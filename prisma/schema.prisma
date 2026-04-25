@@ -1,0 +1,547 @@
+// ReviewQR Prisma Schema
+// Production-ready schema for Indian SMB review management SaaS
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================
+// AUTH & USERS
+// ==========================
+
+enum UserRole {
+  USER
+  ADMIN
+  AGENCY
+  STAFF
+}
+
+enum SubscriptionTier {
+  FREE
+  STARTER
+  GROWTH
+  AGENCY
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  EXPIRED
+}
+
+model User {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  emailVerified  DateTime?
+  password       String?
+  name           String?
+  phone          String?
+  image          String?
+  role           UserRole  @default(USER)
+  agencyId       String?
+  agency         User?     @relation("AgencyClients", fields: [agencyId], references: [id], onDelete: SetNull)
+  clients        User[]    @relation("AgencyClients")
+
+  // White-label
+  whiteLabelEnabled Boolean @default(false)
+  whiteLabelLogo    String?
+  whiteLabelName    String?
+  whiteLabelDomain  String?
+  whiteLabelColor   String?
+
+  // Subscription
+  subscriptionTier   SubscriptionTier   @default(FREE)
+  subscriptionStatus SubscriptionStatus @default(TRIALING)
+  trialEndsAt        DateTime?
+  subscriptionEndsAt DateTime?
+  razorpayCustomerId String?
+  stripeCustomerId   String?
+
+  businesses  Business[]
+  sessions    Session[]
+  accounts    Account[]
+  payments    Payment[]
+  apiKeys     ApiKey[]
+  notifications Notification[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([agencyId])
+  @@index([email])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ==========================
+// BUSINESSES & LOCATIONS
+// ==========================
+
+model Business {
+  id              String  @id @default(cuid())
+  ownerId         String
+  owner           User    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name            String
+  slug            String  @unique
+  industry        String?
+  description     String? @db.Text
+  logo            String?
+  coverImage      String?
+  primaryColor    String  @default("#2563eb")
+  email           String?
+  phone           String?
+  whatsappNumber  String?
+  website         String?
+  address         String? @db.Text
+  city            String?
+  state           String?
+  pincode         String?
+
+  // Review settings
+  googleReviewUrl   String?  @db.Text
+  googlePlaceId     String?
+  ratingThreshold   Int      @default(4) // >= goes to Google, < captures private
+  enableWhatsApp    Boolean  @default(true)
+  enableEmail       Boolean  @default(true)
+  customThankYou    String?  @db.Text
+  whatsappTemplate  String?  @db.Text
+  emailTemplate     String?  @db.Text
+
+  // Custom domain (white-label)
+  customDomain      String?  @unique
+  customDomainVerified Boolean @default(false)
+
+  isActive  Boolean @default(true)
+  archived  Boolean @default(false)
+
+  locations    Location[]
+  staffMembers Staff[]
+  reviews      Review[]
+  feedbacks    Feedback[]
+  qrCodes      QRCode[]
+  campaigns    Campaign[]
+  contacts     Contact[]
+  tags         FeedbackTag[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerId])
+  @@index([slug])
+  @@index([customDomain])
+}
+
+model Location {
+  id         String  @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name       String
+  slug       String
+  address    String? @db.Text
+  city       String?
+  state      String?
+  pincode    String?
+  phone      String?
+  googleReviewUrl String? @db.Text
+  isActive   Boolean @default(true)
+
+  staffMembers Staff[]
+  reviews      Review[]
+  feedbacks    Feedback[]
+  qrCodes      QRCode[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([businessId, slug])
+  @@index([businessId])
+}
+
+model Staff {
+  id         String  @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  locationId String?
+  location   Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  name       String
+  slug       String
+  role       String?
+  email      String?
+  phone      String?
+  photo      String?
+  isActive   Boolean @default(true)
+
+  reviews   Review[]
+  feedbacks Feedback[]
+  qrCodes   QRCode[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([businessId, slug])
+  @@index([businessId])
+  @@index([locationId])
+}
+
+// ==========================
+// REVIEWS & FEEDBACK
+// ==========================
+
+enum ReviewSentiment {
+  POSITIVE
+  NEUTRAL
+  NEGATIVE
+}
+
+enum FeedbackStatus {
+  NEW
+  IN_PROGRESS
+  RESOLVED
+  IGNORED
+}
+
+// Review = the public-facing rating event (every customer who clicks the link)
+model Review {
+  id         String  @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  locationId String?
+  location   Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  staffId    String?
+  staff      Staff? @relation(fields: [staffId], references: [id], onDelete: SetNull)
+  campaignId String?
+  campaign   Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  rating     Int          // 1..5
+  sentiment  ReviewSentiment
+  redirected Boolean  @default(false) // true if sent to Google
+  source     String?  // qr / link / whatsapp / email / widget
+
+  customerName  String?
+  customerEmail String?
+  customerPhone String?
+
+  ipAddress  String?
+  userAgent  String? @db.Text
+  fingerprint String?
+
+  feedback   Feedback?
+
+  createdAt DateTime @default(now())
+
+  @@index([businessId, createdAt])
+  @@index([locationId])
+  @@index([staffId])
+  @@index([fingerprint])
+}
+
+model Feedback {
+  id         String  @id @default(cuid())
+  reviewId   String  @unique
+  review     Review  @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  locationId String?
+  location   Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  staffId    String?
+  staff      Staff? @relation(fields: [staffId], references: [id], onDelete: SetNull)
+
+  message    String  @db.Text
+  status     FeedbackStatus @default(NEW)
+  internalNote String? @db.Text
+  npsScore   Int? // 0-10
+
+  tags       FeedbackTagOnFeedback[]
+
+  resolvedAt DateTime?
+  resolvedBy String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([businessId, createdAt])
+  @@index([status])
+}
+
+model FeedbackTag {
+  id         String  @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name       String
+  color      String  @default("#3b82f6")
+
+  feedbacks  FeedbackTagOnFeedback[]
+
+  createdAt DateTime @default(now())
+
+  @@unique([businessId, name])
+}
+
+model FeedbackTagOnFeedback {
+  feedbackId String
+  tagId      String
+  feedback   Feedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+  tag        FeedbackTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  assignedAt DateTime @default(now())
+
+  @@id([feedbackId, tagId])
+}
+
+// ==========================
+// QR CODES & CAMPAIGNS
+// ==========================
+
+enum QRType {
+  COUNTER
+  TABLE
+  BILL
+  CARD
+  POSTER
+  CUSTOM
+}
+
+model QRCode {
+  id         String  @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  locationId String?
+  location   Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  staffId    String?
+  staff      Staff? @relation(fields: [staffId], references: [id], onDelete: SetNull)
+
+  type       QRType  @default(COUNTER)
+  label      String
+  shortCode  String  @unique
+  scans      Int     @default(0)
+  isActive   Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([businessId])
+  @@index([shortCode])
+}
+
+enum CampaignStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+}
+
+model Campaign {
+  id         String  @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name       String
+  description String? @db.Text
+  status     CampaignStatus @default(DRAFT)
+
+  // Stats
+  sent       Int @default(0)
+  opened     Int @default(0)
+  clicked    Int @default(0)
+  reviewed   Int @default(0)
+
+  whatsappTemplate String? @db.Text
+  emailTemplate    String? @db.Text
+  emailSubject     String?
+
+  startedAt DateTime?
+  endedAt   DateTime?
+
+  reviews   Review[]
+  contacts  CampaignContact[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([businessId])
+}
+
+model Contact {
+  id         String  @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name       String?
+  email      String?
+  phone      String?
+  notes      String? @db.Text
+  source     String? // manual / csv / pos / api
+
+  campaigns  CampaignContact[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([businessId, phone])
+  @@index([businessId])
+}
+
+model CampaignContact {
+  campaignId String
+  contactId  String
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  contact    Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  sentAt    DateTime?
+  openedAt  DateTime?
+  clickedAt DateTime?
+  reviewedAt DateTime?
+
+  @@id([campaignId, contactId])
+}
+
+// ==========================
+// PAYMENTS & BILLING
+// ==========================
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum PaymentProvider {
+  RAZORPAY
+  STRIPE
+  MANUAL
+}
+
+model Payment {
+  id        String  @id @default(cuid())
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount    Int     // in paise
+  currency  String  @default("INR")
+  status    PaymentStatus @default(PENDING)
+  provider  PaymentProvider @default(RAZORPAY)
+  providerOrderId   String?
+  providerPaymentId String?
+  tier      SubscriptionTier
+  periodMonths Int @default(1)
+  invoiceUrl String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// ==========================
+// SYSTEM
+// ==========================
+
+model ApiKey {
+  id        String  @id @default(cuid())
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  key       String  @unique
+  lastUsed  DateTime?
+  isActive  Boolean @default(true)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Notification {
+  id        String  @id @default(cuid())
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String  // negative_feedback, review_milestone, etc
+  title     String
+  message   String  @db.Text
+  link      String?
+  isRead    Boolean @default(false)
+  metadata  Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead])
+}
+
+model RateLimit {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  count     Int      @default(0)
+  expiresAt DateTime
+
+  @@index([expiresAt])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  entity    String?
+  entityId  String?
+  metadata  Json?
+  ip        String?
+  userAgent String?  @db.Text
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([entity, entityId])
+}
+
+model Testimonial {
+  id          String  @id @default(cuid())
+  businessId  String
+  authorName  String
+  authorRole  String?
+  authorImage String?
+  rating      Int     @default(5)
+  message     String  @db.Text
+  isPublic    Boolean @default(false)
+  isApproved  Boolean @default(false)
+  source      String? // public_widget / manual / imported
+
+  createdAt DateTime @default(now())
+
+  @@index([businessId])
+}

@@ -1,0 +1,155 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    /* Google blue */
+    --primary: 217 89% 51%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    /* Google green */
+    --accent: 137 56% 43%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 217 89% 51%;
+    --radius: 0.75rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+    text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1, "cv11";
+  }
+
+  /* Better mobile-tap targets */
+  button, [role="button"], a {
+    @apply touch-manipulation;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn bg-primary text-primary-foreground shadow-sm hover:bg-primary-700 hover:shadow-md active:scale-[0.98];
+  }
+  .btn-accent {
+    @apply btn bg-accent text-accent-foreground shadow-sm hover:bg-accent-700 hover:shadow-md active:scale-[0.98];
+  }
+  .btn-outline {
+    @apply btn border border-border bg-background hover:bg-secondary;
+  }
+  .btn-ghost {
+    @apply btn hover:bg-secondary;
+  }
+  .btn-sm { @apply h-9 px-3 text-sm; }
+  .btn-md { @apply h-10 px-5; }
+  .btn-lg { @apply h-12 px-7 text-base; }
+
+  .input {
+    @apply flex h-10 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .textarea {
+    @apply input min-h-[88px] py-2 leading-relaxed;
+  }
+  .label {
+    @apply text-sm font-medium text-foreground/90;
+  }
+
+  .card {
+    @apply rounded-xl border bg-card text-card-foreground shadow-soft transition-shadow hover:shadow-card;
+  }
+  .card-flat {
+    @apply rounded-xl border bg-card text-card-foreground;
+  }
+
+  .gradient-brand {
+    background: linear-gradient(135deg, hsl(217 89% 51%) 0%, hsl(137 56% 43%) 100%);
+  }
+  .gradient-text {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(217 89% 51%) 0%, hsl(137 56% 43%) 100%);
+  }
+  .gradient-text-google {
+    background-image: linear-gradient(90deg, #4285f4 0%, #34a853 33%, #fbbc04 66%, #ea4335 100%);
+    @apply bg-clip-text text-transparent;
+  }
+
+  .container-tight {
+    @apply container max-w-6xl;
+  }
+
+  /* Pretty form sections */
+  .section-title {
+    @apply text-2xl sm:text-3xl font-bold tracking-tight;
+  }
+  .section-sub {
+    @apply text-base sm:text-lg text-muted-foreground;
+  }
+
+  .star-btn {
+    @apply transition-all duration-150 hover:scale-110 active:scale-95;
+  }
+
+  .skeleton {
+    @apply animate-pulse rounded-md bg-muted;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+  .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { background: hsl(214 32% 80%); border-radius: 999px; }
+}
+
+@layer utilities {
+  .safe-pb {
+    padding-bottom: max(env(safe-area-inset-bottom), 0px);
+  }
+  .safe-pt {
+    padding-top: max(env(safe-area-inset-top), 0px);
+  }
+  .text-balance {
+    text-wrap: balance;
+  }
+  .text-pretty {
+    text-wrap: pretty;
+  }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { scrollbar-width: none; }
+
+  @media (max-width: 640px) {
+    .hide-on-mobile { display: none !important; }
+  }
+  @media (min-width: 641px) {
+    .show-on-mobile { display: none !important; }
+  }
+}
+
+/* Print styles for QR poster export */
+@media print {
+  body { background: white; }
+  .no-print { display: none !important; }
+  .print-only { display: block !important; }
+}
