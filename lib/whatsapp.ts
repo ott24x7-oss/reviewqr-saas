@@ -68,7 +68,7 @@ export async function sendWhatsApp(payload: WhatsAppPayload) {
   if (isCloudApiConfigured()) {
     try {
       const r = await sendWhatsAppCloud(payload);
-      return { ok: true, via: "cloud" as const, ...r };
+      return { ...r, via: "cloud" as const };
     } catch (e: any) {
       console.warn("[wa] cloud send failed, falling back to wa.me:", e.message);
     }
