@@ -36,7 +36,7 @@ export async function GET(req: NextRequest, { params }: { params: { code: string
     errorCorrectionLevel: "H",
     color: { dark: c, light: "#ffffff" }
   });
-  return new NextResponse(buf, {
+  return new NextResponse(new Uint8Array(buf), {
     headers: {
       "content-type": "image/png",
       "cache-control": "public, max-age=86400"
