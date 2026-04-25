@@ -45,7 +45,7 @@ function isTransient(e: any) {
 }
 
 function buildTransport(port = SMTP_PORT, secure = SMTP_SECURE) {
-  const opts: SMTPTransport.Options = {
+  const opts: SMTPTransport.Options & { family?: number } = {
     host: SMTP_HOST,
     port,
     secure,
