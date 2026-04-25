@@ -9,6 +9,7 @@
  * Auto-falls-back from port 587 -> 465 (or vice versa) on transient errors.
  */
 import nodemailer from "nodemailer";
+import type SMTPTransport from "nodemailer/lib/smtp-transport";
 
 const RELAY_URL = process.env.MAILER_RELAY_URL || "";
 const RELAY_SECRET = process.env.MAILER_SECRET || "";
@@ -44,7 +45,7 @@ function isTransient(e: any) {
 }
 
 function buildTransport(port = SMTP_PORT, secure = SMTP_SECURE) {
-  return nodemailer.createTransport({
+  const opts: SMTPTransport.Options = {
     host: SMTP_HOST,
     port,
     secure,
@@ -53,7 +54,8 @@ function buildTransport(port = SMTP_PORT, secure = SMTP_SECURE) {
     connectionTimeout: 20_000,
     greetingTimeout: 10_000,
     socketTimeout: 30_000
-  });
+  };
+  return nodemailer.createTransport(opts);
 }
 
 async function sendDirect(payload: EmailPayload) {
