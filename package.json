@@ -5,7 +5,7 @@
   "description": "ReviewQR - Turn happy customers into Google reviews. Indian SMB focused review management SaaS.",
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && prisma migrate deploy && next build",
+    "build": "prisma generate && next build",
     "start": "next start -p ${PORT:-3000}",
     "lint": "next lint",
     "postinstall": "prisma generate",
