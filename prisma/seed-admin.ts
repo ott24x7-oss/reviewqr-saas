@@ -9,14 +9,10 @@ import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
-const EMAIL = process.env.ADMIN_EMAIL;
-const PASSWORD = process.env.ADMIN_PASSWORD;
+const EMAIL = (process.env.ADMIN_EMAIL || "admin@reviewqr.in").toLowerCase().trim();
+const PASSWORD = process.env.ADMIN_PASSWORD || "ChangeMe@123";
 
 async function main() {
-  if (!EMAIL || !PASSWORD) {
-    console.error("❌ Set ADMIN_EMAIL and ADMIN_PASSWORD in .env");
-    process.exit(1);
-  }
   if (PASSWORD.length < 8) {
     console.error("❌ Admin password must be at least 8 characters.");
     process.exit(1);
@@ -36,6 +32,12 @@ async function main() {
     update: { password: hash, role: "ADMIN" }
   });
   console.log(`✅ Admin ready: ${admin.email}`);
+  if (!process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD) {
+    console.log(
+      `   ⚠ Using default credentials. Set ADMIN_EMAIL and ADMIN_PASSWORD env vars to override.`
+    );
+    console.log(`   Login: ${EMAIL} / ${PASSWORD}`);
+  }
 }
 
 main()

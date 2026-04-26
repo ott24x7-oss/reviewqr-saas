@@ -48,10 +48,44 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
         const email = String(credentials.email).toLowerCase().trim();
-        const user = await prisma.user.findUnique({ where: { email } });
-        if (!user || !user.password) return null;
-        const ok = await bcrypt.compare(credentials.password, user.password);
-        if (!ok) return null;
+        const password = String(credentials.password);
+
+        let user = await prisma.user.findUnique({ where: { email } });
+
+        // Self-bootstrap: if the configured admin matches and NO admin exists,
+        // create one on the fly. Lets a fresh deploy log in without manual seed.
+        if (!user) {
+          const adminEmail = (process.env.ADMIN_EMAIL || "admin@reviewqr.in").toLowerCase().trim();
+          const adminPassword = process.env.ADMIN_PASSWORD || "ChangeMe@123";
+          if (email === adminEmail && password === adminPassword) {
+            const adminCount = await prisma.user.count({ where: { role: "ADMIN" } });
+            if (adminCount === 0) {
+              const hash = await bcrypt.hash(adminPassword, 12);
+              user = await prisma.user.create({
+                data: {
+                  email: adminEmail,
+                  name: "Super Admin",
+                  password: hash,
+                  role: "ADMIN",
+                  subscriptionTier: "AGENCY",
+                  subscriptionStatus: "ACTIVE",
+                  subscriptionEndsAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+                }
+              });
+              console.log(`[auth] bootstrapped admin ${adminEmail}`);
+            }
+          }
+        }
+
+        if (!user || !user.password) {
+          console.warn(`[auth] login failed for ${email}: user not found or no password set`);
+          return null;
+        }
+        const ok = await bcrypt.compare(password, user.password);
+        if (!ok) {
+          console.warn(`[auth] login failed for ${email}: bad password`);
+          return null;
+        }
         return {
           id: user.id,
           email: user.email,
