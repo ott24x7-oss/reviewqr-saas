@@ -10,16 +10,7 @@
  */
 import nodemailer from "nodemailer";
 import type SMTPTransport from "nodemailer/lib/smtp-transport";
-
-const RELAY_URL = process.env.MAILER_RELAY_URL || "";
-const RELAY_SECRET = process.env.MAILER_SECRET || "";
-
-const SMTP_HOST = process.env.SMTP_HOST || "";
-const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
-const SMTP_USER = process.env.SMTP_USER || "";
-const SMTP_PASS = process.env.SMTP_PASS || "";
-const SMTP_FROM = process.env.SMTP_FROM || `ReviewQR <${SMTP_USER}>`;
-const SMTP_SECURE = SMTP_PORT === 465;
+import { getEmailConfig } from "./settings";
 
 export type EmailPayload = {
   to: string | string[];
@@ -44,12 +35,16 @@ function isTransient(e: any) {
   );
 }
 
-function buildTransport(port = SMTP_PORT, secure = SMTP_SECURE) {
+function buildTransport(
+  cfg: { smtpHost: string; smtpPort: number; smtpUser: string; smtpPass: string },
+  port = cfg.smtpPort,
+  secure = port === 465
+) {
   const opts: SMTPTransport.Options & { family?: number } = {
-    host: SMTP_HOST,
+    host: cfg.smtpHost,
     port,
     secure,
-    auth: SMTP_USER && SMTP_PASS ? { user: SMTP_USER, pass: SMTP_PASS } : undefined,
+    auth: cfg.smtpUser && cfg.smtpPass ? { user: cfg.smtpUser, pass: cfg.smtpPass } : undefined,
     family: 4,
     connectionTimeout: 20_000,
     greetingTimeout: 10_000,
@@ -58,9 +53,9 @@ function buildTransport(port = SMTP_PORT, secure = SMTP_SECURE) {
   return nodemailer.createTransport(opts);
 }
 
-async function sendDirect(payload: EmailPayload) {
+async function sendDirect(payload: EmailPayload, cfg: Awaited<ReturnType<typeof getEmailConfig>>) {
   const opts = {
-    from: payload.from || SMTP_FROM,
+    from: payload.from || cfg.smtpFrom,
     to: Array.isArray(payload.to) ? payload.to.join(", ") : payload.to,
     cc: Array.isArray(payload.cc) ? payload.cc.join(", ") : payload.cc,
     subject: payload.subject,
@@ -69,29 +64,33 @@ async function sendDirect(payload: EmailPayload) {
     attachments: payload.attachments
   };
   try {
-    const info = await buildTransport().sendMail(opts);
+    const info = await buildTransport(cfg).sendMail(opts);
     return { ok: true, messageId: info.messageId, via: "smtp" };
   } catch (e: any) {
     if (!isTransient(e)) throw e;
-    const altPort = SMTP_PORT === 465 ? 587 : 465;
-    const info = await buildTransport(altPort, altPort === 465).sendMail(opts);
+    const altPort = cfg.smtpPort === 465 ? 587 : 465;
+    const info = await buildTransport(cfg, altPort, altPort === 465).sendMail(opts);
     return { ok: true, messageId: info.messageId, via: "smtp-fallback" };
   }
 }
 
-async function sendViaRelay(payload: EmailPayload) {
-  const fromMatch = String(payload.from || SMTP_FROM).match(/<([^>]+)>/);
-  const fromEmail = fromMatch ? fromMatch[1] : SMTP_USER;
-  const fromName = String(payload.from || SMTP_FROM).split("<")[0].trim().replace(/"/g, "") || "ReviewQR";
+async function sendViaRelay(
+  payload: EmailPayload,
+  cfg: Awaited<ReturnType<typeof getEmailConfig>>
+) {
+  const fromMatch = String(payload.from || cfg.smtpFrom).match(/<([^>]+)>/);
+  const fromEmail = fromMatch ? fromMatch[1] : cfg.smtpUser;
+  const fromName =
+    String(payload.from || cfg.smtpFrom).split("<")[0].trim().replace(/"/g, "") || "ReviewQR";
   const body = {
-    secret: RELAY_SECRET,
-    smtp_host: SMTP_HOST,
-    smtp_port: SMTP_PORT,
-    smtp_secure: SMTP_SECURE,
-    smtp_user: SMTP_USER,
-    smtp_pass: SMTP_PASS,
-    smtp_email: SMTP_USER,
-    smtp_password: SMTP_PASS,
+    secret: cfg.relaySecret,
+    smtp_host: cfg.smtpHost,
+    smtp_port: cfg.smtpPort,
+    smtp_secure: cfg.smtpPort === 465,
+    smtp_user: cfg.smtpUser,
+    smtp_pass: cfg.smtpPass,
+    smtp_email: cfg.smtpUser,
+    smtp_password: cfg.smtpPass,
     from_email: fromEmail,
     from_name: fromName,
     to: Array.isArray(payload.to) ? payload.to.join(",") : payload.to,
@@ -109,11 +108,11 @@ async function sendViaRelay(payload: EmailPayload) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), 30_000);
   try {
-    const res = await fetch(RELAY_URL, {
+    const res = await fetch(cfg.relayUrl, {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        ...(RELAY_SECRET ? { "x-mailer-token": RELAY_SECRET } : {})
+        ...(cfg.relaySecret ? { "x-mailer-token": cfg.relaySecret } : {})
       },
       body: JSON.stringify(body),
       signal: ctrl.signal
@@ -134,13 +133,14 @@ async function sendViaRelay(payload: EmailPayload) {
 }
 
 export async function sendEmail(payload: EmailPayload) {
-  if (!SMTP_USER && !RELAY_URL) {
+  const cfg = await getEmailConfig();
+  if (!cfg.smtpUser && !cfg.relayUrl) {
     console.warn("[email] not configured — printing to console");
     console.log("---EMAIL---", payload.subject, "to", payload.to);
     return { ok: true, via: "console" as const };
   }
-  if (RELAY_URL) return sendViaRelay(payload);
-  return sendDirect(payload);
+  if (cfg.relayUrl) return sendViaRelay(payload, cfg);
+  return sendDirect(payload, cfg);
 }
 
 function stripHtml(s: string) {

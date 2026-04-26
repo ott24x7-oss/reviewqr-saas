@@ -26,7 +26,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const count = await prisma.location.count({
     where: { business: { ownerId: user.id }, isActive: true }
   });
-  if (count >= planLimit(user.subscriptionTier, "locations")) {
+  if (count >= (await planLimit(user.subscriptionTier, "locations"))) {
     return NextResponse.json({ error: "Plan location limit reached" }, { status: 402 });
   }
 

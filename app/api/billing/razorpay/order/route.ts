@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
-import { createRazorpayOrder, isRazorpayConfigured, planPriceForPeriod, PLANS } from "@/lib/payments";
+import {
+  createRazorpayOrder,
+  isRazorpayConfigured,
+  planPriceForPeriod,
+  getPlan
+} from "@/lib/payments";
+import { getPaymentsConfig } from "@/lib/settings";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
 
@@ -12,13 +18,13 @@ const schema = z.object({
 export async function POST(req: NextRequest) {
   const user = await requireUser().catch(() => null);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!isRazorpayConfigured()) {
+  if (!(await isRazorpayConfigured())) {
     return NextResponse.json({ error: "Razorpay not configured" }, { status: 503 });
   }
   const parsed = schema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
 
-  const amount = planPriceForPeriod(parsed.data.tier, parsed.data.period);
+  const amount = await planPriceForPeriod(parsed.data.tier, parsed.data.period);
   if (!amount) return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
 
   const order = await createRazorpayOrder({
@@ -40,11 +46,14 @@ export async function POST(req: NextRequest) {
     }
   });
 
+  const plan = await getPlan(parsed.data.tier);
+  const cfg = await getPaymentsConfig();
+
   return NextResponse.json({
     orderId: order.id,
     amount,
     currency: "INR",
-    plan: PLANS[parsed.data.tier].name,
-    keyId: process.env.RAZORPAY_KEY_ID
+    plan: plan.name,
+    keyId: cfg.razorpayKeyId
   });
 }

@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
   const count = await prisma.business.count({
     where: { ownerId: user.id, archived: false }
   });
-  const limit = planLimit(user.subscriptionTier, "businesses");
+  const limit = await planLimit(user.subscriptionTier, "businesses");
   if (count >= limit) {
     return NextResponse.json(
       { error: `Your ${user.subscriptionTier} plan allows ${limit} business(es). Upgrade to add more.` },

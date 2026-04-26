@@ -16,7 +16,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const count = await prisma.staff.count({
     where: { business: { ownerId: user.id }, isActive: true }
   });
-  if (count >= planLimit(user.subscriptionTier, "staff")) {
+  if (count >= (await planLimit(user.subscriptionTier, "staff"))) {
     return NextResponse.json({ error: "Plan staff limit reached" }, { status: 402 });
   }
 

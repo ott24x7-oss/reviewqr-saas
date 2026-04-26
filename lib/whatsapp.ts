@@ -15,10 +15,7 @@
  */
 
 import { normalizePhone } from "./utils";
-
-const WA_API_URL = process.env.WHATSAPP_API_URL || "https://graph.facebook.com/v20.0";
-const WA_TOKEN = process.env.WHATSAPP_API_TOKEN || "";
-const WA_PHONE_ID = process.env.WHATSAPP_PHONE_ID || "";
+import { getWhatsAppConfig } from "./settings";
 
 export type WhatsAppPayload = {
   to: string;
@@ -31,19 +28,21 @@ export function buildClickToChatUrl(phone: string, message: string) {
   return `https://wa.me/${normalized}?text=${encodeURIComponent(message)}`;
 }
 
-export function isCloudApiConfigured() {
-  return !!(WA_TOKEN && WA_PHONE_ID);
+export async function isCloudApiConfigured() {
+  const cfg = await getWhatsAppConfig();
+  return !!(cfg.apiToken && cfg.phoneId);
 }
 
 export async function sendWhatsAppCloud(payload: WhatsAppPayload) {
-  if (!isCloudApiConfigured()) {
+  const cfg = await getWhatsAppConfig();
+  if (!cfg.apiToken || !cfg.phoneId) {
     throw new Error("WhatsApp Cloud API not configured. Use buildClickToChatUrl as a fallback.");
   }
   const to = normalizePhone(payload.to);
-  const res = await fetch(`${WA_API_URL}/${WA_PHONE_ID}/messages`, {
+  const res = await fetch(`${cfg.apiUrl}/${cfg.phoneId}/messages`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${WA_TOKEN}`,
+      Authorization: `Bearer ${cfg.apiToken}`,
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
@@ -60,12 +59,8 @@ export async function sendWhatsAppCloud(payload: WhatsAppPayload) {
   return { ok: true, messageId: json.messages?.[0]?.id };
 }
 
-/**
- * Smart send: tries Cloud API if available, otherwise returns the
- * click-to-chat URL so the caller can open it / send via the user's phone.
- */
 export async function sendWhatsApp(payload: WhatsAppPayload) {
-  if (isCloudApiConfigured()) {
+  if (await isCloudApiConfigured()) {
     try {
       const r = await sendWhatsAppCloud(payload);
       return { ...r, via: "cloud" as const };

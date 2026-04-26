@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   const parsed = schema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
 
-  const ok = verifyRazorpaySignature(parsed.data);
+  const ok = await verifyRazorpaySignature(parsed.data);
   if (!ok) {
     await prisma.payment
       .updateMany({

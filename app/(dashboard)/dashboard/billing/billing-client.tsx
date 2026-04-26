@@ -4,7 +4,7 @@ import { Check, Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { PLANS } from "@/lib/payments";
+import type { PricingConfig } from "@/lib/settings";
 import { formatINR, cn } from "@/lib/utils";
 import type { SubscriptionTier } from "@prisma/client";
 
@@ -14,7 +14,13 @@ declare global {
   }
 }
 
-export function BillingClient({ currentTier }: { currentTier: SubscriptionTier }) {
+export function BillingClient({
+  currentTier,
+  plans
+}: {
+  currentTier: SubscriptionTier;
+  plans: PricingConfig;
+}) {
   const [annual, setAnnual] = React.useState(true);
   const [loading, setLoading] = React.useState<SubscriptionTier | null>(null);
 
@@ -80,7 +86,9 @@ export function BillingClient({ currentTier }: { currentTier: SubscriptionTier }
     }
   }
 
-  const tiers = (["FREE", "STARTER", "GROWTH", "AGENCY"] as const);
+  const tiers = (["FREE", "STARTER", "GROWTH", "AGENCY"] as const).filter(
+    (k) => plans[k].visible
+  );
 
   return (
     <Card>
@@ -117,10 +125,10 @@ export function BillingClient({ currentTier }: { currentTier: SubscriptionTier }
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           {tiers.map((tierKey) => {
-            const tier = PLANS[tierKey];
+            const tier = plans[tierKey];
             const price = annual ? tier.yearly : tier.monthly;
             const isCurrent = currentTier === tierKey;
-            const isHighlighted = tierKey === "GROWTH";
+            const isHighlighted = !!tier.highlighted;
 
             return (
               <div

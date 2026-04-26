@@ -2,14 +2,16 @@
 import * as React from "react";
 import Link from "next/link";
 import { Check, Sparkles } from "lucide-react";
-import { PLANS } from "@/lib/payments";
+import type { PricingConfig } from "@/lib/settings";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatINR } from "@/lib/utils";
 
-export function Pricing() {
+export function Pricing({ plans }: { plans: PricingConfig }) {
   const [annual, setAnnual] = React.useState(true);
-  const tiers = (["FREE", "STARTER", "GROWTH", "AGENCY"] as const).map((t) => PLANS[t]);
+  const tiers = (["FREE", "STARTER", "GROWTH", "AGENCY"] as const)
+    .filter((t) => plans[t].visible)
+    .map((t) => plans[t]);
 
   return (
     <section id="pricing" className="py-16 sm:py-24 bg-secondary/30">

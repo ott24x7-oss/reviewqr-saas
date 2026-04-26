@@ -18,7 +18,8 @@ import {
   Sparkles,
   Bell,
   ChevronDown,
-  Plus
+  Plus,
+  ShieldCheck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -134,6 +135,16 @@ export function DashboardShell({
                   <div className="font-medium truncate">{user.email}</div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                {user.role === "ADMIN" && (
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin">
+                        <ShieldCheck className="h-4 w-4 mr-2" /> Admin panel
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
                 <DropdownMenuItem asChild>
                   <Link href="/dashboard/settings"><Settings className="h-4 w-4 mr-2" /> Settings</Link>
                 </DropdownMenuItem>

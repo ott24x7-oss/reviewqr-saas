@@ -529,6 +529,14 @@ model AuditLog {
   @@index([entity, entityId])
 }
 
+// Admin-editable key/value config (overrides env). value holds JSON.
+model AppSetting {
+  key       String   @id
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+}
+
 model Testimonial {
   id          String  @id @default(cuid())
   businessId  String

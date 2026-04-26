@@ -8,8 +8,12 @@ import { Testimonials } from "@/components/marketing/testimonials";
 import { FAQ } from "@/components/marketing/faq";
 import { CTA } from "@/components/marketing/cta";
 import { Footer } from "@/components/marketing/footer";
+import { getPricingConfig } from "@/lib/settings";
 
-export default function HomePage() {
+export const dynamic = "force-dynamic";
+
+export default async function HomePage() {
+  const plans = await getPricingConfig();
   return (
     <main className="min-h-screen bg-white">
       <MarketingNavbar />
@@ -17,7 +21,7 @@ export default function HomePage() {
       <Features />
       <HowItWorks />
       <DashboardPreview />
-      <Pricing />
+      <Pricing plans={plans} />
       <Testimonials />
       <FAQ />
       <CTA />
