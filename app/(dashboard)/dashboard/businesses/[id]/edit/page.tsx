@@ -25,6 +25,8 @@ export default async function EditBusinessPage({ params }: { params: { id: strin
           name: business.name,
           industry: business.industry || "",
           description: business.description || "",
+          logo: business.logo,
+          coverImage: business.coverImage,
           email: business.email || "",
           phone: business.phone || "",
           whatsappNumber: business.whatsappNumber || "",

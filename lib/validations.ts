@@ -27,10 +27,19 @@ export const loginSchema = z.object({
   password: z.string().min(1)
 });
 
+// Accept either an http(s) URL or a base64 data URL (≤ ~700KB encoded). Logos
+// are auto-resized client-side so they comfortably fit; covers are larger.
+const imageString = z
+  .string()
+  .max(1_500_000)
+  .refine((s) => /^(https?:|data:image\/)/i.test(s), "Invalid image");
+
 export const businessSchema = z.object({
   name: z.string().min(2).max(80),
   industry: z.string().max(60).optional().or(z.literal("")),
   description: z.string().max(500).optional().or(z.literal("")),
+  logo: imageString.nullable().optional(),
+  coverImage: imageString.nullable().optional(),
   email: emailSchema.optional().or(z.literal("")),
   phone: phoneSchema.optional().or(z.literal("")),
   whatsappNumber: phoneSchema.optional().or(z.literal("")),
@@ -41,7 +50,8 @@ export const businessSchema = z.object({
   pincode: z.string().regex(/^\d{6}$/, "Enter 6-digit PIN").optional().or(z.literal("")),
   googleReviewUrl: z.string().url().optional().or(z.literal("")),
   ratingThreshold: z.number().int().min(1).max(5).default(4),
-  primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#1a73e8")
+  primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#1a73e8"),
+  customThankYou: z.string().max(500).optional().or(z.literal(""))
 });
 
 export const locationSchema = z.object({

@@ -8,12 +8,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ImageUpload } from "@/components/ui/image-upload";
 
 type Init = {
   id: string;
   name: string;
   industry: string;
   description: string;
+  logo: string | null;
+  coverImage: string | null;
   email: string;
   phone: string;
   whatsappNumber: string;
@@ -62,6 +65,46 @@ export function EditBusinessForm({ initial }: { initial: Init }) {
     <form onSubmit={save} className="space-y-4">
       <Card>
         <CardHeader>
+          <CardTitle>Brand & images</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-5 items-start">
+            <ImageUpload
+              variant="logo"
+              value={form.logo}
+              onChange={(v) => update("logo", v)}
+              label="Logo"
+              hint="Square image, auto-cropped to a circular thumbnail."
+            />
+            <ImageUpload
+              variant="cover"
+              value={form.coverImage}
+              onChange={(v) => update("coverImage", v)}
+              label="Cover image"
+              hint="Wide banner shown at the top of your public review page."
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="primaryColor">Brand colour</Label>
+            <div className="flex gap-3">
+              <input
+                type="color"
+                value={form.primaryColor}
+                onChange={(e) => update("primaryColor", e.target.value)}
+                className="h-10 w-14 rounded-lg border cursor-pointer"
+              />
+              <Input
+                value={form.primaryColor}
+                onChange={(e) => update("primaryColor", e.target.value)}
+                className="font-mono"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Basic info</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -76,6 +119,7 @@ export function EditBusinessForm({ initial }: { initial: Init }) {
                 id="industry"
                 value={form.industry}
                 onChange={(e) => update("industry", e.target.value)}
+                placeholder="Café, Salon, Clinic…"
               />
             </div>
             <div className="space-y-1.5">
@@ -95,6 +139,61 @@ export function EditBusinessForm({ initial }: { initial: Init }) {
               onChange={(e) => update("description", e.target.value)}
             />
           </div>
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="website">Website</Label>
+              <Input
+                id="website"
+                value={form.website}
+                onChange={(e) => update("website", e.target.value)}
+                placeholder="https://yourbusiness.com"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={form.email}
+                onChange={(e) => update("email", e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="address">Address</Label>
+            <Textarea
+              id="address"
+              rows={2}
+              value={form.address}
+              onChange={(e) => update("address", e.target.value)}
+            />
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="city">City</Label>
+              <Input
+                id="city"
+                value={form.city}
+                onChange={(e) => update("city", e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="state">State</Label>
+              <Input
+                id="state"
+                value={form.state}
+                onChange={(e) => update("state", e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="pincode">PIN</Label>
+              <Input
+                id="pincode"
+                value={form.pincode}
+                onChange={(e) => update("pincode", e.target.value)}
+              />
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -109,13 +208,14 @@ export function EditBusinessForm({ initial }: { initial: Init }) {
               id="googleReviewUrl"
               value={form.googleReviewUrl}
               onChange={(e) => update("googleReviewUrl", e.target.value)}
+              placeholder="https://g.page/r/…/review"
             />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="threshold">Rating threshold</Label>
             <select
               id="threshold"
-              className="input"
+              className="w-full h-10 rounded-lg border bg-white px-3 text-sm"
               value={form.ratingThreshold}
               onChange={(e) => update("ratingThreshold", Number(e.target.value))}
             >
@@ -123,22 +223,6 @@ export function EditBusinessForm({ initial }: { initial: Init }) {
               <option value={4}>4★+ (recommended)</option>
               <option value={5}>5★ only</option>
             </select>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="primaryColor">Brand colour</Label>
-            <div className="flex gap-3">
-              <input
-                type="color"
-                value={form.primaryColor}
-                onChange={(e) => update("primaryColor", e.target.value)}
-                className="h-10 w-14 rounded-lg border cursor-pointer"
-              />
-              <Input
-                value={form.primaryColor}
-                onChange={(e) => update("primaryColor", e.target.value)}
-                className="font-mono"
-              />
-            </div>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="whatsappNumber">WhatsApp alert number</Label>
@@ -160,7 +244,7 @@ export function EditBusinessForm({ initial }: { initial: Init }) {
         </CardContent>
       </Card>
 
-      <div className="flex justify-end gap-2">
+      <div className="flex justify-end gap-2 sticky bottom-3 bg-secondary/30 backdrop-blur-sm py-2 -mx-2 px-2 rounded-lg">
         <Button type="button" variant="outline" onClick={() => router.back()}>
           Cancel
         </Button>
