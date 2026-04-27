@@ -1,19 +1,15 @@
 /**
  * WhatsApp helper.
  *
- * Two ways to deliver messages, in this order:
- *   1. Click-to-chat URL — works without any API. We just generate
- *      `https://wa.me/<phone>?text=<encoded>`. The user (or staff) opens
- *      it and presses Send. This is what most Indian SMBs actually use.
- *   2. Cloud API — if WHATSAPP_API_TOKEN + WHATSAPP_PHONE_ID are set,
- *      we POST to Meta's Cloud API to send programmatically.
- *
- * The pattern is borrowed from the wa-Invoice-bot's manager — same
- * concept of templates with variable interpolation, but without the
- * Baileys session/QR pairing surface (since SMBs don't need to link
- * their personal WhatsApp to send templated review requests).
+ * Three send paths picked at runtime via WhatsAppConfig.provider:
+ *   1. click-to-chat — generates a wa.me URL the caller (or staff) opens
+ *      manually. No auth, no setup. Fine for low-volume / human-in-loop.
+ *   2. cloud-api — Meta WhatsApp Cloud API. Requires Business approval +
+ *      verified number. Best for high volume + deliverability.
+ *   3. baileys — unofficial WhatsApp Web. Free, fast to set up (scan a
+ *      QR with your phone), but only suitable for low-volume notifications
+ *      and you must follow WhatsApp ToS to avoid bans.
  */
-
 import { normalizePhone } from "./utils";
 import { getWhatsAppConfig } from "./settings";
 
@@ -36,7 +32,7 @@ export async function isCloudApiConfigured() {
 export async function sendWhatsAppCloud(payload: WhatsAppPayload) {
   const cfg = await getWhatsAppConfig();
   if (!cfg.apiToken || !cfg.phoneId) {
-    throw new Error("WhatsApp Cloud API not configured. Use buildClickToChatUrl as a fallback.");
+    throw new Error("WhatsApp Cloud API not configured.");
   }
   const to = normalizePhone(payload.to);
   const res = await fetch(`${cfg.apiUrl}/${cfg.phoneId}/messages`, {
@@ -56,20 +52,43 @@ export async function sendWhatsAppCloud(payload: WhatsAppPayload) {
   if (!res.ok) {
     throw new Error(`WhatsApp API ${res.status}: ${JSON.stringify(json).slice(0, 200)}`);
   }
-  return { ok: true, messageId: json.messages?.[0]?.id };
+  return { ok: true as const, messageId: json.messages?.[0]?.id, via: "cloud" as const };
 }
 
+async function sendWhatsAppBaileys(payload: WhatsAppPayload) {
+  const { getBaileys } = await import("./whatsapp-baileys");
+  const mgr = getBaileys();
+  if (!mgr.isConnected()) {
+    throw new Error("Baileys not connected — open Admin → WhatsApp to pair.");
+  }
+  await mgr.send(payload.to, payload.message);
+  return { ok: true as const, via: "baileys" as const };
+}
+
+/**
+ * Smart send. Honours the configured provider; on hard-failure of an
+ * automated provider, falls back to returning a click-to-chat URL so the
+ * caller still has a way to deliver the message manually.
+ */
 export async function sendWhatsApp(payload: WhatsAppPayload) {
-  if (await isCloudApiConfigured()) {
+  const cfg = await getWhatsAppConfig();
+
+  if (cfg.provider === "cloud-api") {
     try {
-      const r = await sendWhatsAppCloud(payload);
-      return { ...r, via: "cloud" as const };
+      return await sendWhatsAppCloud(payload);
     } catch (e: any) {
       console.warn("[wa] cloud send failed, falling back to wa.me:", e.message);
     }
+  } else if (cfg.provider === "baileys") {
+    try {
+      return await sendWhatsAppBaileys(payload);
+    } catch (e: any) {
+      console.warn("[wa] baileys send failed, falling back to wa.me:", e.message);
+    }
   }
+
   return {
-    ok: true,
+    ok: true as const,
     via: "click-to-chat" as const,
     url: buildClickToChatUrl(payload.to, payload.message)
   };

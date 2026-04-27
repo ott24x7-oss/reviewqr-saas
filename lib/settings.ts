@@ -40,10 +40,14 @@ export type EmailConfig = {
   smtpFrom: string;
 };
 
+export type WhatsAppProvider = "click-to-chat" | "cloud-api" | "baileys";
+
 export type WhatsAppConfig = {
+  provider: WhatsAppProvider;
   apiUrl: string;
   apiToken: string;
   phoneId: string;
+  notifyPositiveCopy: boolean;
 };
 
 export type SiteConfig = {
@@ -182,9 +186,11 @@ export const DEFAULT_EMAIL: EmailConfig = {
 };
 
 export const DEFAULT_WHATSAPP: WhatsAppConfig = {
+  provider: "click-to-chat",
   apiUrl: "https://graph.facebook.com/v20.0",
   apiToken: "",
-  phoneId: ""
+  phoneId: "",
+  notifyPositiveCopy: true
 };
 
 export const DEFAULT_SITE: SiteConfig = {
@@ -285,10 +291,13 @@ export async function setEmailConfig(v: EmailConfig, by?: string) {
 /* ============== WhatsApp ============== */
 export async function getWhatsAppConfig(): Promise<WhatsAppConfig> {
   const stored = await readKey<Partial<WhatsAppConfig>>(SETTING_KEYS.whatsapp, {});
+  const provider = (stored.provider as WhatsAppProvider) || "click-to-chat";
   return {
+    provider,
     apiUrl: stored.apiUrl || process.env.WHATSAPP_API_URL || DEFAULT_WHATSAPP.apiUrl,
     apiToken: stored.apiToken || process.env.WHATSAPP_API_TOKEN || "",
-    phoneId: stored.phoneId || process.env.WHATSAPP_PHONE_ID || ""
+    phoneId: stored.phoneId || process.env.WHATSAPP_PHONE_ID || "",
+    notifyPositiveCopy: stored.notifyPositiveCopy ?? true
   };
 }
 export async function setWhatsAppConfig(v: WhatsAppConfig, by?: string) {

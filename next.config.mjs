@@ -12,7 +12,8 @@ const nextConfig = {
   experimental: {
     serverActions: {
       allowedOrigins: ["localhost:3000", "*.up.railway.app", "*.railway.app"]
-    }
+    },
+    serverComponentsExternalPackages: ["@whiskeysockets/baileys", "pino", "sharp"]
   },
   async headers() {
     return [

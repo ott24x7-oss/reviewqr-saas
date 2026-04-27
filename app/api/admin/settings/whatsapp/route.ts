@@ -9,11 +9,22 @@ export async function PUT(req: NextRequest) {
 
   const incoming = (await req.json().catch(() => ({}))) as any;
   const current = await getWhatsAppConfig();
+  const provider =
+    incoming.provider === "cloud-api" ||
+    incoming.provider === "baileys" ||
+    incoming.provider === "click-to-chat"
+      ? incoming.provider
+      : current.provider;
   const next = {
+    provider,
     apiUrl: String(incoming.apiUrl ?? current.apiUrl).trim(),
     apiToken:
       typeof incoming.apiToken === "string" ? incoming.apiToken.trim() : current.apiToken,
-    phoneId: String(incoming.phoneId ?? current.phoneId).trim()
+    phoneId: String(incoming.phoneId ?? current.phoneId).trim(),
+    notifyPositiveCopy:
+      typeof incoming.notifyPositiveCopy === "boolean"
+        ? incoming.notifyPositiveCopy
+        : current.notifyPositiveCopy
   };
 
   await setWhatsAppConfig(next, guard.user.id);

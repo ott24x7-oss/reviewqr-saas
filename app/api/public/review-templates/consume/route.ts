@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/utils";
+import { notifyPositiveReviewCopy } from "@/lib/notify";
 
 const schema = z.object({
   slug: z.string().min(1).max(100),
@@ -50,6 +51,15 @@ export async function POST(req: NextRequest) {
     where: { id: parsed.data.templateId },
     select: { content: true }
   });
+
+  // Fire-and-forget owner notification with the exact text the customer
+  // is about to paste on Google.
+  if (tpl?.content) {
+    notifyPositiveReviewCopy({
+      businessId: business.id,
+      templateContent: tpl.content
+    }).catch((e) => console.error("[notify] positive copy:", e?.message));
+  }
 
   return NextResponse.json({ ok: true, content: tpl?.content || "" });
 }
