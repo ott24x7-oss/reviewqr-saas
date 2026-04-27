@@ -25,16 +25,17 @@ const config: Config = {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
-          50: "#eff6ff",
-          100: "#dbeafe",
-          200: "#bfdbfe",
-          300: "#93c5fd",
-          400: "#60a5fa",
-          500: "#3b82f6",
-          600: "#2563eb",
-          700: "#1d4ed8",
-          800: "#1e40af",
-          900: "#1e3a8a"
+          // WatShop Signal Green ramp (#34C77B is the brand color)
+          50: "#ECFDF5",
+          100: "#D1FAE5",
+          200: "#A7F3D0",
+          300: "#6EE7B7",
+          400: "#34C77B",
+          500: "#34C77B",
+          600: "#2BAE69",
+          700: "#1F8C53",
+          800: "#166937",
+          900: "#0E4D27"
         },
         accent: {
           DEFAULT: "hsl(var(--accent))",
@@ -78,12 +79,13 @@ const config: Config = {
       },
       fontFamily: {
         sans: ["var(--font-inter)", "system-ui", "sans-serif"],
-        display: ["var(--font-display)", "system-ui", "sans-serif"]
+        display: ["var(--font-inter)", "system-ui", "sans-serif"],
+        mono: ["var(--font-jetbrains-mono)", "ui-monospace", "SFMono-Regular", "monospace"]
       },
       boxShadow: {
         soft: "0 2px 8px 0 rgb(0 0 0 / 0.04), 0 1px 3px 0 rgb(0 0 0 / 0.06)",
         card: "0 4px 24px -2px rgb(0 0 0 / 0.06), 0 2px 8px -2px rgb(0 0 0 / 0.04)",
-        glow: "0 0 0 1px rgb(59 130 246 / 0.1), 0 8px 32px -8px rgb(59 130 246 / 0.2)"
+        glow: "0 0 0 1px rgb(52 199 123 / 0.1), 0 8px 32px -8px rgb(52 199 123 / 0.2)"
       },
       keyframes: {
         "accordion-down": {
@@ -116,7 +118,7 @@ const config: Config = {
       },
       backgroundImage: {
         "grid-pattern":
-          "linear-gradient(to right, rgb(59 130 246 / 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgb(59 130 246 / 0.05) 1px, transparent 1px)"
+          "linear-gradient(to right, rgb(52 199 123 / 0.06) 1px, transparent 1px), linear-gradient(to bottom, rgb(52 199 123 / 0.06) 1px, transparent 1px)"
       }
     }
   },

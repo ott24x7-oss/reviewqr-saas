@@ -4,28 +4,52 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222 47% 11%;
+    /* WatShop brand: Page / Forest Ink */
+    --background: 40 33% 98%;
+    --foreground: 160 25% 9%;
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 160 25% 9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    /* Google blue */
-    --primary: 217 89% 51%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
-    /* Google green */
-    --accent: 137 56% 43%;
-    --accent-foreground: 0 0% 100%;
+    --popover-foreground: 160 25% 9%;
+    /* Forest Ink as semantic primary */
+    --primary: 160 25% 9%;
+    --primary-foreground: 40 33% 98%;
+    /* Linen */
+    --secondary: 40 28% 94%;
+    --secondary-foreground: 160 25% 9%;
+    --muted: 40 28% 94%;
+    --muted-foreground: 165 9% 39%;
+    /* Signal Green */
+    --accent: 150 58% 49%;
+    --accent-foreground: 40 33% 98%;
     --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 217 89% 51%;
+    --destructive-foreground: 40 33% 98%;
+    --border: 40 20% 88%;
+    --input: 40 20% 88%;
+    --ring: 150 58% 49%;
     --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 160 25% 9%;
+    --foreground: 40 33% 98%;
+    --card: 160 22% 12%;
+    --card-foreground: 40 33% 98%;
+    --popover: 160 22% 12%;
+    --popover-foreground: 40 33% 98%;
+    --primary: 40 33% 98%;
+    --primary-foreground: 160 25% 9%;
+    --secondary: 160 18% 16%;
+    --secondary-foreground: 40 33% 98%;
+    --muted: 160 18% 16%;
+    --muted-foreground: 165 12% 65%;
+    --accent: 150 58% 49%;
+    --accent-foreground: 160 25% 9%;
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 40 33% 98%;
+    --border: 160 15% 22%;
+    --input: 160 15% 22%;
+    --ring: 150 58% 49%;
   }
 
   * {
@@ -87,11 +111,11 @@
   }
 
   .gradient-brand {
-    background: linear-gradient(135deg, hsl(217 89% 51%) 0%, hsl(137 56% 43%) 100%);
+    background: linear-gradient(135deg, hsl(160 25% 9%) 0%, hsl(150 58% 49%) 100%);
   }
   .gradient-text {
     @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(135deg, hsl(217 89% 51%) 0%, hsl(137 56% 43%) 100%);
+    background-image: linear-gradient(135deg, hsl(160 25% 9%) 0%, hsl(150 58% 49%) 100%);
   }
   .gradient-text-google {
     background-image: linear-gradient(90deg, #4285f4 0%, #34a853 33%, #fbbc04 66%, #ea4335 100%);

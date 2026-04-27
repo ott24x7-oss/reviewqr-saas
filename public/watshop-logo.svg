@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 480" width="1600" height="480">
+  <title>WatShop — primary horizontal logo (3D)</title>
+  <defs>
+    <radialGradient id="dome3" cx="0.32" cy="0.18" r="1.05">
+      <stop offset="0" stop-color="#5DE89B"/>
+      <stop offset="0.38" stop-color="#2BAE69"/>
+      <stop offset="0.85" stop-color="#0F5132"/>
+      <stop offset="1" stop-color="#082818"/>
+    </radialGradient>
+    <linearGradient id="bevel3" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.55"/>
+      <stop offset="0.45" stop-color="#FFFFFF" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.30"/>
+    </linearGradient>
+    <radialGradient id="gloss3" cx="0.5" cy="0.22" r="0.62">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.40"/>
+      <stop offset="0.55" stop-color="#FFFFFF" stop-opacity="0.04"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="wFace3" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#C8DDD0"/>
+    </linearGradient>
+    <radialGradient id="dotGloss3" cx="0.4" cy="0.3" r="0.6">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.55"/>
+      <stop offset="0.7" stop-color="#FFFFFF" stop-opacity="0.05"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="markShadow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#000000" stop-opacity="0.30"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="markClip">
+      <rect x="60" y="60" width="360" height="360" rx="93"/>
+    </clipPath>
+  </defs>
+
+  <!-- mark drop shadow -->
+  <ellipse cx="240" cy="442" rx="170" ry="14" fill="url(#markShadow)"/>
+
+  <!-- ============ 3D MARK (compressed proportionally) ============ -->
+  <rect x="60" y="60" width="360" height="360" rx="93" fill="url(#dome3)"/>
+  <g clip-path="url(#markClip)">
+    <rect x="60" y="126" width="360" height="13" fill="#0A2A18" opacity="0.30"/>
+    <rect x="60" y="121" width="360" height="9" fill="#5DE89B"/>
+    <rect x="60" y="132" width="360" height="3" fill="#2BAE69"/>
+  </g>
+  <!-- W shadow -->
+  <g transform="translate(0, 5)" opacity="0.45">
+    <path d="M 144 195 L 188 326 L 240 224 L 292 326 L 336 195"
+          fill="none" stroke="#0A2A18" stroke-width="29"
+          stroke-linejoin="miter" stroke-linecap="butt" stroke-miterlimit="2"/>
+  </g>
+  <path d="M 144 195 L 188 326 L 240 224 L 292 326 L 336 195"
+        fill="none" stroke="url(#wFace3)" stroke-width="29"
+        stroke-linejoin="miter" stroke-linecap="butt" stroke-miterlimit="2"/>
+  <path d="M 144 195 L 188 326"
+        fill="none" stroke="#FFFFFF" stroke-width="6"
+        stroke-linejoin="miter" opacity="0.35"/>
+  <rect x="60" y="60" width="360" height="360" rx="93" fill="url(#gloss3)"/>
+  <!-- gem -->
+  <g transform="translate(367, 128)">
+    <circle r="22" fill="#0A2818" opacity="0.85"/>
+    <circle r="18" fill="#34C77B"/>
+    <circle r="18" fill="url(#dotGloss3)"/>
+    <ellipse cx="-4" cy="-5" rx="5" ry="3.5" fill="#FFFFFF" opacity="0.65"/>
+  </g>
+  <rect x="60" y="60" width="360" height="360" rx="93"
+        fill="none" stroke="url(#bevel3)" stroke-width="2"/>
+
+  <!-- ============ WORDMARK ============ -->
+  <g font-family="Inter, 'Helvetica Neue', Arial, sans-serif">
+    <text x="476" y="284" font-size="160" font-weight="700" fill="#0F1F1A" letter-spacing="-6">wat</text>
+    <text x="772" y="284" font-size="160" font-weight="700" fill="#34C77B" letter-spacing="-6">·</text>
+    <text x="836" y="284" font-size="160" font-weight="700" fill="#0F1F1A" letter-spacing="-6">shop</text>
+    <text x="478" y="354" font-size="26" font-weight="600" fill="#5A6B66" letter-spacing="6">WHATSAPP  ·  AUTOMATION  ·  SAAS</text>
+  </g>
+</svg>

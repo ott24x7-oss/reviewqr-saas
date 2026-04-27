@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import Link from "next/link";
-import { Menu, X, Star, Sparkles } from "lucide-react";
+import { Menu, X, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -34,11 +34,13 @@ export function MarketingNavbar() {
       )}
     >
       <div className="container max-w-6xl flex h-16 items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 font-bold text-xl">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg gradient-brand shadow-md">
-            <Star className="h-5 w-5 fill-white text-white" />
-          </span>
-          <span className="font-display">ReviewQR</span>
+        <Link href="/" className="flex items-center gap-2" aria-label="WatShop Review home">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/watshop-review-lockup.svg"
+            alt="WatShop Review"
+            className="h-8 w-auto"
+          />
         </Link>
 
         <nav className="hidden md:flex items-center gap-8">
