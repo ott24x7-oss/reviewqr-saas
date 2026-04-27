@@ -17,7 +17,7 @@ import {
   ChevronLeft,
   Copy,
   Check,
-  RefreshCw
+  Pencil
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -85,7 +85,7 @@ type Step =
   | "feedback"
   | "thank-you-google"
   | "thank-you-private";
-type Tab = "review" | "reviews" | "info";
+type Tab = "reviews" | "info";
 
 async function safeClipboard(text: string): Promise<boolean> {
   if (typeof navigator === "undefined") return false;
@@ -130,7 +130,7 @@ type TemplatePick = { id: string; content: string };
 
 export function ReviewFlow(props: Props) {
   const [step, setStep] = React.useState<Step>("rate");
-  const [tab, setTab] = React.useState<Tab>("review");
+  const [tab, setTab] = React.useState<Tab>("reviews");
   const [rating, setRating] = React.useState(0);
   const [hoverRating, setHoverRating] = React.useState(0);
   const [feedback, setFeedback] = React.useState("");
@@ -346,7 +346,7 @@ export function ReviewFlow(props: Props) {
             type="button"
             onClick={() => {
               setStep("rate");
-              setTab("review");
+              setTab("reviews");
             }}
             className="absolute top-3 left-3 inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-black/40 text-white text-xs backdrop-blur-sm hover:bg-black/60"
           >
@@ -437,7 +437,20 @@ export function ReviewFlow(props: Props) {
         )}
       </div>
 
-      {/* Action chips */}
+      {/* PRIMARY CTA — star rating, always at top on the rate step */}
+      {step === "rate" && (
+        <RateStep
+          business={business}
+          staff={props.staff}
+          rating={rating}
+          hoverRating={hoverRating}
+          setHoverRating={setHoverRating}
+          pickRating={pickRating}
+          loading={loading || templatesLoading}
+        />
+      )}
+
+      {/* Action chips (secondary) */}
       {!inSubFlow && (
         <div className="container max-w-2xl px-4 mt-4">
           <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
@@ -481,14 +494,16 @@ export function ReviewFlow(props: Props) {
         </div>
       )}
 
-      {/* Tabs */}
+      {/* Tabs (Reviews / Info — for browsing) */}
       {!inSubFlow && (
         <div className="container max-w-2xl px-4 mt-5">
           <div className="border-b border-slate-200 flex gap-6">
             {(
               [
-                { id: "review", label: "Leave a review" },
-                { id: "reviews", label: `Reviews${props.reviews.length ? ` · ${props.reviews.length}` : ""}` },
+                {
+                  id: "reviews",
+                  label: `Reviews${props.reviews.length ? ` · ${props.reviews.length}` : ""}`
+                },
                 { id: "info", label: "Info" }
               ] as const
             ).map((t) => (
@@ -512,31 +527,8 @@ export function ReviewFlow(props: Props) {
       )}
 
       <main className="flex-1">
-        {step === "rate" && tab === "review" && (
-          <RateStep
-            business={business}
-            staff={props.staff}
-            rating={rating}
-            hoverRating={hoverRating}
-            setHoverRating={setHoverRating}
-            pickRating={pickRating}
-            loading={loading || templatesLoading}
-          />
-        )}
         {step === "rate" && tab === "reviews" && <ReviewsTab reviews={props.reviews} />}
         {step === "rate" && tab === "info" && <InfoTab business={business} />}
-
-        {step === "pick-template" && (
-          <PickTemplateStep
-            business={business}
-            templates={templates}
-            pickedId={pickedId}
-            loading={loading}
-            accent={accent}
-            onPick={onPickTemplate}
-            onSkip={() => goToGoogleReview(rating)}
-          />
-        )}
 
         {step === "feedback" && (
           <FeedbackStep
@@ -574,6 +566,18 @@ export function ReviewFlow(props: Props) {
           Powered by <b className="text-slate-600">ReviewQR</b>
         </a>
       </footer>
+
+      {/* Full-screen template picker — covers everything else when active */}
+      {step === "pick-template" && (
+        <PickTemplateModal
+          templates={templates}
+          pickedId={pickedId}
+          loading={loading}
+          accent={accent}
+          onPick={onPickTemplate}
+          onSkip={() => goToGoogleReview(rating)}
+        />
+      )}
     </div>
   );
 }
@@ -725,8 +729,7 @@ function RateStep({
   );
 }
 
-function PickTemplateStep({
-  business,
+function PickTemplateModal({
   templates,
   pickedId,
   loading,
@@ -734,7 +737,6 @@ function PickTemplateStep({
   onPick,
   onSkip
 }: {
-  business: Business;
   templates: TemplatePick[];
   pickedId: string | null;
   loading: boolean;
@@ -742,81 +744,120 @@ function PickTemplateStep({
   onPick: (t: TemplatePick) => void;
   onSkip: () => void;
 }) {
+  // Lock body scroll while the modal is open.
+  React.useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
+  // Show only 3 templates per the requested UX.
+  const visible = templates.slice(0, 3);
+
   return (
-    <div className="container max-w-2xl px-4 py-6 sm:py-8">
-      <div className="rounded-2xl bg-white border border-slate-200 shadow-sm p-5 sm:p-7">
-        <div className="flex justify-center gap-1 mb-3">
+    <div
+      className="fixed inset-0 z-50 bg-white overflow-y-auto"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="pick-template-heading"
+    >
+      <div className="min-h-full container max-w-2xl px-4 py-6 sm:py-10 flex flex-col">
+        <div className="flex justify-center gap-1 mb-4">
           {[1, 2, 3, 4, 5].map((n) => (
-            <Star key={n} className="h-5 w-5 fill-amber-400 text-amber-400" />
+            <Star
+              key={n}
+              className="h-7 w-7 fill-amber-400 text-amber-400 drop-shadow-sm"
+            />
           ))}
         </div>
-        <h2 className="text-xl sm:text-2xl font-bold text-center tracking-tight">
-          Help others find {business.name}
+
+        <h2
+          id="pick-template-heading"
+          className="text-2xl sm:text-3xl font-bold text-center tracking-tight"
+        >
+          <span
+            className="px-3 py-1 rounded-lg"
+            style={{ background: `${accent}1a`, color: accent }}
+          >
+            Select your content
+          </span>
         </h2>
-        <p className="mt-1.5 text-sm text-slate-500 text-center max-w-md mx-auto">
-          Pick a review you'd like to leave on Google. We'll copy it for you — just paste it on
-          Google's form.
+        <p className="mt-3 text-sm text-slate-600 text-center max-w-md mx-auto">
+          Tap <b>Copy</b> on the review you'd like to leave. We'll copy it to your clipboard —
+          just paste it on Google's form.
         </p>
 
-        <div className="mt-5 space-y-2.5">
-          {templates.map((t) => {
+        <div className="mt-6 space-y-3">
+          {visible.map((t) => {
             const isPicked = pickedId === t.id;
             return (
-              <button
+              <div
                 key={t.id}
-                type="button"
-                disabled={loading}
-                onClick={() => onPick(t)}
                 className={cn(
-                  "w-full text-left rounded-xl border p-4 transition group",
-                  "hover:border-slate-400 hover:shadow-sm",
-                  "disabled:cursor-not-allowed",
-                  isPicked
-                    ? "border-emerald-500 bg-emerald-50/50"
-                    : "border-slate-200 bg-white"
+                  "rounded-2xl border p-4 sm:p-5 transition",
+                  isPicked ? "border-emerald-400 bg-emerald-50/40" : "border-slate-200 bg-white"
                 )}
-                style={isPicked ? { borderColor: accent, background: `${accent}0d` } : undefined}
+                style={
+                  isPicked ? { borderColor: accent, background: `${accent}0d` } : undefined
+                }
               >
-                <div className="flex items-start gap-3">
-                  <div
-                    className={cn(
-                      "h-8 w-8 rounded-full flex items-center justify-center shrink-0 transition",
-                      isPicked ? "text-white" : "text-slate-400 group-hover:text-slate-600"
-                    )}
-                    style={isPicked ? { background: accent } : { background: "#f1f5f9" }}
+                <p className="text-[15px] leading-relaxed text-slate-800 whitespace-pre-line">
+                  {t.content}
+                </p>
+                <div className="mt-3 flex justify-end">
+                  <Button
+                    type="button"
+                    onClick={() => onPick(t)}
+                    disabled={loading}
+                    size="sm"
+                    className="min-w-[110px]"
+                    style={
+                      isPicked
+                        ? undefined
+                        : { background: accent, borderColor: accent, color: "#fff" }
+                    }
+                    variant={isPicked ? "outline" : "default"}
                   >
                     {isPicked ? (
                       loading ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" /> Copying…
+                        </>
                       ) : (
-                        <Check className="h-4 w-4" />
+                        <>
+                          <Check className="h-4 w-4" /> Copied
+                        </>
                       )
                     ) : (
-                      <Copy className="h-3.5 w-3.5" />
+                      <>
+                        <Copy className="h-4 w-4" /> Copy
+                      </>
                     )}
-                  </div>
-                  <p className="text-sm leading-relaxed text-slate-700 flex-1">{t.content}</p>
+                  </Button>
                 </div>
-              </button>
+              </div>
             );
           })}
         </div>
 
-        <div className="mt-5 flex flex-col sm:flex-row gap-2">
+        {/* "I'll write my own" — below the 3 prefilled options */}
+        <div className="mt-6 pt-5 border-t border-slate-200">
           <Button
             type="button"
             variant="outline"
-            className="flex-1"
+            size="lg"
+            className="w-full"
             onClick={onSkip}
             disabled={loading}
           >
-            <RefreshCw className="h-4 w-4" /> Write my own
+            <Pencil className="h-4 w-4" /> I'll write my own
           </Button>
         </div>
 
-        <p className="mt-3 text-[11px] text-slate-400 text-center">
-          Each review here is shown to a single customer only. Once you pick one, the next
-          customer sees fresh options.
+        <p className="mt-4 text-[11px] text-slate-400 text-center">
+          Each review is shown to a single customer only — the next person sees fresh options.
         </p>
       </div>
     </div>

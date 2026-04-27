@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
     FROM "ReviewTemplate"
     WHERE "businessId" = ${business.id} AND "used" = false
     ORDER BY RANDOM()
-    LIMIT 4
+    LIMIT 3
   `) as Array<{ id: string; content: string }>;
 
   return NextResponse.json({
