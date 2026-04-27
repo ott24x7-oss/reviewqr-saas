@@ -163,6 +163,7 @@ model Business {
   campaigns    Campaign[]
   contacts     Contact[]
   tags         FeedbackTag[]
+  reviewTemplates ReviewTemplate[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -527,6 +528,22 @@ model AuditLog {
 
   @@index([userId])
   @@index([entity, entityId])
+}
+
+// Per-business stock of pre-written positive reviews. After a happy
+// customer copies one to paste on Google, the row flips to used=true so
+// no two customers ever post the same text.
+model ReviewTemplate {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  content    String   @db.Text
+  used       Boolean  @default(false)
+  usedAt     DateTime?
+  usedIp     String?
+  createdAt  DateTime @default(now())
+
+  @@index([businessId, used])
 }
 
 // Admin-editable key/value config (overrides env). value holds JSON.

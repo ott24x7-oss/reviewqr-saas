@@ -14,7 +14,10 @@ import {
   Share2,
   Navigation,
   BadgeCheck,
-  ChevronLeft
+  ChevronLeft,
+  Copy,
+  Check,
+  RefreshCw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,8 +79,38 @@ const TAGS = [
   { id: "cleanliness", label: "Cleanliness" }
 ];
 
-type Step = "rate" | "feedback" | "thank-you-google" | "thank-you-private";
+type Step =
+  | "rate"
+  | "pick-template"
+  | "feedback"
+  | "thank-you-google"
+  | "thank-you-private";
 type Tab = "review" | "reviews" | "info";
+
+async function safeClipboard(text: string): Promise<boolean> {
+  if (typeof navigator === "undefined") return false;
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {}
+  // Legacy fallback for older Safari / non-secure contexts.
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    return ok;
+  } catch {
+    return false;
+  }
+}
 
 function timeAgoShort(iso: string) {
   const d = new Date(iso);
@@ -93,6 +126,8 @@ function fullAddress(b: Business) {
   return [b.address, b.city, b.state, b.pincode].filter(Boolean).join(", ");
 }
 
+type TemplatePick = { id: string; content: string };
+
 export function ReviewFlow(props: Props) {
   const [step, setStep] = React.useState<Step>("rate");
   const [tab, setTab] = React.useState<Tab>("review");
@@ -105,6 +140,9 @@ export function ReviewFlow(props: Props) {
   const [tags, setTags] = React.useState<string[]>([]);
   const [npsScore, setNpsScore] = React.useState<number | null>(null);
   const [loading, setLoading] = React.useState(false);
+  const [templates, setTemplates] = React.useState<TemplatePick[]>([]);
+  const [templatesLoading, setTemplatesLoading] = React.useState(false);
+  const [pickedId, setPickedId] = React.useState<string | null>(null);
 
   const { business } = props;
   const accent = business.primaryColor || "#1a73e8";
@@ -112,10 +150,36 @@ export function ReviewFlow(props: Props) {
   function pickRating(n: number) {
     setRating(n);
     if (n >= business.ratingThreshold && business.googleReviewUrl) {
-      setTimeout(() => goToGoogleReview(n), 350);
+      // High rating + Google URL: try to fetch templates first.
+      // If stock is empty we redirect immediately like before.
+      setTimeout(() => onHighRating(n), 250);
     } else {
       setTimeout(() => setStep("feedback"), 250);
     }
+  }
+
+  async function onHighRating(stars: number) {
+    setTemplatesLoading(true);
+    try {
+      const res = await fetch(
+        `/api/public/review-templates/pick?slug=${encodeURIComponent(business.slug)}`,
+        { cache: "no-store" }
+      );
+      const j = await res.json().catch(() => ({}));
+      const items: TemplatePick[] = Array.isArray(j.items) ? j.items : [];
+      if (items.length > 0) {
+        setTemplates(items);
+        setStep("pick-template");
+        // Track the rating now (redirected = true) so analytics still capture it
+        submitReview({ rating: stars, feedback: "", redirected: true }).catch(() => {});
+        return;
+      }
+    } catch {
+      // fall through to instant redirect
+    } finally {
+      setTemplatesLoading(false);
+    }
+    goToGoogleReview(stars);
   }
 
   async function goToGoogleReview(stars: number) {
@@ -125,6 +189,64 @@ export function ReviewFlow(props: Props) {
     } catch {}
     if (business.googleReviewUrl) window.location.href = business.googleReviewUrl;
     else setStep("thank-you-google");
+  }
+
+  async function onPickTemplate(t: TemplatePick) {
+    setPickedId(t.id);
+    setLoading(true);
+    let textToCopy = t.content;
+    try {
+      const res = await fetch("/api/public/review-templates/consume", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ slug: business.slug, templateId: t.id })
+      });
+      if (res.status === 409) {
+        // Race — someone else just took this one. Refetch and let the user pick again.
+        toast.message("Just taken — pick another");
+        const fresh = await fetch(
+          `/api/public/review-templates/pick?slug=${encodeURIComponent(business.slug)}`,
+          { cache: "no-store" }
+        );
+        const j = await fresh.json().catch(() => ({}));
+        if (Array.isArray(j.items) && j.items.length > 0) {
+          setTemplates(j.items);
+          setPickedId(null);
+          setLoading(false);
+          return;
+        }
+        // nothing left — go to Google with no copy
+      } else if (!res.ok) {
+        throw new Error("Couldn't claim review");
+      } else {
+        const j = await res.json();
+        if (j.content) textToCopy = j.content;
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Something went wrong");
+      setPickedId(null);
+      setLoading(false);
+      return;
+    }
+
+    // Copy to clipboard. Need a user gesture to satisfy mobile browsers — this
+    // function runs from a button onClick so we're inside one.
+    const copied = await safeClipboard(textToCopy);
+    if (copied) {
+      toast.success("Copied! Paste it on Google's review form.");
+    } else {
+      toast.message("Long-press the highlighted text to copy.");
+    }
+
+    // Brief pause so the toast registers, then redirect.
+    setTimeout(() => {
+      if (business.googleReviewUrl) {
+        window.location.href = business.googleReviewUrl;
+      } else {
+        setStep("thank-you-google");
+        setLoading(false);
+      }
+    }, 900);
   }
 
   async function submitReview(opts: { rating: number; feedback: string; redirected: boolean }) {
@@ -190,7 +312,11 @@ export function ReviewFlow(props: Props) {
   const callUrl = business.phone ? `tel:${business.phone.replace(/\s/g, "")}` : null;
 
   // mid-step screens (post-rating). We hide the tab UI on these.
-  const inSubFlow = step === "feedback" || step === "thank-you-google" || step === "thank-you-private";
+  const inSubFlow =
+    step === "feedback" ||
+    step === "pick-template" ||
+    step === "thank-you-google" ||
+    step === "thank-you-private";
 
   return (
     <div className="min-h-screen bg-[#f8fafc] flex flex-col" style={{ "--accent": accent } as any}>
@@ -394,11 +520,23 @@ export function ReviewFlow(props: Props) {
             hoverRating={hoverRating}
             setHoverRating={setHoverRating}
             pickRating={pickRating}
-            loading={loading}
+            loading={loading || templatesLoading}
           />
         )}
         {step === "rate" && tab === "reviews" && <ReviewsTab reviews={props.reviews} />}
         {step === "rate" && tab === "info" && <InfoTab business={business} />}
+
+        {step === "pick-template" && (
+          <PickTemplateStep
+            business={business}
+            templates={templates}
+            pickedId={pickedId}
+            loading={loading}
+            accent={accent}
+            onPick={onPickTemplate}
+            onSkip={() => goToGoogleReview(rating)}
+          />
+        )}
 
         {step === "feedback" && (
           <FeedbackStep
@@ -582,6 +720,104 @@ function RateStep({
             Taking you to Google…
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function PickTemplateStep({
+  business,
+  templates,
+  pickedId,
+  loading,
+  accent,
+  onPick,
+  onSkip
+}: {
+  business: Business;
+  templates: TemplatePick[];
+  pickedId: string | null;
+  loading: boolean;
+  accent: string;
+  onPick: (t: TemplatePick) => void;
+  onSkip: () => void;
+}) {
+  return (
+    <div className="container max-w-2xl px-4 py-6 sm:py-8">
+      <div className="rounded-2xl bg-white border border-slate-200 shadow-sm p-5 sm:p-7">
+        <div className="flex justify-center gap-1 mb-3">
+          {[1, 2, 3, 4, 5].map((n) => (
+            <Star key={n} className="h-5 w-5 fill-amber-400 text-amber-400" />
+          ))}
+        </div>
+        <h2 className="text-xl sm:text-2xl font-bold text-center tracking-tight">
+          Help others find {business.name}
+        </h2>
+        <p className="mt-1.5 text-sm text-slate-500 text-center max-w-md mx-auto">
+          Pick a review you'd like to leave on Google. We'll copy it for you — just paste it on
+          Google's form.
+        </p>
+
+        <div className="mt-5 space-y-2.5">
+          {templates.map((t) => {
+            const isPicked = pickedId === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                disabled={loading}
+                onClick={() => onPick(t)}
+                className={cn(
+                  "w-full text-left rounded-xl border p-4 transition group",
+                  "hover:border-slate-400 hover:shadow-sm",
+                  "disabled:cursor-not-allowed",
+                  isPicked
+                    ? "border-emerald-500 bg-emerald-50/50"
+                    : "border-slate-200 bg-white"
+                )}
+                style={isPicked ? { borderColor: accent, background: `${accent}0d` } : undefined}
+              >
+                <div className="flex items-start gap-3">
+                  <div
+                    className={cn(
+                      "h-8 w-8 rounded-full flex items-center justify-center shrink-0 transition",
+                      isPicked ? "text-white" : "text-slate-400 group-hover:text-slate-600"
+                    )}
+                    style={isPicked ? { background: accent } : { background: "#f1f5f9" }}
+                  >
+                    {isPicked ? (
+                      loading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Check className="h-4 w-4" />
+                      )
+                    ) : (
+                      <Copy className="h-3.5 w-3.5" />
+                    )}
+                  </div>
+                  <p className="text-sm leading-relaxed text-slate-700 flex-1">{t.content}</p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mt-5 flex flex-col sm:flex-row gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            className="flex-1"
+            onClick={onSkip}
+            disabled={loading}
+          >
+            <RefreshCw className="h-4 w-4" /> Write my own
+          </Button>
+        </div>
+
+        <p className="mt-3 text-[11px] text-slate-400 text-center">
+          Each review here is shown to a single customer only. Once you pick one, the next
+          customer sees fresh options.
+        </p>
       </div>
     </div>
   );

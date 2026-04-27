@@ -5,7 +5,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { absoluteUrl } from "@/lib/utils";
-import { ExternalLink, QrCode, MapPin, Users, Edit3, Star } from "lucide-react";
+import { ExternalLink, QrCode, MapPin, Users, Edit3, Star, FileText } from "lucide-react";
 import { getReviewUrl } from "@/lib/qr";
 import { BusinessActions } from "./business-actions";
 
@@ -18,7 +18,16 @@ export default async function BusinessDetailPage({ params }: { params: { id: str
   const business = await prisma.business.findFirst({
     where: { id: params.id, ownerId: user.id, archived: false },
     include: {
-      _count: { select: { reviews: true, locations: true, staffMembers: true, qrCodes: true, feedbacks: true } },
+      _count: {
+        select: {
+          reviews: true,
+          locations: true,
+          staffMembers: true,
+          qrCodes: true,
+          feedbacks: true,
+          reviewTemplates: true
+        }
+      },
       reviews: { select: { rating: true, redirected: true }, take: 1000, orderBy: { createdAt: "desc" } }
     }
   });
@@ -91,7 +100,7 @@ export default async function BusinessDetailPage({ params }: { params: { id: str
       <BusinessActions business={business} reviewUrl={reviewUrl} />
 
       {/* Sub-resources nav */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <Link href={`/dashboard/businesses/${business.id}/locations`}>
           <Card className="hover:shadow-card transition cursor-pointer">
             <CardContent className="p-5 flex items-start gap-3">
@@ -127,6 +136,21 @@ export default async function BusinessDetailPage({ params }: { params: { id: str
               <div>
                 <div className="font-semibold">QR codes</div>
                 <div className="text-xs text-muted-foreground">{business._count.qrCodes} active</div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href={`/dashboard/businesses/${business.id}/review-templates`}>
+          <Card className="hover:shadow-card transition cursor-pointer">
+            <CardContent className="p-5 flex items-start gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
+                <FileText className="h-5 w-5" />
+              </span>
+              <div>
+                <div className="font-semibold">Review templates</div>
+                <div className="text-xs text-muted-foreground">
+                  {business._count.reviewTemplates} in stock
+                </div>
               </div>
             </CardContent>
           </Card>
