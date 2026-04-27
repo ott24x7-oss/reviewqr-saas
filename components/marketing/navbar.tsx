@@ -37,10 +37,12 @@ export function MarketingNavbar() {
         <Link href="/" className="flex items-center gap-2" aria-label="WatShop Review home">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
+            data-brand-logo
             src="/watshop-review-lockup.svg"
             alt="WatShop Review"
             className="h-8 w-auto"
           />
+          <span data-brand-name className="sr-only">WatShop Review</span>
         </Link>
 
         <nav className="hidden md:flex items-center gap-8">

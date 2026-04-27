@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   LogOut,
   Menu,
+  Palette,
   X
 } from "lucide-react";
 import { cn, getInitials } from "@/lib/utils";
@@ -30,6 +31,7 @@ const nav = [
   { href: "/admin/email", label: "Email", icon: Mail },
   { href: "/admin/whatsapp", label: "WhatsApp", icon: MessageCircle },
   { href: "/admin/site", label: "Site Settings", icon: Globe },
+  { href: "/admin/branding", label: "Frontend Branding", icon: Palette },
   { href: "/admin/audit", label: "Audit Log", icon: History }
 ];
 

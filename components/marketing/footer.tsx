@@ -8,12 +8,15 @@ export function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
           <div className="col-span-2">
             <Link href="/" className="flex items-center gap-2 font-bold text-xl">
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg gradient-brand">
+              <span
+                data-brand-logo
+                className="flex h-9 w-9 items-center justify-center rounded-lg gradient-brand bg-cover bg-center"
+              >
                 <Star className="h-5 w-5 fill-white text-white" />
               </span>
-              <span className="font-display">ReviewQR</span>
+              <span data-brand-name className="font-display">ReviewQR</span>
             </Link>
-            <p className="mt-3 text-sm text-muted-foreground max-w-xs leading-relaxed">
+            <p data-brand-tagline className="mt-3 text-sm text-muted-foreground max-w-xs leading-relaxed">
               The simplest way for Indian SMBs to grow Google reviews and catch unhappy customers privately.
             </p>
             <div className="mt-4 space-y-1.5 text-sm">
@@ -46,7 +49,7 @@ export function Footer() {
         </div>
 
         <div className="mt-10 pt-6 border-t flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-muted-foreground">
-          <div>© {new Date().getFullYear()} ReviewQR. Made in India 🇮🇳</div>
+          <div data-brand-footer>© {new Date().getFullYear()} ReviewQR. Made in India 🇮🇳</div>
           <div className="flex gap-4">
             <span>GST: 29ABCDE1234F1Z5</span>
             <span>·</span>

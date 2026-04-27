@@ -72,6 +72,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+        {/* Runtime branding patcher — fetches /api/branding and overrides
+            [data-brand-*] elements + --brand-primary on every public page.
+            Admin chrome doesn't tag any elements with these attributes, so
+            it's safe to load globally. */}
+        <script src="/js/branding.js" defer />
       </head>
       <body className="min-h-screen bg-background font-sans antialiased">
         <Providers>

@@ -554,6 +554,19 @@ model AppSetting {
   updatedBy String?
 }
 
+// Singleton: admin-overridable branding for the WatShop Review *platform*
+// marketing site (review.watshop.in). Per-tenant business branding lives on
+// the Business model — do not conflate the two.
+model PlatformBranding {
+  id           String   @id @default("singleton")
+  logoDataUrl  String   @default("")
+  brandName    String   @default("")
+  tagline      String   @default("")
+  footerText   String   @default("")
+  primaryColor String   @default("")
+  updatedAt    DateTime @updatedAt
+}
+
 model Testimonial {
   id          String  @id @default(cuid())
   businessId  String
