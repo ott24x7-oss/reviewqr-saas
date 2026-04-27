@@ -164,16 +164,16 @@ export default function DemoPage() {
           </div>
 
           <div className="mt-8 flex justify-center">
-            {/* Phone-frame wrapper */}
-            <div className="relative">
-              <div className="absolute -inset-3 rounded-[2.5rem] gradient-brand opacity-10 blur-2xl" />
-              <div className="relative rounded-[2.5rem] bg-slate-900 p-3 shadow-2xl">
-                <div className="rounded-[2rem] overflow-hidden bg-white relative">
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 z-10 h-6 w-32 bg-slate-900 rounded-b-2xl" />
+            {/* Phone-frame wrapper — fluid width on mobile, capped at 400px on desktop */}
+            <div className="relative w-full max-w-[400px] mx-auto">
+              <div className="absolute -inset-3 rounded-[2.5rem] gradient-brand opacity-10 blur-2xl pointer-events-none" />
+              <div className="relative rounded-[2.25rem] sm:rounded-[2.5rem] bg-slate-900 p-2 sm:p-3 shadow-2xl">
+                <div className="rounded-[1.75rem] sm:rounded-[2rem] overflow-hidden bg-white relative">
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 z-10 h-5 sm:h-6 w-20 sm:w-32 bg-slate-900 rounded-b-2xl" />
                   <iframe
                     src={DEMO_REVIEW_URL}
                     title="ReviewQR live demo"
-                    className="block w-[340px] sm:w-[380px] h-[680px] sm:h-[720px] border-0"
+                    className="block w-full h-[78svh] min-h-[560px] max-h-[780px] sm:h-[720px] border-0"
                     loading="lazy"
                   />
                 </div>
