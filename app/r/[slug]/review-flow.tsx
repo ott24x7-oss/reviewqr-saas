@@ -87,6 +87,67 @@ type Step =
   | "thank-you-private";
 type Tab = "reviews" | "info";
 
+/**
+ * Returns true if the page is rendered inside an iframe. Wrapped in
+ * try/catch because cross-origin embeds can throw on `window.top` access.
+ */
+function isInIframe(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.top !== window.self;
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * When we're inside an iframe, browsers block `window.location.href = ...`
+ * if the destination has X-Frame-Options (Google's review page does), and
+ * an async fetch in between can also strip the user-gesture context that
+ * `window.open` needs to bypass popup blockers. So we synchronously
+ * reserve a blank tab the moment the user clicks, then navigate that
+ * tab once the fetch + clipboard work finishes.
+ *
+ * Returns null when we're not in an iframe — same-tab navigation works
+ * fine in that case.
+ */
+function reserveExternalTab(): Window | null {
+  if (typeof window === "undefined") return null;
+  if (!isInIframe()) return null;
+  try {
+    return window.open("about:blank", "_blank");
+  } catch {
+    return null;
+  }
+}
+
+function navigateExternal(url: string, reserved?: Window | null) {
+  if (typeof window === "undefined") return;
+  if (reserved && !reserved.closed) {
+    try {
+      reserved.location.href = url;
+      return;
+    } catch {
+      // fall through
+    }
+  }
+  if (isInIframe()) {
+    const win = window.open(url, "_blank");
+    if (win) return;
+    // Popup blocker swallowed it. Try breaking out via window.top
+    // (works if same-origin), otherwise navigate the iframe itself.
+    try {
+      if (window.top) {
+        window.top.location.href = url;
+        return;
+      }
+    } catch {}
+    window.location.href = url;
+    return;
+  }
+  window.location.href = url;
+}
+
 async function safeClipboard(text: string): Promise<boolean> {
   if (typeof navigator === "undefined") return false;
   try {
@@ -159,6 +220,9 @@ export function ReviewFlow(props: Props) {
   }
 
   async function onHighRating(stars: number) {
+    // Reserve a tab while the user-gesture is still fresh so the popup
+    // blocker doesn't kick in if we end up redirecting after the fetch.
+    const reserved = reserveExternalTab();
     setTemplatesLoading(true);
     try {
       const res = await fetch(
@@ -168,6 +232,8 @@ export function ReviewFlow(props: Props) {
       const j = await res.json().catch(() => ({}));
       const items: TemplatePick[] = Array.isArray(j.items) ? j.items : [];
       if (items.length > 0) {
+        // Showing the modal — we don't redirect, so close the reserved tab.
+        reserved?.close();
         setTemplates(items);
         setStep("pick-template");
         // Track the rating now (redirected = true) so analytics still capture it
@@ -179,19 +245,28 @@ export function ReviewFlow(props: Props) {
     } finally {
       setTemplatesLoading(false);
     }
-    goToGoogleReview(stars);
+    goToGoogleReview(stars, reserved);
   }
 
-  async function goToGoogleReview(stars: number) {
+  async function goToGoogleReview(stars: number, reserved?: Window | null) {
+    const tab = reserved ?? reserveExternalTab();
     setLoading(true);
     try {
       await submitReview({ rating: stars, feedback: "", redirected: true });
     } catch {}
-    if (business.googleReviewUrl) window.location.href = business.googleReviewUrl;
-    else setStep("thank-you-google");
+    if (business.googleReviewUrl) {
+      navigateExternal(business.googleReviewUrl, tab);
+    } else {
+      tab?.close();
+      setStep("thank-you-google");
+    }
   }
 
   async function onPickTemplate(t: TemplatePick) {
+    // Reserve a new tab synchronously inside the click handler so iframe
+    // popup-blockers honour the user gesture even after the async fetch.
+    const reserved = reserveExternalTab();
+
     setPickedId(t.id);
     setLoading(true);
     let textToCopy = t.content;
@@ -203,6 +278,7 @@ export function ReviewFlow(props: Props) {
       });
       if (res.status === 409) {
         // Race — someone else just took this one. Refetch and let the user pick again.
+        reserved?.close();
         toast.message("Just taken — pick another");
         const fresh = await fetch(
           `/api/public/review-templates/pick?slug=${encodeURIComponent(business.slug)}`,
@@ -223,6 +299,7 @@ export function ReviewFlow(props: Props) {
         if (j.content) textToCopy = j.content;
       }
     } catch (e: any) {
+      reserved?.close();
       toast.error(e.message || "Something went wrong");
       setPickedId(null);
       setLoading(false);
@@ -241,8 +318,9 @@ export function ReviewFlow(props: Props) {
     // Brief pause so the toast registers, then redirect.
     setTimeout(() => {
       if (business.googleReviewUrl) {
-        window.location.href = business.googleReviewUrl;
+        navigateExternal(business.googleReviewUrl, reserved);
       } else {
+        reserved?.close();
         setStep("thank-you-google");
         setLoading(false);
       }
