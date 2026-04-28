@@ -52,6 +52,7 @@ export type WhatsAppConfig = {
 
 export type SiteConfig = {
   appName: string;
+  logoUrl: string;
   supportEmail: string;
   appUrl: string;
   marketingTagline: string;
@@ -195,6 +196,7 @@ export const DEFAULT_WHATSAPP: WhatsAppConfig = {
 
 export const DEFAULT_SITE: SiteConfig = {
   appName: "ReviewQR",
+  logoUrl: "",
   supportEmail: "hello@reviewqr.in",
   appUrl: "",
   marketingTagline: "Turn happy customers into Google reviews.",
@@ -309,6 +311,7 @@ export async function getSiteConfig(): Promise<SiteConfig> {
   const stored = await readKey<Partial<SiteConfig>>(SETTING_KEYS.site, {});
   return {
     appName: stored.appName || process.env.NEXT_PUBLIC_APP_NAME || DEFAULT_SITE.appName,
+    logoUrl: stored.logoUrl || DEFAULT_SITE.logoUrl,
     supportEmail: stored.supportEmail || DEFAULT_SITE.supportEmail,
     appUrl: stored.appUrl || process.env.NEXT_PUBLIC_APP_URL || "",
     marketingTagline: stored.marketingTagline || DEFAULT_SITE.marketingTagline,

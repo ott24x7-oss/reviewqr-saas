@@ -9,14 +9,15 @@ import { FAQ } from "@/components/marketing/faq";
 import { CTA } from "@/components/marketing/cta";
 import { Footer } from "@/components/marketing/footer";
 import { getPricingConfig } from "@/lib/settings";
+import { getBrand } from "@/lib/brand";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const plans = await getPricingConfig();
+  const [plans, brand] = await Promise.all([getPricingConfig(), getBrand()]);
   return (
     <main className="min-h-screen bg-white">
-      <MarketingNavbar />
+      <MarketingNavbar brand={brand} />
       <Hero />
       <Features />
       <HowItWorks />
@@ -25,7 +26,7 @@ export default async function HomePage() {
       <Testimonials />
       <FAQ />
       <CTA />
-      <Footer />
+      <Footer brand={brand} />
     </main>
   );
 }

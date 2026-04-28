@@ -59,12 +59,16 @@ const nav = [
 export function DashboardShell({
   user,
   businesses,
+  brand,
   children
 }: {
   user: User;
   businesses: Business[];
+  brand?: { name: string; logoUrl: string };
   children: React.ReactNode;
 }) {
+  const brandName = brand?.name || "ReviewQR";
+  const brandLogo = brand?.logoUrl || "";
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = React.useState(false);
@@ -96,10 +100,19 @@ export function DashboardShell({
               {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
             <Link href="/dashboard" className="flex items-center gap-2 font-bold">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg gradient-brand">
-                <Star className="h-4 w-4 fill-white text-white" />
-              </span>
-              <span className="font-display text-lg hidden sm:block">ReviewQR</span>
+              {brandLogo ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={brandLogo}
+                  alt={brandName}
+                  className="h-8 w-8 rounded-lg object-cover"
+                />
+              ) : (
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg gradient-brand">
+                  <Star className="h-4 w-4 fill-white text-white" />
+                </span>
+              )}
+              <span className="font-display text-lg hidden sm:block">{brandName}</span>
             </Link>
           </div>
 

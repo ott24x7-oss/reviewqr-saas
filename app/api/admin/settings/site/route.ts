@@ -9,8 +9,18 @@ export async function PUT(req: NextRequest) {
 
   const incoming = (await req.json().catch(() => ({}))) as any;
   const current = await getSiteConfig();
+
+  let logoUrl = current.logoUrl;
+  if (typeof incoming.logoUrl === "string") {
+    const v = incoming.logoUrl.trim();
+    if (v === "" || /^(https?:|data:image\/)/i.test(v)) {
+      logoUrl = v;
+    }
+  }
+
   const next = {
     appName: String(incoming.appName ?? current.appName).trim().slice(0, 60) || current.appName,
+    logoUrl,
     supportEmail: String(incoming.supportEmail ?? current.supportEmail).trim(),
     appUrl: String(incoming.appUrl ?? current.appUrl).trim().replace(/\/$/, ""),
     marketingTagline: String(incoming.marketingTagline ?? current.marketingTagline).slice(0, 300),

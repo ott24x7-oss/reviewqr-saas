@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ImageUpload } from "@/components/ui/image-upload";
 import { Loader2, Save } from "lucide-react";
 import type { SiteConfig, TurnstileConfig } from "@/lib/settings";
 
@@ -55,7 +56,14 @@ export function SiteForm({
         <CardHeader>
           <CardTitle>Branding</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-4">
+          <ImageUpload
+            variant="logo"
+            value={site.logoUrl || null}
+            onChange={(v) => setSite({ ...site, logoUrl: v || "" })}
+            label="App logo"
+            hint="Square image, replaces the default star icon across the site, dashboard, and emails."
+          />
           <div>
             <Label className="text-xs">App name</Label>
             <Input

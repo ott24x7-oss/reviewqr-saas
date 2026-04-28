@@ -67,6 +67,7 @@ type Props = {
   qrCode: string | null;
   stats: Stats;
   reviews: PublicReview[];
+  brand?: { name: string; appUrl: string };
 };
 
 const TAGS = [
@@ -636,12 +637,12 @@ export function ReviewFlow(props: Props) {
 
       <footer className="py-6 text-center text-xs text-slate-400">
         <a
-          href="https://reviewqr.in"
+          href={props.brand?.appUrl || "https://reviewqr.in"}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1 hover:text-slate-600"
         >
-          Powered by <b className="text-slate-600">ReviewQR</b>
+          Powered by <b className="text-slate-600">{props.brand?.name || "ReviewQR"}</b>
         </a>
       </footer>
 

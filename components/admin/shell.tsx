@@ -17,7 +17,6 @@ import {
   ShieldCheck,
   LogOut,
   Menu,
-  Palette,
   X
 } from "lucide-react";
 import { cn, getInitials } from "@/lib/utils";
@@ -31,17 +30,19 @@ const nav = [
   { href: "/admin/email", label: "Email", icon: Mail },
   { href: "/admin/whatsapp", label: "WhatsApp", icon: MessageCircle },
   { href: "/admin/site", label: "Site Settings", icon: Globe },
-  { href: "/admin/branding", label: "Frontend Branding", icon: Palette },
   { href: "/admin/audit", label: "Audit Log", icon: History }
 ];
 
 export function AdminShell({
   user,
+  brand,
   children
 }: {
   user: { name: string | null; email: string; image: string | null };
+  brand?: { name: string; logoUrl: string };
   children: React.ReactNode;
 }) {
+  const brandName = brand?.name || "ReviewQR";
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = React.useState(false);
   React.useEffect(() => setMobileOpen(false), [pathname]);
@@ -66,7 +67,7 @@ export function AdminShell({
               </span>
               <span className="font-display text-lg">Admin</span>
             </Link>
-            <span className="text-xs text-muted-foreground hidden sm:inline">/ ReviewQR</span>
+            <span className="text-xs text-muted-foreground hidden sm:inline">/ {brandName}</span>
           </div>
           <div className="flex items-center gap-2">
             <Link

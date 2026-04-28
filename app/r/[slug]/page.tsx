@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { ReviewFlow } from "./review-flow";
+import { getBrand } from "@/lib/brand";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -96,6 +97,8 @@ export default async function ReviewPage({
     })
   ]);
 
+  const brand = await getBrand();
+
   const reviews = [
     ...testimonialRows.map((t) => ({
       id: t.id,
@@ -151,6 +154,7 @@ export default async function ReviewPage({
         count: stats._count._all
       }}
       reviews={reviews}
+      brand={brand}
     />
   );
 }

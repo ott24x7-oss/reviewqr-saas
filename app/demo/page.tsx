@@ -2,6 +2,7 @@ import Link from "next/link";
 import { MarketingNavbar } from "@/components/marketing/navbar";
 import { Footer } from "@/components/marketing/footer";
 import { Button } from "@/components/ui/button";
+import { getBrand } from "@/lib/brand";
 import {
   ScanLine,
   Star,
@@ -52,10 +53,13 @@ const steps = [
   }
 ];
 
-export default function DemoPage() {
+export const dynamic = "force-dynamic";
+
+export default async function DemoPage() {
+  const brand = await getBrand();
   return (
     <main className="min-h-screen bg-white">
-      <MarketingNavbar />
+      <MarketingNavbar brand={brand} />
 
       <section className="pt-28 pb-10 sm:pt-32 sm:pb-14 bg-gradient-to-b from-primary-50/40 via-white to-white">
         <div className="container max-w-5xl text-center">
@@ -260,7 +264,7 @@ export default function DemoPage() {
         </div>
       </section>
 
-      <Footer />
+      <Footer brand={brand} />
     </main>
   );
 }

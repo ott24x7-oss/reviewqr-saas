@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import Link from "next/link";
-import { Menu, X, Sparkles } from "lucide-react";
+import { Menu, X, Star, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -13,7 +13,13 @@ const links = [
   { href: "/#faq", label: "FAQ" }
 ];
 
-export function MarketingNavbar() {
+export function MarketingNavbar({
+  brand
+}: {
+  brand?: { name: string; logoUrl: string };
+}) {
+  const name = brand?.name || "ReviewQR";
+  const logoUrl = brand?.logoUrl || "";
   const [open, setOpen] = React.useState(false);
   const [scrolled, setScrolled] = React.useState(false);
 
@@ -34,15 +40,20 @@ export function MarketingNavbar() {
       )}
     >
       <div className="container max-w-6xl flex h-16 items-center justify-between">
-        <Link href="/" className="flex items-center gap-2" aria-label="WatShop Review home">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            data-brand-logo
-            src="/watshop-review-lockup.svg"
-            alt="WatShop Review"
-            className="h-8 w-auto"
-          />
-          <span data-brand-name className="sr-only">WatShop Review</span>
+        <Link href="/" className="flex items-center gap-2 font-bold text-xl">
+          {logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={logoUrl}
+              alt={name}
+              className="h-9 w-9 rounded-lg object-cover shadow-md"
+            />
+          ) : (
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg gradient-brand shadow-md">
+              <Star className="h-5 w-5 fill-white text-white" />
+            </span>
+          )}
+          <span className="font-display">{name}</span>
         </Link>
 
         <nav className="hidden md:flex items-center gap-8">
