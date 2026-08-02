@@ -14,10 +14,10 @@ export function Pricing({ plans }: { plans: PricingConfig }) {
     .map((t) => plans[t]);
 
   return (
-    <section id="pricing" className="py-16 sm:py-24">
+    <section id="pricing" className="py-16 sm:py-24 bg-secondary/30">
       <div className="container max-w-6xl">
         <div className="text-center max-w-2xl mx-auto">
-          <span className="inline-block px-3 py-1 rounded-full bg-accent/15 text-accent text-sm font-medium">
+          <span className="inline-block px-3 py-1 rounded-full bg-accent-50 text-accent-700 text-sm font-medium">
             Pricing
           </span>
           <h2 className="section-title mt-4 font-display">
@@ -27,12 +27,12 @@ export function Pricing({ plans }: { plans: PricingConfig }) {
             Start free. Upgrade only when you grow. No long-term contracts. GST invoice provided.
           </p>
 
-          <div className="mt-6 inline-flex items-center gap-1 p-1 rounded-full bg-surface border border-border shadow-neu">
+          <div className="mt-6 inline-flex items-center gap-1 p-1 rounded-full bg-white border shadow-soft">
             <button
               onClick={() => setAnnual(false)}
               className={cn(
                 "px-4 py-1.5 rounded-full text-sm font-medium transition-colors",
-                !annual ? "bg-brand text-white" : "text-muted-foreground"
+                !annual ? "bg-primary text-white" : "text-muted-foreground"
               )}
             >
               Monthly
@@ -41,11 +41,11 @@ export function Pricing({ plans }: { plans: PricingConfig }) {
               onClick={() => setAnnual(true)}
               className={cn(
                 "px-4 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center gap-1.5",
-                annual ? "bg-brand text-white" : "text-muted-foreground"
+                annual ? "bg-primary text-white" : "text-muted-foreground"
               )}
             >
               Yearly
-              <span className="px-1.5 py-0.5 rounded-full bg-accent/15 text-accent text-[10px] font-bold">
+              <span className="px-1.5 py-0.5 rounded-full bg-accent-100 text-accent-800 text-[10px] font-bold">
                 Save 17%
               </span>
             </button>
@@ -60,8 +60,8 @@ export function Pricing({ plans }: { plans: PricingConfig }) {
               <div
                 key={tier.tier}
                 className={cn(
-                  "relative rounded-2xl border border-border bg-surface p-6 sm:p-7 flex flex-col transition-all hover:shadow-glow",
-                  isHighlighted && "ring-2 ring-brand shadow-glow scale-100 lg:scale-[1.03]"
+                  "relative rounded-2xl border bg-white p-6 sm:p-7 flex flex-col transition-all hover:shadow-card",
+                  isHighlighted && "ring-2 ring-primary shadow-glow scale-100 lg:scale-[1.03]"
                 )}
               >
                 {isHighlighted && (

@@ -398,7 +398,7 @@ export function ReviewFlow(props: Props) {
     step === "thank-you-private";
 
   return (
-    <div className="min-h-screen bg-canvas text-ink flex flex-col" style={{ "--accent": accent } as any}>
+    <div className="min-h-screen bg-[#f8fafc] flex flex-col" style={{ "--accent": accent } as any}>
       {/* HERO */}
       <div className="relative">
         <div
@@ -448,11 +448,11 @@ export function ReviewFlow(props: Props) {
               <img
                 src={business.logo}
                 alt={business.name}
-                className="h-24 w-24 sm:h-28 sm:w-28 rounded-full object-cover ring-4 ring-surface shadow-neu bg-surface"
+                className="h-24 w-24 sm:h-28 sm:w-28 rounded-full object-cover ring-4 ring-white shadow-lg bg-white"
               />
             ) : (
               <div
-                className="h-24 w-24 sm:h-28 sm:w-28 rounded-full ring-4 ring-surface shadow-neu flex items-center justify-center text-white font-bold text-3xl sm:text-4xl"
+                className="h-24 w-24 sm:h-28 sm:w-28 rounded-full ring-4 ring-white shadow-lg flex items-center justify-center text-white font-bold text-3xl sm:text-4xl"
                 style={{ background: accent }}
               >
                 {business.name[0]}
@@ -473,7 +473,7 @@ export function ReviewFlow(props: Props) {
               <BadgeCheck className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" aria-label="Verified" />
             </div>
             {business.industry && (
-              <p className="text-sm text-muted-foreground mt-0.5">{business.industry}</p>
+              <p className="text-sm text-slate-500 mt-0.5">{business.industry}</p>
             )}
           </div>
         </div>
@@ -491,12 +491,12 @@ export function ReviewFlow(props: Props) {
                   "h-4 w-4",
                   n <= Math.round(props.stats.avgRating)
                     ? "fill-amber-400 text-amber-400"
-                    : "fill-transparent text-bluegray"
+                    : "fill-transparent text-slate-300"
                 )}
               />
             ))}
           </div>
-          <span className="text-muted-foreground">
+          <span className="text-slate-500">
             {props.stats.count > 0
               ? `${props.stats.count} review${props.stats.count === 1 ? "" : "s"}`
               : "Be the first to review"}
@@ -504,11 +504,11 @@ export function ReviewFlow(props: Props) {
         </div>
 
         {(business.address || business.city) && (
-          <p className="mt-2 text-xs text-muted-foreground flex items-start gap-1.5">
+          <p className="mt-2 text-xs text-slate-500 flex items-start gap-1.5">
             <MapPin className="h-3.5 w-3.5 shrink-0 mt-0.5" />
             <span className="truncate">
               {props.location?.name && (
-                <span className="font-medium text-ink">{props.location.name} · </span>
+                <span className="font-medium text-slate-700">{props.location.name} · </span>
               )}
               {fullAddress(business) || business.city}
             </span>
@@ -576,7 +576,7 @@ export function ReviewFlow(props: Props) {
       {/* Tabs (Reviews / Info — for browsing) */}
       {!inSubFlow && (
         <div className="container max-w-2xl px-4 mt-5">
-          <div className="border-b border-border flex gap-6">
+          <div className="border-b border-slate-200 flex gap-6">
             {(
               [
                 {
@@ -593,8 +593,8 @@ export function ReviewFlow(props: Props) {
                 className={cn(
                   "py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors",
                   tab === t.id
-                    ? "border-current text-ink"
-                    : "border-transparent text-muted-foreground hover:text-ink"
+                    ? "border-current text-slate-900"
+                    : "border-transparent text-slate-500 hover:text-slate-700"
                 )}
                 style={tab === t.id ? { borderColor: accent, color: accent } : undefined}
               >
@@ -635,14 +635,14 @@ export function ReviewFlow(props: Props) {
         )}
       </main>
 
-      <footer className="py-6 text-center text-xs text-bluegray">
+      <footer className="py-6 text-center text-xs text-slate-400">
         <a
           href={props.brand?.appUrl || "https://reviewqr.in"}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 hover:text-muted-foreground"
+          className="inline-flex items-center gap-1 hover:text-slate-600"
         >
-          Powered by <b className="text-muted-foreground">{props.brand?.name || "ReviewQR"}</b>
+          Powered by <b className="text-slate-600">{props.brand?.name || "ReviewQR"}</b>
         </a>
       </footer>
 
@@ -675,7 +675,7 @@ function ActionChip({
   accent: string;
 }) {
   const cls =
-    "flex flex-col items-center gap-1 py-2 px-1 rounded-xl bg-surface border border-border hover:border-brand/40 hover:shadow-neu transition";
+    "flex flex-col items-center gap-1 py-2 px-1 rounded-xl bg-white border border-slate-200 hover:border-slate-300 hover:shadow-sm transition";
   const inner = (
     <>
       <span
@@ -684,7 +684,7 @@ function ActionChip({
       >
         {icon}
       </span>
-      <span className="text-[11px] font-medium text-muted-foreground">{label}</span>
+      <span className="text-[11px] font-medium text-slate-700">{label}</span>
     </>
   );
   if (href)
@@ -727,9 +727,9 @@ function RateStep({
 
   return (
     <div className="container max-w-2xl px-4 py-6 sm:py-8">
-      <div className="neu rounded-2xl p-5 sm:p-7">
+      <div className="rounded-2xl bg-white border border-slate-200 shadow-sm p-5 sm:p-7">
         {staff && (
-          <div className="mb-5 flex items-center gap-3 px-3 py-2.5 rounded-xl bg-elevated">
+          <div className="mb-5 flex items-center gap-3 px-3 py-2.5 rounded-xl bg-slate-50">
             {staff.photo ? (
               <img
                 src={staff.photo}
@@ -737,12 +737,12 @@ function RateStep({
                 alt={staff.name}
               />
             ) : (
-              <div className="h-10 w-10 rounded-full bg-brand/15 flex items-center justify-center text-sm font-bold text-brand">
+              <div className="h-10 w-10 rounded-full bg-slate-200 flex items-center justify-center text-sm font-bold text-slate-700">
                 {staff.name[0]}
               </div>
             )}
             <div className="text-sm">
-              <div className="text-muted-foreground text-xs">You were served by</div>
+              <div className="text-slate-500 text-xs">You were served by</div>
               <div className="font-semibold">{staff.name}</div>
             </div>
           </div>
@@ -751,7 +751,7 @@ function RateStep({
         <h2 className="text-xl sm:text-2xl font-bold text-center tracking-tight">
           How was your experience?
         </h2>
-        <p className="mt-1.5 text-sm text-muted-foreground text-center">Tap a star to rate · 30 seconds</p>
+        <p className="mt-1.5 text-sm text-slate-500 text-center">Tap a star to rate · 30 seconds</p>
 
         <div
           className="mt-6 flex justify-center gap-1.5"
@@ -772,7 +772,7 @@ function RateStep({
                   "h-11 w-11 sm:h-13 sm:w-13 transition-colors",
                   display >= n
                     ? "fill-amber-400 text-amber-400 drop-shadow-sm"
-                    : "fill-transparent text-bluegray"
+                    : "fill-transparent text-slate-300"
                 )}
                 strokeWidth={1.5}
               />
@@ -786,10 +786,10 @@ function RateStep({
               className={cn(
                 "px-4 py-1.5 rounded-full text-sm font-semibold",
                 display >= 4
-                  ? "bg-accent/15 text-accent"
+                  ? "bg-emerald-100 text-emerald-800"
                   : display === 3
-                  ? "bg-amber-400/15 text-amber-300"
-                  : "bg-destructive/15 text-destructive"
+                  ? "bg-amber-100 text-amber-800"
+                  : "bg-rose-100 text-rose-800"
               )}
             >
               {labels[display]}
@@ -798,7 +798,7 @@ function RateStep({
         </div>
 
         {loading && (
-          <div className="mt-6 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+          <div className="mt-6 flex items-center justify-center gap-2 text-sm text-slate-500">
             <Loader2 className="h-4 w-4 animate-spin" />
             Taking you to Google…
           </div>
@@ -837,7 +837,7 @@ function PickTemplateModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-canvas text-ink overflow-y-auto"
+      className="fixed inset-0 z-50 bg-white overflow-y-auto"
       role="dialog"
       aria-modal="true"
       aria-labelledby="pick-template-heading"
@@ -863,7 +863,7 @@ function PickTemplateModal({
             Select your content
           </span>
         </h2>
-        <p className="mt-3 text-sm text-muted-foreground text-center max-w-md mx-auto">
+        <p className="mt-3 text-sm text-slate-600 text-center max-w-md mx-auto">
           Tap <b>Copy</b> on the review you'd like to leave. We'll copy it to your clipboard —
           just paste it on Google's form.
         </p>
@@ -876,13 +876,13 @@ function PickTemplateModal({
                 key={t.id}
                 className={cn(
                   "rounded-2xl border p-4 sm:p-5 transition",
-                  isPicked ? "border-accent bg-accent/10" : "border-border bg-surface"
+                  isPicked ? "border-emerald-400 bg-emerald-50/40" : "border-slate-200 bg-white"
                 )}
                 style={
                   isPicked ? { borderColor: accent, background: `${accent}0d` } : undefined
                 }
               >
-                <p className="text-[15px] leading-relaxed text-ink whitespace-pre-line">
+                <p className="text-[15px] leading-relaxed text-slate-800 whitespace-pre-line">
                   {t.content}
                 </p>
                 <div className="mt-3 flex justify-end">
@@ -922,7 +922,7 @@ function PickTemplateModal({
         </div>
 
         {/* "I'll write my own" — below the 3 prefilled options */}
-        <div className="mt-6 pt-5 border-t border-border">
+        <div className="mt-6 pt-5 border-t border-slate-200">
           <Button
             type="button"
             variant="outline"
@@ -935,7 +935,7 @@ function PickTemplateModal({
           </Button>
         </div>
 
-        <p className="mt-4 text-[11px] text-bluegray text-center">
+        <p className="mt-4 text-[11px] text-slate-400 text-center">
           Each review is shown to a single customer only — the next person sees fresh options.
         </p>
       </div>
@@ -946,7 +946,7 @@ function PickTemplateModal({
 function ReviewsTab({ reviews }: { reviews: PublicReview[] }) {
   if (reviews.length === 0) {
     return (
-      <div className="container max-w-2xl px-4 py-10 text-center text-sm text-muted-foreground">
+      <div className="container max-w-2xl px-4 py-10 text-center text-sm text-slate-500">
         No reviews yet — be the first to share your experience.
       </div>
     );
@@ -954,7 +954,7 @@ function ReviewsTab({ reviews }: { reviews: PublicReview[] }) {
   return (
     <div className="container max-w-2xl px-4 py-5 space-y-3">
       {reviews.map((r) => (
-        <div key={r.id} className="rounded-2xl bg-surface border border-border p-4 sm:p-5">
+        <div key={r.id} className="rounded-2xl bg-white border border-slate-200 p-4 sm:p-5">
           <div className="flex items-start gap-3">
             {r.authorImage ? (
               <img
@@ -963,16 +963,16 @@ function ReviewsTab({ reviews }: { reviews: PublicReview[] }) {
                 className="h-10 w-10 rounded-full object-cover"
               />
             ) : (
-              <div className="h-10 w-10 rounded-full bg-brand/15 flex items-center justify-center text-sm font-bold text-brand">
+              <div className="h-10 w-10 rounded-full bg-slate-200 flex items-center justify-center text-sm font-bold text-slate-700">
                 {r.author[0]}
               </div>
             )}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <div className="font-semibold text-sm truncate">{r.author}</div>
-                <div className="text-xs text-bluegray shrink-0">{timeAgoShort(r.createdAt)}</div>
+                <div className="text-xs text-slate-400 shrink-0">{timeAgoShort(r.createdAt)}</div>
               </div>
-              {r.authorRole && <div className="text-xs text-muted-foreground">{r.authorRole}</div>}
+              {r.authorRole && <div className="text-xs text-slate-500">{r.authorRole}</div>}
               <div className="flex mt-1">
                 {[1, 2, 3, 4, 5].map((n) => (
                   <Star
@@ -981,12 +981,12 @@ function ReviewsTab({ reviews }: { reviews: PublicReview[] }) {
                       "h-3.5 w-3.5",
                       n <= r.rating
                         ? "fill-amber-400 text-amber-400"
-                        : "fill-transparent text-bluegray"
+                        : "fill-transparent text-slate-300"
                     )}
                   />
                 ))}
               </div>
-              <p className="mt-2 text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+              <p className="mt-2 text-sm text-slate-700 leading-relaxed whitespace-pre-line">
                 {r.message}
               </p>
             </div>
@@ -1034,23 +1034,23 @@ function InfoTab({ business }: { business: Business }) {
   return (
     <div className="container max-w-2xl px-4 py-5 space-y-3">
       {business.description && (
-        <div className="rounded-2xl bg-surface border border-border p-4 sm:p-5">
-          <h3 className="text-sm font-semibold text-ink">About</h3>
-          <p className="mt-2 text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+        <div className="rounded-2xl bg-white border border-slate-200 p-4 sm:p-5">
+          <h3 className="text-sm font-semibold text-slate-900">About</h3>
+          <p className="mt-2 text-sm text-slate-600 leading-relaxed whitespace-pre-line">
             {business.description}
           </p>
         </div>
       )}
-      <div className="rounded-2xl bg-surface border border-border divide-y divide-border">
+      <div className="rounded-2xl bg-white border border-slate-200 divide-y divide-slate-100">
         {rows.map((r) => {
           const content = (
             <div className="flex items-start gap-3 px-4 py-3.5">
-              <div className="h-8 w-8 rounded-full bg-elevated flex items-center justify-center text-muted-foreground shrink-0">
+              <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 shrink-0">
                 {r.icon}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="text-xs text-muted-foreground">{r.label}</div>
-                <div className="text-sm text-ink truncate">{r.value}</div>
+                <div className="text-xs text-slate-500">{r.label}</div>
+                <div className="text-sm text-slate-900 truncate">{r.value}</div>
               </div>
             </div>
           );
@@ -1060,7 +1060,7 @@ function InfoTab({ business }: { business: Business }) {
               href={r.href}
               target={r.href.startsWith("http") ? "_blank" : undefined}
               rel={r.href.startsWith("http") ? "noopener noreferrer" : undefined}
-              className="block hover:bg-elevated"
+              className="block hover:bg-slate-50"
             >
               {content}
             </a>
@@ -1069,7 +1069,7 @@ function InfoTab({ business }: { business: Business }) {
           );
         })}
         {rows.length === 0 && (
-          <div className="px-4 py-6 text-center text-sm text-muted-foreground">No contact info added.</div>
+          <div className="px-4 py-6 text-center text-sm text-slate-500">No contact info added.</div>
         )}
       </div>
     </div>
@@ -1096,7 +1096,7 @@ function FeedbackStep(props: {
 }) {
   return (
     <div className="container max-w-2xl px-4 py-5">
-      <div className="neu rounded-2xl p-5 sm:p-6">
+      <div className="rounded-2xl bg-white border border-slate-200 shadow-sm p-5 sm:p-6">
         <div className="flex items-center justify-center gap-1 mb-3">
           {[1, 2, 3, 4, 5].map((n) => (
             <Star
@@ -1105,7 +1105,7 @@ function FeedbackStep(props: {
                 "h-6 w-6",
                 props.rating >= n
                   ? "fill-amber-400 text-amber-400"
-                  : "fill-transparent text-bluegray"
+                  : "fill-transparent text-slate-300"
               )}
             />
           ))}
@@ -1113,7 +1113,7 @@ function FeedbackStep(props: {
         <h2 className="text-xl sm:text-2xl font-bold text-center tracking-tight">
           We'd love to hear more
         </h2>
-        <p className="mt-1.5 text-sm text-muted-foreground text-center">
+        <p className="mt-1.5 text-sm text-slate-500 text-center">
           This goes privately to the owner — never made public.
         </p>
 
@@ -1143,8 +1143,8 @@ function FeedbackStep(props: {
                   className={cn(
                     "px-3 py-1.5 rounded-full text-xs font-medium border transition-colors",
                     props.tags.includes(t.id)
-                      ? "bg-brand text-white border-brand"
-                      : "bg-surface text-muted-foreground border-border hover:border-brand/40"
+                      ? "bg-slate-900 text-white border-slate-900"
+                      : "bg-white text-slate-600 border-slate-200 hover:border-slate-400"
                   )}
                 >
                   {t.label}
@@ -1183,7 +1183,7 @@ function FeedbackStep(props: {
               onChange={(e) => props.setEmail(e.target.value)}
               placeholder="you@email.com"
             />
-            <p className="text-xs text-bluegray">
+            <p className="text-xs text-slate-400">
               We'll only contact you if you'd like us to follow up.
             </p>
           </div>
@@ -1211,12 +1211,12 @@ function FeedbackStep(props: {
 function ThankYouGoogle({ business }: { business: Business }) {
   return (
     <div className="container max-w-2xl px-4 py-10 text-center">
-      <div className="neu rounded-2xl p-6 sm:p-8">
-        <div className="h-16 w-16 mx-auto rounded-full bg-accent/15 text-accent flex items-center justify-center mb-4">
-          <Heart className="h-8 w-8 fill-accent" />
+      <div className="rounded-2xl bg-white border border-slate-200 p-6 sm:p-8">
+        <div className="h-16 w-16 mx-auto rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mb-4">
+          <Heart className="h-8 w-8 fill-emerald-600" />
         </div>
         <h2 className="text-2xl font-bold tracking-tight">Thank you so much!</h2>
-        <p className="mt-2 text-sm text-muted-foreground max-w-sm mx-auto">
+        <p className="mt-2 text-sm text-slate-500 max-w-sm mx-auto">
           We'd love it if you'd share your experience publicly on Google.
         </p>
         {business.googleReviewUrl && (
@@ -1234,14 +1234,14 @@ function ThankYouGoogle({ business }: { business: Business }) {
 function ThankYouPrivate({ business, customerName }: { business: Business; customerName: string }) {
   return (
     <div className="container max-w-2xl px-4 py-10 text-center">
-      <div className="neu rounded-2xl p-6 sm:p-8">
-        <div className="h-16 w-16 mx-auto rounded-full bg-brand/15 text-brand flex items-center justify-center mb-4">
+      <div className="rounded-2xl bg-white border border-slate-200 p-6 sm:p-8">
+        <div className="h-16 w-16 mx-auto rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mb-4">
           <CheckCircle2 className="h-8 w-8" />
         </div>
         <h2 className="text-2xl font-bold tracking-tight">
           {customerName ? `Thank you, ${customerName.split(" ")[0]}` : "Thank you for your feedback"}
         </h2>
-        <p className="mt-2 text-sm text-muted-foreground max-w-sm mx-auto">
+        <p className="mt-2 text-sm text-slate-500 max-w-sm mx-auto">
           {business.customThankYou ||
             "Your feedback has been sent privately to the owner. We'll personally review it and do everything we can to make it right."}
         </p>

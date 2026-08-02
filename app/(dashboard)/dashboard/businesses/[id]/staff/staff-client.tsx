@@ -118,7 +118,7 @@ export function StaffClient({
           {staff.map((s) => (
             <Card key={s.id}>
               <CardContent className="p-4 flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-elevated flex items-center justify-center font-semibold text-sm shrink-0">
+                <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center font-semibold text-sm shrink-0">
                   {getInitials(s.name)}
                 </div>
                 <div className="flex-1 min-w-0">

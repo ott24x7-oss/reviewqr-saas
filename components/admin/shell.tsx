@@ -50,19 +50,19 @@ export function AdminShell({
     exact ? pathname === href : pathname === href || pathname.startsWith(href + "/");
 
   return (
-    <div className="min-h-screen flex flex-col bg-canvas">
-      <header className="sticky top-0 z-40 border-b border-border glass">
+    <div className="min-h-screen flex flex-col bg-secondary/30">
+      <header className="sticky top-0 z-40 border-b bg-white/95 backdrop-blur-sm">
         <div className="flex h-14 sm:h-16 items-center justify-between px-3 sm:px-6 gap-2">
           <div className="flex items-center gap-2">
             <button
-              className="md:hidden inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border text-ink"
+              className="md:hidden inline-flex h-9 w-9 items-center justify-center rounded-lg border"
               onClick={() => setMobileOpen((v) => !v)}
               aria-label="Toggle menu"
             >
               {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
-            <Link href="/admin" className="flex items-center gap-2 font-bold text-ink">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand text-white">
+            <Link href="/admin" className="flex items-center gap-2 font-bold">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground text-white">
                 <ShieldCheck className="h-4 w-4" />
               </span>
               <span className="font-display text-lg">Admin</span>
@@ -72,16 +72,16 @@ export function AdminShell({
           <div className="flex items-center gap-2">
             <Link
               href="/dashboard"
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-medium text-ink hover:bg-elevated/60"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium hover:bg-secondary"
             >
               <ArrowLeft className="h-3.5 w-3.5" /> User dashboard
             </Link>
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand text-white text-sm font-semibold">
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-foreground text-white text-sm font-semibold">
               {getInitials(user.name || user.email)}
             </span>
             <button
               onClick={() => signOut({ callbackUrl: "/" })}
-              className="inline-flex items-center justify-center h-8 w-8 rounded-lg hover:bg-elevated/60 text-muted-foreground"
+              className="inline-flex items-center justify-center h-8 w-8 rounded-lg hover:bg-secondary text-muted-foreground"
               title="Sign out"
             >
               <LogOut className="h-4 w-4" />
@@ -91,7 +91,7 @@ export function AdminShell({
       </header>
 
       <div className="flex-1 flex">
-        <aside className="hidden md:flex w-60 lg:w-64 border-r border-border glass shrink-0 flex-col">
+        <aside className="hidden md:flex w-60 lg:w-64 border-r bg-white shrink-0 flex-col">
           <nav className="flex-1 p-3 space-y-0.5">
             {nav.map((n) => (
               <Link
@@ -100,8 +100,8 @@ export function AdminShell({
                 className={cn(
                   "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
                   isActive(n.href, n.exact)
-                    ? "bg-brand/15 text-brand"
-                    : "text-muted-foreground hover:bg-elevated/60 hover:text-ink"
+                    ? "bg-foreground text-white"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                 )}
               >
                 <n.icon className="h-4 w-4" />
@@ -109,8 +109,8 @@ export function AdminShell({
               </Link>
             ))}
           </nav>
-          <div className="p-3 border-t border-border text-xs text-muted-foreground">
-            Signed in as <span className="font-medium text-ink">{user.email}</span>
+          <div className="p-3 border-t text-xs text-muted-foreground">
+            Signed in as <span className="font-medium text-foreground">{user.email}</span>
           </div>
         </aside>
 
@@ -120,7 +120,7 @@ export function AdminShell({
             onClick={() => setMobileOpen(false)}
           >
             <aside
-              className="fixed left-0 top-14 bottom-0 w-64 glass-strong border-r border-border shadow-xl"
+              className="fixed left-0 top-14 bottom-0 w-64 bg-white border-r shadow-xl"
               onClick={(e) => e.stopPropagation()}
             >
               <nav className="p-3 space-y-0.5">
@@ -132,8 +132,8 @@ export function AdminShell({
                     className={cn(
                       "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
                       isActive(n.href, n.exact)
-                        ? "bg-brand/15 text-brand"
-                        : "text-muted-foreground hover:bg-elevated/60"
+                        ? "bg-foreground text-white"
+                        : "text-muted-foreground hover:bg-secondary"
                     )}
                   >
                     <n.icon className="h-4 w-4" />

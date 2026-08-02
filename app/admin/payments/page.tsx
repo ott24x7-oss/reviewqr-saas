@@ -39,19 +39,19 @@ export default async function AdminPaymentsPage() {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="neu rounded-xl p-4">
+        <div className="rounded-xl border bg-white p-4">
           <div className="text-xs text-muted-foreground">Total revenue</div>
           <div className="text-2xl font-bold mt-1">{formatINR(agg._sum.amount || 0)}</div>
         </div>
-        <div className="neu rounded-xl p-4">
+        <div className="rounded-xl border bg-white p-4">
           <div className="text-xs text-muted-foreground">Last 30 days</div>
           <div className="text-2xl font-bold mt-1">{formatINR(agg30._sum.amount || 0)}</div>
         </div>
-        <div className="neu rounded-xl p-4">
+        <div className="rounded-xl border bg-white p-4">
           <div className="text-xs text-muted-foreground">Completed</div>
           <div className="text-2xl font-bold mt-1">{agg._count._all}</div>
         </div>
-        <div className="neu rounded-xl p-4">
+        <div className="rounded-xl border bg-white p-4">
           <div className="text-xs text-muted-foreground">Last 30d count</div>
           <div className="text-2xl font-bold mt-1">{agg30._count._all}</div>
         </div>
@@ -75,7 +75,7 @@ export default async function AdminPaymentsPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border text-xs text-muted-foreground">
+                <tr className="border-b text-xs text-muted-foreground">
                   <th className="text-left py-2.5 px-4">Date</th>
                   <th className="text-left py-2.5 px-4">User</th>
                   <th className="text-left py-2.5 px-4">Plan</th>
@@ -86,7 +86,7 @@ export default async function AdminPaymentsPage() {
               </thead>
               <tbody>
                 {payments.map((p) => (
-                  <tr key={p.id} className="border-b border-border last:border-0">
+                  <tr key={p.id} className="border-b last:border-0">
                     <td className="py-2.5 px-4 text-xs">{formatDate(p.createdAt)}</td>
                     <td className="py-2.5 px-4">
                       <div className="text-sm">{p.user.name || p.user.email}</div>

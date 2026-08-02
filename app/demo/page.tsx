@@ -58,12 +58,12 @@ export const dynamic = "force-dynamic";
 export default async function DemoPage() {
   const brand = await getBrand();
   return (
-    <main className="min-h-screen bg-canvas text-ink">
+    <main className="min-h-screen bg-white">
       <MarketingNavbar brand={brand} />
 
-      <section className="pt-28 pb-10 sm:pt-32 sm:pb-14 bg-grad-hero">
+      <section className="pt-28 pb-10 sm:pt-32 sm:pb-14 bg-gradient-to-b from-primary-50/40 via-white to-white">
         <div className="container max-w-5xl text-center">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent/15 text-accent text-sm font-medium">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent-50 text-accent-700 text-sm font-medium">
             <Sparkles className="h-3.5 w-3.5" /> Live demo
           </span>
           <h1 className="mt-4 text-3xl sm:text-5xl font-display font-bold tracking-tight">
@@ -94,7 +94,7 @@ export default async function DemoPage() {
               </p>
               <ul className="mt-5 space-y-2.5 text-sm">
                 <li className="flex items-start gap-2">
-                  <span className="h-5 w-5 rounded-full bg-accent/15 text-accent inline-flex items-center justify-center shrink-0 mt-0.5">
+                  <span className="h-5 w-5 rounded-full bg-emerald-100 text-emerald-700 inline-flex items-center justify-center shrink-0 mt-0.5">
                     <Smartphone className="h-3 w-3" />
                   </span>
                   <span>
@@ -102,7 +102,7 @@ export default async function DemoPage() {
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="h-5 w-5 rounded-full bg-accent/15 text-accent inline-flex items-center justify-center shrink-0 mt-0.5">
+                  <span className="h-5 w-5 rounded-full bg-emerald-100 text-emerald-700 inline-flex items-center justify-center shrink-0 mt-0.5">
                     <Star className="h-3 w-3" />
                   </span>
                   <span>
@@ -111,7 +111,7 @@ export default async function DemoPage() {
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="h-5 w-5 rounded-full bg-accent/15 text-accent inline-flex items-center justify-center shrink-0 mt-0.5">
+                  <span className="h-5 w-5 rounded-full bg-emerald-100 text-emerald-700 inline-flex items-center justify-center shrink-0 mt-0.5">
                     <ThumbsUp className="h-3 w-3" />
                   </span>
                   <span>
@@ -131,7 +131,7 @@ export default async function DemoPage() {
             <div className="order-1 lg:order-2 flex justify-center">
               <div className="relative">
                 <div className="absolute -inset-4 rounded-3xl gradient-brand opacity-10 blur-2xl" />
-                <div className="relative neu rounded-3xl p-5 sm:p-7">
+                <div className="relative rounded-3xl border bg-white shadow-card p-5 sm:p-7">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={DEMO_QR_IMAGE}
@@ -152,7 +152,7 @@ export default async function DemoPage() {
       </section>
 
       {/* Live iframe section */}
-      <section className="py-10 sm:py-16 bg-elevated/40 border-y border-border">
+      <section className="py-10 sm:py-16 bg-secondary/30 border-y">
         <div className="container max-w-5xl">
           <div className="text-center max-w-2xl mx-auto">
             <span className="inline-block text-xs font-bold tracking-widest uppercase text-primary">
@@ -172,7 +172,7 @@ export default async function DemoPage() {
             <div className="relative w-full max-w-[400px] mx-auto">
               <div className="absolute -inset-3 rounded-[2.5rem] gradient-brand opacity-10 blur-2xl pointer-events-none" />
               <div className="relative rounded-[2.25rem] sm:rounded-[2.5rem] bg-slate-900 p-2 sm:p-3 shadow-2xl">
-                <div className="rounded-[1.75rem] sm:rounded-[2rem] overflow-hidden bg-canvas relative">
+                <div className="rounded-[1.75rem] sm:rounded-[2rem] overflow-hidden bg-white relative">
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 z-10 h-5 sm:h-6 w-20 sm:w-32 bg-slate-900 rounded-b-2xl" />
                   <iframe
                     src={DEMO_REVIEW_URL}
@@ -203,7 +203,7 @@ export default async function DemoPage() {
       <section className="py-12 sm:py-20">
         <div className="container max-w-4xl">
           <div className="text-center max-w-2xl mx-auto">
-            <span className="inline-block px-3 py-1 rounded-full bg-brand/10 text-brand border border-brand/20 text-sm font-medium">
+            <span className="inline-block px-3 py-1 rounded-full bg-primary-50 text-primary-700 text-sm font-medium">
               How it works
             </span>
             <h2 className="mt-3 text-2xl sm:text-3xl font-display font-bold">
@@ -219,14 +219,14 @@ export default async function DemoPage() {
             {steps.map((s, i) => (
               <li
                 key={s.title}
-                className="flex gap-4 sm:gap-5 rounded-2xl border border-border bg-surface p-5 sm:p-6 hover:shadow-neu transition"
+                className="flex gap-4 sm:gap-5 rounded-2xl border bg-white p-5 sm:p-6 hover:shadow-card transition"
               >
                 <div className="shrink-0">
                   <div className="relative">
                     <div className="h-12 w-12 rounded-2xl gradient-brand text-white flex items-center justify-center shadow-md">
                       <s.icon className="h-5 w-5" />
                     </div>
-                    <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-surface border border-border text-[10px] font-bold flex items-center justify-center text-brand">
+                    <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-white border text-[10px] font-bold flex items-center justify-center text-primary">
                       {i + 1}
                     </span>
                   </div>
@@ -242,7 +242,7 @@ export default async function DemoPage() {
             ))}
           </ol>
 
-          <div className="mt-12 rounded-2xl border-2 border-dashed border-brand/30 bg-brand/10 p-6 sm:p-8 text-center">
+          <div className="mt-12 rounded-2xl border-2 border-dashed border-primary/30 bg-primary-50/40 p-6 sm:p-8 text-center">
             <h3 className="text-xl sm:text-2xl font-display font-bold">
               Ready to try with your own business?
             </h3>

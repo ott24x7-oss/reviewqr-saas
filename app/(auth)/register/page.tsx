@@ -65,7 +65,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <Card className="shadow-neu">
+    <Card className="shadow-card">
       <CardHeader className="text-center">
         <CardTitle className="text-2xl font-display">Start your free trial</CardTitle>
         <CardDescription>14 days free · no credit card needed</CardDescription>

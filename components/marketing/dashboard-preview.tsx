@@ -5,7 +5,7 @@ export function DashboardPreview() {
     <section className="py-16 sm:py-24">
       <div className="container max-w-6xl">
         <div className="text-center max-w-2xl mx-auto">
-          <span className="inline-block px-3 py-1 rounded-full bg-brand/10 text-brand border border-brand/20 text-sm font-medium">
+          <span className="inline-block px-3 py-1 rounded-full bg-primary-50 text-primary-700 text-sm font-medium">
             Dashboard
           </span>
           <h2 className="section-title mt-4 font-display">
@@ -19,14 +19,14 @@ export function DashboardPreview() {
 
         <div className="mt-12 grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
           {/* Analytics card */}
-          <div className="rounded-2xl border border-border bg-gradient-to-br from-brand/10 to-accent/10 p-1.5 shadow-neu">
-            <div className="rounded-xl bg-surface p-5 sm:p-6">
+          <div className="rounded-2xl border bg-gradient-to-br from-primary-50/50 to-accent-50/50 p-1.5 shadow-card">
+            <div className="rounded-xl bg-white p-5 sm:p-6">
               <div className="flex items-center justify-between mb-5">
                 <div>
                   <div className="text-xs text-muted-foreground">Last 30 days</div>
-                  <h3 className="text-lg font-semibold mt-0.5 text-ink">Review trend</h3>
+                  <h3 className="text-lg font-semibold mt-0.5">Review trend</h3>
                 </div>
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-accent/15 text-accent text-xs font-medium">
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-accent-100 text-accent-800 text-xs font-medium">
                   <TrendingUp className="h-3 w-3" /> +24%
                 </span>
               </div>
@@ -43,23 +43,23 @@ export function DashboardPreview() {
               <div className="mt-5 grid grid-cols-3 gap-3">
                 <div>
                   <div className="text-xs text-muted-foreground">Total</div>
-                  <div className="text-xl font-bold text-ink">1,284</div>
+                  <div className="text-xl font-bold">1,284</div>
                 </div>
                 <div>
                   <div className="text-xs text-muted-foreground">To Google</div>
-                  <div className="text-xl font-bold text-accent">897</div>
+                  <div className="text-xl font-bold text-accent-600">897</div>
                 </div>
                 <div>
                   <div className="text-xs text-muted-foreground">Private</div>
-                  <div className="text-xl font-bold text-amber-400">387</div>
+                  <div className="text-xl font-bold text-amber-600">387</div>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Star distribution */}
-          <div className="rounded-2xl border border-border bg-surface p-5 sm:p-6 shadow-neu">
-            <h3 className="text-lg font-semibold mb-4 text-ink">Rating distribution</h3>
+          <div className="rounded-2xl border bg-white p-5 sm:p-6 shadow-card">
+            <h3 className="text-lg font-semibold mb-4">Rating distribution</h3>
             <div className="space-y-3">
               {[
                 { stars: 5, pct: 72, count: 921 },
@@ -70,13 +70,13 @@ export function DashboardPreview() {
               ].map((row) => (
                 <div key={row.stars} className="flex items-center gap-3">
                   <div className="flex items-center gap-0.5 w-12 shrink-0">
-                    <span className="text-sm font-medium text-ink">{row.stars}</span>
+                    <span className="text-sm font-medium">{row.stars}</span>
                     <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
                   </div>
-                  <div className="flex-1 h-3 rounded-full bg-elevated overflow-hidden">
+                  <div className="flex-1 h-3 rounded-full bg-secondary overflow-hidden">
                     <div
                       className={`h-full rounded-full ${
-                        row.stars >= 4 ? "bg-accent" : row.stars === 3 ? "bg-amber-400" : "bg-red-400"
+                        row.stars >= 4 ? "bg-accent-500" : row.stars === 3 ? "bg-amber-400" : "bg-red-400"
                       }`}
                       style={{ width: `${row.pct}%` }}
                     />
@@ -88,12 +88,12 @@ export function DashboardPreview() {
           </div>
 
           {/* Negative feedback alerts */}
-          <div className="rounded-2xl border border-border bg-surface p-5 sm:p-6 shadow-neu">
+          <div className="rounded-2xl border bg-white p-5 sm:p-6 shadow-card">
             <div className="flex items-center gap-2 mb-4">
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-500/15 text-red-400">
+              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-50 text-red-600">
                 <AlertTriangle className="h-4 w-4" />
               </span>
-              <h3 className="text-lg font-semibold text-ink">Negative feedback alerts</h3>
+              <h3 className="text-lg font-semibold">Negative feedback alerts</h3>
             </div>
             <ul className="space-y-3">
               {[
@@ -103,11 +103,11 @@ export function DashboardPreview() {
               ].map((f) => (
                 <li
                   key={f.name}
-                  className="flex items-start gap-3 p-3 rounded-lg border border-border bg-red-500/10 hover:bg-red-500/15 transition-colors"
+                  className="flex items-start gap-3 p-3 rounded-lg border bg-red-50/50 hover:bg-red-50 transition-colors"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-medium truncate text-ink">{f.name}</span>
+                      <span className="text-sm font-medium truncate">{f.name}</span>
                       <span className="text-xs text-muted-foreground shrink-0">{f.time}</span>
                     </div>
                     <div className="flex gap-0.5 my-1">
@@ -127,12 +127,12 @@ export function DashboardPreview() {
           </div>
 
           {/* Staff leaderboard */}
-          <div className="rounded-2xl border border-border bg-surface p-5 sm:p-6 shadow-neu">
+          <div className="rounded-2xl border bg-white p-5 sm:p-6 shadow-card">
             <div className="flex items-center gap-2 mb-4">
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent/15 text-accent">
+              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-50 text-accent-600">
                 <Users className="h-4 w-4" />
               </span>
-              <h3 className="text-lg font-semibold text-ink">Top performers</h3>
+              <h3 className="text-lg font-semibold">Top performers</h3>
             </div>
             <ul className="space-y-3">
               {[
@@ -141,13 +141,13 @@ export function DashboardPreview() {
                 { name: "Sandeep R.", role: "Server", rating: 4.7, count: 87 }
               ].map((s, i) => (
                 <li key={s.name} className="flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-elevated text-sm font-bold text-ink">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary text-sm font-bold text-foreground">
                     {i + 1}
                   </span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-medium truncate text-ink">{s.name}</span>
-                      <span className="inline-flex items-center gap-0.5 text-sm font-medium text-ink">
+                      <span className="text-sm font-medium truncate">{s.name}</span>
+                      <span className="inline-flex items-center gap-0.5 text-sm font-medium">
                         {s.rating} <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
                       </span>
                     </div>

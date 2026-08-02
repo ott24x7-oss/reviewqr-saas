@@ -88,7 +88,7 @@ export default async function BusinessDetailPage({ params }: { params: { id: str
         </Card>
         <Card className="p-4">
           <div className="text-xs text-muted-foreground">To Google</div>
-          <div className="text-2xl font-bold mt-0.5 text-accent">{redirectedCount}</div>
+          <div className="text-2xl font-bold mt-0.5 text-accent-600">{redirectedCount}</div>
         </Card>
         <Card className="p-4">
           <div className="text-xs text-muted-foreground">Open feedback</div>
@@ -102,9 +102,9 @@ export default async function BusinessDetailPage({ params }: { params: { id: str
       {/* Sub-resources nav */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <Link href={`/dashboard/businesses/${business.id}/locations`}>
-          <Card className="hover:shadow-neu transition cursor-pointer">
+          <Card className="hover:shadow-card transition cursor-pointer">
             <CardContent className="p-5 flex items-start gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand/15 text-brand">
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-50 text-primary-600">
                 <MapPin className="h-5 w-5" />
               </span>
               <div>
@@ -115,9 +115,9 @@ export default async function BusinessDetailPage({ params }: { params: { id: str
           </Card>
         </Link>
         <Link href={`/dashboard/businesses/${business.id}/staff`}>
-          <Card className="hover:shadow-neu transition cursor-pointer">
+          <Card className="hover:shadow-card transition cursor-pointer">
             <CardContent className="p-5 flex items-start gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/15 text-accent">
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent-50 text-accent-600">
                 <Users className="h-5 w-5" />
               </span>
               <div>
@@ -128,9 +128,9 @@ export default async function BusinessDetailPage({ params }: { params: { id: str
           </Card>
         </Link>
         <Link href={`/dashboard/businesses/${business.id}/qr`}>
-          <Card className="hover:shadow-neu transition cursor-pointer">
+          <Card className="hover:shadow-card transition cursor-pointer">
             <CardContent className="p-5 flex items-start gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand/15 text-brand">
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-50 text-primary-600">
                 <QrCode className="h-5 w-5" />
               </span>
               <div>
@@ -141,9 +141,9 @@ export default async function BusinessDetailPage({ params }: { params: { id: str
           </Card>
         </Link>
         <Link href={`/dashboard/businesses/${business.id}/review-templates`}>
-          <Card className="hover:shadow-neu transition cursor-pointer">
+          <Card className="hover:shadow-card transition cursor-pointer">
             <CardContent className="p-5 flex items-start gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-400/15 text-amber-400">
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
                 <FileText className="h-5 w-5" />
               </span>
               <div>

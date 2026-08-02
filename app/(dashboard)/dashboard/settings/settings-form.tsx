@@ -131,7 +131,7 @@ export function SettingsForm({ user }: Props) {
                 value={form.whiteLabelColor}
                 onChange={(e) => update("whiteLabelColor", e.target.value)}
                 disabled={!canWhiteLabel}
-                className="h-10 w-14 rounded-lg border border-border cursor-pointer"
+                className="h-10 w-14 rounded-lg border cursor-pointer"
               />
               <Input
                 value={form.whiteLabelColor}
