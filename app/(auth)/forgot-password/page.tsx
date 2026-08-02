@@ -33,7 +33,7 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <Card className="shadow-neu">
+    <Card className="shadow-card">
       <CardHeader className="text-center">
         <CardTitle className="text-2xl font-display">Reset your password</CardTitle>
         <CardDescription>
@@ -63,7 +63,7 @@ export default function ForgotPasswordPage() {
             </Button>
           </form>
         ) : (
-          <div className="rounded-lg bg-accent/15 border border-accent/30 text-accent p-4 text-sm">
+          <div className="rounded-lg bg-accent-50 border border-accent-200 p-4 text-sm">
             Check your inbox at <b>{email}</b>. The link expires in 30 minutes.
           </div>
         )}

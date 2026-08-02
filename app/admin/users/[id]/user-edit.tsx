@@ -142,7 +142,7 @@ export function UserEditForm({ user }: Props) {
             <select
               value={form.role}
               onChange={(e) => update("role", e.target.value)}
-              className="w-full h-10 rounded-lg border border-border bg-surface/70 text-ink px-3 text-sm"
+              className="w-full h-10 rounded-lg border bg-white px-3 text-sm"
             >
               <option value="USER">USER</option>
               <option value="ADMIN">ADMIN</option>
@@ -155,7 +155,7 @@ export function UserEditForm({ user }: Props) {
             <select
               value={form.subscriptionTier}
               onChange={(e) => update("subscriptionTier", e.target.value)}
-              className="w-full h-10 rounded-lg border border-border bg-surface/70 text-ink px-3 text-sm"
+              className="w-full h-10 rounded-lg border bg-white px-3 text-sm"
             >
               <option value="FREE">FREE</option>
               <option value="STARTER">STARTER</option>
@@ -168,7 +168,7 @@ export function UserEditForm({ user }: Props) {
             <select
               value={form.subscriptionStatus}
               onChange={(e) => update("subscriptionStatus", e.target.value)}
-              className="w-full h-10 rounded-lg border border-border bg-surface/70 text-ink px-3 text-sm"
+              className="w-full h-10 rounded-lg border bg-white px-3 text-sm"
             >
               <option value="TRIALING">TRIALING</option>
               <option value="ACTIVE">ACTIVE</option>
@@ -210,7 +210,7 @@ export function UserEditForm({ user }: Props) {
           </Button>
         </div>
 
-        <div className="border-t border-border pt-4">
+        <div className="border-t pt-4">
           <Label className="text-xs">Reset password</Label>
           <div className="flex gap-2 mt-1">
             <Input
@@ -230,7 +230,7 @@ export function UserEditForm({ user }: Props) {
           </div>
         </div>
 
-        <div className="border-t border-border pt-4">
+        <div className="border-t pt-4">
           <Button onClick={deleteUser} disabled={deleting} variant="destructive">
             {deleting ? (
               <Loader2 className="h-4 w-4 animate-spin" />

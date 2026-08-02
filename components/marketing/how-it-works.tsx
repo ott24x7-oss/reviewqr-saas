@@ -2,10 +2,10 @@ import { Star, ArrowRight, ArrowDown, Check, ExternalLink, MessageSquare, Send }
 
 export function HowItWorks() {
   return (
-    <section id="how" className="py-16 sm:py-24 overflow-hidden">
+    <section id="how" className="py-16 sm:py-24 bg-secondary/30 overflow-hidden">
       <div className="container max-w-6xl">
         <div className="text-center max-w-2xl mx-auto">
-          <span className="inline-block px-3 py-1 rounded-full bg-accent/15 text-accent text-sm font-medium">
+          <span className="inline-block px-3 py-1 rounded-full bg-accent-50 text-accent-700 text-sm font-medium">
             How it works
           </span>
           <h2 className="section-title mt-4 font-display">
@@ -42,7 +42,7 @@ function Phone({ children, label, n }: { children: React.ReactNode; label: strin
   return (
     <div className="flex flex-col items-center text-center">
       <div className="text-xs font-semibold text-muted-foreground mb-2">
-        <span className="px-2 py-0.5 rounded-full bg-surface border border-border mr-1">{n}</span>
+        <span className="px-2 py-0.5 rounded-full bg-white border mr-1">{n}</span>
         {label}
       </div>
       <div className="relative w-44 sm:w-48 aspect-[9/19] rounded-[1.75rem] border-[8px] border-zinc-900 bg-zinc-900 shadow-card">

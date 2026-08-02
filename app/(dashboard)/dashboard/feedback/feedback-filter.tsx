@@ -18,7 +18,7 @@ export function FeedbackFilter({ active }: { active: string }) {
           href={f.href}
           className={cn(
             "shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors",
-            active === f.key ? "bg-brand text-white" : "bg-elevated text-ink hover:bg-elevated/80"
+            active === f.key ? "bg-primary text-white" : "bg-secondary text-foreground hover:bg-secondary/80"
           )}
         >
           {f.label}

@@ -84,9 +84,9 @@ export default async function QrCodesPage() {
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                   {b.qrCodes.map((qr) => (
-                    <Card key={qr.id} className="hover:shadow-neu transition">
+                    <Card key={qr.id} className="hover:shadow-card transition">
                       <CardContent className="p-4 text-center">
-                        <div className="aspect-square bg-white rounded-lg border border-border flex items-center justify-center p-3">
+                        <div className="aspect-square bg-white rounded-lg border flex items-center justify-center p-3">
                           <img
                             src={absoluteUrl(`/api/qr/${qr.shortCode}/image?format=svg`)}
                             alt={qr.label}

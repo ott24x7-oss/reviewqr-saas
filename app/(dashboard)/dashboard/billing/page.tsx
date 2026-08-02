@@ -49,7 +49,7 @@ export default async function BillingPage() {
               </div>
               <p className="text-sm text-muted-foreground mt-0.5">{current.tagline}</p>
               {user.subscriptionStatus === "TRIALING" && trialDays > 0 && (
-                <p className="text-sm text-amber-400 font-medium mt-2">
+                <p className="text-sm text-amber-600 font-medium mt-2">
                   ⏰ {trialDays} day{trialDays !== 1 ? "s" : ""} left in trial
                 </p>
               )}
@@ -76,7 +76,7 @@ export default async function BillingPage() {
             <div className="overflow-x-auto -mx-2 px-2">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-border bg-elevated/60 text-xs text-muted-foreground">
+                  <tr className="border-b text-xs text-muted-foreground">
                     <th className="text-left py-2 px-2">Date</th>
                     <th className="text-left py-2 px-2">Plan</th>
                     <th className="text-right py-2 px-2">Amount</th>
@@ -85,7 +85,7 @@ export default async function BillingPage() {
                 </thead>
                 <tbody>
                   {payments.map((p) => (
-                    <tr key={p.id} className="border-b border-border last:border-0 hover:bg-elevated/40">
+                    <tr key={p.id} className="border-b last:border-0">
                       <td className="py-2 px-2">{formatDate(p.createdAt)}</td>
                       <td className="py-2 px-2">
                         {p.tier} ({p.periodMonths === 12 ? "yearly" : "monthly"})

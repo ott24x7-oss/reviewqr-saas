@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 export default async function HomePage() {
   const [plans, brand] = await Promise.all([getPricingConfig(), getBrand()]);
   return (
-    <main className="min-h-screen bg-canvas">
+    <main className="min-h-screen bg-white">
       <MarketingNavbar brand={brand} />
       <Hero />
       <Features />

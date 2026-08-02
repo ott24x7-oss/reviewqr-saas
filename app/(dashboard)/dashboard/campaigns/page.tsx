@@ -45,7 +45,7 @@ export default async function CampaignsPage() {
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {(Object.entries(DEFAULT_TEMPLATES) as [string, string][]).map(([key, template]) => (
-              <div key={key} className="rounded-lg border border-border bg-elevated/40 p-3">
+              <div key={key} className="rounded-lg border bg-secondary/40 p-3">
                 <div className="text-xs font-medium text-muted-foreground capitalize mb-1">
                   {key.replace(/([A-Z])/g, " $1").trim()}
                 </div>
@@ -54,9 +54,9 @@ export default async function CampaignsPage() {
             ))}
           </div>
           <p className="mt-3 text-xs text-muted-foreground">
-            Variables: <code className="bg-elevated px-1 rounded">{"{{customerName}}"}</code>{" "}
-            <code className="bg-elevated px-1 rounded">{"{{businessName}}"}</code>{" "}
-            <code className="bg-elevated px-1 rounded">{"{{reviewUrl}}"}</code>
+            Variables: <code className="bg-secondary px-1 rounded">{"{{customerName}}"}</code>{" "}
+            <code className="bg-secondary px-1 rounded">{"{{businessName}}"}</code>{" "}
+            <code className="bg-secondary px-1 rounded">{"{{reviewUrl}}"}</code>
           </p>
         </CardContent>
       </Card>

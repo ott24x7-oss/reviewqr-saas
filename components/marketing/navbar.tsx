@@ -35,7 +35,7 @@ export function MarketingNavbar({
       className={cn(
         "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
         scrolled
-          ? "glass border-b border-border/60"
+          ? "bg-white/85 backdrop-blur-lg border-b border-border/60"
           : "bg-transparent"
       )}
     >
@@ -80,7 +80,7 @@ export function MarketingNavbar({
         </div>
 
         <button
-          className="md:hidden inline-flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-surface"
+          className="md:hidden inline-flex h-10 w-10 items-center justify-center rounded-lg border bg-white"
           onClick={() => setOpen((v) => !v)}
           aria-label="Toggle menu"
         >
@@ -89,14 +89,14 @@ export function MarketingNavbar({
       </div>
 
       {open && (
-        <div className="md:hidden border-t border-border glass">
+        <div className="md:hidden border-t border-border bg-white">
           <div className="container max-w-6xl py-4 flex flex-col gap-1">
             {links.map((l) => (
               <a
                 key={l.href}
                 href={l.href}
                 onClick={() => setOpen(false)}
-                className="px-3 py-3 rounded-lg text-base font-medium text-ink hover:bg-elevated"
+                className="px-3 py-3 rounded-lg text-base font-medium text-foreground hover:bg-secondary"
               >
                 {l.label}
               </a>

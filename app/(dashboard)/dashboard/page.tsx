@@ -131,10 +131,10 @@ export default async function DashboardOverview() {
                     <span className="text-sm font-medium">{d.stars}</span>
                     <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
                   </div>
-                  <div className="flex-1 h-3 rounded-full bg-elevated overflow-hidden">
+                  <div className="flex-1 h-3 rounded-full bg-secondary overflow-hidden">
                     <div
                       className={`h-full rounded-full ${
-                        d.stars >= 4 ? "bg-accent" : d.stars === 3 ? "bg-amber-400" : "bg-destructive"
+                        d.stars >= 4 ? "bg-accent-500" : d.stars === 3 ? "bg-amber-400" : "bg-red-400"
                       }`}
                       style={{ width: `${pct}%` }}
                     />
@@ -159,16 +159,16 @@ export default async function DashboardOverview() {
                 No reviews yet. Share your QR code to get started.
               </p>
             ) : (
-              <ul className="divide-y divide-border">
+              <ul className="divide-y">
                 {recentReviews.map((r) => (
                   <li key={r.id} className="py-3 first:pt-0 last:pb-0 flex items-start gap-3">
                     <div
                       className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
                         r.rating >= 4
-                          ? "bg-accent/15 text-accent"
+                          ? "bg-accent-100 text-accent-700"
                           : r.rating === 3
-                          ? "bg-amber-400/15 text-amber-400"
-                          : "bg-destructive/15 text-destructive"
+                          ? "bg-amber-100 text-amber-700"
+                          : "bg-red-100 text-red-700"
                       }`}
                     >
                       {r.rating}★
@@ -182,7 +182,7 @@ export default async function DashboardOverview() {
                       </div>
                       <div className="text-xs text-muted-foreground truncate">
                         {r.business.name}
-                        {r.redirected && <span className="ml-1 text-accent">· sent to Google</span>}
+                        {r.redirected && <span className="ml-1 text-accent-600">· sent to Google</span>}
                       </div>
                       {r.feedback?.message && (
                         <div className="mt-1 text-sm text-foreground/80 line-clamp-2">{r.feedback.message}</div>
@@ -215,12 +215,12 @@ function Stat({
   sub?: string;
 }) {
   const map: Record<string, string> = {
-    primary: "bg-brand/15 text-brand",
-    accent: "bg-accent/15 text-accent",
-    warning: "bg-amber-400/15 text-amber-400"
+    primary: "bg-primary-50 text-primary-600",
+    accent: "bg-accent-50 text-accent-600",
+    warning: "bg-amber-50 text-amber-600"
   };
   return (
-    <Card className="neu p-4 sm:p-5">
+    <Card className="p-4 sm:p-5">
       <div className="flex items-start justify-between">
         <div className={`flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-lg ${map[tone]}`}>
           <Icon className="h-4 w-4 sm:h-5 sm:w-5" />

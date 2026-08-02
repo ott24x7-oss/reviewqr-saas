@@ -10,7 +10,7 @@ export function Footer({
   const logoUrl = brand?.logoUrl || "";
   const supportEmail = brand?.supportEmail || "hello@reviewqr.in";
   return (
-    <footer className="border-t border-border bg-surface">
+    <footer className="border-t bg-white">
       <div className="container max-w-6xl py-12">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
           <div className="col-span-2">
@@ -64,7 +64,7 @@ export function Footer({
           </div>
         </div>
 
-        <div className="mt-10 pt-6 border-t border-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-muted-foreground">
+        <div className="mt-10 pt-6 border-t flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-muted-foreground">
           <div>© {new Date().getFullYear()} {name}. Made in India 🇮🇳</div>
           <div>v1.0</div>
         </div>
