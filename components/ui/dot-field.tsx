@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, memo, type CSSProperties } from "react";
+import { useEffect, useRef, useId, memo, type CSSProperties } from "react";
 
 /**
  * DotField (React Bits) — an interactive dot-grid background. Dots bulge away
@@ -70,7 +70,8 @@ const DotField = memo(function DotField({
     gradientTo
   };
   const rebuildRef = useRef<null | (() => void)>(null);
-  const glowIdRef = useRef(`dot-field-glow-${Math.round(Date.now() % 1e9).toString(36)}`);
+  // Stable across SSR + hydration; strip ":" so it's a valid CSS/url() selector.
+  const glowId = `dot-field-glow-${useId().replace(/:/g, "")}`;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -273,7 +274,7 @@ const DotField = memo(function DotField({
       <canvas ref={canvasRef} style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} />
       <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}>
         <defs>
-          <radialGradient id={glowIdRef.current}>
+          <radialGradient id={glowId}>
             <stop offset="0%" stopColor={glowColor} />
             <stop offset="100%" stopColor="transparent" />
           </radialGradient>
@@ -283,7 +284,7 @@ const DotField = memo(function DotField({
           cx="-9999"
           cy="-9999"
           r={glowRadius}
-          fill={`url(#${glowIdRef.current})`}
+          fill={`url(#${glowId})`}
           style={{ opacity: 0, willChange: "opacity" }}
         />
       </svg>
