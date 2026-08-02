@@ -19,10 +19,10 @@ import {
 
 export function Features() {
   return (
-    <section id="features" className="py-16 sm:py-24 bg-white">
+    <section id="features" className="py-16 sm:py-24">
       <div className="container max-w-6xl">
         <div className="text-center max-w-2xl mx-auto">
-          <span className="inline-block px-3 py-1 rounded-full bg-primary-50 text-primary-700 text-sm font-medium">
+          <span className="inline-block px-3 py-1 rounded-full bg-brand/10 text-brand border border-brand/20 text-sm font-medium">
             Features
           </span>
           <h2 className="section-title mt-4 font-display">
@@ -54,8 +54,8 @@ export function Features() {
             { icon: Code2, label: "REST API" },
             { icon: ShieldCheck, label: "Spam protection" }
           ].map((f) => (
-            <div key={f.label} className="rounded-lg border bg-white p-3 flex items-center gap-2 hover:shadow-soft transition">
-              <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary-50 text-primary-600 shrink-0">
+            <div key={f.label} className="rounded-lg border border-border bg-surface p-3 flex items-center gap-2 hover:shadow-neu transition">
+              <span className="flex h-8 w-8 items-center justify-center rounded-md bg-brand/10 text-brand shrink-0">
                 <f.icon className="h-4 w-4" />
               </span>
               <span className="text-xs sm:text-sm font-medium truncate">{f.label}</span>
@@ -81,19 +81,19 @@ function FeatureFrame({
   children: React.ReactNode;
 }) {
   const toneMap: Record<string, string> = {
-    primary: "bg-primary-100 text-primary-700",
-    accent: "bg-accent-100 text-accent-700",
-    warning: "bg-amber-100 text-amber-700"
+    primary: "bg-brand/15 text-brand",
+    accent: "bg-accent/15 text-accent",
+    warning: "bg-amber-400/15 text-amber-400"
   };
   return (
-    <div className="group rounded-2xl border bg-white p-5 shadow-soft hover:shadow-card hover:-translate-y-0.5 transition-all flex flex-col">
+    <div className="group rounded-2xl border border-border bg-surface p-5 shadow-neu hover:shadow-glow hover:-translate-y-0.5 transition-all flex flex-col">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="font-semibold text-base">{title}</h3>
+        <h3 className="font-semibold text-base text-ink">{title}</h3>
         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${toneMap[tagTone]}`}>
           {tag}
         </span>
       </div>
-      <div className="flex-1 min-h-[180px] rounded-xl bg-gradient-to-br from-secondary/40 to-secondary/10 border p-3 flex items-center justify-center">
+      <div className="flex-1 min-h-[180px] rounded-xl bg-elevated border border-border p-3 flex items-center justify-center">
         {children}
       </div>
     </div>
@@ -104,7 +104,7 @@ function SmartLinkCard() {
   return (
     <FeatureFrame title="Smart review link" tag="Auto" tagTone="primary">
       <div className="w-full">
-        <div className="rounded-lg bg-white border shadow-sm p-3">
+        <div className="rounded-lg bg-surface border border-border shadow-neu p-3">
           <div className="flex justify-center gap-0.5 mb-2">
             {[1, 2, 3, 4, 5].map((n) => (
               <Star
@@ -115,17 +115,17 @@ function SmartLinkCard() {
               />
             ))}
           </div>
-          <div className="text-[10px] text-center font-semibold text-accent-600">
+          <div className="text-[10px] text-center font-semibold text-accent">
             4★ → Google
           </div>
         </div>
         <div className="mt-2 grid grid-cols-2 gap-1.5">
-          <div className="rounded-md bg-accent-50 border border-accent-200 p-2 text-[9px] text-center">
-            <div className="font-bold text-accent-700">4★ – 5★</div>
+          <div className="rounded-md bg-accent/10 border border-accent/20 p-2 text-[9px] text-center">
+            <div className="font-bold text-accent">4★ – 5★</div>
             <div className="text-muted-foreground">→ Google</div>
           </div>
-          <div className="rounded-md bg-amber-50 border border-amber-200 p-2 text-[9px] text-center">
-            <div className="font-bold text-amber-700">1★ – 3★</div>
+          <div className="rounded-md bg-amber-400/10 border border-amber-400/20 p-2 text-[9px] text-center">
+            <div className="font-bold text-amber-400">1★ – 3★</div>
             <div className="text-muted-foreground">→ Private form</div>
           </div>
         </div>
@@ -137,7 +137,7 @@ function SmartLinkCard() {
 function QrCodeCard() {
   return (
     <FeatureFrame title="Print-ready QR posters" tag="Print" tagTone="primary">
-      <div className="bg-white rounded-lg border-2 border-primary-300 p-3 shadow-sm">
+      <div className="bg-white rounded-lg border-2 border-brand/40 p-3 shadow-neu">
         <div className="text-[9px] font-bold text-center gradient-text mb-1">SCAN ME</div>
         <svg viewBox="0 0 36 36" className="w-20 h-20 mx-auto" fill="#1a73e8">
           <rect x="0" y="0" width="10" height="10" />
@@ -167,21 +167,21 @@ function NegativeAlertCard() {
   return (
     <FeatureFrame title="Negative feedback alerts" tag="Live" tagTone="warning">
       <div className="w-full space-y-2">
-        <div className="rounded-lg bg-white border p-2.5 flex items-start gap-2 shadow-sm">
-          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-red-100 text-red-600 shrink-0">
+        <div className="rounded-lg bg-surface border border-border p-2.5 flex items-start gap-2 shadow-neu">
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-red-500/15 text-red-400 shrink-0">
             <BellRing className="h-3.5 w-3.5" />
           </span>
           <div className="text-[10px] min-w-0">
-            <div className="font-semibold">2★ feedback</div>
+            <div className="font-semibold text-ink">2★ feedback</div>
             <div className="text-muted-foreground truncate">"Cold parathas, no apology"</div>
-            <div className="text-[9px] text-red-600 font-medium mt-0.5">just now</div>
+            <div className="text-[9px] text-red-400 font-medium mt-0.5">just now</div>
           </div>
         </div>
         <div className="flex items-center gap-2 text-[9px]">
-          <div className="px-2 py-1 rounded bg-white border flex items-center gap-1 flex-1 justify-center">
-            <Mail className="h-2.5 w-2.5 text-primary" /> Email sent
+          <div className="px-2 py-1 rounded bg-surface border border-border flex items-center gap-1 flex-1 justify-center">
+            <Mail className="h-2.5 w-2.5 text-brand" /> Email sent
           </div>
-          <div className="px-2 py-1 rounded bg-white border flex items-center gap-1 flex-1 justify-center">
+          <div className="px-2 py-1 rounded bg-surface border border-border flex items-center gap-1 flex-1 justify-center">
             <MessageCircle className="h-2.5 w-2.5 text-[#25D366]" /> WA sent
           </div>
         </div>
@@ -207,8 +207,8 @@ function WhatsAppCard() {
             <div className="mt-1 text-[8px] text-muted-foreground text-right">10:24 AM ✓✓</div>
           </div>
         </div>
-        <div className="mt-2 inline-flex items-center gap-1 text-[9px] text-muted-foreground bg-white px-2 py-1 rounded-full border">
-          <span className="h-1.5 w-1.5 rounded-full bg-accent-500" />
+        <div className="mt-2 inline-flex items-center gap-1 text-[9px] text-muted-foreground bg-surface px-2 py-1 rounded-full border border-border">
+          <span className="h-1.5 w-1.5 rounded-full bg-accent" />
           5x more reviews
         </div>
       </div>
@@ -220,19 +220,19 @@ function DashboardCard() {
   return (
     <FeatureFrame title="Real-time dashboard" tag="Mobile" tagTone="primary">
       <div className="w-full grid grid-cols-2 gap-1.5">
-        <div className="rounded-md bg-white border p-2">
+        <div className="rounded-md bg-surface border border-border p-2">
           <div className="text-[8px] text-muted-foreground">Reviews</div>
-          <div className="text-base font-bold">1,284</div>
-          <div className="text-[8px] text-accent-600 font-medium">+12%</div>
+          <div className="text-base font-bold text-ink">1,284</div>
+          <div className="text-[8px] text-accent font-medium">+12%</div>
         </div>
-        <div className="rounded-md bg-white border p-2">
+        <div className="rounded-md bg-surface border border-border p-2">
           <div className="text-[8px] text-muted-foreground">Avg</div>
-          <div className="text-base font-bold inline-flex items-center gap-0.5">
+          <div className="text-base font-bold inline-flex items-center gap-0.5 text-ink">
             4.7 <Star className="h-2.5 w-2.5 fill-amber-400 text-amber-400" />
           </div>
-          <div className="text-[8px] text-accent-600 font-medium">+0.2</div>
+          <div className="text-[8px] text-accent font-medium">+0.2</div>
         </div>
-        <div className="col-span-2 rounded-md bg-white border p-2">
+        <div className="col-span-2 rounded-md bg-surface border border-border p-2">
           <div className="flex items-end gap-0.5 h-8">
             {[40, 55, 48, 62, 70, 68, 82, 75, 88, 92].map((h, i) => (
               <div key={i} className="flex-1 rounded-t gradient-brand" style={{ height: `${h}%` }} />
@@ -255,11 +255,11 @@ function StaffCard() {
         ].map((s, i) => (
           <div
             key={s.name}
-            className={`rounded-md border p-2 flex items-center gap-2 text-[10px] ${
-              s.top ? "bg-amber-50 border-amber-200" : "bg-white"
+            className={`rounded-md border p-2 flex items-center gap-2 text-[10px] text-ink ${
+              s.top ? "bg-amber-400/10 border-amber-400/30" : "bg-surface border-border"
             }`}
           >
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-secondary text-[9px] font-bold">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-elevated text-[9px] font-bold">
               {i + 1}
             </span>
             <span className="font-medium flex-1 truncate">{s.name}</span>
@@ -277,8 +277,8 @@ function TagsCard() {
   return (
     <FeatureFrame title="Smart feedback tags" tag="AI" tagTone="primary">
       <div className="w-full">
-        <div className="rounded-lg bg-white border p-2.5 text-[9px] mb-2">
-          <div className="font-medium leading-relaxed">"Server was rude when we asked for water"</div>
+        <div className="rounded-lg bg-surface border border-border p-2.5 text-[9px] mb-2">
+          <div className="font-medium leading-relaxed text-ink">"Server was rude when we asked for water"</div>
         </div>
         <div className="flex flex-wrap gap-1">
           {[
@@ -288,7 +288,7 @@ function TagsCard() {
           ].map((t) => (
             <span
               key={t.label}
-              className="px-2 py-0.5 rounded-full text-[9px] font-medium border bg-white"
+              className="px-2 py-0.5 rounded-full text-[9px] font-medium border bg-surface"
               style={{ borderColor: t.color, color: t.color }}
             >
               {t.label}
@@ -303,21 +303,21 @@ function TagsCard() {
 function ExportCard() {
   return (
     <FeatureFrame title="CSV / PDF export" tag="Easy" tagTone="primary">
-      <div className="w-full bg-white rounded-lg border p-3">
+      <div className="w-full bg-surface rounded-lg border border-border p-3">
         <div className="flex items-center gap-2 mb-2">
-          <FileDown className="h-4 w-4 text-primary" />
-          <span className="text-[10px] font-semibold">reviews-2026-04.csv</span>
+          <FileDown className="h-4 w-4 text-brand" />
+          <span className="text-[10px] font-semibold text-ink">reviews-2026-04.csv</span>
         </div>
         <div className="space-y-1">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="grid grid-cols-3 gap-1 text-[8px]">
-              <div className="h-2 rounded bg-secondary" />
-              <div className="h-2 rounded bg-secondary" />
-              <div className="h-2 rounded bg-primary-100" />
+              <div className="h-2 rounded bg-elevated" />
+              <div className="h-2 rounded bg-elevated" />
+              <div className="h-2 rounded bg-brand/30" />
             </div>
           ))}
         </div>
-        <div className="mt-2 text-[9px] text-accent-600 font-medium">1,284 rows · 247 KB</div>
+        <div className="mt-2 text-[9px] text-accent font-medium">1,284 rows · 247 KB</div>
       </div>
     </FeatureFrame>
   );
@@ -326,20 +326,20 @@ function ExportCard() {
 function WidgetCard() {
   return (
     <FeatureFrame title="Public testimonial widget" tag="Embed" tagTone="accent">
-      <div className="w-full bg-white rounded-lg border p-3 shadow-sm">
+      <div className="w-full bg-surface rounded-lg border border-border p-3 shadow-neu">
         <div className="flex items-center gap-2 mb-2">
           <div className="h-6 w-6 rounded gradient-brand text-white text-[10px] font-bold flex items-center justify-center">
             S
           </div>
           <div className="min-w-0">
-            <div className="text-[10px] font-semibold truncate">Spice Junction</div>
+            <div className="text-[10px] font-semibold truncate text-ink">Spice Junction</div>
             <div className="flex items-center gap-1">
               <span className="text-amber-400 text-[9px]">★★★★★</span>
               <span className="text-[8px] text-muted-foreground">4.7 · 1,284</span>
             </div>
           </div>
         </div>
-        <div className="rounded-md bg-secondary/40 p-2 text-[9px]">
+        <div className="rounded-md bg-elevated p-2 text-[9px]">
           <div className="text-amber-400 mb-0.5">★★★★★</div>
           <div className="text-foreground/80 line-clamp-2">
             "Loved the masala dosa! Best in Indiranagar."

@@ -72,7 +72,7 @@ export function PricingForm({ initial }: { initial: PricingConfig }) {
                 <CardTitle className="flex items-center gap-2">
                   {p.name || tier}
                   {p.highlighted && (
-                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-primary text-white text-[10px] font-bold">
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-brand text-white text-[10px] font-bold">
                       <Sparkles className="h-2.5 w-2.5" /> Highlighted
                     </span>
                   )}

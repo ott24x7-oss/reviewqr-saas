@@ -28,7 +28,7 @@ export default async function AdminAuditPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b text-xs text-muted-foreground">
+                <tr className="border-b border-border text-xs text-muted-foreground">
                   <th className="text-left py-2.5 px-4">When</th>
                   <th className="text-left py-2.5 px-4">Actor</th>
                   <th className="text-left py-2.5 px-4">Action</th>
@@ -41,7 +41,7 @@ export default async function AdminAuditPage() {
                 {logs.map((l) => {
                   const u = l.userId ? userMap.get(l.userId) : null;
                   return (
-                    <tr key={l.id} className="border-b last:border-0">
+                    <tr key={l.id} className="border-b border-border last:border-0">
                       <td className="py-2.5 px-4 text-xs">
                         <div>{timeAgo(l.createdAt)}</div>
                         <div className="text-muted-foreground">{formatDate(l.createdAt)}</div>

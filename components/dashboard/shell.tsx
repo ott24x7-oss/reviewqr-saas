@@ -87,13 +87,13 @@ export function DashboardShell({
     : 0;
 
   return (
-    <div className="min-h-screen flex flex-col bg-secondary/30">
+    <div className="min-h-screen flex flex-col">
       {/* Top bar */}
-      <header className="sticky top-0 z-40 border-b bg-white/95 backdrop-blur-sm">
+      <header className="sticky top-0 z-40 border-b border-border glass">
         <div className="flex h-14 sm:h-16 items-center justify-between px-3 sm:px-6 gap-2">
           <div className="flex items-center gap-2">
             <button
-              className="md:hidden inline-flex h-9 w-9 items-center justify-center rounded-lg border"
+              className="md:hidden inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border text-ink"
               onClick={() => setMobileOpen((v) => !v)}
               aria-label="Toggle menu"
             >
@@ -120,7 +120,7 @@ export function DashboardShell({
             {(user.tier === "FREE" || user.tier === "GROWTH" && !user.subscriptionEndsAt) && (
               <Link
                 href="/dashboard/billing"
-                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-xs font-medium hover:bg-amber-100 transition"
+                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-400/15 text-amber-400 border border-amber-400/20 text-xs font-medium hover:bg-amber-400/25 transition"
               >
                 <Sparkles className="h-3.5 w-3.5" />
                 {trialDays > 0 ? `${trialDays} days left` : "Upgrade"}
@@ -129,7 +129,7 @@ export function DashboardShell({
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="inline-flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-secondary transition-colors">
+                <button className="inline-flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-elevated/60 transition-colors">
                   <span className="flex h-8 w-8 items-center justify-center rounded-full gradient-brand text-white text-sm font-semibold">
                     {getInitials(user.name || user.email)}
                   </span>
@@ -179,7 +179,7 @@ export function DashboardShell({
 
       <div className="flex-1 flex">
         {/* Sidebar - desktop */}
-        <aside className="hidden md:flex w-60 lg:w-64 border-r bg-white shrink-0 flex-col">
+        <aside className="hidden md:flex w-60 lg:w-64 border-r border-border glass shrink-0 flex-col">
           <nav className="flex-1 p-3 space-y-0.5">
             {nav.map((n) => (
               <Link
@@ -188,8 +188,8 @@ export function DashboardShell({
                 className={cn(
                   "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
                   isActive(n.href, n.exact)
-                    ? "bg-primary-50 text-primary-700"
-                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                    ? "bg-brand/15 text-brand"
+                    : "text-muted-foreground hover:bg-elevated/60 hover:text-ink"
                 )}
               >
                 <n.icon className="h-4 w-4" />
@@ -198,9 +198,9 @@ export function DashboardShell({
             ))}
           </nav>
 
-          <div className="p-3 border-t">
-            <div className="rounded-lg bg-gradient-to-br from-primary-50 to-accent-50 p-3 text-xs">
-              <div className="font-semibold text-foreground mb-1">Need help?</div>
+          <div className="p-3 border-t border-border">
+            <div className="rounded-lg border border-border bg-elevated p-3 text-xs">
+              <div className="font-semibold text-ink mb-1">Need help?</div>
               <p className="text-muted-foreground leading-relaxed">
                 Email us at hello@reviewqr.in or check the docs.
               </p>
@@ -212,7 +212,7 @@ export function DashboardShell({
         {mobileOpen && (
           <div className="md:hidden fixed inset-0 z-30 bg-black/50" onClick={() => setMobileOpen(false)}>
             <aside
-              className="fixed left-0 top-14 bottom-0 w-64 bg-white border-r shadow-xl"
+              className="fixed left-0 top-14 bottom-0 w-64 glass-strong border-r border-border shadow-xl"
               onClick={(e) => e.stopPropagation()}
             >
               <nav className="p-3 space-y-0.5">
@@ -224,8 +224,8 @@ export function DashboardShell({
                     className={cn(
                       "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
                       isActive(n.href, n.exact)
-                        ? "bg-primary-50 text-primary-700"
-                        : "text-muted-foreground hover:bg-secondary"
+                        ? "bg-brand/15 text-brand"
+                        : "text-muted-foreground hover:bg-elevated/60"
                     )}
                   >
                     <n.icon className="h-4 w-4" />
@@ -244,7 +244,7 @@ export function DashboardShell({
       </div>
 
       {/* Mobile bottom nav */}
-      <nav className="md:hidden sticky bottom-0 z-30 border-t bg-white grid grid-cols-5 safe-pb">
+      <nav className="md:hidden sticky bottom-0 z-30 border-t border-border glass grid grid-cols-5 safe-pb">
         {[
           { href: "/dashboard", label: "Home", icon: LayoutDashboard, exact: true },
           { href: "/dashboard/reviews", label: "Reviews", icon: Star },
@@ -257,7 +257,7 @@ export function DashboardShell({
             href={n.href}
             className={cn(
               "flex flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-medium",
-              isActive(n.href, n.exact) ? "text-primary" : "text-muted-foreground"
+              isActive(n.href, n.exact) ? "text-brand" : "text-muted-foreground"
             )}
           >
             <n.icon className="h-5 w-5" />

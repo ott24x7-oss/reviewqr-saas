@@ -98,12 +98,12 @@ export function BillingClient({
             <h2 className="text-lg font-semibold">Choose a plan</h2>
             <p className="text-sm text-muted-foreground">Pay via Razorpay (UPI / cards / wallets)</p>
           </div>
-          <div className="inline-flex items-center gap-1 p-1 rounded-full bg-secondary">
+          <div className="inline-flex items-center gap-1 p-1 rounded-full bg-elevated">
             <button
               onClick={() => setAnnual(false)}
               className={cn(
                 "px-3 py-1 rounded-full text-xs font-medium transition",
-                !annual ? "bg-white shadow text-foreground" : "text-muted-foreground"
+                !annual ? "bg-surface shadow-neu-sm text-ink" : "text-muted-foreground"
               )}
             >
               Monthly
@@ -112,11 +112,11 @@ export function BillingClient({
               onClick={() => setAnnual(true)}
               className={cn(
                 "px-3 py-1 rounded-full text-xs font-medium transition flex items-center gap-1",
-                annual ? "bg-white shadow text-foreground" : "text-muted-foreground"
+                annual ? "bg-surface shadow-neu-sm text-ink" : "text-muted-foreground"
               )}
             >
               Yearly
-              <span className="px-1.5 py-0.5 rounded-full bg-accent-100 text-accent-800 text-[9px] font-bold">
+              <span className="px-1.5 py-0.5 rounded-full bg-accent/15 text-accent text-[9px] font-bold">
                 -17%
               </span>
             </button>
@@ -134,8 +134,8 @@ export function BillingClient({
               <div
                 key={tierKey}
                 className={cn(
-                  "relative rounded-xl border p-4 flex flex-col",
-                  isHighlighted && "ring-2 ring-primary"
+                  "relative rounded-xl border border-border p-4 flex flex-col",
+                  isHighlighted && "bg-brand/10 border-brand/40"
                 )}
               >
                 {isHighlighted && (

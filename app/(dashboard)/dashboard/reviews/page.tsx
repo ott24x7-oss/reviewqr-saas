@@ -115,10 +115,10 @@ export default async function ReviewsPage({
                   <div
                     className={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold ${
                       r.rating >= 4
-                        ? "bg-accent-100 text-accent-700"
+                        ? "bg-accent/15 text-accent"
                         : r.rating === 3
-                        ? "bg-amber-100 text-amber-700"
-                        : "bg-red-100 text-red-700"
+                        ? "bg-amber-400/15 text-amber-400"
+                        : "bg-destructive/15 text-destructive"
                     }`}
                   >
                     {r.rating}★
@@ -168,7 +168,7 @@ function FilterPill({ href, active, children }: { href: string; active: boolean;
     <Link
       href={href}
       className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-        active ? "bg-primary text-white" : "bg-secondary text-foreground hover:bg-secondary/80"
+        active ? "bg-brand text-white" : "bg-elevated text-ink hover:bg-elevated/70"
       }`}
     >
       {children}

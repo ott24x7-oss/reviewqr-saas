@@ -59,7 +59,7 @@ export default async function BusinessesPage() {
             const ratings = b.reviews.map((r) => r.rating);
             const avg = ratings.length ? ratings.reduce((a, c) => a + c, 0) / ratings.length : 0;
             return (
-              <Card key={b.id} className="hover:shadow-card transition-shadow flex flex-col">
+              <Card key={b.id} className="hover:shadow-neu transition-shadow flex flex-col">
                 <CardContent className="p-5 flex-1">
                   <div className="flex items-start gap-3">
                     {b.logo ? (
@@ -81,18 +81,18 @@ export default async function BusinessesPage() {
                   </div>
 
                   <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-                    <div className="rounded-lg bg-secondary p-2">
+                    <div className="rounded-lg bg-elevated p-2">
                       <div className="text-base font-bold inline-flex items-center gap-0.5">
                         {avg > 0 ? avg.toFixed(1) : "—"}
                         {avg > 0 && <Star className="h-3 w-3 fill-amber-400 text-amber-400" />}
                       </div>
                       <div className="text-[10px] text-muted-foreground">Rating</div>
                     </div>
-                    <div className="rounded-lg bg-secondary p-2">
+                    <div className="rounded-lg bg-elevated p-2">
                       <div className="text-base font-bold">{formatNumber(b._count.reviews)}</div>
                       <div className="text-[10px] text-muted-foreground">Reviews</div>
                     </div>
-                    <div className="rounded-lg bg-secondary p-2">
+                    <div className="rounded-lg bg-elevated p-2">
                       <div className="text-base font-bold">{b._count.qrCodes}</div>
                       <div className="text-[10px] text-muted-foreground">QR codes</div>
                     </div>

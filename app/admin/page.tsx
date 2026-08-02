@@ -139,7 +139,7 @@ export default async function AdminOverview() {
           <Link
             key={t.label}
             href={t.href}
-            className="rounded-xl border bg-white p-4 hover:shadow-soft transition"
+            className="neu rounded-xl p-4 hover:shadow-neu transition"
           >
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-muted-foreground">{t.label}</span>
@@ -160,7 +160,7 @@ export default async function AdminOverview() {
             {recentUsers.length === 0 ? (
               <p className="text-sm text-muted-foreground">No users yet.</p>
             ) : (
-              <ul className="divide-y -mx-2">
+              <ul className="divide-border divide-y -mx-2">
                 {recentUsers.map((u) => (
                   <li key={u.id} className="py-2.5 px-2 flex items-center justify-between">
                     <div className="min-w-0">
@@ -177,7 +177,7 @@ export default async function AdminOverview() {
             )}
             <Link
               href="/admin/users"
-              className="mt-3 inline-flex items-center gap-1 text-xs text-primary font-medium hover:underline"
+              className="mt-3 inline-flex items-center gap-1 text-xs text-brand font-medium hover:underline"
             >
               View all users <ArrowRight className="h-3 w-3" />
             </Link>
@@ -214,7 +214,7 @@ export default async function AdminOverview() {
             {payments.length === 0 ? (
               <p className="text-sm text-muted-foreground">No completed payments yet.</p>
             ) : (
-              <ul className="divide-y -mx-2">
+              <ul className="divide-border divide-y -mx-2">
                 {payments.map((p) => (
                   <li key={p.id} className="py-2.5 px-2 flex items-center justify-between">
                     <div className="min-w-0">
@@ -233,7 +233,7 @@ export default async function AdminOverview() {
             )}
             <Link
               href="/admin/payments"
-              className="mt-3 inline-flex items-center gap-1 text-xs text-primary font-medium hover:underline"
+              className="mt-3 inline-flex items-center gap-1 text-xs text-brand font-medium hover:underline"
             >
               All payments <ArrowRight className="h-3 w-3" />
             </Link>
@@ -250,13 +250,13 @@ export default async function AdminOverview() {
                 <li key={c.label}>
                   <Link
                     href={c.href}
-                    className="flex items-center justify-between p-2 rounded-lg hover:bg-secondary text-sm"
+                    className="flex items-center justify-between p-2 rounded-lg hover:bg-elevated/60 text-sm"
                   >
                     <span className="flex items-center gap-2">
                       {c.ok ? (
-                        <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                        <span className="h-2 w-2 rounded-full bg-accent" />
                       ) : (
-                        <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
+                        <AlertCircle className="h-3.5 w-3.5 text-amber-400" />
                       )}
                       {c.label}
                     </span>
