@@ -91,7 +91,7 @@ export function EditBusinessForm({ initial }: { initial: Init }) {
                 type="color"
                 value={form.primaryColor}
                 onChange={(e) => update("primaryColor", e.target.value)}
-                className="h-10 w-14 rounded-lg border cursor-pointer"
+                className="h-10 w-14 rounded-lg border border-border cursor-pointer"
               />
               <Input
                 value={form.primaryColor}
@@ -215,7 +215,7 @@ export function EditBusinessForm({ initial }: { initial: Init }) {
             <Label htmlFor="threshold">Rating threshold</Label>
             <select
               id="threshold"
-              className="w-full h-10 rounded-lg border bg-white px-3 text-sm"
+              className="w-full h-10 rounded-lg border border-border bg-surface px-3 text-sm"
               value={form.ratingThreshold}
               onChange={(e) => update("ratingThreshold", Number(e.target.value))}
             >
@@ -244,7 +244,7 @@ export function EditBusinessForm({ initial }: { initial: Init }) {
         </CardContent>
       </Card>
 
-      <div className="flex justify-end gap-2 sticky bottom-3 bg-secondary/30 backdrop-blur-sm py-2 -mx-2 px-2 rounded-lg">
+      <div className="flex justify-end gap-2 sticky bottom-3 glass py-2 -mx-2 px-2 rounded-lg">
         <Button type="button" variant="outline" onClick={() => router.back()}>
           Cancel
         </Button>

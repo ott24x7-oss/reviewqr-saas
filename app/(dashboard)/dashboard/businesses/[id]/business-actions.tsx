@@ -58,7 +58,7 @@ export function BusinessActions({
         </div>
 
         <div className="grid sm:grid-cols-2 gap-2 pt-2">
-          <details className="rounded-lg border p-3">
+          <details className="rounded-lg border border-border p-3">
             <summary className="text-sm font-medium cursor-pointer flex items-center gap-2">
               <Code className="h-4 w-4" /> Embed widget on your website
             </summary>
@@ -82,7 +82,7 @@ export function BusinessActions({
             </Button>
           </details>
 
-          <details className="rounded-lg border p-3">
+          <details className="rounded-lg border border-border p-3">
             <summary className="text-sm font-medium cursor-pointer flex items-center gap-2">
               <Share2 className="h-4 w-4" /> Email signature link
             </summary>

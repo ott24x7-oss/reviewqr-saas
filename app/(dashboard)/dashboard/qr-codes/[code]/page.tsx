@@ -73,12 +73,12 @@ export default async function QrDetailPage({ params }: { params: { code: string 
 
             <div>
               <div className="text-xs text-muted-foreground mb-1">Short URL</div>
-              <code className="text-xs bg-secondary px-2 py-1 rounded font-mono break-all">{targetUrl}</code>
+              <code className="text-xs bg-elevated px-2 py-1 rounded font-mono break-all">{targetUrl}</code>
             </div>
 
             <div>
               <div className="text-xs text-muted-foreground mb-1">Direct review URL</div>
-              <code className="text-xs bg-secondary px-2 py-1 rounded font-mono break-all">{directUrl}</code>
+              <code className="text-xs bg-elevated px-2 py-1 rounded font-mono break-all">{directUrl}</code>
             </div>
 
             <div className="grid grid-cols-2 gap-2 pt-2">

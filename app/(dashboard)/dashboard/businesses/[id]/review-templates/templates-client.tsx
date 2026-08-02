@@ -130,8 +130,8 @@ export function ReviewTemplatesClient({
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-3 gap-3">
-        <StatTile label="Available" value={stats.available} accent="text-emerald-600" />
-        <StatTile label="Used" value={stats.used} accent="text-slate-500" />
+        <StatTile label="Available" value={stats.available} accent="text-accent" />
+        <StatTile label="Used" value={stats.used} accent="text-muted-foreground" />
         <StatTile label="Total stock" value={stats.total} accent="text-foreground" />
       </div>
 
@@ -162,7 +162,7 @@ export function ReviewTemplatesClient({
       <Card>
         <CardHeader className="flex-row items-center justify-between gap-2 space-y-0">
           <CardTitle>Stock</CardTitle>
-          <div className="flex gap-1 p-1 rounded-full bg-secondary text-xs">
+          <div className="flex gap-1 p-1 rounded-full bg-elevated text-xs">
             {(["all", "available", "used"] as const).map((f) => (
               <button
                 key={f}
@@ -170,7 +170,7 @@ export function ReviewTemplatesClient({
                 className={cn(
                   "px-3 py-1 rounded-full font-medium transition",
                   filter === f
-                    ? "bg-white shadow-sm text-foreground"
+                    ? "bg-surface shadow-neu-sm text-foreground"
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
@@ -201,7 +201,7 @@ export function ReviewTemplatesClient({
                 : "No matches."}
             </div>
           ) : (
-            <ul className="divide-y -mx-2">
+            <ul className="divide-border -mx-2">
               {filtered.map((t) => (
                 <li key={t.id} className="px-2 py-3 flex gap-3 items-start">
                   <button
@@ -211,9 +211,9 @@ export function ReviewTemplatesClient({
                     title={t.used ? "Mark as available" : "Mark as used"}
                   >
                     {t.used ? (
-                      <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                      <CheckCircle2 className="h-5 w-5 text-accent" />
                     ) : (
-                      <Circle className="h-5 w-5 text-slate-300" />
+                      <Circle className="h-5 w-5 text-muted-foreground" />
                     )}
                   </button>
                   <div className="min-w-0 flex-1">
@@ -278,7 +278,7 @@ function StatTile({
   accent: string;
 }) {
   return (
-    <div className="rounded-xl border bg-white p-4">
+    <div className="rounded-xl border border-border bg-surface p-4">
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className={cn("text-2xl font-bold mt-1", accent)}>{value.toLocaleString("en-IN")}</div>
     </div>

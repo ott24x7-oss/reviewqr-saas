@@ -68,17 +68,17 @@ export default async function FeedbackPage({
           {feedbacks.map((f) => {
             const customer = f.review.customerName || "Anonymous";
             return (
-              <Card key={f.id} className="hover:shadow-card transition-shadow">
+              <Card key={f.id} className="hover:shadow-neu transition-shadow">
                 <CardContent className="p-4 sm:p-5">
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div className="flex items-start gap-3 min-w-0">
                       <div
                         className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
                           f.review.rating >= 4
-                            ? "bg-accent-100 text-accent-700"
+                            ? "bg-accent/15 text-accent"
                             : f.review.rating === 3
-                            ? "bg-amber-100 text-amber-700"
-                            : "bg-red-100 text-red-700"
+                            ? "bg-amber-400/15 text-amber-400"
+                            : "bg-destructive/15 text-destructive"
                         }`}
                       >
                         {f.review.rating}★

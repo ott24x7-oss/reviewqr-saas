@@ -87,7 +87,7 @@ export function BrandingForm({ initial }: { initial: Branding }) {
           <CardTitle>Logo</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="flex items-center justify-center h-32 rounded-lg border bg-secondary/30">
+          <div className="flex items-center justify-center h-32 rounded-lg border border-border bg-elevated">
             {b.logoDataUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={b.logoDataUrl} alt="Logo preview" className="max-h-24 max-w-full" />
@@ -167,7 +167,7 @@ export function BrandingForm({ initial }: { initial: Branding }) {
                 type="color"
                 value={/^#[0-9a-fA-F]{6}$/.test(b.primaryColor) ? b.primaryColor : "#2563eb"}
                 onChange={(e) => setB({ ...b, primaryColor: e.target.value })}
-                className="h-10 w-14 rounded-lg border bg-white cursor-pointer"
+                className="h-10 w-14 rounded-lg border border-border bg-surface/70 cursor-pointer"
                 aria-label="Primary color picker"
               />
               <Input

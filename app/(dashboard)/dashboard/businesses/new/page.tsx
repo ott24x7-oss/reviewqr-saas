@@ -167,7 +167,7 @@ export default function NewBusinessPage() {
                   id="primaryColor"
                   value={form.primaryColor}
                   onChange={(e) => update("primaryColor", e.target.value)}
-                  className="h-10 w-14 rounded-lg border cursor-pointer"
+                  className="h-10 w-14 rounded-lg border border-border cursor-pointer"
                 />
                 <Input
                   value={form.primaryColor}

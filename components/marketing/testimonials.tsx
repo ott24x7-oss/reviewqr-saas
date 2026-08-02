@@ -65,10 +65,10 @@ const testimonials = [
 
 export function Testimonials() {
   return (
-    <section className="py-16 sm:py-24 bg-white">
+    <section className="py-16 sm:py-24">
       <div className="container max-w-6xl">
         <div className="text-center max-w-2xl mx-auto">
-          <span className="inline-block px-3 py-1 rounded-full bg-primary-50 text-primary-700 text-sm font-medium">
+          <span className="inline-block px-3 py-1 rounded-full bg-brand/10 text-brand border border-brand/20 text-sm font-medium">
             Loved by SMBs
           </span>
           <h2 className="section-title mt-4 font-display">
@@ -83,7 +83,7 @@ export function Testimonials() {
           {testimonials.map((t) => (
             <figure
               key={t.name}
-              className="rounded-xl border bg-white p-6 shadow-soft hover:shadow-card transition-shadow flex flex-col"
+              className="rounded-xl border border-border bg-surface p-6 shadow-neu hover:shadow-glow transition-shadow flex flex-col"
             >
               <div className="flex items-center gap-0.5 mb-3">
                 {Array.from({ length: 5 }).map((_, i) => (
@@ -95,18 +95,18 @@ export function Testimonials() {
                   />
                 ))}
               </div>
-              <blockquote className="text-sm sm:text-base text-foreground/90 leading-relaxed flex-1">
+              <blockquote className="text-sm sm:text-base text-ink/90 leading-relaxed flex-1">
                 "{t.quote}"
               </blockquote>
               <figcaption className="mt-5 flex items-center gap-3">
                 <img
                   src={t.image}
                   alt={t.name}
-                  className="h-10 w-10 rounded-full bg-secondary"
+                  className="h-10 w-10 rounded-full bg-elevated"
                   loading="lazy"
                 />
                 <div>
-                  <div className="font-medium text-sm">{t.name}</div>
+                  <div className="font-medium text-sm text-ink">{t.name}</div>
                   <div className="text-xs text-muted-foreground">
                     {t.role} · {t.location}
                   </div>

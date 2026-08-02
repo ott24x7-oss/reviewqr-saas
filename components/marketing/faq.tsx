@@ -50,10 +50,10 @@ const faqs = [
 
 export function FAQ() {
   return (
-    <section id="faq" className="py-16 sm:py-24 bg-white">
+    <section id="faq" className="py-16 sm:py-24">
       <div className="container max-w-3xl">
         <div className="text-center">
-          <span className="inline-block px-3 py-1 rounded-full bg-primary-50 text-primary-700 text-sm font-medium">
+          <span className="inline-block px-3 py-1 rounded-full bg-brand/10 text-brand border border-brand/20 text-sm font-medium">
             FAQ
           </span>
           <h2 className="section-title mt-4 font-display">
@@ -61,7 +61,7 @@ export function FAQ() {
           </h2>
           <p className="section-sub mt-4">
             Can't find what you're looking for?{" "}
-            <a href="mailto:hello@reviewqr.in" className="text-primary font-medium hover:underline">
+            <a href="mailto:hello@reviewqr.in" className="text-brand font-medium hover:underline">
               Email us
             </a>
             .

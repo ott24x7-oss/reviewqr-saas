@@ -37,7 +37,7 @@ function LoginForm() {
   }
 
   return (
-    <Card className="shadow-card">
+    <Card className="shadow-neu">
       <CardHeader className="text-center">
         <CardTitle className="text-2xl font-display">Welcome back</CardTitle>
         <CardDescription>Sign in to manage your reviews</CardDescription>
@@ -86,7 +86,7 @@ function LoginForm() {
             Create an account
           </Link>
         </div>
-        <div className="mt-4 p-3 rounded-lg bg-secondary text-xs text-muted-foreground">
+        <div className="mt-4 p-3 rounded-lg bg-elevated border border-border text-xs text-muted-foreground">
           <strong>Demo:</strong> demo@reviewqr.in / Demo@123
         </div>
       </CardContent>

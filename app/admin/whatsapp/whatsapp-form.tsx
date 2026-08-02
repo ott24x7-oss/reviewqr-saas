@@ -109,8 +109,8 @@ export function WhatsAppConfigForm({ initial }: { initial: WhatsAppConfig }) {
                   className={cn(
                     "text-left rounded-xl border p-3 transition",
                     active
-                      ? "border-foreground ring-2 ring-foreground/20 bg-secondary/40"
-                      : "border-border hover:border-foreground/40"
+                      ? "border-brand ring-2 ring-brand/20 bg-brand/10"
+                      : "border-border hover:border-brand/40"
                   )}
                 >
                   <div className="font-semibold text-sm">{p.title}</div>
@@ -120,7 +120,7 @@ export function WhatsAppConfigForm({ initial }: { initial: WhatsAppConfig }) {
             })}
           </div>
 
-          <label className="flex items-start gap-2 text-sm pt-2 border-t">
+          <label className="flex items-start gap-2 text-sm pt-2 border-t border-border">
             <input
               type="checkbox"
               className="mt-0.5"
