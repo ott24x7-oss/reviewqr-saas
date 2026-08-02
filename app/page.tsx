@@ -18,17 +18,17 @@ export default async function HomePage() {
   const [plans, brand] = await Promise.all([getPricingConfig(), getBrand()]);
   return (
     <main className="relative min-h-screen">
-      {/* Interactive dot-field background (React Bits), tuned for the light theme */}
-      <div className="pointer-events-none fixed inset-0 -z-10">
+      {/* Interactive dot-field background (React Bits) — uniform gray dots on a light-gray backdrop */}
+      <div className="pointer-events-none fixed inset-0 -z-10 bg-[#f1f2f4]">
         <DotField
-          dotRadius={1.6}
-          dotSpacing={16}
-          bulgeStrength={75}
-          cursorRadius={450}
-          glowRadius={150}
-          gradientFrom="rgba(52, 199, 123, 0.45)"
-          gradientTo="rgba(37, 99, 235, 0.28)"
-          glowColor="#34C77B"
+          dotRadius={2}
+          dotSpacing={20}
+          bulgeStrength={60}
+          cursorRadius={480}
+          glowRadius={160}
+          gradientFrom="rgba(148, 163, 184, 0.6)"
+          gradientTo="rgba(148, 163, 184, 0.6)"
+          glowColor="#334155"
         />
       </div>
       <MarketingNavbar brand={brand} />

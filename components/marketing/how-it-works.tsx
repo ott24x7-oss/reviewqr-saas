@@ -2,7 +2,7 @@ import { Star, ArrowRight, ArrowDown, Check, ExternalLink, MessageSquare, Send }
 
 export function HowItWorks() {
   return (
-    <section id="how" className="py-16 sm:py-24 bg-secondary/30 overflow-hidden">
+    <section id="how" className="py-16 sm:py-24 overflow-hidden">
       <div className="container max-w-6xl">
         <div className="text-center max-w-2xl mx-auto">
           <span className="inline-block px-3 py-1 rounded-full bg-accent-50 text-accent-700 text-sm font-medium">
