@@ -14,7 +14,7 @@ export function Pricing({ plans }: { plans: PricingConfig }) {
     .map((t) => plans[t]);
 
   return (
-    <section id="pricing" className="py-16 sm:py-24 bg-secondary/30">
+    <section id="pricing" className="py-16 sm:py-24">
       <div className="container max-w-6xl">
         <div className="text-center max-w-2xl mx-auto">
           <span className="inline-block px-3 py-1 rounded-full bg-accent-50 text-accent-700 text-sm font-medium">
