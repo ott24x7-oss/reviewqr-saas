@@ -1,29 +1,30 @@
 import { Star, ArrowRight, ArrowDown, Check, ExternalLink, MessageSquare, Send } from "lucide-react";
+import { Reveal, RevealGroup, RevealItem } from "@/components/ui/reveal";
 
 export function HowItWorks() {
   return (
     <section id="how" className="py-16 sm:py-24 overflow-hidden">
       <div className="container max-w-6xl">
-        <div className="text-center max-w-2xl mx-auto">
+        <Reveal className="text-center max-w-2xl mx-auto">
           <span className="inline-block px-3 py-1 rounded-full bg-accent/15 text-accent text-sm font-medium">
             How it works
           </span>
           <h2 className="section-title mt-4 font-display">
             Live in <span className="gradient-text">5 minutes</span>
           </h2>
-        </div>
+        </Reveal>
 
         {/* Step 1 → Step 2 → Step 3 → Step 4 with phone mockups */}
-        <div className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-3">
-          <Step1 />
+        <RevealGroup className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-3">
+          <RevealItem><Step1 /></RevealItem>
           <Connector />
-          <Step2 />
+          <RevealItem><Step2 /></RevealItem>
           <Connector />
-          <Step3 />
+          <RevealItem><Step3 /></RevealItem>
           <Connector />
-          <Step4 />
+          <RevealItem><Step4 /></RevealItem>
           <Connector />
-        </div>
+        </RevealGroup>
       </div>
     </section>
   );

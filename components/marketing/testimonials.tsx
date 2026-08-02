@@ -1,4 +1,5 @@
 import { Star } from "lucide-react";
+import { Reveal, RevealGroup, RevealItem } from "@/components/ui/reveal";
 
 const testimonials = [
   {
@@ -67,7 +68,7 @@ export function Testimonials() {
   return (
     <section className="py-16 sm:py-24">
       <div className="container max-w-6xl">
-        <div className="text-center max-w-2xl mx-auto">
+        <Reveal className="text-center max-w-2xl mx-auto">
           <span className="inline-block px-3 py-1 rounded-full bg-brand/10 text-brand border border-brand/20 text-sm font-medium">
             Loved by SMBs
           </span>
@@ -77,11 +78,11 @@ export function Testimonials() {
           <p className="section-sub mt-4">
             Cafés, salons, clinics, gyms, boutiques — they all share one thing.
           </p>
-        </div>
+        </Reveal>
 
-        <div className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        <RevealGroup className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {testimonials.map((t) => (
-            <figure
+            <RevealItem
               key={t.name}
               className="rounded-xl border border-border bg-surface p-6 shadow-neu hover:shadow-glow transition-shadow flex flex-col"
             >
@@ -112,9 +113,9 @@ export function Testimonials() {
                   </div>
                 </div>
               </figcaption>
-            </figure>
+            </RevealItem>
           ))}
-        </div>
+        </RevealGroup>
       </div>
     </section>
   );

@@ -432,6 +432,19 @@
       transparent
     );
   }
+
+  /* ───────── ScrollFloat (char-by-char heading reveal) ───────── */
+  .scroll-float {
+    overflow: hidden;
+    padding-bottom: 0.14em;
+  }
+  .scroll-float-text {
+    display: inline-block;
+  }
+  .scroll-float .char {
+    display: inline-block;
+    will-change: transform, opacity;
+  }
 }
 
 @layer utilities {

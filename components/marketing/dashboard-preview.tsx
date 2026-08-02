@@ -1,10 +1,11 @@
 import { Star, TrendingUp, AlertTriangle, ArrowUpRight, MessageSquare, Users } from "lucide-react";
+import { Reveal, RevealGroup, RevealItem } from "@/components/ui/reveal";
 
 export function DashboardPreview() {
   return (
     <section className="py-16 sm:py-24">
       <div className="container max-w-6xl">
-        <div className="text-center max-w-2xl mx-auto">
+        <Reveal className="text-center max-w-2xl mx-auto">
           <span className="inline-block px-3 py-1 rounded-full bg-brand/10 text-brand border border-brand/20 text-sm font-medium">
             Dashboard
           </span>
@@ -15,11 +16,11 @@ export function DashboardPreview() {
           <p className="section-sub mt-4">
             Beautifully simple. Built mobile-first because your dukan never closes.
           </p>
-        </div>
+        </Reveal>
 
-        <div className="mt-12 grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+        <RevealGroup className="mt-12 grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
           {/* Analytics card */}
-          <div className="rounded-2xl border border-border bg-gradient-to-br from-brand/10 to-accent/10 p-1.5 shadow-neu">
+          <RevealItem className="rounded-2xl border border-border bg-gradient-to-br from-brand/10 to-accent/10 p-1.5 shadow-neu">
             <div className="rounded-xl bg-surface p-5 sm:p-6">
               <div className="flex items-center justify-between mb-5">
                 <div>
@@ -55,10 +56,10 @@ export function DashboardPreview() {
                 </div>
               </div>
             </div>
-          </div>
+          </RevealItem>
 
           {/* Star distribution */}
-          <div className="rounded-2xl border border-border bg-surface p-5 sm:p-6 shadow-neu">
+          <RevealItem className="rounded-2xl border border-border bg-surface p-5 sm:p-6 shadow-neu">
             <h3 className="text-lg font-semibold mb-4 text-ink">Rating distribution</h3>
             <div className="space-y-3">
               {[
@@ -85,10 +86,10 @@ export function DashboardPreview() {
                 </div>
               ))}
             </div>
-          </div>
+          </RevealItem>
 
           {/* Negative feedback alerts */}
-          <div className="rounded-2xl border border-border bg-surface p-5 sm:p-6 shadow-neu">
+          <RevealItem className="rounded-2xl border border-border bg-surface p-5 sm:p-6 shadow-neu">
             <div className="flex items-center gap-2 mb-4">
               <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-500/15 text-red-400">
                 <AlertTriangle className="h-4 w-4" />
@@ -124,10 +125,10 @@ export function DashboardPreview() {
                 </li>
               ))}
             </ul>
-          </div>
+          </RevealItem>
 
           {/* Staff leaderboard */}
-          <div className="rounded-2xl border border-border bg-surface p-5 sm:p-6 shadow-neu">
+          <RevealItem className="rounded-2xl border border-border bg-surface p-5 sm:p-6 shadow-neu">
             <div className="flex items-center gap-2 mb-4">
               <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent/15 text-accent">
                 <Users className="h-4 w-4" />
@@ -156,8 +157,8 @@ export function DashboardPreview() {
                 </li>
               ))}
             </ul>
-          </div>
-        </div>
+          </RevealItem>
+        </RevealGroup>
       </div>
     </section>
   );

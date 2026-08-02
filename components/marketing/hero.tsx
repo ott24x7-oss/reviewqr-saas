@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { ArrowRight, Star, Play, ChevronRight, MessageCircle, Heart, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Reveal } from "@/components/ui/reveal";
 
 export function Hero() {
   return (
@@ -22,6 +23,7 @@ export function Hero() {
         <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
           {/* Left: minimal copy */}
           <div className="text-center lg:text-left order-2 lg:order-1">
+            <Reveal>
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand/10 border border-brand/20 text-brand text-xs font-medium">
               <span className="flex h-2 w-2 rounded-full bg-accent animate-pulse-soft" />
               2,500+ Indian SMBs
@@ -75,10 +77,11 @@ export function Hero() {
                 <p className="text-xs text-muted-foreground">from 800+ owners</p>
               </div>
             </div>
+            </Reveal>
           </div>
 
           {/* Right: layered phone + dashboard mockup */}
-          <div className="order-1 lg:order-2 relative">
+          <Reveal delay={0.1} className="order-1 lg:order-2 relative">
             <div className="relative max-w-md mx-auto">
               {/* Backdrop dashboard mock */}
               <div className="absolute -right-6 -top-4 sm:-right-12 sm:-top-8 w-72 sm:w-80 rounded-xl border border-border bg-surface shadow-neu overflow-hidden hidden sm:block rotate-3">
@@ -188,7 +191,7 @@ export function Hero() {
                 </div>
               </div>
             </div>
-          </div>
+          </Reveal>
         </div>
       </div>
     </section>

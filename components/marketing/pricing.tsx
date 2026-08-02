@@ -6,6 +6,7 @@ import type { PricingConfig } from "@/lib/settings";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatINR } from "@/lib/utils";
+import { Reveal, RevealGroup, RevealItem } from "@/components/ui/reveal";
 
 export function Pricing({ plans }: { plans: PricingConfig }) {
   const [annual, setAnnual] = React.useState(true);
@@ -17,6 +18,7 @@ export function Pricing({ plans }: { plans: PricingConfig }) {
     <section id="pricing" className="py-16 sm:py-24">
       <div className="container max-w-6xl">
         <div className="text-center max-w-2xl mx-auto">
+          <Reveal>
           <span className="inline-block px-3 py-1 rounded-full bg-accent/15 text-accent text-sm font-medium">
             Pricing
           </span>
@@ -26,6 +28,7 @@ export function Pricing({ plans }: { plans: PricingConfig }) {
           <p className="section-sub mt-4">
             Start free. Upgrade only when you grow. No long-term contracts. GST invoice provided.
           </p>
+          </Reveal>
 
           <div className="mt-6 inline-flex items-center gap-1 p-1 rounded-full bg-surface border border-border shadow-neu">
             <button
@@ -52,12 +55,12 @@ export function Pricing({ plans }: { plans: PricingConfig }) {
           </div>
         </div>
 
-        <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        <RevealGroup className="mt-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {tiers.map((tier) => {
             const price = annual ? tier.yearly : tier.monthly;
             const isHighlighted = !!tier.highlighted;
             return (
-              <div
+              <RevealItem
                 key={tier.tier}
                 className={cn(
                   "relative rounded-2xl border border-border bg-surface p-6 sm:p-7 flex flex-col transition-all hover:shadow-glow",
@@ -112,10 +115,10 @@ export function Pricing({ plans }: { plans: PricingConfig }) {
                     {tier.tier === "FREE" ? "Start Free" : tier.tier === "AGENCY" ? "Talk to sales" : "Start trial"}
                   </Link>
                 </Button>
-              </div>
+              </RevealItem>
             );
           })}
-        </div>
+        </RevealGroup>
 
         <p className="mt-8 text-center text-sm text-muted-foreground">
           All plans include UPI / Razorpay billing · GST invoice · 14-day money-back guarantee

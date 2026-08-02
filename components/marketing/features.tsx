@@ -16,12 +16,13 @@ import {
   ExternalLink,
   Layers
 } from "lucide-react";
+import { Reveal, RevealGroup, RevealItem } from "@/components/ui/reveal";
 
 export function Features() {
   return (
     <section id="features" className="py-16 sm:py-24">
       <div className="container max-w-6xl">
-        <div className="text-center max-w-2xl mx-auto">
+        <Reveal className="text-center max-w-2xl mx-auto">
           <span className="inline-block px-3 py-1 rounded-full bg-brand/10 text-brand border border-brand/20 text-sm font-medium">
             Features
           </span>
@@ -29,20 +30,20 @@ export function Features() {
             Everything you need.{" "}
             <span className="gradient-text">Nothing you don't.</span>
           </h2>
-        </div>
+        </Reveal>
 
         {/* Big feature grid: each card is a mini visual mockup */}
-        <div className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-          <SmartLinkCard />
-          <QrCodeCard />
-          <NegativeAlertCard />
-          <WhatsAppCard />
-          <DashboardCard />
-          <StaffCard />
-          <TagsCard />
-          <ExportCard />
-          <WidgetCard />
-        </div>
+        <RevealGroup className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+          <RevealItem><SmartLinkCard /></RevealItem>
+          <RevealItem><QrCodeCard /></RevealItem>
+          <RevealItem><NegativeAlertCard /></RevealItem>
+          <RevealItem><WhatsAppCard /></RevealItem>
+          <RevealItem><DashboardCard /></RevealItem>
+          <RevealItem><StaffCard /></RevealItem>
+          <RevealItem><TagsCard /></RevealItem>
+          <RevealItem><ExportCard /></RevealItem>
+          <RevealItem><WidgetCard /></RevealItem>
+        </RevealGroup>
 
         {/* Smaller features grid */}
         <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">

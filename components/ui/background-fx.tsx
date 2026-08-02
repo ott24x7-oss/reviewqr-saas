@@ -1,9 +1,12 @@
+import { WaterRipples } from "./water-ripples";
+
 /**
  * Site-wide animated background (ported from WatShop).
  *
  * Every layer is generated from CSS gradients + an inline SVG noise
  * data-URI — crisp at any size, zero network requests, and it recolors
- * itself from the theme CSS variables. All motion is pure CSS and is
+ * itself from the theme CSS variables. Plus an interactive water-ripple
+ * canvas that reacts to the cursor and scroll (desktop only). All motion is
  * disabled under prefers-reduced-motion.
  */
 export function BackgroundFX() {
@@ -38,6 +41,9 @@ export function BackgroundFX() {
 
       {/* Perspective grid, masked toward the top */}
       <div className="absolute inset-0 animate-grid-pan fx-grid" />
+
+      {/* Interactive water ripples — react to cursor + scroll (desktop only) */}
+      <WaterRipples />
 
       {/* Falling light beams */}
       <div className="absolute inset-0">

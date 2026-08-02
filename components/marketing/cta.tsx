@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Reveal } from "@/components/ui/reveal";
+import ScrollFloat from "@/components/ui/scroll-float";
 
 export function CTA() {
   return (
@@ -12,10 +14,11 @@ export function CTA() {
             className="absolute inset-0 bg-grid-pattern bg-[size:32px_32px] opacity-15"
           />
           <div className="relative">
+            <Reveal>
             <Sparkles className="mx-auto h-10 w-10 mb-3 opacity-90" />
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold font-display tracking-tight text-balance">
+            <ScrollFloat as="h2" textClassName="text-3xl sm:text-4xl md:text-5xl font-bold font-display tracking-tight text-balance">
               Ready to grow your Google reviews?
-            </h2>
+            </ScrollFloat>
             <p className="mt-4 text-base sm:text-lg opacity-95 text-pretty max-w-xl mx-auto">
               Join 2,500+ Indian shops, salons, cafés and clinics. Free forever — no credit card needed.
             </p>
@@ -29,6 +32,7 @@ export function CTA() {
                 <Link href="/r/demo-cafe">View Live Demo</Link>
               </Button>
             </div>
+            </Reveal>
           </div>
         </div>
       </div>

@@ -3,6 +3,7 @@ import { Inter, Space_Grotesk } from "next/font/google";
 import { Providers } from "@/components/providers";
 import { Toaster } from "@/components/ui/toaster";
 import { BackgroundFX } from "@/components/ui/background-fx";
+import { SmoothScroll } from "@/components/ui/smooth-scroll";
 import { getBrand } from "@/lib/brand";
 import "./globals.css";
 
@@ -76,6 +77,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       suppressHydrationWarning
     >
       <body className="min-h-screen bg-canvas font-sans text-ink antialiased">
+        <SmoothScroll />
         <BackgroundFX />
         <Providers>
           {children}
