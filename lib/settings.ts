@@ -15,8 +15,18 @@ export const SETTING_KEYS = {
   email: "email",
   whatsapp: "whatsapp",
   site: "site",
-  turnstile: "turnstile"
+  turnstile: "turnstile",
+  ai: "ai"
 } as const;
+
+export type AiConfig = {
+  enabled: boolean;
+  /** OpenAI-compatible base URL, e.g. https://openrouter.ai/api/v1 */
+  apiUrl: string;
+  apiKey: string;
+  /** Model id, e.g. openai/gpt-4o-mini (OpenRouter) or gpt-4o-mini (OpenAI) */
+  model: string;
+};
 
 export type PaymentsConfig = {
   razorpayKeyId: string;
@@ -207,6 +217,13 @@ export const DEFAULT_SITE: SiteConfig = {
 
 export const DEFAULT_TURNSTILE: TurnstileConfig = { siteKey: "", secretKey: "" };
 
+export const DEFAULT_AI: AiConfig = {
+  enabled: false,
+  apiUrl: "https://openrouter.ai/api/v1",
+  apiKey: "",
+  model: "openai/gpt-4o-mini"
+};
+
 async function readKey<T>(key: string, fallback: T): Promise<T> {
   const hit = cache.get(key);
   if (hit && hit.expiresAt > Date.now()) return hit.value as T;
@@ -334,4 +351,18 @@ export async function getTurnstileConfig(): Promise<TurnstileConfig> {
 }
 export async function setTurnstileConfig(v: TurnstileConfig, by?: string) {
   await writeKey(SETTING_KEYS.turnstile, v, by);
+}
+
+/* ============== AI (OpenAI-compatible) ============== */
+export async function getAiConfig(): Promise<AiConfig> {
+  const stored = await readKey<Partial<AiConfig>>(SETTING_KEYS.ai, {});
+  return {
+    enabled: stored.enabled ?? (process.env.AI_ENABLED === "true"),
+    apiUrl: (stored.apiUrl || process.env.AI_API_URL || DEFAULT_AI.apiUrl).replace(/\/$/, ""),
+    apiKey: stored.apiKey || process.env.AI_API_KEY || "",
+    model: stored.model || process.env.AI_MODEL || DEFAULT_AI.model
+  };
+}
+export async function setAiConfig(v: AiConfig, by?: string) {
+  await writeKey(SETTING_KEYS.ai, v, by);
 }

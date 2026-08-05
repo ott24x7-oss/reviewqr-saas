@@ -148,6 +148,10 @@ model Business {
   whatsappTemplate  String?  @db.Text
   emailTemplate     String?  @db.Text
 
+  // AI-assisted reviews (training context + opt-in)
+  aiReviewsEnabled  Boolean  @default(false)
+  services          String?  @db.Text // what the business offers — trains the AI
+
   // Custom domain (white-label)
   customDomain      String?  @unique
   customDomainVerified Boolean @default(false)

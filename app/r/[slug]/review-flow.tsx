@@ -17,7 +17,8 @@ import {
   ChevronLeft,
   Copy,
   Check,
-  Pencil
+  Pencil,
+  Sparkles
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,7 +69,10 @@ type Props = {
   stats: Stats;
   reviews: PublicReview[];
   brand?: { name: string; appUrl: string };
+  aiEnabled?: boolean;
 };
+
+type AiQuestion = { id: string; question: string; options: string[] };
 
 const TAGS = [
   { id: "service", label: "Service" },
@@ -83,6 +87,7 @@ const TAGS = [
 type Step =
   | "rate"
   | "pick-template"
+  | "ai"
   | "feedback"
   | "thank-you-google"
   | "thank-you-private";
@@ -205,6 +210,7 @@ export function ReviewFlow(props: Props) {
   const [templates, setTemplates] = React.useState<TemplatePick[]>([]);
   const [templatesLoading, setTemplatesLoading] = React.useState(false);
   const [pickedId, setPickedId] = React.useState<string | null>(null);
+  const [aiQuestions, setAiQuestions] = React.useState<AiQuestion[]>([]);
 
   const { business } = props;
   const accent = business.primaryColor || "#1a73e8";
@@ -225,6 +231,30 @@ export function ReviewFlow(props: Props) {
     // blocker doesn't kick in if we end up redirecting after the fetch.
     const reserved = reserveExternalTab();
     setTemplatesLoading(true);
+
+    // Prefer the AI assistant when it's enabled for this business.
+    if (props.aiEnabled) {
+      try {
+        const res = await fetch("/api/public/ai/questions", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ slug: business.slug }),
+          cache: "no-store"
+        });
+        const j = await res.json().catch(() => ({}));
+        if (j.available && Array.isArray(j.questions) && j.questions.length > 0) {
+          reserved?.close();
+          setAiQuestions(j.questions);
+          setTemplatesLoading(false);
+          setStep("ai");
+          submitReview({ rating: stars, feedback: "", redirected: true }).catch(() => {});
+          return;
+        }
+      } catch {
+        // fall through to templates / instant redirect
+      }
+    }
+
     try {
       const res = await fetch(
         `/api/public/review-templates/pick?slug=${encodeURIComponent(business.slug)}`,
@@ -394,6 +424,7 @@ export function ReviewFlow(props: Props) {
   const inSubFlow =
     step === "feedback" ||
     step === "pick-template" ||
+    step === "ai" ||
     step === "thank-you-google" ||
     step === "thank-you-private";
 
@@ -657,6 +688,232 @@ export function ReviewFlow(props: Props) {
           onSkip={() => goToGoogleReview(rating)}
         />
       )}
+
+      {/* Full-screen AI assistant — questions → suggested reviews → Google */}
+      {step === "ai" && (
+        <AiReviewModal
+          business={business}
+          rating={rating}
+          questions={aiQuestions}
+          accent={accent}
+          onSkip={() => goToGoogleReview(rating)}
+        />
+      )}
+    </div>
+  );
+}
+
+function AiReviewModal({
+  business,
+  rating,
+  questions,
+  accent,
+  onSkip
+}: {
+  business: Business;
+  rating: number;
+  questions: AiQuestion[];
+  accent: string;
+  onSkip: () => void;
+}) {
+  const [phase, setPhase] = React.useState<"questions" | "reviews">("questions");
+  const [answers, setAnswers] = React.useState<Record<string, string>>({});
+  const [reviews, setReviews] = React.useState<string[]>([]);
+  const [loading, setLoading] = React.useState(false);
+  const [copiedIdx, setCopiedIdx] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
+  const allAnswered = questions.every((q) => answers[q.id]);
+
+  async function getReviews() {
+    setLoading(true);
+    try {
+      const payload = questions
+        .map((q) => ({ question: q.question, answer: answers[q.id] || "" }))
+        .filter((a) => a.answer);
+      const res = await fetch("/api/public/ai/reviews", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ slug: business.slug, rating, answers: payload })
+      });
+      const j = await res.json().catch(() => ({}));
+      const items: string[] = Array.isArray(j.reviews) ? j.reviews : [];
+      if (items.length === 0) {
+        toast.message("Couldn't draft reviews — you can write your own on Google.");
+        onSkip();
+        return;
+      }
+      setReviews(items);
+      setPhase("reviews");
+    } catch {
+      toast.error("Something went wrong");
+      onSkip();
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function copyAndGo(text: string, idx: number) {
+    // Reserve a tab inside this click so iframe popup-blockers honour the gesture.
+    const reserved = reserveExternalTab();
+    setCopiedIdx(idx);
+    const copied = await safeClipboard(text);
+    if (copied) toast.success("Copied! Paste it on Google's review form.");
+    else toast.message("Long-press the text to copy.");
+    setTimeout(() => {
+      if (business.googleReviewUrl) navigateExternal(business.googleReviewUrl, reserved);
+      else reserved?.close();
+    }, 900);
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-white overflow-y-auto"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className="min-h-full container max-w-2xl px-4 py-6 sm:py-10 flex flex-col">
+        <div className="flex justify-center gap-1 mb-4">
+          {[1, 2, 3, 4, 5].map((n) => (
+            <Star key={n} className="h-7 w-7 fill-amber-400 text-amber-400 drop-shadow-sm" />
+          ))}
+        </div>
+
+        {phase === "questions" ? (
+          <>
+            <div className="flex items-center justify-center gap-2">
+              <Sparkles className="h-5 w-5" style={{ color: accent }} />
+              <h2 className="text-2xl sm:text-3xl font-bold text-center tracking-tight">
+                A few quick taps
+              </h2>
+            </div>
+            <p className="mt-3 text-sm text-slate-600 text-center max-w-md mx-auto">
+              Tell us what stood out — we'll turn it into a great review you can post in one tap.
+            </p>
+
+            <div className="mt-6 space-y-5">
+              {questions.map((q) => (
+                <div key={q.id}>
+                  <div className="text-[15px] font-semibold text-slate-800 mb-2">{q.question}</div>
+                  <div className="flex flex-wrap gap-2">
+                    {q.options.map((opt) => {
+                      const active = answers[q.id] === opt;
+                      return (
+                        <button
+                          key={opt}
+                          type="button"
+                          onClick={() => setAnswers((a) => ({ ...a, [q.id]: opt }))}
+                          className={cn(
+                            "px-3.5 py-2 rounded-full text-sm font-medium border transition",
+                            active
+                              ? "text-white"
+                              : "bg-white text-slate-700 border-slate-200 hover:border-slate-400"
+                          )}
+                          style={active ? { background: accent, borderColor: accent } : undefined}
+                        >
+                          {opt}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-7">
+              <Button
+                type="button"
+                size="lg"
+                className="w-full"
+                disabled={!allAnswered || loading}
+                style={{ background: accent, borderColor: accent, color: "#fff" }}
+                onClick={getReviews}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" /> Writing your review…
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" /> Get my review
+                  </>
+                )}
+              </Button>
+              {!allAnswered && (
+                <p className="mt-2 text-[11px] text-slate-400 text-center">
+                  Pick one option for each question.
+                </p>
+              )}
+            </div>
+          </>
+        ) : (
+          <>
+            <h2 className="text-2xl sm:text-3xl font-bold text-center tracking-tight">
+              <span
+                className="px-3 py-1 rounded-lg"
+                style={{ background: `${accent}1a`, color: accent }}
+              >
+                Pick your review
+              </span>
+            </h2>
+            <p className="mt-3 text-sm text-slate-600 text-center max-w-md mx-auto">
+              Tap <b>Copy</b> on the one you like — we'll copy it and open Google so you can paste.
+            </p>
+
+            <div className="mt-6 space-y-3">
+              {reviews.map((r, idx) => {
+                const isCopied = copiedIdx === idx;
+                return (
+                  <div
+                    key={idx}
+                    className={cn(
+                      "rounded-2xl border p-4 sm:p-5 transition",
+                      isCopied ? "border-emerald-400 bg-emerald-50/40" : "border-slate-200 bg-white"
+                    )}
+                    style={isCopied ? { borderColor: accent, background: `${accent}0d` } : undefined}
+                  >
+                    <p className="text-[15px] leading-relaxed text-slate-800 whitespace-pre-line">
+                      {r}
+                    </p>
+                    <div className="mt-3 flex justify-end">
+                      <Button
+                        type="button"
+                        onClick={() => copyAndGo(r, idx)}
+                        size="sm"
+                        className="min-w-[110px]"
+                        style={{ background: accent, borderColor: accent, color: "#fff" }}
+                      >
+                        {isCopied ? (
+                          <>
+                            <Check className="h-4 w-4" /> Copied
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-4 w-4" /> Copy
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        <div className="mt-6 pt-5 border-t border-slate-200">
+          <Button type="button" variant="outline" size="lg" className="w-full" onClick={onSkip}>
+            <Pencil className="h-4 w-4" /> I'll write my own
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

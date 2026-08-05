@@ -51,7 +51,9 @@ export const businessSchema = z.object({
   googleReviewUrl: z.string().url().optional().or(z.literal("")),
   ratingThreshold: z.number().int().min(1).max(5).default(4),
   primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#1a73e8"),
-  customThankYou: z.string().max(500).optional().or(z.literal(""))
+  customThankYou: z.string().max(500).optional().or(z.literal("")),
+  aiReviewsEnabled: z.boolean().optional(),
+  services: z.string().max(2000).optional().or(z.literal(""))
 });
 
 export const locationSchema = z.object({

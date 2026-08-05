@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { ReviewFlow } from "./review-flow";
 import { getBrand } from "@/lib/brand";
+import { getAiConfig } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -98,6 +99,8 @@ export default async function ReviewPage({
   ]);
 
   const brand = await getBrand();
+  const aiCfg = await getAiConfig();
+  const aiEnabled = aiCfg.enabled && !!aiCfg.apiKey && !!business.aiReviewsEnabled;
 
   const reviews = [
     ...testimonialRows.map((t) => ({
@@ -155,6 +158,7 @@ export default async function ReviewPage({
       }}
       reviews={reviews}
       brand={brand}
+      aiEnabled={aiEnabled}
     />
   );
 }
