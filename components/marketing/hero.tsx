@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowRight, Star, Play, ChevronRight, MessageCircle, Heart, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AvatarInitials } from "@/components/ui/avatar-initials";
+import { RotatingReviewWord } from "@/components/marketing/rotating-word";
 
 export function Hero() {
   return (
@@ -30,7 +31,7 @@ export function Hero() {
 
             <h1 className="mt-5 text-4xl sm:text-5xl lg:text-6xl font-bold font-display tracking-tight text-balance">
               Happy customers →{" "}
-              <span className="gradient-text-google">Google reviews</span>
+              <RotatingReviewWord />
             </h1>
             <p className="mt-3 text-base sm:text-lg text-muted-foreground text-pretty max-w-md mx-auto lg:mx-0">
               Our <b className="text-foreground">AI writes the 5★ review for them</b> — they just tap

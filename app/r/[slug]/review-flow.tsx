@@ -37,6 +37,7 @@ type Business = {
   industry?: string | null;
   primaryColor: string;
   googleReviewUrl?: string | null;
+  reviewPlatform?: "google" | "trustpilot";
   ratingThreshold: number;
   customThankYou?: string | null;
   whatsappNumber?: string | null;
@@ -218,6 +219,7 @@ export function ReviewFlow(props: Props) {
 
   const { business } = props;
   const accent = business.primaryColor || "#1a73e8";
+  const platformLabel = business.reviewPlatform === "trustpilot" ? "Trustpilot" : "Google";
 
   function pickRating(n: number) {
     setRating(n);
@@ -359,7 +361,7 @@ export function ReviewFlow(props: Props) {
     // function runs from a button onClick so we're inside one.
     const copied = await safeClipboard(textToCopy);
     if (copied) {
-      toast.success("Copied! Paste it on Google's review form.");
+      toast.success(`Copied! Paste it on ${platformLabel}'s review form.`);
     } else {
       toast.message("Long-press the highlighted text to copy.");
     }
@@ -807,6 +809,7 @@ function AiReviewModal({
   const [reviews, setReviews] = React.useState<string[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [copiedIdx, setCopiedIdx] = React.useState<number | null>(null);
+  const platformLabel = business.reviewPlatform === "trustpilot" ? "Trustpilot" : "Google";
 
   React.useEffect(() => {
     const prev = document.body.style.overflow;
@@ -832,7 +835,7 @@ function AiReviewModal({
       const j = await res.json().catch(() => ({}));
       const items: string[] = Array.isArray(j.reviews) ? j.reviews : [];
       if (items.length === 0) {
-        toast.message("Couldn't draft reviews — you can write your own on Google.");
+        toast.message(`Couldn't draft reviews — you can write your own on ${platformLabel}.`);
         onSkip();
         return;
       }
@@ -851,7 +854,7 @@ function AiReviewModal({
     const reserved = reserveExternalTab();
     setCopiedIdx(idx);
     const copied = await safeClipboard(text);
-    if (copied) toast.success("Copied! Paste it on Google's review form.");
+    if (copied) toast.success(`Copied! Paste it on ${platformLabel}'s review form.`);
     else toast.message("Long-press the text to copy.");
     setTimeout(() => {
       if (business.googleReviewUrl) navigateExternal(business.googleReviewUrl, reserved);
@@ -950,7 +953,7 @@ function AiReviewModal({
               </span>
             </h2>
             <p className="mt-3 text-sm rv-body text-center max-w-md mx-auto">
-              Tap <b>Copy</b> on the one you like — we'll copy it and open Google so you can paste.
+              Tap <b>Copy</b> on the one you like — we'll copy it and open {platformLabel} so you can paste.
             </p>
 
             <div className="mt-6 space-y-3">
@@ -1076,6 +1079,7 @@ function RateStep({
 }) {
   const display = hoverRating || rating;
   const labels = ["", "Awful", "Poor", "Okay", "Great", "Amazing"];
+  const platformLabel = business.reviewPlatform === "trustpilot" ? "Trustpilot" : "Google";
 
   return (
     <div className="container max-w-2xl px-4 py-6 sm:py-8">
@@ -1152,7 +1156,7 @@ function RateStep({
         {loading && (
           <div className="mt-6 flex items-center justify-center gap-2 text-sm rv-muted">
             <Loader2 className="h-4 w-4 animate-spin" />
-            Taking you to Google…
+            Taking you to {platformLabel}…
           </div>
         )}
       </div>
@@ -1217,7 +1221,7 @@ function PickTemplateModal({
         </h2>
         <p className="mt-3 text-sm rv-body text-center max-w-md mx-auto">
           Tap <b>Copy</b> on the review you'd like to leave. We'll copy it to your clipboard —
-          just paste it on Google's form.
+          just paste it on the review form.
         </p>
 
         <div className="mt-6 space-y-3">
@@ -1556,6 +1560,7 @@ function FeedbackStep(props: {
 }
 
 function ThankYouGoogle({ business }: { business: Business }) {
+  const platformLabel = business.reviewPlatform === "trustpilot" ? "Trustpilot" : "Google";
   return (
     <div className="container max-w-2xl px-4 py-10 text-center">
       <div className="rounded-3xl neu p-6 sm:p-8">
@@ -1564,12 +1569,12 @@ function ThankYouGoogle({ business }: { business: Business }) {
         </div>
         <h2 className="text-2xl font-bold tracking-tight">Thank you so much!</h2>
         <p className="mt-2 text-sm rv-muted max-w-sm mx-auto">
-          We'd love it if you'd share your experience publicly on Google.
+          We'd love it if you'd share your experience publicly on {platformLabel}.
         </p>
         {business.googleReviewUrl && (
           <Button asChild variant="skeuo" size="lg" className="mt-6 w-full max-w-xs mx-auto">
             <a href={business.googleReviewUrl} target="_blank" rel="noopener noreferrer">
-              Leave Google Review <ExternalLink className="h-4 w-4" />
+              Leave {platformLabel} Review <ExternalLink className="h-4 w-4" />
             </a>
           </Button>
         )}

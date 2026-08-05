@@ -17,6 +17,8 @@ export default function NewBusinessPage() {
     industry: "",
     description: "",
     googleReviewUrl: "",
+    reviewPlatform: "google" as "google" | "trustpilot",
+    trustpilotUrl: "",
     phone: "",
     whatsappNumber: "",
     address: "",
@@ -119,6 +121,22 @@ export default function NewBusinessPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-1.5">
+              <Label htmlFor="reviewPlatform">Review platform</Label>
+              <select
+                id="reviewPlatform"
+                className="input"
+                value={form.reviewPlatform}
+                onChange={(e) => update("reviewPlatform", e.target.value)}
+              >
+                <option value="google">Google</option>
+                <option value="trustpilot">Trustpilot</option>
+              </select>
+              <p className="text-xs text-muted-foreground">
+                Where happy customers are sent to leave a public review.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
               <Label htmlFor="googleReviewUrl">Google review URL</Label>
               <Input
                 id="googleReviewUrl"
@@ -131,6 +149,23 @@ export default function NewBusinessPage() {
                 Find this in Google Business Profile → "Get more reviews".
               </p>
             </div>
+
+            {form.reviewPlatform === "trustpilot" && (
+              <div className="space-y-1.5">
+                <Label htmlFor="trustpilotUrl">Trustpilot review URL</Label>
+                <Input
+                  id="trustpilotUrl"
+                  type="url"
+                  value={form.trustpilotUrl}
+                  onChange={(e) => update("trustpilotUrl", e.target.value)}
+                  placeholder="https://www.trustpilot.com/evaluate/yourdomain.com"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Your Trustpilot review-collection link, e.g.
+                  https://www.trustpilot.com/evaluate/yourdomain.com
+                </p>
+              </div>
+            )}
 
             <div className="space-y-1.5">
               <Label htmlFor="ratingThreshold">Send to Google when rating ≥</Label>

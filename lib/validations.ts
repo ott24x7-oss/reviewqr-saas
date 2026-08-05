@@ -49,6 +49,8 @@ export const businessSchema = z.object({
   state: z.string().max(60).optional().or(z.literal("")),
   pincode: z.string().regex(/^\d{6}$/, "Enter 6-digit PIN").optional().or(z.literal("")),
   googleReviewUrl: z.string().url().optional().or(z.literal("")),
+  trustpilotUrl: z.string().url().optional().or(z.literal("")),
+  reviewPlatform: z.enum(["google", "trustpilot"]).optional(),
   ratingThreshold: z.number().int().min(1).max(5).default(4),
   primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#1a73e8"),
   customThankYou: z.string().max(500).optional().or(z.literal("")),
