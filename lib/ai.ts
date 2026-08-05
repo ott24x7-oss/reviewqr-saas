@@ -76,6 +76,65 @@ async function chat(
   }
 }
 
+/** List available model ids from an OpenAI-compatible `/models` endpoint. */
+export async function listModels(cfg: AiConfig): Promise<string[]> {
+  if (!cfg.apiKey) throw new Error("Add an API key first");
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15_000);
+  try {
+    const res = await fetch(`${cfg.apiUrl}/models`, {
+      headers: { authorization: `Bearer ${cfg.apiKey}` },
+      signal: controller.signal
+    });
+    const text = await res.text();
+    if (!res.ok) throw new Error(`Models request failed (${res.status}): ${text.slice(0, 160)}`);
+    let json: any;
+    try {
+      json = JSON.parse(text);
+    } catch {
+      throw new Error("Unexpected models response");
+    }
+    const arr: any[] = Array.isArray(json?.data) ? json.data : Array.isArray(json) ? json : [];
+    const ids: string[] = [];
+    for (const m of arr) {
+      const id = typeof m === "string" ? m : m?.id;
+      if (typeof id === "string" && id.length > 0) ids.push(id);
+    }
+    return Array.from(new Set(ids)).sort();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/** Ping the chat endpoint to confirm the URL + key + model actually work. */
+export async function testConnection(cfg: AiConfig): Promise<string> {
+  if (!cfg.apiKey) throw new Error("Add an API key first");
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15_000);
+  try {
+    const res = await fetch(`${cfg.apiUrl}/chat/completions`, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${cfg.apiKey}` },
+      body: JSON.stringify({
+        model: cfg.model,
+        messages: [{ role: "user", content: "Reply with exactly: OK" }],
+        max_tokens: 5,
+        temperature: 0
+      }),
+      signal: controller.signal
+    });
+    const text = await res.text();
+    if (!res.ok) throw new Error(`(${res.status}) ${text.slice(0, 180)}`);
+    let reply = "";
+    try {
+      reply = JSON.parse(text)?.choices?.[0]?.message?.content ?? "";
+    } catch {}
+    return (reply || "OK").trim();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 /** Pull a JSON object/array out of a model response, tolerating stray prose. */
 function parseJson(content: string): any {
   try {
