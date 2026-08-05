@@ -11,6 +11,7 @@
  * review templates) so the customer flow never dead-ends.
  */
 import type { AiConfig } from "./settings";
+import { assertSafeOutboundUrl } from "./ssrf";
 
 export type BusinessContext = {
   name: string;
@@ -46,7 +47,8 @@ async function chat(
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 20_000);
   try {
-    const res = await fetch(`${cfg.apiUrl}/chat/completions`, {
+    const url = await assertSafeOutboundUrl(`${cfg.apiUrl}/chat/completions`);
+    const res = await fetch(url, {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -82,7 +84,8 @@ export async function listModels(cfg: AiConfig): Promise<string[]> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15_000);
   try {
-    const res = await fetch(`${cfg.apiUrl}/models`, {
+    const url = await assertSafeOutboundUrl(`${cfg.apiUrl}/models`);
+    const res = await fetch(url, {
       headers: { authorization: `Bearer ${cfg.apiKey}` },
       signal: controller.signal
     });
@@ -112,7 +115,8 @@ export async function testConnection(cfg: AiConfig): Promise<string> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15_000);
   try {
-    const res = await fetch(`${cfg.apiUrl}/chat/completions`, {
+    const url = await assertSafeOutboundUrl(`${cfg.apiUrl}/chat/completions`);
+    const res = await fetch(url, {
       method: "POST",
       headers: { "content-type": "application/json", authorization: `Bearer ${cfg.apiKey}` },
       body: JSON.stringify({
