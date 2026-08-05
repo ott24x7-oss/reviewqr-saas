@@ -35,7 +35,9 @@ export function Hero() {
             </h1>
             <p className="mt-3 text-base sm:text-lg text-muted-foreground text-pretty max-w-md mx-auto lg:mx-0">
               Our <b className="text-foreground">AI writes the 5★ review for them</b> — they just tap
-              Copy. Unhappy ones go to your private inbox. One smart QR, 30 seconds.
+              Copy and post it to <b className="gradient-text-google">Google</b> or{" "}
+              <b className="text-[#00b67a]">Trustpilot</b>. Unhappy ones go to your private inbox. One
+              smart QR, 30 seconds.
             </p>
 
             <div className="mt-6 flex flex-col sm:flex-row gap-2 justify-center lg:justify-start">
@@ -49,6 +51,17 @@ export function Hero() {
                   <Play className="h-4 w-4" /> Try the demo
                 </Link>
               </Button>
+            </div>
+
+            {/* Works-with platforms */}
+            <div className="mt-6 flex items-center gap-2.5 justify-center lg:justify-start text-xs text-muted-foreground">
+              <span className="font-medium">Grows your reviews on</span>
+              <span className="inline-flex items-center gap-1 rounded-full border border-primary-100 bg-white px-2.5 py-1 font-semibold">
+                <span className="gradient-text-google">Google</span>
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-full border border-[#00b67a]/30 bg-white px-2.5 py-1 font-semibold text-[#00b67a]">
+                <Star className="h-3 w-3 fill-[#00b67a] text-[#00b67a]" /> Trustpilot
+              </span>
             </div>
 
             {/* Tiny trust strip */}
@@ -151,8 +164,10 @@ export function Hero() {
                     </div>
                     <div className="mt-5 rounded-xl bg-secondary/60 border p-3 text-center">
                       <div className="text-[10px] text-muted-foreground">Auto-redirecting to</div>
-                      <div className="mt-1 inline-flex items-center gap-1 text-xs font-semibold">
-                        <span className="gradient-text-google">G</span>oogle Reviews
+                      <div className="mt-1 inline-flex items-center gap-1.5 text-xs font-semibold">
+                        <span><span className="gradient-text-google">G</span>oogle</span>
+                        <span className="text-muted-foreground/50">/</span>
+                        <span className="text-[#00b67a]">Trustpilot</span>
                         <ExternalLink className="h-3 w-3" />
                       </div>
                     </div>

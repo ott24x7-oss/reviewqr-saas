@@ -18,7 +18,8 @@ export function RoutingHighlight() {
         </h2>
         <p className="mt-4 text-base sm:text-lg text-muted-ink">
           One smart QR reads the rating and sends each customer down the right path — so you grow your
-          Google score <b className="text-ink">and</b> catch problems before they go public.
+          <b className="text-ink"> Google &amp; Trustpilot</b> score <b className="text-ink">and</b> catch
+          problems before they go public.
         </p>
       </div>
 
@@ -53,9 +54,11 @@ export function RoutingHighlight() {
                 <Globe className="h-5 w-5" />
               </span>
               <div>
-                <div className="flex items-center gap-1.5 font-semibold text-ink">
+                <div className="flex flex-wrap items-center gap-1.5 font-semibold text-ink">
                   4–5★ <ArrowRight className="h-3.5 w-3.5 text-muted-ink" />{" "}
-                  <span className="gradient-text-google font-bold">Google Reviews</span>
+                  <span className="gradient-text-google font-bold">Google</span>
+                  <span className="text-muted-ink font-normal">or</span>
+                  <span className="text-[#00b67a] font-bold">Trustpilot</span>
                 </div>
                 <div className="text-sm text-muted-ink">Public 5-star review, written by AI</div>
               </div>

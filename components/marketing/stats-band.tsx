@@ -2,7 +2,7 @@ import { TrendingUp, Star, Users, Clock } from "lucide-react";
 
 const STATS = [
   { icon: Users, value: "2,500+", label: "Indian businesses" },
-  { icon: TrendingUp, value: "3.2×", label: "more Google reviews" },
+  { icon: TrendingUp, value: "3.2×", label: "more Google & Trustpilot reviews" },
   { icon: Star, value: "+0.5★", label: "average rating lift" },
   { icon: Clock, value: "30 sec", label: "per review, start to post" }
 ];

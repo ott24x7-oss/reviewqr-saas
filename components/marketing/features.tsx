@@ -116,13 +116,13 @@ function SmartLinkCard() {
             ))}
           </div>
           <div className="text-[10px] text-center font-semibold text-accent-600">
-            4★ → Google
+            4★ → Google / Trustpilot
           </div>
         </div>
         <div className="mt-2 grid grid-cols-2 gap-1.5">
           <div className="rounded-md bg-accent-50 border border-accent-200 p-2 text-[9px] text-center">
             <div className="font-bold text-accent-700">4★ – 5★</div>
-            <div className="text-muted-foreground">→ Google</div>
+            <div className="text-muted-foreground">→ Google / Trustpilot</div>
           </div>
           <div className="rounded-md bg-amber-50 border border-amber-200 p-2 text-[9px] text-center">
             <div className="font-bold text-amber-700">1★ – 3★</div>

@@ -30,7 +30,7 @@ export function Footer({
               <span className="font-display">{name}</span>
             </Link>
             <p className="mt-3 text-sm text-muted-foreground max-w-xs leading-relaxed">
-              The simplest way for Indian SMBs to grow Google reviews and catch unhappy customers privately.
+              The simplest way for Indian SMBs to grow Google &amp; Trustpilot reviews and catch unhappy customers privately.
             </p>
             <div className="mt-4 space-y-1.5 text-sm">
               <a

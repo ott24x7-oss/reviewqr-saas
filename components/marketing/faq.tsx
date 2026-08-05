@@ -8,11 +8,15 @@ import {
 const faqs = [
   {
     q: "How does the smart review link work?",
-    a: "When a customer scans your QR code or clicks your link, they see a clean star rating page. If they choose 4 or 5 stars, they're auto-redirected to your Google Maps review page. If they choose 1, 2 or 3 stars, they're shown a private feedback form so you can fix the issue without it ever becoming a public review."
+    a: "When a customer scans your QR code or clicks your link, they see a clean star rating page. If they choose 4 or 5 stars, they're auto-redirected to your Google or Trustpilot review page — whichever you set for the business. If they choose 1, 2 or 3 stars, they're shown a private feedback form so you can fix the issue without it ever becoming a public review."
   },
   {
-    q: "Is this allowed by Google?",
-    a: "Yes. We don't filter out negative reviews — we ask all customers for feedback. Some customers choose to leave private feedback instead of public, just like they would over the phone. Google's policy is against soliciting reviews only from happy customers, which we don't do. Customers always have the option to post publicly."
+    q: "Do you support both Google and Trustpilot?",
+    a: "Yes. Each business picks its review platform — Google Maps or Trustpilot — and the AI-written review and auto-redirect adapt to that choice. Run some outlets on Google and others on Trustpilot; multi-location plans can even set it per branch."
+  },
+  {
+    q: "Is this allowed by Google and Trustpilot?",
+    a: "Yes. We don't filter out negative reviews — we ask all customers for feedback. Some customers choose to leave private feedback instead of public, just like they would over the phone. Both Google's and Trustpilot's policies are against soliciting reviews only from happy customers, which we don't do. Customers always have the option to post publicly."
   },
   {
     q: "Do my customers need to install an app?",
@@ -20,15 +24,15 @@ const faqs = [
   },
   {
     q: "Can I have multiple branches and locations?",
-    a: "Yes — Growth and Agency plans support multiple businesses, locations, and even staff-wise links. Each branch can have its own Google review URL."
+    a: "Yes — Growth and Agency plans support multiple businesses, locations, and even staff-wise links. Each branch can have its own Google or Trustpilot review URL."
   },
   {
     q: "How does WhatsApp integration work?",
     a: "Two options. (1) Click-to-chat — works without any setup, you click 'Send' on your phone. (2) WhatsApp Cloud API — fully automated, requires a Meta Business verification. Both come standard."
   },
   {
-    q: "Do you support UPI / Razorpay billing?",
-    a: "Yes. We're built India-first. You can pay with UPI, cards, netbanking, or wallets via Razorpay. GST invoice provided automatically."
+    q: "How do I pay for a plan?",
+    a: "We're built India-first. Pay by UPI in INR, or with USDT (crypto) if you're overseas. Payments are auto-verified from the transaction email, so your plan activates within minutes — no card on file."
   },
   {
     q: "Can I white-label this for my agency clients?",
