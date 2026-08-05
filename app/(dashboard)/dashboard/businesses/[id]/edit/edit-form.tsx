@@ -26,6 +26,8 @@ type Init = {
   state: string;
   pincode: string;
   googleReviewUrl: string;
+  reviewPlatform: "google" | "trustpilot";
+  trustpilotUrl: string;
   ratingThreshold: number;
   primaryColor: string;
   customThankYou: string;
@@ -203,6 +205,23 @@ export function EditBusinessForm({ initial }: { initial: Init }) {
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="space-y-1.5">
+            <Label htmlFor="reviewPlatform">Review platform</Label>
+            <select
+              id="reviewPlatform"
+              className="w-full h-10 rounded-lg border bg-white dark:bg-slate-900 px-3 text-sm"
+              value={form.reviewPlatform}
+              onChange={(e) =>
+                update("reviewPlatform", e.target.value as Init["reviewPlatform"])
+              }
+            >
+              <option value="google">Google</option>
+              <option value="trustpilot">Trustpilot</option>
+            </select>
+            <p className="text-xs text-muted-foreground">
+              Where happy customers are sent to leave a public review.
+            </p>
+          </div>
+          <div className="space-y-1.5">
             <Label htmlFor="googleReviewUrl">Google review URL</Label>
             <Input
               id="googleReviewUrl"
@@ -211,6 +230,21 @@ export function EditBusinessForm({ initial }: { initial: Init }) {
               placeholder="https://g.page/r/…/review"
             />
           </div>
+          {form.reviewPlatform === "trustpilot" && (
+            <div className="space-y-1.5">
+              <Label htmlFor="trustpilotUrl">Trustpilot review URL</Label>
+              <Input
+                id="trustpilotUrl"
+                value={form.trustpilotUrl}
+                onChange={(e) => update("trustpilotUrl", e.target.value)}
+                placeholder="https://www.trustpilot.com/evaluate/yourdomain.com"
+              />
+              <p className="text-xs text-muted-foreground">
+                Your Trustpilot review-collection link, e.g.
+                https://www.trustpilot.com/evaluate/yourdomain.com
+              </p>
+            </div>
+          )}
           <div className="space-y-1.5">
             <Label htmlFor="threshold">Rating threshold</Label>
             <select

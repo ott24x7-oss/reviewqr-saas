@@ -36,6 +36,9 @@ export default async function EditBusinessPage({ params }: { params: { id: strin
           state: business.state || "",
           pincode: business.pincode || "",
           googleReviewUrl: business.googleReviewUrl || "",
+          reviewPlatform:
+            business.reviewPlatform === "trustpilot" ? "trustpilot" : "google",
+          trustpilotUrl: business.trustpilotUrl || "",
           ratingThreshold: business.ratingThreshold,
           primaryColor: business.primaryColor,
           customThankYou: business.customThankYou || ""

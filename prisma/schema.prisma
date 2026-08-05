@@ -141,7 +141,9 @@ model Business {
   // Review settings
   googleReviewUrl   String?  @db.Text
   googlePlaceId     String?
-  ratingThreshold   Int      @default(4) // >= goes to Google, < captures private
+  trustpilotUrl     String?  @db.Text
+  reviewPlatform    String   @default("google") // google | trustpilot — where happy reviews go
+  ratingThreshold   Int      @default(4) // >= goes to the platform, < captures private
   enableWhatsApp    Boolean  @default(true)
   enableEmail       Boolean  @default(true)
   customThankYou    String?  @db.Text
