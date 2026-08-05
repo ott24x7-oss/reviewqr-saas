@@ -132,7 +132,7 @@ export function AiConfigForm({ initial }: { initial: AiConfig }) {
                     update("apiUrl", p.apiUrl);
                     update("model", p.model);
                   }}
-                  className="px-3 py-1.5 rounded-full text-xs font-medium border border-border bg-white hover:border-foreground/40"
+                  className="px-3 py-1.5 rounded-full text-xs font-medium border border-border bg-white dark:bg-slate-900 hover:border-foreground/40"
                 >
                   {p.label}
                 </button>
@@ -159,7 +159,7 @@ export function AiConfigForm({ initial }: { initial: AiConfig }) {
                 type="button"
                 onClick={detectModels}
                 disabled={detecting}
-                className="inline-flex items-center gap-1 text-xs font-medium text-primary-700 hover:underline disabled:opacity-50"
+                className="inline-flex items-center gap-1 text-xs font-medium text-primary-700 dark:text-primary-300 hover:underline disabled:opacity-50"
               >
                 {detecting ? (
                   <Loader2 className="h-3 w-3 animate-spin" />
@@ -209,8 +209,8 @@ export function AiConfigForm({ initial }: { initial: AiConfig }) {
           className={cn(
             "flex items-start gap-2 rounded-xl border p-3 text-sm",
             testResult.ok
-              ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-              : "border-rose-200 bg-rose-50 text-rose-800"
+              ? "border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300"
+              : "border-rose-200 dark:border-red-500/30 bg-rose-50 dark:bg-red-500/15 text-rose-800 dark:text-red-300"
           )}
         >
           {testResult.ok ? (

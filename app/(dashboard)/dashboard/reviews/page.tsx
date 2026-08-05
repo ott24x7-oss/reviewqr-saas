@@ -117,8 +117,8 @@ export default async function ReviewsPage({
                       r.rating >= 4
                         ? "bg-accent-100 text-accent-700"
                         : r.rating === 3
-                        ? "bg-amber-100 text-amber-700"
-                        : "bg-red-100 text-red-700"
+                        ? "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
+                        : "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300"
                     }`}
                   >
                     {r.rating}★

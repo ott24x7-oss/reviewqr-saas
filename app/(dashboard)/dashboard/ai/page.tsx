@@ -45,7 +45,7 @@ export default async function DashboardAiPage() {
       </div>
 
       {!aiAvailable && (
-        <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+        <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-500/15 p-3 text-sm text-amber-800 dark:text-amber-300">
           <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
           <span>
             The AI review assistant isn't active on this platform yet. Once it's connected, enabling
@@ -98,7 +98,7 @@ export default async function DashboardAiPage() {
                     <span
                       className={
                         b.aiReviewsEnabled
-                          ? "inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-[11px] font-semibold shrink-0"
+                          ? "inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300 px-2 py-0.5 text-[11px] font-semibold shrink-0"
                           : "inline-flex items-center gap-1 rounded-full bg-secondary text-muted-foreground px-2 py-0.5 text-[11px] font-semibold shrink-0"
                       }
                     >

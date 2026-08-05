@@ -103,7 +103,7 @@ export function BillingClient({
               onClick={() => setAnnual(false)}
               className={cn(
                 "px-3 py-1 rounded-full text-xs font-medium transition",
-                !annual ? "bg-white shadow text-foreground" : "text-muted-foreground"
+                !annual ? "bg-white dark:bg-slate-900 shadow text-foreground" : "text-muted-foreground"
               )}
             >
               Monthly
@@ -112,7 +112,7 @@ export function BillingClient({
               onClick={() => setAnnual(true)}
               className={cn(
                 "px-3 py-1 rounded-full text-xs font-medium transition flex items-center gap-1",
-                annual ? "bg-white shadow text-foreground" : "text-muted-foreground"
+                annual ? "bg-white dark:bg-slate-900 shadow text-foreground" : "text-muted-foreground"
               )}
             >
               Yearly
@@ -134,7 +134,7 @@ export function BillingClient({
               <div
                 key={tierKey}
                 className={cn(
-                  "relative rounded-xl border p-4 flex flex-col",
+                  "relative rounded-xl border dark:border-slate-800 p-4 flex flex-col",
                   isHighlighted && "ring-2 ring-primary"
                 )}
               >

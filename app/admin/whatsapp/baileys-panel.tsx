@@ -96,7 +96,7 @@ export function BaileysPanel() {
       </CardHeader>
       <CardContent className="space-y-4">
         {info?.error && (
-          <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+          <div className="flex items-start gap-2 rounded-lg border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/15 p-3 text-xs text-amber-900 dark:text-amber-200">
             <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
             <div>{info.error}</div>
           </div>
@@ -115,15 +115,15 @@ export function BaileysPanel() {
         )}
 
         {status === "connected" && (
-          <div className="rounded-xl border bg-emerald-50 border-emerald-200 p-3 flex items-center gap-3">
+          <div className="rounded-xl border bg-emerald-50 dark:bg-emerald-500/15 border-emerald-200 dark:border-emerald-500/30 p-3 flex items-center gap-3">
             <span className="h-9 w-9 rounded-full bg-emerald-500 text-white inline-flex items-center justify-center">
               <Smartphone className="h-4 w-4" />
             </span>
             <div className="flex-1 min-w-0 text-sm">
-              <div className="font-semibold text-emerald-900">
+              <div className="font-semibold text-emerald-900 dark:text-emerald-200">
                 Connected as {info?.phoneNumber || "—"}
               </div>
-              <div className="text-xs text-emerald-700">
+              <div className="text-xs text-emerald-700 dark:text-emerald-300">
                 {info?.connectedAt
                   ? `Since ${new Date(info.connectedAt).toLocaleString()}`
                   : ""}

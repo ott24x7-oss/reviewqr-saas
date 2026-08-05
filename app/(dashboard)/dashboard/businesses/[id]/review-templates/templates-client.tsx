@@ -131,7 +131,7 @@ export function ReviewTemplatesClient({
     <div className="space-y-4">
       <div className="grid grid-cols-3 gap-3">
         <StatTile label="Available" value={stats.available} accent="text-emerald-600" />
-        <StatTile label="Used" value={stats.used} accent="text-slate-500" />
+        <StatTile label="Used" value={stats.used} accent="text-slate-500 dark:text-slate-400" />
         <StatTile label="Total stock" value={stats.total} accent="text-foreground" />
       </div>
 
@@ -170,7 +170,7 @@ export function ReviewTemplatesClient({
                 className={cn(
                   "px-3 py-1 rounded-full font-medium transition",
                   filter === f
-                    ? "bg-white shadow-sm text-foreground"
+                    ? "bg-white dark:bg-slate-900 shadow-sm text-foreground"
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
@@ -278,7 +278,7 @@ function StatTile({
   accent: string;
 }) {
   return (
-    <div className="rounded-xl border bg-white p-4">
+    <div className="rounded-xl border dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className={cn("text-2xl font-bold mt-1", accent)}>{value.toLocaleString("en-IN")}</div>
     </div>

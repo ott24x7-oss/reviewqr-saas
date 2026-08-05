@@ -104,7 +104,7 @@ export default async function BusinessDetailPage({ params }: { params: { id: str
         <Link href={`/dashboard/businesses/${business.id}/locations`}>
           <Card className="hover:shadow-card transition cursor-pointer">
             <CardContent className="p-5 flex items-start gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-50 text-primary-600">
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-50 text-primary-600 dark:bg-primary-500/15 dark:text-primary-300">
                 <MapPin className="h-5 w-5" />
               </span>
               <div>
@@ -130,7 +130,7 @@ export default async function BusinessDetailPage({ params }: { params: { id: str
         <Link href={`/dashboard/businesses/${business.id}/qr`}>
           <Card className="hover:shadow-card transition cursor-pointer">
             <CardContent className="p-5 flex items-start gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-50 text-primary-600">
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-50 text-primary-600 dark:bg-primary-500/15 dark:text-primary-300">
                 <QrCode className="h-5 w-5" />
               </span>
               <div>
@@ -143,7 +143,7 @@ export default async function BusinessDetailPage({ params }: { params: { id: str
         <Link href={`/dashboard/businesses/${business.id}/review-templates`}>
           <Card className="hover:shadow-card transition cursor-pointer">
             <CardContent className="p-5 flex items-start gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300">
                 <FileText className="h-5 w-5" />
               </span>
               <div>
@@ -159,7 +159,7 @@ export default async function BusinessDetailPage({ params }: { params: { id: str
         <Link href={`/dashboard/businesses/${business.id}/ai`}>
           <Card className="hover:shadow-card transition cursor-pointer">
             <CardContent className="p-5 flex items-start gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-violet-50 text-violet-600">
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-violet-50 text-violet-600 dark:bg-violet-500/15 dark:text-violet-300">
                 <Sparkles className="h-5 w-5" />
               </span>
               <div>

@@ -142,7 +142,7 @@ export function UserEditForm({ user }: Props) {
             <select
               value={form.role}
               onChange={(e) => update("role", e.target.value)}
-              className="w-full h-10 rounded-lg border bg-white px-3 text-sm"
+              className="w-full h-10 rounded-lg border bg-white dark:bg-slate-900 dark:text-slate-100 px-3 text-sm"
             >
               <option value="USER">USER</option>
               <option value="ADMIN">ADMIN</option>
@@ -155,7 +155,7 @@ export function UserEditForm({ user }: Props) {
             <select
               value={form.subscriptionTier}
               onChange={(e) => update("subscriptionTier", e.target.value)}
-              className="w-full h-10 rounded-lg border bg-white px-3 text-sm"
+              className="w-full h-10 rounded-lg border bg-white dark:bg-slate-900 dark:text-slate-100 px-3 text-sm"
             >
               <option value="FREE">FREE</option>
               <option value="STARTER">STARTER</option>
@@ -168,7 +168,7 @@ export function UserEditForm({ user }: Props) {
             <select
               value={form.subscriptionStatus}
               onChange={(e) => update("subscriptionStatus", e.target.value)}
-              className="w-full h-10 rounded-lg border bg-white px-3 text-sm"
+              className="w-full h-10 rounded-lg border bg-white dark:bg-slate-900 dark:text-slate-100 px-3 text-sm"
             >
               <option value="TRIALING">TRIALING</option>
               <option value="ACTIVE">ACTIVE</option>
