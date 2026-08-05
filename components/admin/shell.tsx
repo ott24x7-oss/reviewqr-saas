@@ -13,6 +13,7 @@ import {
   MessageCircle,
   Globe,
   History,
+  Sparkles,
   ArrowLeft,
   ShieldCheck,
   LogOut,
@@ -29,6 +30,7 @@ const nav = [
   { href: "/admin/payments", label: "Payments", icon: CreditCard },
   { href: "/admin/email", label: "Email", icon: Mail },
   { href: "/admin/whatsapp", label: "WhatsApp", icon: MessageCircle },
+  { href: "/admin/ai", label: "AI Reviews", icon: Sparkles },
   { href: "/admin/site", label: "Site Settings", icon: Globe },
   { href: "/admin/audit", label: "Audit Log", icon: History }
 ];
