@@ -60,7 +60,12 @@ export default async function AdminPaymentsPage() {
       <PaymentsConfigForm
         initial={{
           ...cfg,
-          mailImapPass: maskSecret(cfg.mailImapPass)
+          // Never ship raw secrets to the browser — mask every credential.
+          mailImapPass: maskSecret(cfg.mailImapPass),
+          razorpayKeySecret: maskSecret(cfg.razorpayKeySecret),
+          razorpayWebhookSecret: maskSecret(cfg.razorpayWebhookSecret),
+          stripeSecretKey: maskSecret(cfg.stripeSecretKey),
+          stripeWebhookSecret: maskSecret(cfg.stripeWebhookSecret)
         }}
       />
 

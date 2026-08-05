@@ -9,26 +9,20 @@ export async function PUT(req: NextRequest) {
 
   const incoming = (await req.json().catch(() => ({}))) as any;
   const current = await getPaymentsConfig();
-  // Only overwrite secrets if the client actually sent them (form omits when unchanged).
+  // Only overwrite a secret when the client sent a real, edited value. A missing
+  // field, or a masked value echoed back from the form (contains the "•" mask
+  // char), preserves the stored secret — never clobbers it with dots.
+  const secret = (incoming: unknown, cur: string) =>
+    typeof incoming === "string" && incoming.trim() && !incoming.includes("•")
+      ? incoming.trim()
+      : cur;
   const next = {
     razorpayKeyId: String(incoming.razorpayKeyId ?? current.razorpayKeyId).trim(),
-    razorpayKeySecret:
-      typeof incoming.razorpayKeySecret === "string"
-        ? incoming.razorpayKeySecret.trim()
-        : current.razorpayKeySecret,
-    razorpayWebhookSecret:
-      typeof incoming.razorpayWebhookSecret === "string"
-        ? incoming.razorpayWebhookSecret.trim()
-        : current.razorpayWebhookSecret,
+    razorpayKeySecret: secret(incoming.razorpayKeySecret, current.razorpayKeySecret),
+    razorpayWebhookSecret: secret(incoming.razorpayWebhookSecret, current.razorpayWebhookSecret),
     razorpayLive: !!incoming.razorpayLive,
-    stripeSecretKey:
-      typeof incoming.stripeSecretKey === "string"
-        ? incoming.stripeSecretKey.trim()
-        : current.stripeSecretKey,
-    stripeWebhookSecret:
-      typeof incoming.stripeWebhookSecret === "string"
-        ? incoming.stripeWebhookSecret.trim()
-        : current.stripeWebhookSecret,
+    stripeSecretKey: secret(incoming.stripeSecretKey, current.stripeSecretKey),
+    stripeWebhookSecret: secret(incoming.stripeWebhookSecret, current.stripeWebhookSecret),
     stripePublishableKey: String(incoming.stripePublishableKey ?? current.stripePublishableKey).trim(),
     // UPI
     upiEnabled: typeof incoming.upiEnabled === "boolean" ? incoming.upiEnabled : current.upiEnabled,
@@ -46,8 +40,7 @@ export async function PUT(req: NextRequest) {
     mailImapHost: String(incoming.mailImapHost ?? current.mailImapHost).trim(),
     mailImapPort: Number(incoming.mailImapPort) || current.mailImapPort || 993,
     mailImapUser: String(incoming.mailImapUser ?? current.mailImapUser).trim(),
-    mailImapPass:
-      typeof incoming.mailImapPass === "string" ? incoming.mailImapPass.trim() : current.mailImapPass,
+    mailImapPass: secret(incoming.mailImapPass, current.mailImapPass),
     mailFromFilter: String(incoming.mailFromFilter ?? current.mailFromFilter).trim()
   };
 

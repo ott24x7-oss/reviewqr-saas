@@ -69,36 +69,67 @@ export async function attachReference(paymentId: string, userId: string, referen
   });
 }
 
-/** Does an email confirm this payment? Match on the unique amount, then reference. */
+/**
+ * Does an email confirm this payment?
+ *
+ * Security: a confirmation is only accepted when the email contains BOTH the
+ * exact unique amount AND the customer-supplied transaction reference (UTR /
+ * tx-hash). Neither signal alone is trusted:
+ *  - amount alone collides across users sharing the same tier/period and can be
+ *    forged by anyone who can email the mailbox;
+ *  - reference alone proves nothing about funds actually being received.
+ * The email must also have already passed the sender allow-list upstream
+ * (fetchRecentPaymentEmails), so `from` is a known payment provider.
+ * A reference must be present — orders with no reference never auto-activate.
+ */
 function matchEmail(payment: Payment, emails: ParsedEmail[]): ParsedEmail | null {
   const ref = (payment.reference || "").toLowerCase().replace(/\s+/g, "");
+  // No reference on file → nothing to bind against; refuse to auto-verify.
+  if (ref.length < 6) return null;
+
   if (payment.method === "usdt") {
     const usdt = (payment.amountUsdt || 0).toFixed(2);
     for (const e of emails) {
-      const body = (e.subject + " " + e.text).toLowerCase();
+      const raw = (e.subject + " " + e.text).toLowerCase();
+      const compact = raw.replace(/\s+/g, "");
       const amountHit =
-        body.includes(usdt) &&
-        (body.includes("usdt") || body.includes("tether") || body.includes("deposit"));
-      const refHit = ref.length >= 6 && body.replace(/\s+/g, "").includes(ref);
-      if (amountHit || refHit) return e;
+        raw.includes(usdt) &&
+        (raw.includes("usdt") || raw.includes("tether") || raw.includes("deposit"));
+      const refHit = compact.includes(ref);
+      if (amountHit && refHit) return e;
     }
     return null;
   }
-  // UPI (INR)
+
+  // UPI (INR): require the exact rupee amount AND the reference in the same email.
   const rupees = (payment.amount / 100).toFixed(2); // "999.37"
-  const rupeesWhole = Math.round(payment.amount / 100).toString();
   for (const e of emails) {
-    const body = (e.subject + " " + e.text).toLowerCase().replace(/,/g, "");
+    const raw = (e.subject + " " + e.text).toLowerCase().replace(/,/g, "");
+    const compact = raw.replace(/\s+/g, "");
     const amountHit =
-      body.includes(rupees) ||
-      body.includes("rs " + rupees) ||
-      body.includes("rs." + rupees) ||
-      body.includes("inr " + rupees) ||
-      body.includes("₹" + rupees);
-    const refHit = ref.length >= 8 && body.replace(/\s+/g, "").includes(ref);
-    if (amountHit || (refHit && body.includes(rupeesWhole))) return e;
+      raw.includes(rupees) ||
+      raw.includes("rs " + rupees) ||
+      raw.includes("rs." + rupees) ||
+      raw.includes("inr " + rupees) ||
+      raw.includes("₹" + rupees);
+    const refHit = compact.includes(ref);
+    if (amountHit && refHit) return e;
   }
   return null;
+}
+
+/**
+ * Has this confirmation email already been used to activate another order?
+ * Prevents a single provider email from activating many colliding orders
+ * (e.g. an attacker who pre-created orders across every amount suffix).
+ */
+async function emailAlreadyUsed(messageId: string): Promise<boolean> {
+  if (!messageId) return false;
+  const existing = await prisma.payment.findFirst({
+    where: { status: "COMPLETED", matchedEmail: { contains: messageId } },
+    select: { id: true }
+  });
+  return !!existing;
 }
 
 async function activate(payment: Payment, via: string, matchedEmail: string | null) {
@@ -125,6 +156,8 @@ export async function reconcilePayment(payment: Payment): Promise<boolean> {
   if (payment.status !== "PENDING") return payment.status === "COMPLETED";
   const cfg = await getPaymentsConfig();
   if (!cfg.mailVerifyEnabled || !cfg.mailImapUser) return false;
+  // Refuse to auto-verify without a sender allow-list (see matchEmail rationale).
+  if (!cfg.mailFromFilter.trim()) return false;
   const emails = await fetchRecentPaymentEmails(
     {
       host: cfg.mailImapHost,
@@ -136,8 +169,8 @@ export async function reconcilePayment(payment: Payment): Promise<boolean> {
     1440
   );
   const hit = matchEmail(payment, emails);
-  if (hit) {
-    await activate(payment, "email", `${hit.uid} ${hit.subject}`);
+  if (hit && !(await emailAlreadyUsed(hit.messageId))) {
+    await activate(payment, "email", `${hit.messageId} :: ${hit.subject}`);
     return true;
   }
   return false;
@@ -147,6 +180,8 @@ export async function reconcilePayment(payment: Payment): Promise<boolean> {
 export async function reconcileAllPending(): Promise<{ checked: number; activated: number }> {
   const cfg = await getPaymentsConfig();
   if (!cfg.mailVerifyEnabled || !cfg.mailImapUser) return { checked: 0, activated: 0 };
+  // Refuse to auto-verify without a sender allow-list (see matchEmail rationale).
+  if (!cfg.mailFromFilter.trim()) return { checked: 0, activated: 0 };
   const pending = await prisma.payment.findMany({
     where: { status: "PENDING", method: { in: ["upi", "usdt"] }, expiresAt: { gt: new Date() } },
     orderBy: { createdAt: "desc" },
@@ -164,12 +199,16 @@ export async function reconcileAllPending(): Promise<{ checked: number; activate
     1440
   );
   let activated = 0;
+  const usedInBatch = new Set<string>();
   for (const p of pending) {
     const hit = matchEmail(p, emails);
-    if (hit) {
-      await activate(p, "email", `${hit.uid} ${hit.subject}`);
-      activated++;
-    }
+    if (!hit) continue;
+    // One email activates at most one order — within this batch and across history.
+    if (usedInBatch.has(hit.messageId)) continue;
+    if (await emailAlreadyUsed(hit.messageId)) continue;
+    usedInBatch.add(hit.messageId);
+    await activate(p, "email", `${hit.messageId} :: ${hit.subject}`);
+    activated++;
   }
   return { checked: pending.length, activated };
 }

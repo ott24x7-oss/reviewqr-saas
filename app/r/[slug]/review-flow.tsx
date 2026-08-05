@@ -128,8 +128,20 @@ function reserveExternalTab(): Window | null {
   }
 }
 
+// Only ever navigate to http(s) targets. Blocks javascript:/data: and other
+// schemes even if a stale/malicious URL slipped into the DB before validation.
+function isSafeHttpUrl(url: string): boolean {
+  try {
+    const u = new URL(url);
+    return u.protocol === "https:" || u.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
 function navigateExternal(url: string, reserved?: Window | null) {
   if (typeof window === "undefined") return;
+  if (!isSafeHttpUrl(url)) return;
   if (reserved && !reserved.closed) {
     try {
       reserved.location.href = url;
@@ -1571,7 +1583,7 @@ function ThankYouGoogle({ business }: { business: Business }) {
         <p className="mt-2 text-sm rv-muted max-w-sm mx-auto">
           We'd love it if you'd share your experience publicly on {platformLabel}.
         </p>
-        {business.googleReviewUrl && (
+        {business.googleReviewUrl && isSafeHttpUrl(business.googleReviewUrl) && (
           <Button asChild variant="skeuo" size="lg" className="mt-6 w-full max-w-xs mx-auto">
             <a href={business.googleReviewUrl} target="_blank" rel="noopener noreferrer">
               Leave {platformLabel} Review <ExternalLink className="h-4 w-4" />
