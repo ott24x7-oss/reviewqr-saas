@@ -54,7 +54,7 @@ export function Features() {
             { icon: Code2, label: "REST API" },
             { icon: ShieldCheck, label: "Spam protection" }
           ].map((f) => (
-            <div key={f.label} className="rounded-lg border bg-white p-3 flex items-center gap-2 hover:shadow-soft transition">
+            <div key={f.label} className="neu rounded-lg p-3 flex items-center gap-2 transition">
               <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary-50 text-primary-600 shrink-0">
                 <f.icon className="h-4 w-4" />
               </span>
@@ -86,7 +86,7 @@ function FeatureFrame({
     warning: "bg-amber-100 text-amber-700"
   };
   return (
-    <div className="group rounded-2xl border bg-white p-5 shadow-soft hover:shadow-card hover:-translate-y-0.5 transition-all flex flex-col">
+    <div className="group neu rounded-2xl p-5 hover:-translate-y-0.5 transition-all flex flex-col">
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-semibold text-base">{title}</h3>
         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${toneMap[tagTone]}`}>

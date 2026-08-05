@@ -19,7 +19,7 @@ export function DashboardPreview() {
 
         <div className="mt-12 grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
           {/* Analytics card */}
-          <div className="rounded-2xl border bg-gradient-to-br from-primary-50/50 to-accent-50/50 p-1.5 shadow-card">
+          <div className="neu rounded-2xl p-1.5">
             <div className="rounded-xl bg-white p-5 sm:p-6">
               <div className="flex items-center justify-between mb-5">
                 <div>
@@ -58,7 +58,7 @@ export function DashboardPreview() {
           </div>
 
           {/* Star distribution */}
-          <div className="rounded-2xl border bg-white p-5 sm:p-6 shadow-card">
+          <div className="neu rounded-2xl p-5 sm:p-6">
             <h3 className="text-lg font-semibold mb-4">Rating distribution</h3>
             <div className="space-y-3">
               {[
@@ -88,7 +88,7 @@ export function DashboardPreview() {
           </div>
 
           {/* Negative feedback alerts */}
-          <div className="rounded-2xl border bg-white p-5 sm:p-6 shadow-card">
+          <div className="neu rounded-2xl p-5 sm:p-6">
             <div className="flex items-center gap-2 mb-4">
               <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-50 text-red-600">
                 <AlertTriangle className="h-4 w-4" />
@@ -127,7 +127,7 @@ export function DashboardPreview() {
           </div>
 
           {/* Staff leaderboard */}
-          <div className="rounded-2xl border bg-white p-5 sm:p-6 shadow-card">
+          <div className="neu rounded-2xl p-5 sm:p-6">
             <div className="flex items-center gap-2 mb-4">
               <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-50 text-accent-600">
                 <Users className="h-4 w-4" />

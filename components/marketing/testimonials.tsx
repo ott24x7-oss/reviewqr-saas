@@ -84,7 +84,7 @@ export function Testimonials() {
           {testimonials.map((t) => (
             <figure
               key={t.name}
-              className="rounded-xl border bg-white p-6 shadow-soft hover:shadow-card transition-shadow flex flex-col"
+              className="neu rounded-xl p-6 transition-shadow flex flex-col"
             >
               <div className="flex items-center gap-0.5 mb-3">
                 {Array.from({ length: 5 }).map((_, i) => (
