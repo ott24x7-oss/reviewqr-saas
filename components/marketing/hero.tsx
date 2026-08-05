@@ -33,7 +33,8 @@ export function Hero() {
               <span className="gradient-text-google">Google reviews</span>
             </h1>
             <p className="mt-3 text-base sm:text-lg text-muted-foreground text-pretty max-w-md mx-auto lg:mx-0">
-              Bad ones → private feedback. One smart QR. 30 seconds.
+              Our <b className="text-foreground">AI writes the 5★ review for them</b> — they just tap
+              Copy. Unhappy ones go to your private inbox. One smart QR, 30 seconds.
             </p>
 
             <div className="mt-6 flex flex-col sm:flex-row gap-2 justify-center lg:justify-start">
