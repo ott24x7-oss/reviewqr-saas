@@ -24,7 +24,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import ShapeGrid from "@/components/ui/shape-grid";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -430,21 +429,7 @@ export function ReviewFlow(props: Props) {
     step === "thank-you-private";
 
   return (
-    <div className="relative min-h-screen neu-base flex flex-col" style={{ "--accent": accent } as any}>
-      {/* Animated ShapeGrid background — drifts + fills under the cursor */}
-      <div className="pointer-events-none fixed inset-0 -z-10">
-        <ShapeGrid
-          speed={0.4}
-          squareSize={40}
-          direction="diagonal"
-          borderColor="rgba(120,135,160,0.22)"
-          hoverFillColor={accent}
-          shape="square"
-          hoverTrailAmount={5}
-          className="h-full w-full"
-        />
-      </div>
-
+    <div className="relative min-h-screen flex flex-col" style={{ "--accent": accent } as any}>
       {/* HERO */}
       <div className="relative">
         <div

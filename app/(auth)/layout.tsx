@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export default async function AuthLayout({ children }: { children: React.ReactNode }) {
   const brand = await getBrand();
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-primary-50/50 via-white to-accent-50/50">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-primary-50/40 via-transparent to-accent-50/40">
       <header className="border-b bg-white/70 backdrop-blur-sm">
         <div className="container max-w-6xl flex h-16 items-center justify-between">
           <Link href="/" className="flex items-center gap-2 font-bold">

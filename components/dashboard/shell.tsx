@@ -88,7 +88,7 @@ export function DashboardShell({
     : 0;
 
   return (
-    <div className="min-h-screen flex flex-col bg-secondary/30">
+    <div className="min-h-screen flex flex-col bg-transparent">
       {/* Top bar */}
       <header className="sticky top-0 z-40 border-b bg-white/95 backdrop-blur-sm">
         <div className="flex h-14 sm:h-16 items-center justify-between px-3 sm:px-6 gap-2">
