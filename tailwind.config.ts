@@ -70,7 +70,10 @@ const config: Config = {
         popover: {
           DEFAULT: "hsl(var(--popover))",
           foreground: "hsl(var(--popover-foreground))"
-        }
+        },
+        brand: "#34C77B",
+        ink: "hsl(var(--foreground))",
+        "muted-ink": "hsl(var(--muted-foreground))"
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -118,7 +121,8 @@ const config: Config = {
       },
       backgroundImage: {
         "grid-pattern":
-          "linear-gradient(to right, rgb(52 199 123 / 0.06) 1px, transparent 1px), linear-gradient(to bottom, rgb(52 199 123 / 0.06) 1px, transparent 1px)"
+          "linear-gradient(to right, rgb(52 199 123 / 0.06) 1px, transparent 1px), linear-gradient(to bottom, rgb(52 199 123 / 0.06) 1px, transparent 1px)",
+        "grad-brand": "linear-gradient(135deg, #34C77B 0%, #1F8C53 100%)"
       }
     }
   },
