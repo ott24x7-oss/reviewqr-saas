@@ -18,12 +18,9 @@ import {
   ShieldCheck,
   LogOut,
   Menu,
-  X,
-  Sun,
-  Moon
+  X
 } from "lucide-react";
 import { cn, getInitials } from "@/lib/utils";
-import { useDarkToggle } from "@/lib/use-theme";
 
 const nav = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard, exact: true },
@@ -51,12 +48,11 @@ export function AdminShell({
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = React.useState(false);
   React.useEffect(() => setMobileOpen(false), [pathname]);
-  const { dark, toggle } = useDarkToggle();
   const isActive = (href: string, exact?: boolean) =>
     exact ? pathname === href : pathname === href || pathname.startsWith(href + "/");
 
   return (
-    <div className={cn("min-h-screen flex flex-col", dark ? "dark bg-[#0b1220] text-slate-100" : "bg-transparent")}>
+    <div className="min-h-screen flex flex-col bg-transparent">
       <header className="sticky top-0 z-40 border-b dark:border-slate-800 bg-white/95 dark:bg-slate-900/85 backdrop-blur-sm">
         <div className="flex h-14 sm:h-16 items-center justify-between px-3 sm:px-6 gap-2">
           <div className="flex items-center gap-2">
@@ -76,14 +72,6 @@ export function AdminShell({
             <span className="text-xs text-muted-foreground hidden sm:inline">/ {brandName}</span>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={toggle}
-              aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
-            >
-              {dark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-            </button>
             <Link
               href="/dashboard"
               className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border dark:border-slate-700 text-xs font-medium hover:bg-secondary"

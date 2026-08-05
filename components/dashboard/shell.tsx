@@ -19,12 +19,9 @@ import {
   Bell,
   ChevronDown,
   Plus,
-  ShieldCheck,
-  Sun,
-  Moon
+  ShieldCheck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useDarkToggle } from "@/lib/use-theme";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -76,7 +73,6 @@ export function DashboardShell({
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = React.useState(false);
-  const { dark, toggle } = useDarkToggle();
 
   React.useEffect(() => {
     setMobileOpen(false);
@@ -92,7 +88,7 @@ export function DashboardShell({
     : 0;
 
   return (
-    <div className={cn("min-h-screen flex flex-col", dark ? "dark bg-[#0b1220] text-slate-100" : "bg-transparent")}>
+    <div className="min-h-screen flex flex-col bg-transparent">
       {/* Top bar */}
       <header className="sticky top-0 z-40 border-b dark:border-slate-800 bg-white/95 dark:bg-slate-900/85 backdrop-blur-sm">
         <div className="flex h-14 sm:h-16 items-center justify-between px-3 sm:px-6 gap-2">
@@ -122,14 +118,6 @@ export function DashboardShell({
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={toggle}
-              aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
-            >
-              {dark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-            </button>
             {(user.tier === "FREE" || user.tier === "GROWTH" && !user.subscriptionEndsAt) && (
               <Link
                 href="/dashboard/billing"
