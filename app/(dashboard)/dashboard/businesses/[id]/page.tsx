@@ -5,7 +5,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { absoluteUrl } from "@/lib/utils";
-import { ExternalLink, QrCode, MapPin, Users, Edit3, Star, FileText, Sparkles } from "lucide-react";
+import { ExternalLink, QrCode, MapPin, Users, Edit3, Star, FileText, Sparkles, Quote } from "lucide-react";
 import { getReviewUrl } from "@/lib/qr";
 import { BusinessActions } from "./business-actions";
 
@@ -150,6 +150,22 @@ export default async function BusinessDetailPage({ params }: { params: { id: str
                 <div className="font-semibold">Review templates</div>
                 <div className="text-xs text-muted-foreground">
                   {business._count.reviewTemplates} in stock
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href={`/dashboard/businesses/${business.id}/testimonials`}>
+          <Card className="hover:shadow-card transition cursor-pointer">
+            <CardContent className="p-5 flex items-start gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300">
+                <Quote className="h-5 w-5" />
+              </span>
+              <div>
+                <div className="font-semibold">Testimonials</div>
+                <div className="text-xs text-muted-foreground">
+                  Publish reviews to your widget
                 </div>
               </div>
             </CardContent>
