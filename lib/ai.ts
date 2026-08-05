@@ -159,21 +159,21 @@ export async function generateQuestions(
     "Return ONLY JSON. Keep it warm, simple, and specific to the business.";
   const user =
     `${contextBlock(ctx)}\n\n` +
-    "Generate 3 to 4 quick multiple-choice questions a satisfied customer can tap through in seconds. " +
-    "Each question must be specific to THIS business's services and have 3-4 short, positive answer options " +
+    "Generate exactly 3 quick multiple-choice questions a satisfied customer can tap through in seconds. " +
+    "Each question must be specific to THIS business's services and have 3 short, positive answer options " +
     "(single words or very short phrases). " +
     'Respond as JSON: {"questions":[{"question":"...","options":["...","..."]}]}';
 
   const raw = await chat(cfg, [
     { role: "system", content: system },
     { role: "user", content: user }
-  ], { maxTokens: 500, temperature: 0.6 });
+  ], { maxTokens: 350, temperature: 0.6 });
 
   const data = parseJson(raw);
   const arr = Array.isArray(data) ? data : data.questions;
   if (!Array.isArray(arr)) throw new Error("Bad questions shape");
   const questions: AiQuestion[] = arr
-    .slice(0, 4)
+    .slice(0, 3)
     .map((q: any, i: number) => ({
       id: `q${i}`,
       question: String(q.question || q.q || "").trim(),
@@ -204,15 +204,15 @@ export async function generateReviews(
   const user =
     `${contextBlock(ctx)}\n\n` +
     `The customer gave ${rating} out of 5 stars. What they highlighted:\n${answerBlock}\n\n` +
-    "Write 5 distinct, ready-to-post Google review options this happy customer could use. " +
-    "Mention the business by name naturally in some of them, reference the services/answers, " +
-    "and keep each one genuine and easy to relate to. " +
-    'Respond as JSON: {"reviews":["...","...","...","...","..."]}';
+    "Write 2 distinct, ready-to-post Google review options this happy customer could use. " +
+    "Mention the business by name naturally, reference the services/answers, " +
+    "and keep each one genuine, concise and easy to relate to (2-3 sentences). " +
+    'Respond as JSON: {"reviews":["...","..."]}';
 
   const raw = await chat(cfg, [
     { role: "system", content: system },
     { role: "user", content: user }
-  ], { maxTokens: 800, temperature: 0.9 });
+  ], { maxTokens: 350, temperature: 0.85 });
 
   const data = parseJson(raw);
   const arr = Array.isArray(data) ? data : data.reviews;
@@ -220,7 +220,7 @@ export async function generateReviews(
   const reviews = arr
     .map((r: any) => String(r).trim())
     .filter((r: string) => r.length > 10)
-    .slice(0, 5);
+    .slice(0, 2);
   if (reviews.length === 0) throw new Error("No usable reviews");
   return reviews;
 }

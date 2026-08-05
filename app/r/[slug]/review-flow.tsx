@@ -213,6 +213,7 @@ export function ReviewFlow(props: Props) {
   const [templatesLoading, setTemplatesLoading] = React.useState(false);
   const [pickedId, setPickedId] = React.useState<string | null>(null);
   const [aiQuestions, setAiQuestions] = React.useState<AiQuestion[]>([]);
+  const [aiPreparing, setAiPreparing] = React.useState(false);
 
   const { business } = props;
   const accent = business.primaryColor || "#1a73e8";
@@ -256,6 +257,7 @@ export function ReviewFlow(props: Props) {
 
     // Prefer the AI assistant when it's enabled for this business.
     if (props.aiEnabled) {
+      setAiPreparing(true);
       try {
         const res = await fetch("/api/public/ai/questions", {
           method: "POST",
@@ -268,6 +270,7 @@ export function ReviewFlow(props: Props) {
           reserved?.close();
           setAiQuestions(j.questions);
           setTemplatesLoading(false);
+          setAiPreparing(false);
           setStep("ai");
           submitReview({ rating: stars, feedback: "", redirected: true }).catch(() => {});
           return;
@@ -275,6 +278,7 @@ export function ReviewFlow(props: Props) {
       } catch {
         // fall through to templates / instant redirect
       }
+      setAiPreparing(false);
     }
 
     try {
@@ -456,6 +460,9 @@ export function ReviewFlow(props: Props) {
       data-rt={theme}
       style={{ "--accent": accent } as any}
     >
+      {/* Boxed profile card, centered on the grid background */}
+      <div className="mx-auto w-full max-w-2xl flex-1 sm:px-4 sm:py-8">
+        <div className="overflow-hidden bg-white sm:rounded-[2rem] sm:border sm:border-black/5 dark:sm:border-white/10 sm:shadow-2xl">
       {/* HERO */}
       <div className="relative">
         <div
@@ -701,6 +708,8 @@ export function ReviewFlow(props: Props) {
           <ThankYouPrivate business={business} customerName={name} />
         )}
       </main>
+        </div>
+      </div>
 
       <footer className="py-6 text-center text-xs rv-sub">
         <a
@@ -735,6 +744,69 @@ export function ReviewFlow(props: Props) {
           onSkip={() => goToGoogleReview(rating)}
         />
       )}
+
+      {/* Loading popup while AI prepares the quick questions */}
+      {aiPreparing && (
+        <AiLoadingOverlay
+          accent={accent}
+          title="Preparing your quick review"
+          sub="Our AI is getting a couple of questions ready — just a moment."
+        />
+      )}
+    </div>
+  );
+}
+
+function AiLoadingOverlay({
+  accent,
+  title,
+  sub
+}: {
+  accent: string;
+  title: string;
+  sub: string;
+}) {
+  React.useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+  return (
+    <div className="fixed inset-0 z-[70] grid place-items-center glass-strong p-4">
+      <div className="w-full max-w-sm rounded-3xl neu p-8 text-center">
+        <div className="relative mx-auto h-16 w-16">
+          <span
+            className="absolute inset-0 rounded-full animate-ping"
+            style={{ background: accent, opacity: 0.25 }}
+          />
+          <span
+            className="absolute inset-2 rounded-full"
+            style={{ background: `${accent}22` }}
+          />
+          <span
+            className="absolute inset-0 rounded-full border-[3px] border-transparent animate-spin"
+            style={{ borderTopColor: accent }}
+          />
+          <span className="absolute inset-0 grid place-items-center">
+            <Sparkles className="h-6 w-6" style={{ color: accent }} />
+          </span>
+        </div>
+        <h3 className="mt-5 text-lg font-bold rv-ink">{title}</h3>
+        <p className="mt-1.5 text-sm rv-muted">{sub}</p>
+        <div className="mt-6 space-y-2.5">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-3 rounded-full neu-inset overflow-hidden">
+              <div
+                className="h-full w-1/2 rounded-full animate-pulse"
+                style={{ background: `${accent}55`, animationDelay: `${i * 180}ms` }}
+              />
+            </div>
+          ))}
+        </div>
+        <p className="mt-5 text-[11px] rv-sub">This only takes a few seconds — hang tight ✨</p>
+      </div>
     </div>
   );
 }
@@ -950,6 +1022,15 @@ function AiReviewModal({
           </Button>
         </div>
       </div>
+
+      {/* Loading popup while the AI writes the review options */}
+      {loading && phase === "questions" && (
+        <AiLoadingOverlay
+          accent={accent}
+          title="Writing your review"
+          sub="Crafting ready-to-post options from your answers."
+        />
+      )}
     </div>
   );
 }
