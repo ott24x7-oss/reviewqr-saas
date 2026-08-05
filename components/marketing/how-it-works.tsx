@@ -1,222 +1,148 @@
-import { Star, ArrowRight, ArrowDown, Check, ExternalLink, MessageSquare, Send } from "lucide-react";
+import { QrCode, Sparkles, Star, Send, ArrowRight, Bell, Check } from "lucide-react";
 
+/**
+ * Customer process — 3 clean steps with material cards + mini 3D-tilt mockups.
+ * Anchor id="how" kept for the nav.
+ */
 export function HowItWorks() {
   return (
-    <section id="how" className="py-16 sm:py-24 overflow-hidden">
-      <div className="container max-w-6xl">
-        <div className="text-center max-w-2xl mx-auto">
-          <span className="inline-block px-3 py-1 rounded-full bg-accent-50 text-accent-700 text-sm font-medium">
-            How it works
-          </span>
-          <h2 className="section-title mt-4 font-display">
-            Live in <span className="gradient-text">5 minutes</span>
-          </h2>
+    <section id="how" className="px-5 sm:px-10 py-16 sm:py-24">
+      <div className="text-center max-w-2xl mx-auto">
+        <div className="inline-flex items-center gap-2 rounded-full bg-accent/15 border border-accent/20 px-3 py-1 text-xs font-semibold text-accent">
+          How it works
         </div>
+        <h2 className="mt-4 font-display text-3xl sm:text-4xl font-bold tracking-tight text-ink leading-tight">
+          Live in 5 minutes. Then it runs <span className="text-gradient">on autopilot.</span>
+        </h2>
+        <p className="mt-4 text-base sm:text-lg text-muted-ink">
+          No app for your customer to download. No training for your staff. Just one smart QR on the
+          table, the bill, or the counter.
+        </p>
+      </div>
 
-        {/* Step 1 → Step 2 → Step 3 → Step 4 with phone mockups */}
-        <div className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-3">
-          <Step1 />
-          <Connector />
-          <Step2 />
-          <Connector />
-          <Step3 />
-          <Connector />
-          <Step4 />
-          <Connector />
-        </div>
+      <div className="mt-14 grid md:grid-cols-3 gap-5 lg:gap-6 relative">
+        <Step
+          n={1}
+          icon={QrCode}
+          title="Customer scans"
+          desc="They point their phone at your QR — no app, no signup. Your branded review page opens instantly."
+        >
+          <div className="[perspective:1200px]">
+            <div
+              className="neu-inset rounded-2xl p-4 grid place-items-center"
+              style={{ transform: "rotateX(8deg)" }}
+            >
+              <svg viewBox="0 0 40 40" className="w-20 h-20" fill="currentColor">
+                <g className="text-ink">
+                  <rect x="1" y="1" width="11" height="11" rx="2" />
+                  <rect x="3.5" y="3.5" width="6" height="6" rx="1" fill="#eef1f6" />
+                  <rect x="28" y="1" width="11" height="11" rx="2" />
+                  <rect x="30.5" y="3.5" width="6" height="6" rx="1" fill="#eef1f6" />
+                  <rect x="1" y="28" width="11" height="11" rx="2" />
+                  <rect x="3.5" y="30.5" width="6" height="6" rx="1" fill="#eef1f6" />
+                  <rect x="16" y="3" width="3" height="6" />
+                  <rect x="22" y="3" width="3" height="9" />
+                  <rect x="16" y="16" width="8" height="3" />
+                  <rect x="28" y="16" width="3" height="9" />
+                  <rect x="17" y="24" width="3" height="9" />
+                  <rect x="24" y="28" width="9" height="3" />
+                  <rect x="34" y="34" width="5" height="5" />
+                </g>
+              </svg>
+            </div>
+          </div>
+        </Step>
+
+        <Step
+          n={2}
+          icon={Sparkles}
+          title="Taps a rating — AI drafts it"
+          desc="They tap a star and 3 quick buttons. Our AI instantly writes a genuine review in their words — ready to copy."
+        >
+          <div className="neu-inset rounded-2xl p-3.5">
+            <div className="flex justify-center gap-1 mb-2">
+              {[1, 2, 3, 4, 5].map((s) => (
+                <Star key={s} className="h-4 w-4 fill-amber-400 text-amber-400" />
+              ))}
+            </div>
+            <div className="flex flex-wrap justify-center gap-1 mb-2">
+              {["Great food", "Quick"].map((c) => (
+                <span key={c} className="skeuo-accent text-white text-[9px] rounded-full px-2 py-0.5">
+                  {c}
+                </span>
+              ))}
+            </div>
+            <div className="rounded-lg bg-white p-2 text-[10px] leading-snug text-ink/80">
+              "Amazing dosa and super quick service — highly recommend!"
+            </div>
+          </div>
+        </Step>
+
+        <Step
+          n={3}
+          icon={Send}
+          title="Google grows — or you're alerted"
+          desc="Happy reviews land on Google in one paste. Unhappy ones hit your private inbox with an instant alert."
+        >
+          <div className="space-y-2">
+            <div className="neu-inset rounded-xl p-2.5 flex items-center gap-2">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent/15 text-accent shrink-0">
+                <Check className="h-4 w-4" />
+              </span>
+              <div className="text-[10px]">
+                <span className="gradient-text-google font-bold">Posted to Google</span>
+                <div className="text-muted-ink">Public 5★ review</div>
+              </div>
+            </div>
+            <div className="neu-inset rounded-xl p-2.5 flex items-center gap-2">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-400/15 text-amber-500 shrink-0">
+                <Bell className="h-4 w-4" />
+              </span>
+              <div className="text-[10px]">
+                <span className="font-bold text-ink">Private alert</span>
+                <div className="text-muted-ink">Only you see it</div>
+              </div>
+            </div>
+          </div>
+        </Step>
       </div>
     </section>
   );
 }
 
-function Connector() {
+function Step({
+  n,
+  icon: Icon,
+  title,
+  desc,
+  children
+}: {
+  n: number;
+  icon: React.ElementType;
+  title: string;
+  desc: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="hidden lg:flex items-center justify-center -mx-6">
-      <ArrowRight className="h-5 w-5 text-muted-foreground" />
+    <div className="relative neu rounded-3xl p-6 flex flex-col">
+      <div className="flex items-center gap-3">
+        <span className="skeuo-accent text-white h-9 w-9 rounded-xl grid place-items-center font-bold text-sm">
+          {n}
+        </span>
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand/10 text-brand">
+          <Icon className="h-5 w-5" />
+        </span>
+      </div>
+      <h3 className="mt-4 font-display text-lg font-bold text-ink">{title}</h3>
+      <p className="mt-1.5 text-sm text-muted-ink leading-relaxed">{desc}</p>
+      <div className="mt-5">{children}</div>
+
+      {/* connector arrow (desktop) */}
+      {n < 3 && (
+        <div className="hidden md:flex absolute top-1/2 -right-4 lg:-right-5 z-10 h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full glass text-brand">
+          <ArrowRight className="h-4 w-4" />
+        </div>
+      )}
     </div>
-  );
-}
-
-/* Phone mockup wrapper */
-function Phone({ children, label, n }: { children: React.ReactNode; label: string; n: string }) {
-  return (
-    <div className="flex flex-col items-center text-center">
-      <div className="text-xs font-semibold text-muted-foreground mb-2">
-        <span className="px-2 py-0.5 rounded-full bg-white border mr-1">{n}</span>
-        {label}
-      </div>
-      <div className="relative w-44 sm:w-48 aspect-[9/19] rounded-[1.75rem] border-[8px] border-zinc-900 bg-zinc-900 shadow-card">
-        <div className="absolute top-2 left-1/2 -translate-x-1/2 h-3.5 w-16 rounded-full bg-zinc-900 z-20" />
-        <div className="relative h-full w-full rounded-[1.25rem] overflow-hidden bg-white">{children}</div>
-      </div>
-    </div>
-  );
-}
-
-function Step1() {
-  // Customer scans QR poster
-  return (
-    <Phone n="01" label="Customer scans">
-      <div className="h-full w-full bg-gradient-to-br from-primary-50 to-accent-50 flex flex-col items-center justify-center p-3">
-        <div className="rounded-xl bg-white border-2 border-primary p-3 shadow-soft">
-          {/* Mini QR */}
-          <svg viewBox="0 0 36 36" className="w-24 h-24" fill="#1a73e8">
-            <rect x="0" y="0" width="10" height="10" />
-            <rect x="2" y="2" width="6" height="6" fill="white" />
-            <rect x="4" y="4" width="2" height="2" fill="#1a73e8" />
-            <rect x="26" y="0" width="10" height="10" />
-            <rect x="28" y="2" width="6" height="6" fill="white" />
-            <rect x="30" y="4" width="2" height="2" fill="#1a73e8" />
-            <rect x="0" y="26" width="10" height="10" />
-            <rect x="2" y="28" width="6" height="6" fill="white" />
-            <rect x="4" y="30" width="2" height="2" fill="#1a73e8" />
-            <rect x="14" y="2" width="2" height="4" />
-            <rect x="18" y="4" width="2" height="2" />
-            <rect x="22" y="2" width="2" height="6" />
-            <rect x="14" y="14" width="6" height="2" />
-            <rect x="22" y="14" width="2" height="6" />
-            <rect x="26" y="18" width="4" height="2" />
-            <rect x="14" y="22" width="2" height="6" />
-            <rect x="18" y="26" width="6" height="2" />
-            <rect x="26" y="22" width="2" height="2" />
-            <rect x="30" y="24" width="4" height="4" />
-            <rect x="28" y="32" width="2" height="2" />
-          </svg>
-        </div>
-        <div className="mt-3 text-[10px] font-bold gradient-text-google">SCAN ME</div>
-        <div className="mt-1 text-[8px] text-muted-foreground text-center">
-          Loved your visit?
-          <br />Leave us a review!
-        </div>
-      </div>
-    </Phone>
-  );
-}
-
-function Step2() {
-  // Picks a rating
-  return (
-    <Phone n="02" label="Picks rating">
-      <div className="h-full bg-white">
-        <div className="border-b px-3 py-2 flex items-center gap-2">
-          <div className="h-6 w-6 rounded gradient-brand flex items-center justify-center text-white text-[9px] font-bold">
-            S
-          </div>
-          <div className="text-[10px] font-semibold truncate">Spice Junction Café</div>
-        </div>
-        <div className="p-3 flex flex-col items-center">
-          <div className="text-xs font-bold text-center font-display mt-3">
-            How was your<br />experience?
-          </div>
-          <div className="mt-5 flex gap-0.5">
-            {[1, 2, 3, 4, 5].map((n) => (
-              <Star
-                key={n}
-                className={`h-5 w-5 ${
-                  n <= 5 ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"
-                }`}
-                strokeWidth={1.5}
-              />
-            ))}
-          </div>
-          <span className="mt-3 inline-block px-2.5 py-0.5 rounded-full bg-accent-100 text-accent-800 text-[9px] font-bold">
-            Amazing
-          </span>
-          <div className="mt-4 w-full rounded-lg bg-secondary border p-2 text-center">
-            <div className="text-[8px] text-muted-foreground">Auto-redirecting...</div>
-          </div>
-        </div>
-      </div>
-    </Phone>
-  );
-}
-
-function Step3() {
-  // Lands on Google
-  return (
-    <Phone n="03" label="Posts to Google">
-      <div className="h-full bg-white">
-        <div className="bg-white border-b px-3 py-2 flex items-center gap-1">
-          <span className="text-[10px] font-bold gradient-text-google">G</span>
-          <span className="text-[9px] text-muted-foreground">maps.google.com</span>
-        </div>
-        <div className="p-3">
-          <div className="text-[10px] font-semibold mb-2">Rate Spice Junction Café</div>
-          <div className="flex gap-0.5 mb-3">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Star key={i} className="h-5 w-5 fill-amber-400 text-amber-400" strokeWidth={1.5} />
-            ))}
-          </div>
-          <div className="rounded-lg border bg-secondary/40 p-2 mb-2">
-            <textarea
-              className="w-full bg-transparent text-[9px] resize-none outline-none"
-              rows={3}
-              defaultValue="Loved the masala dosa! Best in Indiranagar."
-              readOnly
-            />
-          </div>
-          <div className="flex justify-end gap-1">
-            <div className="px-2 py-1 rounded text-[8px] text-muted-foreground">Cancel</div>
-            <div className="px-3 py-1 rounded bg-primary text-white text-[9px] font-medium inline-flex items-center gap-1">
-              Post <ExternalLink className="h-2 w-2" />
-            </div>
-          </div>
-          <div className="mt-3 inline-flex items-center gap-1 text-[8px] text-accent-600 font-medium">
-            <Check className="h-2.5 w-2.5" /> Public review live
-          </div>
-        </div>
-      </div>
-    </Phone>
-  );
-}
-
-function Step4() {
-  // You see in dashboard / get WA alert
-  return (
-    <Phone n="04" label="You get notified">
-      <div className="h-full bg-secondary/30">
-        <div className="bg-white border-b px-3 py-2 flex items-center gap-2">
-          <div className="h-5 w-5 rounded-md gradient-brand flex items-center justify-center text-white text-[8px] font-bold">
-            R
-          </div>
-          <div className="text-[9px] font-semibold">ReviewQR</div>
-        </div>
-        <div className="p-3 space-y-2">
-          {/* WhatsApp alert */}
-          <div className="rounded-lg bg-white shadow-soft border p-2 flex items-start gap-2">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#25D366]/10 text-[#25D366] shrink-0">
-              <MessageSquare className="h-3 w-3" />
-            </span>
-            <div className="text-[9px] min-w-0">
-              <div className="font-semibold">5★ from Ananya</div>
-              <div className="text-muted-foreground truncate">"Loved the dosa!"</div>
-              <div className="mt-0.5 inline-flex items-center gap-0.5 text-[8px] text-accent-600 font-medium">
-                <ExternalLink className="h-2 w-2" /> Sent to Google
-              </div>
-            </div>
-          </div>
-          {/* Stats */}
-          <div className="rounded-lg bg-white shadow-soft border p-2">
-            <div className="text-[8px] text-muted-foreground">Today</div>
-            <div className="flex items-baseline gap-1">
-              <span className="text-base font-bold">14</span>
-              <span className="text-[9px] text-muted-foreground">new reviews</span>
-              <span className="ml-auto text-[9px] text-accent-600 font-medium">+24%</span>
-            </div>
-            <div className="mt-1.5 flex items-end gap-0.5 h-6">
-              {[40, 55, 48, 62, 70, 68, 82].map((h, i) => (
-                <div key={i} className="flex-1 rounded-t gradient-brand" style={{ height: `${h}%` }} />
-              ))}
-            </div>
-          </div>
-          {/* Send WA template */}
-          <div className="rounded-lg bg-white shadow-soft border p-2 flex items-center gap-2">
-            <Send className="h-3 w-3 text-primary" />
-            <span className="text-[9px] flex-1">3 new contacts to follow up</span>
-            <span className="text-[8px] text-primary font-bold">→</span>
-          </div>
-        </div>
-      </div>
-    </Phone>
   );
 }

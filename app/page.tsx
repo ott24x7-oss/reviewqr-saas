@@ -10,6 +10,7 @@ import { CTA } from "@/components/marketing/cta";
 import { Footer } from "@/components/marketing/footer";
 import { AiHighlight } from "@/components/marketing/ai-highlight";
 import { RoutingHighlight } from "@/components/marketing/routing-highlight";
+import { StatsBand } from "@/components/marketing/stats-band";
 import { getPricingConfig } from "@/lib/settings";
 import { getBrand } from "@/lib/brand";
 
@@ -31,6 +32,9 @@ export default async function HomePage() {
         </section>
         <section className="rounded-[2rem] neu overflow-hidden">
           <AiHighlight />
+        </section>
+        <section className="rounded-[2rem] neu overflow-hidden">
+          <StatsBand />
         </section>
         <section className="rounded-[2rem] neu overflow-hidden">
           <Features />
