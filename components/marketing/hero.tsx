@@ -6,7 +6,7 @@ import { AvatarInitials } from "@/components/ui/avatar-initials";
 
 export function Hero() {
   return (
-    <section className="relative pt-28 pb-12 sm:pt-36 sm:pb-20 overflow-hidden">
+    <section className="relative pt-10 pb-12 sm:pt-14 sm:pb-20 overflow-hidden">
       <div
         aria-hidden
         className="absolute inset-0 -z-10 bg-grid-pattern bg-[size:32px_32px] opacity-50"
