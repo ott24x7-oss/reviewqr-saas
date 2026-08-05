@@ -50,15 +50,6 @@ export default async function ReviewPage({
     ? business.staffMembers.find((s) => s.slug === searchParams.s)
     : null;
 
-  if (searchParams.q) {
-    prisma.qRCode
-      .updateMany({
-        where: { shortCode: searchParams.q, businessId: business.id },
-        data: { scans: { increment: 1 } }
-      })
-      .catch(() => {});
-  }
-
   // Public stats — drives the rating header
   const [stats, testimonialRows, recentPositive] = await Promise.all([
     prisma.review.aggregate({

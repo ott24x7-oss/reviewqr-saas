@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
+import { effectiveTier } from "@/lib/payments";
 import { z } from "zod";
 
 const schema = z.object({
@@ -23,7 +24,7 @@ export async function PATCH(req: NextRequest) {
 
   // White-label only allowed on Agency tier
   const data = { ...parsed.data };
-  if (user.subscriptionTier !== "AGENCY") {
+  if (effectiveTier(user) !== "AGENCY") {
     delete data.whiteLabelEnabled;
     delete data.whiteLabelName;
     delete data.whiteLabelDomain;

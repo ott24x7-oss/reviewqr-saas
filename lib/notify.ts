@@ -24,7 +24,7 @@ export async function notifyNegativeFeedback(opts: {
   });
   if (!business) return;
 
-  const dashboardUrl = absoluteUrl(`/dashboard/${business.slug}/feedback/${opts.reviewId}`);
+  const dashboardUrl = absoluteUrl(`/dashboard/feedback`);
 
   // Email alert
   if (business.email || business.owner.email) {
@@ -69,7 +69,7 @@ export async function notifyNegativeFeedback(opts: {
       type: "negative_feedback",
       title: `New ${opts.rating}-star feedback`,
       message: opts.message.slice(0, 200),
-      link: `/dashboard/${business.slug}/feedback/${opts.reviewId}`,
+      link: `/dashboard/feedback`,
       metadata: { rating: opts.rating, businessId: business.id }
     }
   });

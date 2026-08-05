@@ -88,23 +88,54 @@ export async function POST(req: NextRequest) {
 
   const redirected = data.rating >= business.ratingThreshold && !cleanFeedback;
 
-  const review = await prisma.review.create({
-    data: {
-      businessId: business.id,
-      locationId: location?.id || null,
-      staffId: staff?.id || null,
-      rating: data.rating,
-      sentiment,
-      redirected,
-      source: data.source || "link",
-      customerName,
-      customerEmail,
-      customerPhone,
-      ipAddress: ip,
-      userAgent: ua.slice(0, 500),
-      fingerprint: fp
-    }
-  });
+  // Fix #8: when written feedback arrives, reuse the bare Review row that was
+  // captured the moment the customer tapped their (low) rating — same visitor
+  // (fingerprint), same rating, still without feedback, and recent. This keeps
+  // exactly one Review row per customer instead of creating a second one.
+  const existingBare = cleanFeedback
+    ? await prisma.review.findFirst({
+        where: {
+          businessId: business.id,
+          fingerprint: fp,
+          rating: data.rating,
+          feedback: { is: null },
+          createdAt: { gte: new Date(Date.now() - 15 * 60 * 1000) }
+        },
+        orderBy: { createdAt: "desc" }
+      })
+    : null;
+
+  const review = existingBare
+    ? await prisma.review.update({
+        where: { id: existingBare.id },
+        data: {
+          locationId: location?.id ?? existingBare.locationId,
+          staffId: staff?.id ?? existingBare.staffId,
+          sentiment,
+          redirected,
+          source: data.source || existingBare.source,
+          customerName: customerName ?? existingBare.customerName,
+          customerEmail: customerEmail ?? existingBare.customerEmail,
+          customerPhone: customerPhone ?? existingBare.customerPhone
+        }
+      })
+    : await prisma.review.create({
+        data: {
+          businessId: business.id,
+          locationId: location?.id || null,
+          staffId: staff?.id || null,
+          rating: data.rating,
+          sentiment,
+          redirected,
+          source: data.source || "link",
+          customerName,
+          customerEmail,
+          customerPhone,
+          ipAddress: ip,
+          userAgent: ua.slice(0, 500),
+          fingerprint: fp
+        }
+      });
 
   // If feedback supplied, persist it
   if (cleanFeedback) {

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { getPlans } from "@/lib/payments";
+import { getPaymentsConfig } from "@/lib/settings";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BillingClient } from "./billing-client";
@@ -20,6 +21,7 @@ export default async function BillingPage() {
   });
 
   const plans = await getPlans();
+  const cfg = await getPaymentsConfig();
   const current = plans[user.subscriptionTier];
   const trialDays = user.trialEndsAt
     ? Math.max(0, Math.ceil((user.trialEndsAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
@@ -63,7 +65,12 @@ export default async function BillingPage() {
         </CardContent>
       </Card>
 
-      <BillingClient currentTier={user.subscriptionTier} plans={plans} />
+      <BillingClient
+        currentTier={user.subscriptionTier}
+        plans={plans}
+        upiEnabled={cfg.upiEnabled && !!cfg.upiId}
+        usdtEnabled={cfg.usdtEnabled && !!cfg.usdtAddress}
+      />
 
       <Card>
         <CardHeader>

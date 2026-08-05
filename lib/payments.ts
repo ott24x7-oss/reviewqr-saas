@@ -4,7 +4,7 @@
  */
 import Razorpay from "razorpay";
 import crypto from "crypto";
-import type { SubscriptionTier } from "@prisma/client";
+import type { SubscriptionTier, SubscriptionStatus } from "@prisma/client";
 import {
   getPaymentsConfig,
   getPricingConfig,
@@ -20,6 +20,47 @@ export type PlanInfo = SettingsPlanInfo;
  * DEFAULT_PLANS in lib/settings.ts. For server callers, prefer getPlans().
  */
 export const PLANS: Record<SubscriptionTier, PlanInfo> = DEFAULT_PLANS;
+
+/**
+ * Compute the EFFECTIVE subscription tier for gating/access control.
+ *
+ * The stored `subscriptionTier` reflects what the user paid for, but access
+ * must also account for trial/paid-period expiry and cancellation. This
+ * returns FREE whenever access should be revoked, otherwise the real tier.
+ * Use this (never the raw `subscriptionTier`) for any limit/feature gate.
+ */
+export function effectiveTier(u: {
+  subscriptionTier: SubscriptionTier;
+  subscriptionStatus: SubscriptionStatus;
+  trialEndsAt: Date | null;
+  subscriptionEndsAt: Date | null;
+}): SubscriptionTier {
+  const now = new Date();
+
+  // Already free — nothing to revoke.
+  if (u.subscriptionTier === "FREE") return "FREE";
+
+  // Explicitly cancelled or expired.
+  if (u.subscriptionStatus === "CANCELED" || u.subscriptionStatus === "EXPIRED") {
+    return "FREE";
+  }
+
+  // Paid period has lapsed.
+  if (u.subscriptionEndsAt && u.subscriptionEndsAt.getTime() < now.getTime()) {
+    return "FREE";
+  }
+
+  // Trial ended with no paid period taking over.
+  if (
+    u.subscriptionStatus === "TRIALING" &&
+    u.trialEndsAt &&
+    u.trialEndsAt.getTime() < now.getTime()
+  ) {
+    return "FREE";
+  }
+
+  return u.subscriptionTier;
+}
 
 export async function getPlans() {
   return getPricingConfig();
