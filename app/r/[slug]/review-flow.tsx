@@ -18,7 +18,9 @@ import {
   Copy,
   Check,
   Pencil,
-  Sparkles
+  Sparkles,
+  Sun,
+  Moon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -214,6 +216,26 @@ export function ReviewFlow(props: Props) {
 
   const { business } = props;
   const accent = business.primaryColor || "#1a73e8";
+
+  // Scoped light/dark theme for the review page (persisted + honours OS pref).
+  const [theme, setTheme] = React.useState<"light" | "dark">("light");
+  React.useEffect(() => {
+    let initial: "light" | "dark" = "light";
+    try {
+      const saved = localStorage.getItem("rv-theme") as "light" | "dark" | null;
+      initial = saved || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    } catch {}
+    setTheme(initial);
+  }, []);
+  function toggleTheme() {
+    setTheme((t) => {
+      const next = t === "dark" ? "light" : "dark";
+      try {
+        localStorage.setItem("rv-theme", next);
+      } catch {}
+      return next;
+    });
+  }
 
   function pickRating(n: number) {
     setRating(n);
@@ -429,7 +451,11 @@ export function ReviewFlow(props: Props) {
     step === "thank-you-private";
 
   return (
-    <div className="relative min-h-screen flex flex-col" style={{ "--accent": accent } as any}>
+    <div
+      className="rv relative min-h-dvh flex flex-col"
+      data-rt={theme}
+      style={{ "--accent": accent } as any}
+    >
       {/* HERO */}
       <div className="relative">
         <div
@@ -458,19 +484,29 @@ export function ReviewFlow(props: Props) {
               setStep("rate");
               setTab("reviews");
             }}
-            className="absolute top-3 left-3 inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-black/40 text-white text-xs backdrop-blur-sm hover:bg-black/60"
+            className="absolute top-3 left-3 inline-flex items-center gap-1 h-10 px-3.5 rounded-full bg-black/40 text-white text-xs backdrop-blur-sm hover:bg-black/60 transition"
           >
             <ChevronLeft className="h-3.5 w-3.5" /> Back
           </button>
         )}
 
-        <button
-          type="button"
-          onClick={share}
-          className="absolute top-3 right-3 inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-black/40 text-white text-xs backdrop-blur-sm hover:bg-black/60"
-        >
-          <Share2 className="h-3.5 w-3.5" /> Share
-        </button>
+        <div className="absolute top-3 right-3 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={toggleTheme}
+            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            className="inline-flex items-center justify-center h-10 w-10 rounded-full bg-black/40 text-white backdrop-blur-sm hover:bg-black/60 transition"
+          >
+            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </button>
+          <button
+            type="button"
+            onClick={share}
+            className="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-full bg-black/40 text-white text-xs backdrop-blur-sm hover:bg-black/60 transition"
+          >
+            <Share2 className="h-3.5 w-3.5" /> Share
+          </button>
+        </div>
 
         {/* Logo overlapping the cover */}
         <div className="container max-w-2xl px-4">
@@ -504,7 +540,7 @@ export function ReviewFlow(props: Props) {
               <BadgeCheck className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" aria-label="Verified" />
             </div>
             {business.industry && (
-              <p className="text-sm text-slate-500 mt-0.5">{business.industry}</p>
+              <p className="text-sm rv-muted mt-0.5">{business.industry}</p>
             )}
           </div>
         </div>
@@ -522,12 +558,12 @@ export function ReviewFlow(props: Props) {
                   "h-4 w-4",
                   n <= Math.round(props.stats.avgRating)
                     ? "fill-amber-400 text-amber-400"
-                    : "fill-transparent text-slate-300"
+                    : "fill-transparent rv-sub"
                 )}
               />
             ))}
           </div>
-          <span className="text-slate-500">
+          <span className="rv-muted">
             {props.stats.count > 0
               ? `${props.stats.count} review${props.stats.count === 1 ? "" : "s"}`
               : "Be the first to review"}
@@ -535,11 +571,11 @@ export function ReviewFlow(props: Props) {
         </div>
 
         {(business.address || business.city) && (
-          <p className="mt-2 text-xs text-slate-500 flex items-start gap-1.5">
+          <p className="mt-2 text-xs rv-muted flex items-start gap-1.5">
             <MapPin className="h-3.5 w-3.5 shrink-0 mt-0.5" />
             <span className="truncate">
               {props.location?.name && (
-                <span className="font-medium text-slate-700">{props.location.name} · </span>
+                <span className="font-medium rv-body">{props.location.name} · </span>
               )}
               {fullAddress(business) || business.city}
             </span>
@@ -624,8 +660,8 @@ export function ReviewFlow(props: Props) {
                 className={cn(
                   "py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors",
                   tab === t.id
-                    ? "border-current text-slate-900"
-                    : "border-transparent text-slate-500 hover:text-slate-700"
+                    ? "border-current rv-ink"
+                    : "border-transparent rv-muted hover:rv-body"
                 )}
                 style={tab === t.id ? { borderColor: accent, color: accent } : undefined}
               >
@@ -666,14 +702,14 @@ export function ReviewFlow(props: Props) {
         )}
       </main>
 
-      <footer className="py-6 text-center text-xs text-slate-400">
+      <footer className="py-6 text-center text-xs rv-sub">
         <a
           href={props.brand?.appUrl || "https://reviewqr.in"}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 hover:text-slate-600"
+          className="inline-flex items-center gap-1 hover:rv-body"
         >
-          Powered by <b className="text-slate-600">{props.brand?.name || "ReviewQR"}</b>
+          Powered by <b className="rv-body">{props.brand?.name || "ReviewQR"}</b>
         </a>
       </footer>
 
@@ -794,14 +830,14 @@ function AiReviewModal({
                 A few quick taps
               </h2>
             </div>
-            <p className="mt-3 text-sm text-slate-600 text-center max-w-md mx-auto">
+            <p className="mt-3 text-sm rv-body text-center max-w-md mx-auto">
               Tell us what stood out — we'll turn it into a great review you can post in one tap.
             </p>
 
             <div className="mt-6 space-y-5">
               {questions.map((q) => (
                 <div key={q.id}>
-                  <div className="text-[15px] font-semibold text-slate-800 mb-2">{q.question}</div>
+                  <div className="text-[15px] font-semibold rv-ink mb-2">{q.question}</div>
                   <div className="flex flex-wrap gap-2">
                     {q.options.map((opt) => {
                       const active = answers[q.id] === opt;
@@ -814,7 +850,7 @@ function AiReviewModal({
                             "px-3.5 py-2 rounded-full text-sm font-medium border transition",
                             active
                               ? "text-white"
-                              : "skeuo text-slate-700"
+                              : "skeuo rv-body"
                           )}
                           style={active ? { background: accent, borderColor: accent } : undefined}
                         >
@@ -847,7 +883,7 @@ function AiReviewModal({
                 )}
               </Button>
               {!allAnswered && (
-                <p className="mt-2 text-[11px] text-slate-400 text-center">
+                <p className="mt-2 text-[11px] rv-sub text-center">
                   Pick one option for each question.
                 </p>
               )}
@@ -863,7 +899,7 @@ function AiReviewModal({
                 Pick your review
               </span>
             </h2>
-            <p className="mt-3 text-sm text-slate-600 text-center max-w-md mx-auto">
+            <p className="mt-3 text-sm rv-body text-center max-w-md mx-auto">
               Tap <b>Copy</b> on the one you like — we'll copy it and open Google so you can paste.
             </p>
 
@@ -879,7 +915,7 @@ function AiReviewModal({
                     )}
                     style={isCopied ? { borderColor: accent, background: `${accent}0d` } : undefined}
                   >
-                    <p className="text-[15px] leading-relaxed text-slate-800 whitespace-pre-line">
+                    <p className="text-[15px] leading-relaxed rv-ink whitespace-pre-line">
                       {r}
                     </p>
                     <div className="mt-3 flex justify-end">
@@ -941,7 +977,7 @@ function ActionChip({
       >
         {icon}
       </span>
-      <span className="text-[11px] font-medium text-slate-700">{label}</span>
+      <span className="text-[11px] font-medium rv-body">{label}</span>
     </>
   );
   if (href)
@@ -994,12 +1030,12 @@ function RateStep({
                 alt={staff.name}
               />
             ) : (
-              <div className="h-10 w-10 rounded-full bg-slate-200 flex items-center justify-center text-sm font-bold text-slate-700">
+              <div className="h-10 w-10 rounded-full bg-slate-200 flex items-center justify-center text-sm font-bold rv-body">
                 {staff.name[0]}
               </div>
             )}
             <div className="text-sm">
-              <div className="text-slate-500 text-xs">You were served by</div>
+              <div className="rv-muted text-xs">You were served by</div>
               <div className="font-semibold">{staff.name}</div>
             </div>
           </div>
@@ -1008,7 +1044,7 @@ function RateStep({
         <h2 className="text-xl sm:text-2xl font-bold text-center tracking-tight">
           How was your experience?
         </h2>
-        <p className="mt-1.5 text-sm text-slate-500 text-center">Tap a star to rate · 30 seconds</p>
+        <p className="mt-1.5 text-sm rv-muted text-center">Tap a star to rate · 30 seconds</p>
 
         <div
           className="mt-6 flex justify-center gap-1.5"
@@ -1029,7 +1065,7 @@ function RateStep({
                   "h-11 w-11 sm:h-13 sm:w-13 transition-colors",
                   display >= n
                     ? "fill-amber-400 text-amber-400 drop-shadow-sm"
-                    : "fill-transparent text-slate-300"
+                    : "fill-transparent rv-sub"
                 )}
                 strokeWidth={1.5}
               />
@@ -1055,7 +1091,7 @@ function RateStep({
         </div>
 
         {loading && (
-          <div className="mt-6 flex items-center justify-center gap-2 text-sm text-slate-500">
+          <div className="mt-6 flex items-center justify-center gap-2 text-sm rv-muted">
             <Loader2 className="h-4 w-4 animate-spin" />
             Taking you to Google…
           </div>
@@ -1120,7 +1156,7 @@ function PickTemplateModal({
             Select your content
           </span>
         </h2>
-        <p className="mt-3 text-sm text-slate-600 text-center max-w-md mx-auto">
+        <p className="mt-3 text-sm rv-body text-center max-w-md mx-auto">
           Tap <b>Copy</b> on the review you'd like to leave. We'll copy it to your clipboard —
           just paste it on Google's form.
         </p>
@@ -1139,7 +1175,7 @@ function PickTemplateModal({
                   isPicked ? { borderColor: accent, background: `${accent}0d` } : undefined
                 }
               >
-                <p className="text-[15px] leading-relaxed text-slate-800 whitespace-pre-line">
+                <p className="text-[15px] leading-relaxed rv-ink whitespace-pre-line">
                   {t.content}
                 </p>
                 <div className="mt-3 flex justify-end">
@@ -1187,7 +1223,7 @@ function PickTemplateModal({
           </Button>
         </div>
 
-        <p className="mt-4 text-[11px] text-slate-400 text-center">
+        <p className="mt-4 text-[11px] rv-sub text-center">
           Each review is shown to a single customer only — the next person sees fresh options.
         </p>
       </div>
@@ -1198,7 +1234,7 @@ function PickTemplateModal({
 function ReviewsTab({ reviews }: { reviews: PublicReview[] }) {
   if (reviews.length === 0) {
     return (
-      <div className="container max-w-2xl px-4 py-10 text-center text-sm text-slate-500">
+      <div className="container max-w-2xl px-4 py-10 text-center text-sm rv-muted">
         No reviews yet — be the first to share your experience.
       </div>
     );
@@ -1215,16 +1251,16 @@ function ReviewsTab({ reviews }: { reviews: PublicReview[] }) {
                 className="h-10 w-10 rounded-full object-cover"
               />
             ) : (
-              <div className="h-10 w-10 rounded-full bg-slate-200 flex items-center justify-center text-sm font-bold text-slate-700">
+              <div className="h-10 w-10 rounded-full bg-slate-200 flex items-center justify-center text-sm font-bold rv-body">
                 {r.author[0]}
               </div>
             )}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <div className="font-semibold text-sm truncate">{r.author}</div>
-                <div className="text-xs text-slate-400 shrink-0">{timeAgoShort(r.createdAt)}</div>
+                <div className="text-xs rv-sub shrink-0">{timeAgoShort(r.createdAt)}</div>
               </div>
-              {r.authorRole && <div className="text-xs text-slate-500">{r.authorRole}</div>}
+              {r.authorRole && <div className="text-xs rv-muted">{r.authorRole}</div>}
               <div className="flex mt-1">
                 {[1, 2, 3, 4, 5].map((n) => (
                   <Star
@@ -1233,12 +1269,12 @@ function ReviewsTab({ reviews }: { reviews: PublicReview[] }) {
                       "h-3.5 w-3.5",
                       n <= r.rating
                         ? "fill-amber-400 text-amber-400"
-                        : "fill-transparent text-slate-300"
+                        : "fill-transparent rv-sub"
                     )}
                   />
                 ))}
               </div>
-              <p className="mt-2 text-sm text-slate-700 leading-relaxed whitespace-pre-line">
+              <p className="mt-2 text-sm rv-body leading-relaxed whitespace-pre-line">
                 {r.message}
               </p>
             </div>
@@ -1287,8 +1323,8 @@ function InfoTab({ business }: { business: Business }) {
     <div className="container max-w-2xl px-4 py-5 space-y-3">
       {business.description && (
         <div className="rounded-2xl neu p-4 sm:p-5">
-          <h3 className="text-sm font-semibold text-slate-900">About</h3>
-          <p className="mt-2 text-sm text-slate-600 leading-relaxed whitespace-pre-line">
+          <h3 className="text-sm font-semibold rv-ink">About</h3>
+          <p className="mt-2 text-sm rv-body leading-relaxed whitespace-pre-line">
             {business.description}
           </p>
         </div>
@@ -1297,12 +1333,12 @@ function InfoTab({ business }: { business: Business }) {
         {rows.map((r) => {
           const content = (
             <div className="flex items-start gap-3 px-4 py-3.5">
-              <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 shrink-0">
+              <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center rv-body shrink-0">
                 {r.icon}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="text-xs text-slate-500">{r.label}</div>
-                <div className="text-sm text-slate-900 truncate">{r.value}</div>
+                <div className="text-xs rv-muted">{r.label}</div>
+                <div className="text-sm rv-ink truncate">{r.value}</div>
               </div>
             </div>
           );
@@ -1321,7 +1357,7 @@ function InfoTab({ business }: { business: Business }) {
           );
         })}
         {rows.length === 0 && (
-          <div className="px-4 py-6 text-center text-sm text-slate-500">No contact info added.</div>
+          <div className="px-4 py-6 text-center text-sm rv-muted">No contact info added.</div>
         )}
       </div>
     </div>
@@ -1357,7 +1393,7 @@ function FeedbackStep(props: {
                 "h-6 w-6",
                 props.rating >= n
                   ? "fill-amber-400 text-amber-400"
-                  : "fill-transparent text-slate-300"
+                  : "fill-transparent rv-sub"
               )}
             />
           ))}
@@ -1365,7 +1401,7 @@ function FeedbackStep(props: {
         <h2 className="text-xl sm:text-2xl font-bold text-center tracking-tight">
           We'd love to hear more
         </h2>
-        <p className="mt-1.5 text-sm text-slate-500 text-center">
+        <p className="mt-1.5 text-sm rv-muted text-center">
           This goes privately to the owner — never made public.
         </p>
 
@@ -1396,7 +1432,7 @@ function FeedbackStep(props: {
                     "px-3 py-1.5 rounded-full text-xs font-medium border transition-colors",
                     props.tags.includes(t.id)
                       ? "skeuo-accent text-white"
-                      : "skeuo text-slate-600"
+                      : "skeuo rv-body"
                   )}
                 >
                   {t.label}
@@ -1435,7 +1471,7 @@ function FeedbackStep(props: {
               onChange={(e) => props.setEmail(e.target.value)}
               placeholder="you@email.com"
             />
-            <p className="text-xs text-slate-400">
+            <p className="text-xs rv-sub">
               We'll only contact you if you'd like us to follow up.
             </p>
           </div>
@@ -1468,7 +1504,7 @@ function ThankYouGoogle({ business }: { business: Business }) {
           <Heart className="h-8 w-8 fill-emerald-600" />
         </div>
         <h2 className="text-2xl font-bold tracking-tight">Thank you so much!</h2>
-        <p className="mt-2 text-sm text-slate-500 max-w-sm mx-auto">
+        <p className="mt-2 text-sm rv-muted max-w-sm mx-auto">
           We'd love it if you'd share your experience publicly on Google.
         </p>
         {business.googleReviewUrl && (
@@ -1493,7 +1529,7 @@ function ThankYouPrivate({ business, customerName }: { business: Business; custo
         <h2 className="text-2xl font-bold tracking-tight">
           {customerName ? `Thank you, ${customerName.split(" ")[0]}` : "Thank you for your feedback"}
         </h2>
-        <p className="mt-2 text-sm text-slate-500 max-w-sm mx-auto">
+        <p className="mt-2 text-sm rv-muted max-w-sm mx-auto">
           {business.customThankYou ||
             "Your feedback has been sent privately to the owner. We'll personally review it and do everything we can to make it right."}
         </p>
