@@ -29,10 +29,21 @@ export const loginSchema = z.object({
 
 // Accept either an http(s) URL or a base64 data URL (≤ ~700KB encoded). Logos
 // are auto-resized client-side so they comfortably fit; covers are larger.
+// Reject quotes/whitespace/angle-brackets so a value can't break out of an
+// HTML attribute when rendered (e.g. in the embeddable widget).
 const imageString = z
   .string()
   .max(1_500_000)
-  .refine((s) => /^(https?:|data:image\/)/i.test(s), "Invalid image");
+  .refine((s) => /^(https?:\/\/|data:image\/)/i.test(s), "Invalid image")
+  .refine((s) => !/["'<>\s]/.test(s), "Invalid image URL");
+
+// A safe, navigable URL: must parse AND be http(s). Blocks javascript:, data:,
+// and other schemes that would enable XSS or malicious auto-redirects when the
+// customer review flow navigates to a business-supplied URL.
+const httpUrl = z
+  .string()
+  .url()
+  .refine((s) => /^https?:\/\//i.test(s), "Must be an http(s) URL");
 
 export const businessSchema = z.object({
   name: z.string().min(2).max(80),
@@ -43,13 +54,13 @@ export const businessSchema = z.object({
   email: emailSchema.optional().or(z.literal("")),
   phone: phoneSchema.optional().or(z.literal("")),
   whatsappNumber: phoneSchema.optional().or(z.literal("")),
-  website: z.string().url().optional().or(z.literal("")),
+  website: httpUrl.optional().or(z.literal("")),
   address: z.string().max(300).optional().or(z.literal("")),
   city: z.string().max(60).optional().or(z.literal("")),
   state: z.string().max(60).optional().or(z.literal("")),
   pincode: z.string().regex(/^\d{6}$/, "Enter 6-digit PIN").optional().or(z.literal("")),
-  googleReviewUrl: z.string().url().optional().or(z.literal("")),
-  trustpilotUrl: z.string().url().optional().or(z.literal("")),
+  googleReviewUrl: httpUrl.optional().or(z.literal("")),
+  trustpilotUrl: httpUrl.optional().or(z.literal("")),
   reviewPlatform: z.enum(["google", "trustpilot"]).optional(),
   ratingThreshold: z.number().int().min(1).max(5).default(4),
   primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#1a73e8"),
@@ -65,7 +76,7 @@ export const locationSchema = z.object({
   state: z.string().max(60).optional().or(z.literal("")),
   pincode: z.string().regex(/^\d{6}$/).optional().or(z.literal("")),
   phone: phoneSchema.optional().or(z.literal("")),
-  googleReviewUrl: z.string().url().optional().or(z.literal(""))
+  googleReviewUrl: httpUrl.optional().or(z.literal(""))
 });
 
 export const staffSchema = z.object({

@@ -17,6 +17,7 @@ export type MailCfg = {
 
 export type ParsedEmail = {
   uid: string;
+  messageId: string;
   subject: string;
   from: string;
   text: string;
@@ -64,6 +65,10 @@ export async function fetchRecentPaymentEmails(
     .split(",")
     .map((s) => s.trim().toLowerCase())
     .filter(Boolean);
+  // Security: never scan an unrestricted mailbox. Without a sender allow-list,
+  // any inbound email could be treated as a payment confirmation, so we refuse
+  // to return candidates at all. Callers must configure mailFromFilter.
+  if (!senders.length) return [];
 
   const client = makeClient(cfg);
   const out: ParsedEmail[] = [];
@@ -83,6 +88,7 @@ export async function fetchRecentPaymentEmails(
             const text = (parsed.text || parsed.html || "").toString();
             out.push({
               uid: String(msg.uid),
+              messageId: parsed.messageId || String(msg.uid),
               subject: parsed.subject || "",
               from,
               text,

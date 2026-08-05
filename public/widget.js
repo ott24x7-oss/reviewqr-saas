@@ -44,10 +44,10 @@
         `<style>${css}</style>` +
         `<div class="rqw-card">` +
         `<div class="rqw-head">` +
-        (business.logo
-          ? `<img class="rqw-logo" src="${business.logo}" alt="" style="object-fit:cover">`
-          : `<div class="rqw-logo">${business.name[0] || "?"}</div>`) +
-        `<div><div class="rqw-name">${business.name}</div>` +
+        (safeImg(business.logo)
+          ? `<img class="rqw-logo" src="${escapeHtml(safeImg(business.logo))}" alt="" style="object-fit:cover">`
+          : `<div class="rqw-logo">${escapeHtml((business.name || "?")[0])}</div>`) +
+        `<div><div class="rqw-name">${escapeHtml(business.name)}</div>` +
         `<div class="rqw-rating"><span class="rqw-stars">${star(Math.round(average))}</span> ${average} · ${total} reviews</div></div>` +
         `</div>` +
         `<div class="rqw-list">` +
@@ -76,5 +76,13 @@
       '"': "&quot;",
       "'": "&#39;"
     }[c]));
+  }
+
+  // Only allow http(s) or inline image data URIs as an <img> source; reject
+  // anything else (and anything with quotes/spaces that could break the attr).
+  function safeImg(u) {
+    const s = String(u || "").trim();
+    if (!s || /["'\s<>]/.test(s)) return "";
+    return /^(https?:\/\/|data:image\/)/i.test(s) ? s : "";
   }
 })();
