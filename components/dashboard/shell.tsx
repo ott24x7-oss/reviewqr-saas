@@ -19,9 +19,12 @@ import {
   Bell,
   ChevronDown,
   Plus,
-  ShieldCheck
+  ShieldCheck,
+  Sun,
+  Moon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useDarkToggle } from "@/lib/use-theme";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -73,6 +76,7 @@ export function DashboardShell({
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = React.useState(false);
+  const { dark, toggle } = useDarkToggle();
 
   React.useEffect(() => {
     setMobileOpen(false);
@@ -88,9 +92,9 @@ export function DashboardShell({
     : 0;
 
   return (
-    <div className="min-h-screen flex flex-col bg-transparent">
+    <div className={cn("min-h-screen flex flex-col", dark ? "dark bg-[#0b1220] text-slate-100" : "bg-transparent")}>
       {/* Top bar */}
-      <header className="sticky top-0 z-40 border-b bg-white/95 backdrop-blur-sm">
+      <header className="sticky top-0 z-40 border-b dark:border-slate-800 bg-white/95 dark:bg-slate-900/85 backdrop-blur-sm">
         <div className="flex h-14 sm:h-16 items-center justify-between px-3 sm:px-6 gap-2">
           <div className="flex items-center gap-2">
             <button
@@ -118,6 +122,14 @@ export function DashboardShell({
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={toggle}
+              aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+            >
+              {dark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </button>
             {(user.tier === "FREE" || user.tier === "GROWTH" && !user.subscriptionEndsAt) && (
               <Link
                 href="/dashboard/billing"
@@ -180,7 +192,7 @@ export function DashboardShell({
 
       <div className="flex-1 flex">
         {/* Sidebar - desktop */}
-        <aside className="hidden md:flex w-60 lg:w-64 border-r bg-white shrink-0 flex-col">
+        <aside className="hidden md:flex w-60 lg:w-64 border-r dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0 flex-col">
           <nav className="flex-1 p-3 space-y-0.5">
             {nav.map((n) => (
               <Link
@@ -189,7 +201,7 @@ export function DashboardShell({
                 className={cn(
                   "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
                   isActive(n.href, n.exact)
-                    ? "bg-primary-50 text-primary-700"
+                    ? "bg-primary-50 dark:bg-primary-500/15 text-primary-700 dark:text-primary-300"
                     : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                 )}
               >
@@ -200,7 +212,7 @@ export function DashboardShell({
           </nav>
 
           <div className="p-3 border-t">
-            <div className="rounded-lg bg-gradient-to-br from-primary-50 to-accent-50 p-3 text-xs">
+            <div className="rounded-lg bg-gradient-to-br from-primary-50 to-accent-50 dark:from-primary-500/10 dark:to-accent-500/10 p-3 text-xs">
               <div className="font-semibold text-foreground mb-1">Need help?</div>
               <p className="text-muted-foreground leading-relaxed">
                 Email us at hello@reviewqr.in or check the docs.
@@ -213,7 +225,7 @@ export function DashboardShell({
         {mobileOpen && (
           <div className="md:hidden fixed inset-0 z-30 bg-black/50" onClick={() => setMobileOpen(false)}>
             <aside
-              className="fixed left-0 top-14 bottom-0 w-64 bg-white border-r shadow-xl"
+              className="fixed left-0 top-14 bottom-0 w-64 bg-white dark:bg-slate-900 border-r dark:border-slate-800 shadow-xl"
               onClick={(e) => e.stopPropagation()}
             >
               <nav className="p-3 space-y-0.5">
@@ -225,7 +237,7 @@ export function DashboardShell({
                     className={cn(
                       "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
                       isActive(n.href, n.exact)
-                        ? "bg-primary-50 text-primary-700"
+                        ? "bg-primary-50 dark:bg-primary-500/15 text-primary-700 dark:text-primary-300"
                         : "text-muted-foreground hover:bg-secondary"
                     )}
                   >
@@ -245,7 +257,7 @@ export function DashboardShell({
       </div>
 
       {/* Mobile bottom nav */}
-      <nav className="md:hidden sticky bottom-0 z-30 border-t bg-white grid grid-cols-5 safe-pb">
+      <nav className="md:hidden sticky bottom-0 z-30 border-t dark:border-slate-800 bg-white dark:bg-slate-900 grid grid-cols-5 safe-pb">
         {[
           { href: "/dashboard", label: "Home", icon: LayoutDashboard, exact: true },
           { href: "/dashboard/reviews", label: "Reviews", icon: Star },

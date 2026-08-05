@@ -55,7 +55,7 @@ export default async function AdminBusinessesPage({
                 className="pl-9"
               />
             </div>
-            <label className="inline-flex items-center gap-2 text-sm px-3 py-2 rounded-lg border bg-white">
+            <label className="inline-flex items-center gap-2 text-sm px-3 py-2 rounded-lg border bg-white dark:bg-slate-900">
               <input
                 type="checkbox"
                 name="archived"
@@ -77,7 +77,7 @@ export default async function AdminBusinessesPage({
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b text-xs text-muted-foreground">
+                <tr className="border-b dark:border-slate-800 text-xs text-muted-foreground">
                   <th className="text-left py-2.5 px-4">Business</th>
                   <th className="text-left py-2.5 px-4">Owner</th>
                   <th className="text-left py-2.5 px-4">Reviews</th>
@@ -90,7 +90,7 @@ export default async function AdminBusinessesPage({
               </thead>
               <tbody>
                 {businesses.map((b) => (
-                  <tr key={b.id} className="border-b hover:bg-secondary/40 last:border-0">
+                  <tr key={b.id} className="border-b dark:border-slate-800 hover:bg-secondary/40 last:border-0">
                     <td className="py-2.5 px-4">
                       <div className="font-medium">{b.name}</div>
                       <div className="text-xs text-muted-foreground">/r/{b.slug}</div>

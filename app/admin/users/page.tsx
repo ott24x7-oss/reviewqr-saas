@@ -66,7 +66,7 @@ export default async function AdminUsersPage({
             <select
               name="tier"
               defaultValue={tier || ""}
-              className="h-10 rounded-lg border bg-white px-3 text-sm"
+              className="h-10 rounded-lg border bg-white dark:bg-slate-900 dark:text-slate-100 px-3 text-sm"
             >
               <option value="">Any plan</option>
               <option value="FREE">Free</option>
@@ -77,7 +77,7 @@ export default async function AdminUsersPage({
             <select
               name="role"
               defaultValue={role || ""}
-              className="h-10 rounded-lg border bg-white px-3 text-sm"
+              className="h-10 rounded-lg border bg-white dark:bg-slate-900 dark:text-slate-100 px-3 text-sm"
             >
               <option value="">Any role</option>
               <option value="USER">User</option>
@@ -97,7 +97,7 @@ export default async function AdminUsersPage({
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b text-xs text-muted-foreground">
+                <tr className="border-b dark:border-slate-800 text-xs text-muted-foreground">
                   <th className="text-left py-2.5 px-4">User</th>
                   <th className="text-left py-2.5 px-4">Role</th>
                   <th className="text-left py-2.5 px-4">Plan</th>
@@ -109,7 +109,7 @@ export default async function AdminUsersPage({
               </thead>
               <tbody>
                 {users.map((u) => (
-                  <tr key={u.id} className="border-b hover:bg-secondary/40 last:border-0">
+                  <tr key={u.id} className="border-b dark:border-slate-800 hover:bg-secondary/40 last:border-0">
                     <td className="py-2.5 px-4">
                       <Link href={`/admin/users/${u.id}`} className="block">
                         <div className="font-medium">{u.name || "—"}</div>

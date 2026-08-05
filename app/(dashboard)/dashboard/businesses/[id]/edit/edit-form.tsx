@@ -215,7 +215,7 @@ export function EditBusinessForm({ initial }: { initial: Init }) {
             <Label htmlFor="threshold">Rating threshold</Label>
             <select
               id="threshold"
-              className="w-full h-10 rounded-lg border bg-white px-3 text-sm"
+              className="w-full h-10 rounded-lg border bg-white dark:bg-slate-900 px-3 text-sm"
               value={form.ratingThreshold}
               onChange={(e) => update("ratingThreshold", Number(e.target.value))}
             >

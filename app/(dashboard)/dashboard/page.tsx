@@ -167,8 +167,8 @@ export default async function DashboardOverview() {
                         r.rating >= 4
                           ? "bg-accent-100 text-accent-700"
                           : r.rating === 3
-                          ? "bg-amber-100 text-amber-700"
-                          : "bg-red-100 text-red-700"
+                          ? "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
+                          : "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300"
                       }`}
                     >
                       {r.rating}★
@@ -215,9 +215,9 @@ function Stat({
   sub?: string;
 }) {
   const map: Record<string, string> = {
-    primary: "bg-primary-50 text-primary-600",
+    primary: "bg-primary-50 text-primary-600 dark:bg-primary-500/15 dark:text-primary-300",
     accent: "bg-accent-50 text-accent-600",
-    warning: "bg-amber-50 text-amber-600"
+    warning: "bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300"
   };
   return (
     <Card className="p-4 sm:p-5">

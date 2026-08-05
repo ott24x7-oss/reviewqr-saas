@@ -136,7 +136,7 @@ export default async function AdminUserDetail({ params }: { params: { id: string
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b text-xs text-muted-foreground">
+                  <tr className="border-b dark:border-slate-800 text-xs text-muted-foreground">
                     <th className="text-left py-2 px-2">Date</th>
                     <th className="text-left py-2 px-2">Plan</th>
                     <th className="text-left py-2 px-2">Provider</th>
@@ -146,7 +146,7 @@ export default async function AdminUserDetail({ params }: { params: { id: string
                 </thead>
                 <tbody>
                   {user.payments.map((p) => (
-                    <tr key={p.id} className="border-b last:border-0">
+                    <tr key={p.id} className="border-b dark:border-slate-800 last:border-0">
                       <td className="py-2 px-2">{formatDate(p.createdAt)}</td>
                       <td className="py-2 px-2">
                         {p.tier} ({p.periodMonths === 12 ? "yearly" : "monthly"})

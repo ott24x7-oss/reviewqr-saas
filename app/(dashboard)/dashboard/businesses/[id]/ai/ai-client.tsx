@@ -49,7 +49,7 @@ export function AiReviewsClient({
   return (
     <div className="space-y-4">
       {!platformAiEnabled && (
-        <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+        <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-500/15 p-3 text-sm text-amber-800 dark:text-amber-300">
           <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
           <span>
             AI isn't connected on the platform yet. An admin needs to add an AI API key in{" "}
@@ -59,7 +59,7 @@ export function AiReviewsClient({
         </div>
       )}
       {!business.hasGoogleUrl && (
-        <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+        <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-500/15 p-3 text-sm text-amber-800 dark:text-amber-300">
           <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
           <span>
             Add your <span className="font-medium">Google review link</span> in the business settings
