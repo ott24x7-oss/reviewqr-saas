@@ -44,6 +44,10 @@ export default function ShapeGrid({
     if (!ctx) return;
     const g = ctx;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // Only animate on desktop with a fine pointer + motion allowed. Touch /
+    // small screens get one cheap static frame (no rAF, no pointer listeners)
+    // — big win for mobile load, jank and battery.
+    const animate = !reduced && window.matchMedia("(min-width: 1024px) and (pointer: fine)").matches;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
     let W = 0;
@@ -109,7 +113,7 @@ export default function ShapeGrid({
 
     let raf = 0;
     function frame() {
-      if (!reduced) phase = (phase + speed) % squareSize;
+      if (animate) phase = (phase + speed) % squareSize;
       const offX = dir.x * phase;
       const offY = dir.y * phase;
 
@@ -141,9 +145,10 @@ export default function ShapeGrid({
           drawShape(cx, cy, squareSize, fill, alpha);
         }
       }
-      raf = requestAnimationFrame(frame);
+      if (animate) raf = requestAnimationFrame(frame);
     }
-    raf = requestAnimationFrame(frame);
+    if (animate) raf = requestAnimationFrame(frame);
+    else frame(); // single static frame on mobile / reduced-motion
 
     function onMove(e: PointerEvent) {
       const rect = canvas!.getBoundingClientRect();
@@ -169,8 +174,10 @@ export default function ShapeGrid({
     }
 
     window.addEventListener("resize", resize);
-    window.addEventListener("pointermove", onMove, { passive: true });
-    window.addEventListener("pointerout", onLeave, { passive: true });
+    if (animate) {
+      window.addEventListener("pointermove", onMove, { passive: true });
+      window.addEventListener("pointerout", onLeave, { passive: true });
+    }
 
     return () => {
       cancelAnimationFrame(raf);

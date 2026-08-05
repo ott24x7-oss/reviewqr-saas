@@ -252,6 +252,65 @@
   }
 }
 
+/* ─────────────────────────────────────────────────────────────
+ *  REVIEW PAGE THEMING (scoped to .rv) — light + dark
+ *  Text uses tokens so both themes stay high-contrast; the material
+ *  classes (.neu/.glass/.skeuo) get dark overrides inside .rv[data-rt="dark"].
+ *  Kept OUTSIDE @layer so these win over the global material classes.
+ * ───────────────────────────────────────────────────────────── */
+.rv {
+  --rv-ink: #0f172a;
+  --rv-body: #334155;
+  --rv-muted: #64748b;
+  --rv-sub: #94a3b8;
+  color: var(--rv-ink);
+}
+.rv[data-rt="dark"] {
+  --rv-ink: #f1f5f9;
+  --rv-body: #cbd5e1;
+  --rv-muted: #94a3b8;
+  --rv-sub: #64748b;
+  background: #0b1220;
+}
+.rv-ink { color: var(--rv-ink); }
+.rv-body { color: var(--rv-body); }
+.rv-muted { color: var(--rv-muted); }
+.rv-sub { color: var(--rv-sub); }
+
+.rv[data-rt="dark"] .neu {
+  background: #141c2e;
+  border-color: rgba(255, 255, 255, 0.05);
+  box-shadow:
+    8px 8px 22px rgba(0, 0, 0, 0.55),
+    -8px -8px 22px rgba(255, 255, 255, 0.03);
+}
+.rv[data-rt="dark"] .neu-inset {
+  background: #10182a;
+  box-shadow:
+    inset 5px 5px 12px rgba(0, 0, 0, 0.6),
+    inset -5px -5px 12px rgba(255, 255, 255, 0.03);
+}
+.rv[data-rt="dark"] .glass-strong {
+  background: rgba(15, 22, 38, 0.82);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+}
+.rv[data-rt="dark"] .skeuo {
+  background: linear-gradient(180deg, #202a3e 0%, #141c2e 100%);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #cbd5e1;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 -2px 5px rgba(0, 0, 0, 0.45) inset,
+    0 6px 14px rgba(0, 0, 0, 0.45);
+}
+/* Auto-theme the few remaining hardcoded light utilities inside dark mode. */
+.rv[data-rt="dark"] .bg-white { background-color: #141c2e; }
+.rv[data-rt="dark"] .bg-slate-50 { background-color: #10182a; }
+.rv[data-rt="dark"] .bg-slate-100 { background-color: #1b2437; }
+.rv[data-rt="dark"] .bg-slate-200 { background-color: #263149; }
+.rv[data-rt="dark"] .border-slate-200 { border-color: rgba(255, 255, 255, 0.09); }
+
 /* Print styles for QR poster export */
 @media print {
   body { background: white; }
