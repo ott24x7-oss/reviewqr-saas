@@ -19,8 +19,8 @@ export default function AboutPage() {
       <p>
         Great local businesses lose out for one simple reason: their happiest customers stay quiet, while
         the occasional unhappy one posts a public one-star review. A single QR code fixes both problems.
-        Scan it, tap a star, and 4★+ customers are sent straight to your Google review page while 1–3★
-        feedback lands privately in your dashboard so you can make it right.
+        Scan it, tap a star, and 4★+ customers are sent straight to your Google or Trustpilot review page
+        while 1–3★ feedback lands privately in your dashboard so you can make it right.
       </p>
 
       <h2>What we believe</h2>
@@ -33,7 +33,7 @@ export default function AboutPage() {
       <h2>Who it's for</h2>
       <p>
         Cafés, salons, clinics, retail stores, restaurants, gyms, and service businesses across India —
-        anyone who meets customers in person and wants more (and better) Google reviews without chasing them.
+        anyone who meets customers in person and wants more (and better) Google &amp; Trustpilot reviews without chasing them.
       </p>
 
       <h2>Say hello</h2>

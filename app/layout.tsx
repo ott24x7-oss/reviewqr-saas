@@ -20,7 +20,7 @@ export async function generateMetadata(): Promise<Metadata> {
     logoUrl: "",
     appUrl: process.env.NEXT_PUBLIC_APP_URL || "",
     supportEmail: "hello@reviewqr.in",
-    tagline: "Turn happy customers into Google reviews."
+    tagline: "Turn happy customers into Google & Trustpilot reviews."
   }));
 
   const fullTitle = `${brand.name} — ${brand.tagline}`;

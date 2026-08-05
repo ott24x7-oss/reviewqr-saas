@@ -14,7 +14,7 @@ export function CTA() {
           <div className="relative">
             <Sparkles className="mx-auto h-10 w-10 mb-3 opacity-90" />
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold font-display tracking-tight text-balance">
-              Ready to grow your Google reviews?
+              Ready to grow your Google &amp; Trustpilot reviews?
             </h2>
             <p className="mt-4 text-base sm:text-lg opacity-95 text-pretty max-w-xl mx-auto">
               Join 2,500+ Indian shops, salons, cafés and clinics. Free forever — no credit card needed.

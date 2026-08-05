@@ -21,7 +21,9 @@ export function AiHighlight() {
           </h2>
           <p className="mt-4 text-base sm:text-lg text-muted-ink leading-relaxed max-w-lg">
             A happy customer taps 3 quick buttons — our AI turns their answers into a genuine,
-            ready-to-post Google review in <b className="text-ink">their own words</b>. They just tap{" "}
+            ready-to-post <b className="gradient-text-google">Google</b> or{" "}
+            <b className="text-[#00b67a]">Trustpilot</b> review in{" "}
+            <b className="text-ink">their own words</b>. They just tap{" "}
             <b className="text-ink">Copy</b> and paste. That's it.
           </p>
 
@@ -88,7 +90,7 @@ export function AiHighlight() {
             </div>
 
             <div className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-muted-ink">
-              <Check className="h-3.5 w-3.5 text-accent" /> Copied — opening Google…
+              <Check className="h-3.5 w-3.5 text-accent" /> Copied — opening Google / Trustpilot…
             </div>
 
             {/* floating badge */}

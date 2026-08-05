@@ -81,8 +81,8 @@ export function HowItWorks() {
         <Step
           n={3}
           icon={Send}
-          title="Google grows — or you're alerted"
-          desc="Happy reviews land on Google in one paste. Unhappy ones hit your private inbox with an instant alert."
+          title="Google & Trustpilot grow — or you're alerted"
+          desc="Happy reviews land on Google or Trustpilot in one paste. Unhappy ones hit your private inbox with an instant alert."
         >
           <div className="space-y-2">
             <div className="neu-inset rounded-xl p-2.5 flex items-center gap-2">
@@ -90,7 +90,7 @@ export function HowItWorks() {
                 <Check className="h-4 w-4" />
               </span>
               <div className="text-[10px]">
-                <span className="gradient-text-google font-bold">Posted to Google</span>
+                <span className="font-bold"><span className="gradient-text-google">Google</span> <span className="text-muted-ink font-normal">/</span> <span className="text-[#00b67a]">Trustpilot</span></span>
                 <div className="text-muted-ink">Public 5★ review</div>
               </div>
             </div>

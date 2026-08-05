@@ -39,12 +39,12 @@ const steps = [
   {
     icon: ThumbsUp,
     title: "Happy? Pick a ready-made review",
-    body: "On 4–5★ we show 3 of your pre-loaded review variants. Each one is shown to a single customer only — so the reviews you actually receive on Google are unique and authentic."
+    body: "On 4–5★ we show 3 of your pre-loaded review variants. Each one is shown to a single customer only — so the reviews you actually receive on Google or Trustpilot are unique and authentic."
   },
   {
     icon: Copy,
     title: "One tap → Copied + redirected",
-    body: "We copy the chosen text to their clipboard and send them to your Google review form. They paste, hit post — done."
+    body: "We copy the chosen text to their clipboard and send them to your Google or Trustpilot review form. They paste, hit post — done."
   },
   {
     icon: Bell,
@@ -115,7 +115,7 @@ export default async function DemoPage() {
                     <ThumbsUp className="h-3 w-3" />
                   </span>
                   <span>
-                    Try 1–2★ — see the private feedback path that protects your Google rating.
+                    Try 1–2★ — see the private feedback path that protects your Google &amp; Trustpilot rating.
                   </span>
                 </li>
               </ul>
@@ -207,7 +207,7 @@ export default async function DemoPage() {
               How it works
             </span>
             <h2 className="mt-3 text-2xl sm:text-3xl font-display font-bold">
-              From a QR scan to a real Google review
+              From a QR scan to a real Google or Trustpilot review
             </h2>
             <p className="mt-3 text-muted-foreground">
               Five steps end-to-end. Steps 1–4 happen in roughly 30 seconds on the customer's
@@ -247,8 +247,8 @@ export default async function DemoPage() {
               Ready to try with your own business?
             </h3>
             <p className="mt-2 text-muted-foreground max-w-lg mx-auto">
-              Add your Google review URL, generate a QR for your counter, and start collecting
-              reviews today. Free trial — no card needed.
+              Add your Google or Trustpilot review URL, generate a QR for your counter, and start
+              collecting reviews today. Free trial — no card needed.
             </p>
             <div className="mt-5 flex flex-col sm:flex-row gap-3 justify-center">
               <Button asChild variant="gradient" size="lg">
