@@ -8,6 +8,8 @@ import { Testimonials } from "@/components/marketing/testimonials";
 import { FAQ } from "@/components/marketing/faq";
 import { CTA } from "@/components/marketing/cta";
 import { Footer } from "@/components/marketing/footer";
+import { AiHighlight } from "@/components/marketing/ai-highlight";
+import { RoutingHighlight } from "@/components/marketing/routing-highlight";
 import { getPricingConfig } from "@/lib/settings";
 import { getBrand } from "@/lib/brand";
 
@@ -28,10 +30,16 @@ export default async function HomePage() {
           <Hero />
         </section>
         <section className="rounded-[2rem] neu overflow-hidden">
+          <AiHighlight />
+        </section>
+        <section className="rounded-[2rem] neu overflow-hidden">
           <Features />
         </section>
         <section className="rounded-[2rem] neu overflow-hidden">
           <HowItWorks />
+        </section>
+        <section className="rounded-[2rem] neu overflow-hidden">
+          <RoutingHighlight />
         </section>
         <section className="rounded-[2rem] neu overflow-hidden">
           <DashboardPreview />
