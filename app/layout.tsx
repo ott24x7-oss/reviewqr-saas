@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Poppins } from "next/font/google";
 import { Providers } from "@/components/providers";
 import { Toaster } from "@/components/ui/toaster";
+import ShapeGrid from "@/components/ui/shape-grid";
 import { getBrand } from "@/lib/brand";
 import "./globals.css";
 
@@ -69,7 +70,20 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${inter.variable} ${poppins.variable}`}>
-      <body className="min-h-screen bg-background font-sans antialiased">
+      <body className="min-h-screen bg-[#eef1f6] font-sans antialiased">
+        {/* Global ShapeGrid background — behind every page (current + future) */}
+        <div aria-hidden className="pointer-events-none fixed inset-0 -z-10">
+          <ShapeGrid
+            speed={0.35}
+            squareSize={40}
+            direction="diagonal"
+            borderColor="rgba(120,135,160,0.18)"
+            hoverFillColor="#94a3b8"
+            shape="square"
+            hoverTrailAmount={4}
+            className="h-full w-full"
+          />
+        </div>
         <Providers>
           {children}
           <Toaster />

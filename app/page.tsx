@@ -17,15 +17,6 @@ export default async function HomePage() {
   const [plans, brand] = await Promise.all([getPricingConfig(), getBrand()]);
   return (
     <main className="relative min-h-screen">
-      {/* Static dot-grid background — uniform gray dots on a light-gray backdrop */}
-      <div
-        aria-hidden
-        className="pointer-events-none fixed inset-0 -z-10 bg-[#f1f2f4]"
-        style={{
-          backgroundImage: "radial-gradient(rgba(148,163,184,0.55) 1.1px, transparent 1.1px)",
-          backgroundSize: "22px 22px"
-        }}
-      />
       <MarketingNavbar brand={brand} />
       <Hero />
       <Features />
