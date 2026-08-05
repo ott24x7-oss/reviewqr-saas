@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import ShapeGrid from "@/components/ui/shape-grid";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -429,7 +430,21 @@ export function ReviewFlow(props: Props) {
     step === "thank-you-private";
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] flex flex-col" style={{ "--accent": accent } as any}>
+    <div className="relative min-h-screen neu-base flex flex-col" style={{ "--accent": accent } as any}>
+      {/* Animated ShapeGrid background — drifts + fills under the cursor */}
+      <div className="pointer-events-none fixed inset-0 -z-10">
+        <ShapeGrid
+          speed={0.4}
+          squareSize={40}
+          direction="diagonal"
+          borderColor="rgba(120,135,160,0.22)"
+          hoverFillColor={accent}
+          shape="square"
+          hoverTrailAmount={5}
+          className="h-full w-full"
+        />
+      </div>
+
       {/* HERO */}
       <div className="relative">
         <div
@@ -775,7 +790,7 @@ function AiReviewModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-white overflow-y-auto"
+      className="fixed inset-0 z-50 glass-strong overflow-y-auto"
       role="dialog"
       aria-modal="true"
     >
@@ -814,7 +829,7 @@ function AiReviewModal({
                             "px-3.5 py-2 rounded-full text-sm font-medium border transition",
                             active
                               ? "text-white"
-                              : "bg-white text-slate-700 border-slate-200 hover:border-slate-400"
+                              : "skeuo text-slate-700"
                           )}
                           style={active ? { background: accent, borderColor: accent } : undefined}
                         >
@@ -833,7 +848,7 @@ function AiReviewModal({
                 size="lg"
                 className="w-full"
                 disabled={!allAnswered || loading}
-                style={{ background: accent, borderColor: accent, color: "#fff" }}
+                variant="skeuo"
                 onClick={getReviews}
               >
                 {loading ? (
@@ -875,7 +890,7 @@ function AiReviewModal({
                     key={idx}
                     className={cn(
                       "rounded-2xl border p-4 sm:p-5 transition",
-                      isCopied ? "border-emerald-400 bg-emerald-50/40" : "border-slate-200 bg-white"
+                      isCopied ? "border-emerald-400 bg-emerald-50/40" : "neu"
                     )}
                     style={isCopied ? { borderColor: accent, background: `${accent}0d` } : undefined}
                   >
@@ -888,7 +903,7 @@ function AiReviewModal({
                         onClick={() => copyAndGo(r, idx)}
                         size="sm"
                         className="min-w-[110px]"
-                        style={{ background: accent, borderColor: accent, color: "#fff" }}
+                        variant="skeuo"
                       >
                         {isCopied ? (
                           <>
@@ -932,7 +947,7 @@ function ActionChip({
   accent: string;
 }) {
   const cls =
-    "flex flex-col items-center gap-1 py-2 px-1 rounded-xl bg-white border border-slate-200 hover:border-slate-300 hover:shadow-sm transition";
+    "flex flex-col items-center gap-1 py-2 px-1 rounded-2xl skeuo transition";
   const inner = (
     <>
       <span
@@ -984,9 +999,9 @@ function RateStep({
 
   return (
     <div className="container max-w-2xl px-4 py-6 sm:py-8">
-      <div className="rounded-2xl bg-white border border-slate-200 shadow-sm p-5 sm:p-7">
+      <div className="rounded-3xl neu p-5 sm:p-7">
         {staff && (
-          <div className="mb-5 flex items-center gap-3 px-3 py-2.5 rounded-xl bg-slate-50">
+          <div className="mb-5 flex items-center gap-3 px-3 py-2.5 rounded-xl neu-inset">
             {staff.photo ? (
               <img
                 src={staff.photo}
@@ -1094,7 +1109,7 @@ function PickTemplateModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-white overflow-y-auto"
+      className="fixed inset-0 z-50 glass-strong overflow-y-auto"
       role="dialog"
       aria-modal="true"
       aria-labelledby="pick-template-heading"
@@ -1133,7 +1148,7 @@ function PickTemplateModal({
                 key={t.id}
                 className={cn(
                   "rounded-2xl border p-4 sm:p-5 transition",
-                  isPicked ? "border-emerald-400 bg-emerald-50/40" : "border-slate-200 bg-white"
+                  isPicked ? "border-emerald-400 bg-emerald-50/40" : "neu"
                 )}
                 style={
                   isPicked ? { borderColor: accent, background: `${accent}0d` } : undefined
@@ -1149,12 +1164,7 @@ function PickTemplateModal({
                     disabled={loading}
                     size="sm"
                     className="min-w-[110px]"
-                    style={
-                      isPicked
-                        ? undefined
-                        : { background: accent, borderColor: accent, color: "#fff" }
-                    }
-                    variant={isPicked ? "outline" : "default"}
+                    variant={isPicked ? "outline" : "skeuo"}
                   >
                     {isPicked ? (
                       loading ? (
@@ -1211,7 +1221,7 @@ function ReviewsTab({ reviews }: { reviews: PublicReview[] }) {
   return (
     <div className="container max-w-2xl px-4 py-5 space-y-3">
       {reviews.map((r) => (
-        <div key={r.id} className="rounded-2xl bg-white border border-slate-200 p-4 sm:p-5">
+        <div key={r.id} className="rounded-2xl neu p-4 sm:p-5">
           <div className="flex items-start gap-3">
             {r.authorImage ? (
               <img
@@ -1291,14 +1301,14 @@ function InfoTab({ business }: { business: Business }) {
   return (
     <div className="container max-w-2xl px-4 py-5 space-y-3">
       {business.description && (
-        <div className="rounded-2xl bg-white border border-slate-200 p-4 sm:p-5">
+        <div className="rounded-2xl neu p-4 sm:p-5">
           <h3 className="text-sm font-semibold text-slate-900">About</h3>
           <p className="mt-2 text-sm text-slate-600 leading-relaxed whitespace-pre-line">
             {business.description}
           </p>
         </div>
       )}
-      <div className="rounded-2xl bg-white border border-slate-200 divide-y divide-slate-100">
+      <div className="rounded-2xl neu divide-y divide-slate-200/50">
         {rows.map((r) => {
           const content = (
             <div className="flex items-start gap-3 px-4 py-3.5">
@@ -1353,7 +1363,7 @@ function FeedbackStep(props: {
 }) {
   return (
     <div className="container max-w-2xl px-4 py-5">
-      <div className="rounded-2xl bg-white border border-slate-200 shadow-sm p-5 sm:p-6">
+      <div className="rounded-3xl neu p-5 sm:p-6">
         <div className="flex items-center justify-center gap-1 mb-3">
           {[1, 2, 3, 4, 5].map((n) => (
             <Star
@@ -1385,7 +1395,7 @@ function FeedbackStep(props: {
               value={props.feedback}
               onChange={(e) => props.setFeedback(e.target.value)}
               placeholder="Tell us what happened…"
-              className="min-h-[110px]"
+              className="min-h-[110px] neu-inset border-0"
             />
           </div>
 
@@ -1400,8 +1410,8 @@ function FeedbackStep(props: {
                   className={cn(
                     "px-3 py-1.5 rounded-full text-xs font-medium border transition-colors",
                     props.tags.includes(t.id)
-                      ? "bg-slate-900 text-white border-slate-900"
-                      : "bg-white text-slate-600 border-slate-200 hover:border-slate-400"
+                      ? "skeuo-accent text-white"
+                      : "skeuo text-slate-600"
                   )}
                 >
                   {t.label}
@@ -1447,7 +1457,7 @@ function FeedbackStep(props: {
 
           <Button
             type="submit"
-            variant="gradient"
+            variant="skeuo"
             size="lg"
             className="w-full"
             disabled={props.loading}
@@ -1468,7 +1478,7 @@ function FeedbackStep(props: {
 function ThankYouGoogle({ business }: { business: Business }) {
   return (
     <div className="container max-w-2xl px-4 py-10 text-center">
-      <div className="rounded-2xl bg-white border border-slate-200 p-6 sm:p-8">
+      <div className="rounded-3xl neu p-6 sm:p-8">
         <div className="h-16 w-16 mx-auto rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mb-4">
           <Heart className="h-8 w-8 fill-emerald-600" />
         </div>
@@ -1477,7 +1487,7 @@ function ThankYouGoogle({ business }: { business: Business }) {
           We'd love it if you'd share your experience publicly on Google.
         </p>
         {business.googleReviewUrl && (
-          <Button asChild variant="gradient" size="lg" className="mt-6 w-full max-w-xs mx-auto">
+          <Button asChild variant="skeuo" size="lg" className="mt-6 w-full max-w-xs mx-auto">
             <a href={business.googleReviewUrl} target="_blank" rel="noopener noreferrer">
               Leave Google Review <ExternalLink className="h-4 w-4" />
             </a>
@@ -1491,7 +1501,7 @@ function ThankYouGoogle({ business }: { business: Business }) {
 function ThankYouPrivate({ business, customerName }: { business: Business; customerName: string }) {
   return (
     <div className="container max-w-2xl px-4 py-10 text-center">
-      <div className="rounded-2xl bg-white border border-slate-200 p-6 sm:p-8">
+      <div className="rounded-3xl neu p-6 sm:p-8">
         <div className="h-16 w-16 mx-auto rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mb-4">
           <CheckCircle2 className="h-8 w-8" />
         </div>
