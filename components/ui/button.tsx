@@ -16,7 +16,9 @@ const buttonVariants = cva(
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-secondary text-foreground",
         link: "text-primary underline-offset-4 hover:underline",
-        gradient: "gradient-brand text-white shadow-md hover:shadow-lg"
+        gradient: "gradient-brand text-white shadow-md hover:shadow-lg",
+        skeuo: "skeuo-accent border-0",
+        neu: "skeuo text-slate-700 border-0"
       },
       size: {
         default: "h-10 px-5",

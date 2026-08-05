@@ -145,6 +145,87 @@
   .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
   .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
   .scrollbar-thin::-webkit-scrollbar-thumb { background: hsl(214 32% 80%); border-radius: 999px; }
+
+  /* ─────────────────────────────────────────────────────────────
+   *  MATERIAL LANGUAGES (light) — for the review page surface
+   *   • Neumorphism  → cards, containers, inputs
+   *   • Glassmorphism → overlays, modals, headers, toolbars
+   *   • Skeuomorphism → buttons, toggles, chips (pressable controls)
+   *  Uses a soft blue-grey base (#eef1f6). The page must share that
+   *  base for the neumorphic shadows to read correctly.
+   * ───────────────────────────────────────────────────────────── */
+  .neu-base { background-color: #eef1f6; }
+
+  .neu {
+    background: #eef1f6;
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow:
+      8px 8px 20px rgba(174, 187, 207, 0.6),
+      -8px -8px 20px rgba(255, 255, 255, 0.95);
+  }
+  .neu-sm {
+    background: #eef1f6;
+    box-shadow:
+      4px 4px 10px rgba(174, 187, 207, 0.55),
+      -4px -4px 10px rgba(255, 255, 255, 0.95);
+  }
+  .neu-inset {
+    background: #eef1f6;
+    box-shadow:
+      inset 5px 5px 11px rgba(174, 187, 207, 0.6),
+      inset -5px -5px 11px rgba(255, 255, 255, 0.95);
+  }
+
+  .glass {
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(16px) saturate(160%);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.65);
+    box-shadow: 0 8px 32px rgba(60, 80, 120, 0.12);
+  }
+  .glass-strong {
+    background: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(22px) saturate(160%);
+    -webkit-backdrop-filter: blur(22px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    box-shadow: 0 16px 48px rgba(60, 80, 120, 0.18);
+  }
+
+  .skeuo {
+    background: linear-gradient(180deg, #ffffff 0%, #e4eaf1 100%);
+    border: 1px solid rgba(120, 140, 170, 0.25);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.9) inset,
+      0 -2px 5px rgba(150, 170, 200, 0.35) inset,
+      0 6px 14px rgba(120, 140, 170, 0.3);
+    transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.2s ease;
+  }
+  .skeuo:hover { filter: brightness(1.02); }
+  .skeuo:active {
+    transform: translateY(2px);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.6) inset,
+      0 2px 6px rgba(120, 140, 170, 0.4) inset;
+  }
+
+  /* Accent (brand-colored) pressable — reads --accent from the page root. */
+  .skeuo-accent {
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--accent, #1a73e8) 80%, white) 0%,
+      var(--accent, #1a73e8) 55%,
+      color-mix(in srgb, var(--accent, #1a73e8) 82%, black) 100%
+    );
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.55) inset,
+      0 -3px 8px color-mix(in srgb, var(--accent, #1a73e8) 45%, black) inset,
+      0 8px 20px color-mix(in srgb, var(--accent, #1a73e8) 45%, transparent);
+    color: #fff;
+    transition: transform 0.12s ease, filter 0.2s ease;
+  }
+  .skeuo-accent:hover { filter: brightness(1.06); }
+  .skeuo-accent:active { transform: translateY(2px); }
 }
 
 @layer utilities {
