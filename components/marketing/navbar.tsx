@@ -35,7 +35,7 @@ export function MarketingNavbar({
       className={cn(
         "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
         scrolled
-          ? "bg-white/85 backdrop-blur-lg border-b border-border/60"
+          ? "glass"
           : "bg-transparent"
       )}
     >
@@ -72,7 +72,7 @@ export function MarketingNavbar({
           <Button variant="ghost" asChild>
             <Link href="/login">Login</Link>
           </Button>
-          <Button variant="gradient" asChild>
+          <Button variant="skeuo" asChild>
             <Link href="/register">
               <Sparkles className="h-4 w-4" /> Start Free
             </Link>
@@ -89,7 +89,7 @@ export function MarketingNavbar({
       </div>
 
       {open && (
-        <div className="md:hidden border-t border-border bg-white">
+        <div className="md:hidden glass-strong">
           <div className="container max-w-6xl py-4 flex flex-col gap-1">
             {links.map((l) => (
               <a
@@ -102,10 +102,10 @@ export function MarketingNavbar({
               </a>
             ))}
             <div className="grid grid-cols-2 gap-2 mt-3">
-              <Button variant="outline" asChild>
+              <Button variant="neu" asChild>
                 <Link href="/login">Login</Link>
               </Button>
-              <Button variant="gradient" asChild>
+              <Button variant="skeuo" asChild>
                 <Link href="/register">Start Free</Link>
               </Button>
             </div>

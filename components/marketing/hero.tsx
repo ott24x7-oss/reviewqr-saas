@@ -37,12 +37,12 @@ export function Hero() {
             </p>
 
             <div className="mt-6 flex flex-col sm:flex-row gap-2 justify-center lg:justify-start">
-              <Button size="lg" variant="gradient" asChild className="w-full sm:w-auto">
+              <Button size="lg" variant="skeuo" asChild className="w-full sm:w-auto">
                 <Link href="/register">
                   Start Free <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
-              <Button size="lg" variant="outline" asChild className="w-full sm:w-auto">
+              <Button size="lg" variant="neu" asChild className="w-full sm:w-auto">
                 <Link href="/r/demo-cafe">
                   <Play className="h-4 w-4" /> Try the demo
                 </Link>

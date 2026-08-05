@@ -27,12 +27,12 @@ export function Pricing({ plans }: { plans: PricingConfig }) {
             Start free. Upgrade only when you grow. No long-term contracts. GST invoice provided.
           </p>
 
-          <div className="mt-6 inline-flex items-center gap-1 p-1 rounded-full bg-white border shadow-soft">
+          <div className="mt-6 inline-flex items-center gap-1 p-1 rounded-full neu-inset">
             <button
               onClick={() => setAnnual(false)}
               className={cn(
                 "px-4 py-1.5 rounded-full text-sm font-medium transition-colors",
-                !annual ? "bg-primary text-white" : "text-muted-foreground"
+                !annual ? "skeuo-accent text-white" : "text-muted-foreground"
               )}
             >
               Monthly
@@ -41,7 +41,7 @@ export function Pricing({ plans }: { plans: PricingConfig }) {
               onClick={() => setAnnual(true)}
               className={cn(
                 "px-4 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center gap-1.5",
-                annual ? "bg-primary text-white" : "text-muted-foreground"
+                annual ? "skeuo-accent text-white" : "text-muted-foreground"
               )}
             >
               Yearly
@@ -60,7 +60,7 @@ export function Pricing({ plans }: { plans: PricingConfig }) {
               <div
                 key={tier.tier}
                 className={cn(
-                  "relative rounded-2xl border bg-white p-6 sm:p-7 flex flex-col transition-all hover:shadow-card",
+                  "relative neu rounded-2xl p-6 sm:p-7 flex flex-col transition-all",
                   isHighlighted && "ring-2 ring-primary shadow-glow scale-100 lg:scale-[1.03]"
                 )}
               >
@@ -103,7 +103,7 @@ export function Pricing({ plans }: { plans: PricingConfig }) {
                 </ul>
 
                 <Button
-                  variant={isHighlighted ? "gradient" : tier.tier === "FREE" ? "outline" : "default"}
+                  variant={isHighlighted ? "skeuo" : tier.tier === "FREE" ? "neu" : "skeuo"}
                   size="lg"
                   className="mt-6 w-full"
                   asChild
