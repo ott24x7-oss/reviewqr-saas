@@ -18,9 +18,7 @@ import {
   Copy,
   Check,
   Pencil,
-  Sparkles,
-  Sun,
-  Moon
+  Sparkles
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -217,26 +215,6 @@ export function ReviewFlow(props: Props) {
 
   const { business } = props;
   const accent = business.primaryColor || "#1a73e8";
-
-  // Scoped light/dark theme for the review page (persisted + honours OS pref).
-  const [theme, setTheme] = React.useState<"light" | "dark">("light");
-  React.useEffect(() => {
-    let initial: "light" | "dark" = "light";
-    try {
-      const saved = localStorage.getItem("rv-theme") as "light" | "dark" | null;
-      initial = saved || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-    } catch {}
-    setTheme(initial);
-  }, []);
-  function toggleTheme() {
-    setTheme((t) => {
-      const next = t === "dark" ? "light" : "dark";
-      try {
-        localStorage.setItem("rv-theme", next);
-      } catch {}
-      return next;
-    });
-  }
 
   function pickRating(n: number) {
     setRating(n);
@@ -455,11 +433,7 @@ export function ReviewFlow(props: Props) {
     step === "thank-you-private";
 
   return (
-    <div
-      className="rv relative min-h-dvh flex flex-col"
-      data-rt={theme}
-      style={{ "--accent": accent } as any}
-    >
+    <div className="rv relative min-h-dvh flex flex-col" style={{ "--accent": accent } as any}>
       {/* Boxed profile card, centered on the grid background */}
       <div className="mx-auto w-full max-w-2xl flex-1 sm:px-4 sm:py-8">
         <div className="overflow-hidden bg-white sm:rounded-[2rem] sm:border sm:border-black/5 dark:sm:border-white/10 sm:shadow-2xl">
@@ -497,23 +471,13 @@ export function ReviewFlow(props: Props) {
           </button>
         )}
 
-        <div className="absolute top-3 right-3 flex items-center gap-2">
-          <button
-            type="button"
-            onClick={toggleTheme}
-            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-            className="inline-flex items-center justify-center h-10 w-10 rounded-full bg-black/40 text-white backdrop-blur-sm hover:bg-black/60 transition"
-          >
-            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          </button>
-          <button
-            type="button"
-            onClick={share}
-            className="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-full bg-black/40 text-white text-xs backdrop-blur-sm hover:bg-black/60 transition"
-          >
-            <Share2 className="h-3.5 w-3.5" /> Share
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={share}
+          className="absolute top-3 right-3 inline-flex items-center gap-1.5 h-10 px-3.5 rounded-full bg-black/40 text-white text-xs backdrop-blur-sm hover:bg-black/60 transition"
+        >
+          <Share2 className="h-3.5 w-3.5" /> Share
+        </button>
 
         {/* Logo overlapping the cover */}
         <div className="container max-w-2xl px-4">
