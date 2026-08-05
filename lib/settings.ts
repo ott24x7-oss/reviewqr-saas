@@ -5,6 +5,7 @@
  */
 import { prisma } from "./db";
 import type { SubscriptionTier } from "@prisma/client";
+import { encryptSecret, decryptSecret } from "./crypto";
 
 const TTL_MS = 30_000;
 const cache = new Map<string, { value: any; expiresAt: number }>();
@@ -18,6 +19,34 @@ export const SETTING_KEYS = {
   turnstile: "turnstile",
   ai: "ai"
 } as const;
+
+// Which fields inside each settings blob are secrets encrypted at rest.
+const SECRET_FIELDS: Record<string, string[]> = {
+  [SETTING_KEYS.payments]: [
+    "razorpayKeySecret",
+    "razorpayWebhookSecret",
+    "stripeSecretKey",
+    "stripeWebhookSecret",
+    "mailImapPass"
+  ],
+  [SETTING_KEYS.email]: ["relaySecret", "smtpPass"],
+  [SETTING_KEYS.whatsapp]: ["apiToken"],
+  [SETTING_KEYS.turnstile]: ["secretKey"],
+  [SETTING_KEYS.ai]: ["apiKey"]
+};
+
+function transformSecrets(
+  key: string,
+  obj: any,
+  fn: (v: string) => string
+): any {
+  const fields = SECRET_FIELDS[key];
+  if (!fields || !obj || typeof obj !== "object") return obj;
+  for (const f of fields) {
+    if (typeof obj[f] === "string" && obj[f]) obj[f] = fn(obj[f]);
+  }
+  return obj;
+}
 
 export type AiConfig = {
   enabled: boolean;
@@ -257,7 +286,9 @@ async function readKey<T>(key: string, fallback: T): Promise<T> {
   if (hit && hit.expiresAt > Date.now()) return hit.value as T;
   try {
     const row = await prisma.appSetting.findUnique({ where: { key } });
-    const value = row ? (JSON.parse(row.value) as T) : fallback;
+    const parsed = row ? (JSON.parse(row.value) as T) : fallback;
+    // Decrypt any secret fields before caching/returning.
+    const value = row ? (transformSecrets(key, parsed, decryptSecret) as T) : parsed;
     cache.set(key, { value, expiresAt: Date.now() + TTL_MS });
     return value;
   } catch {
@@ -271,7 +302,12 @@ export function invalidateSettingsCache(key?: string) {
 }
 
 async function writeKey(key: string, value: unknown, updatedBy?: string) {
-  const json = JSON.stringify(value);
+  // Encrypt secret fields at rest (deep-clone first so callers keep plaintext).
+  const toStore =
+    value && typeof value === "object"
+      ? transformSecrets(key, JSON.parse(JSON.stringify(value)), encryptSecret)
+      : value;
+  const json = JSON.stringify(toStore);
   await prisma.appSetting.upsert({
     where: { key },
     create: { key, value: json, updatedBy: updatedBy || null },

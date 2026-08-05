@@ -6,6 +6,7 @@
  */
 import { ImapFlow } from "imapflow";
 import { simpleParser } from "mailparser";
+import { assertSafeHost } from "./ssrf";
 
 export type MailCfg = {
   host: string;
@@ -39,6 +40,11 @@ export async function testImap(cfg: MailCfg): Promise<{ ok: boolean; message: st
   if (!cfg.host || !cfg.user || !cfg.pass) {
     return { ok: false, message: "Fill in IMAP host, user and app-password first." };
   }
+  try {
+    await assertSafeHost(cfg.host, cfg.port);
+  } catch (e: any) {
+    return { ok: false, message: e?.message || "Invalid IMAP host" };
+  }
   const client = makeClient(cfg);
   try {
     await client.connect();
@@ -61,6 +67,11 @@ export async function fetchRecentPaymentEmails(
   max = 60
 ): Promise<ParsedEmail[]> {
   if (!cfg.host || !cfg.user || !cfg.pass) return [];
+  try {
+    await assertSafeHost(cfg.host, cfg.port);
+  } catch {
+    return []; // refuse to connect to a private/reserved host
+  }
   const senders = cfg.fromFilter
     .split(",")
     .map((s) => s.trim().toLowerCase())
