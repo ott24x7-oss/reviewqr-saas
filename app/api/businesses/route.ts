@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { businessSchema } from "@/lib/validations";
 import { slugify } from "@/lib/utils";
-import { planLimit } from "@/lib/payments";
+import { planLimit, effectiveTier } from "@/lib/payments";
 
 export async function GET() {
   const user = await requireUser().catch(() => null);
@@ -26,10 +26,11 @@ export async function POST(req: NextRequest) {
   const count = await prisma.business.count({
     where: { ownerId: user.id, archived: false }
   });
-  const limit = await planLimit(user.subscriptionTier, "businesses");
+  const tier = effectiveTier(user);
+  const limit = await planLimit(tier, "businesses");
   if (count >= limit) {
     return NextResponse.json(
-      { error: `Your ${user.subscriptionTier} plan allows ${limit} business(es). Upgrade to add more.` },
+      { error: `Your ${tier} plan allows ${limit} business(es). Upgrade to add more.` },
       { status: 402 }
     );
   }

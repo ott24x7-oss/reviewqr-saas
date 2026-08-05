@@ -212,6 +212,9 @@ export function ReviewFlow(props: Props) {
   const [pickedId, setPickedId] = React.useState<string | null>(null);
   const [aiQuestions, setAiQuestions] = React.useState<AiQuestion[]>([]);
   const [aiPreparing, setAiPreparing] = React.useState(false);
+  // Holds the id of a Review row already captured for this visitor (e.g. the
+  // bare low-rating tap). Used to avoid firing the on-tap capture twice.
+  const submittedRef = React.useRef<string | null>(null);
 
   const { business } = props;
   const accent = business.primaryColor || "#1a73e8";
@@ -223,6 +226,17 @@ export function ReviewFlow(props: Props) {
       // If stock is empty we redirect immediately like before.
       setTimeout(() => onHighRating(n), 250);
     } else {
+      // Low rating: capture it immediately (fire-and-forget) so it isn't lost
+      // if the customer abandons before submitting written feedback. The later
+      // feedback submit reuses this same Review row server-side (matched by
+      // fingerprint + rating), so no duplicate Review is created.
+      if (!submittedRef.current) {
+        submitReview({ rating: n, feedback: "", redirected: false })
+          .then((res) => {
+            if (res?.reviewId) submittedRef.current = res.reviewId;
+          })
+          .catch(() => {});
+      }
       setTimeout(() => setStep("feedback"), 250);
     }
   }

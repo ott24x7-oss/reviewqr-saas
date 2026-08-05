@@ -453,6 +453,8 @@ enum PaymentProvider {
   RAZORPAY
   STRIPE
   MANUAL
+  UPI
+  USDT
 }
 
 model Payment {
@@ -469,10 +471,20 @@ model Payment {
   periodMonths Int @default(1)
   invoiceUrl String?
 
+  // Manual UPI / USDT collection + email auto-verify
+  method       String?   // "upi" | "usdt"
+  reference    String?   // UTR (UPI) or transaction hash (USDT), entered by the customer
+  network      String?   // e.g. TRC20 / BEP20 for USDT
+  amountUsdt   Float?    // USDT amount when method = usdt
+  verifiedVia  String?   // "email" | "manual" | "webhook"
+  matchedEmail String?   // uid/subject of the confirmation email that matched
+  expiresAt    DateTime? // pending order expiry
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([userId])
+  @@index([status, expiresAt])
 }
 
 // ==========================

@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { staffSchema } from "@/lib/validations";
 import { slugify, nanoSlug } from "@/lib/utils";
-import { planLimit } from "@/lib/payments";
+import { planLimit, effectiveTier } from "@/lib/payments";
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await requireUser().catch(() => null);
@@ -16,7 +16,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const count = await prisma.staff.count({
     where: { business: { ownerId: user.id }, isActive: true }
   });
-  if (count >= (await planLimit(user.subscriptionTier, "staff"))) {
+  if (count >= (await planLimit(effectiveTier(user), "staff"))) {
     return NextResponse.json({ error: "Plan staff limit reached" }, { status: 402 });
   }
 

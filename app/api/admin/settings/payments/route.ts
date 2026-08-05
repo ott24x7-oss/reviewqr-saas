@@ -30,8 +30,25 @@ export async function PUT(req: NextRequest) {
         ? incoming.stripeWebhookSecret.trim()
         : current.stripeWebhookSecret,
     stripePublishableKey: String(incoming.stripePublishableKey ?? current.stripePublishableKey).trim(),
+    // UPI
+    upiEnabled: typeof incoming.upiEnabled === "boolean" ? incoming.upiEnabled : current.upiEnabled,
     upiId: String(incoming.upiId ?? current.upiId).trim(),
-    upiPayeeName: String(incoming.upiPayeeName ?? current.upiPayeeName).trim() || "ReviewQR"
+    upiPayeeName: String(incoming.upiPayeeName ?? current.upiPayeeName).trim() || "ReviewQR",
+    upiQrDataUrl: String(incoming.upiQrDataUrl ?? current.upiQrDataUrl),
+    // USDT
+    usdtEnabled: typeof incoming.usdtEnabled === "boolean" ? incoming.usdtEnabled : current.usdtEnabled,
+    usdtNetwork: String(incoming.usdtNetwork ?? current.usdtNetwork).trim() || "TRC20",
+    usdtAddress: String(incoming.usdtAddress ?? current.usdtAddress).trim(),
+    usdtRateInr: Number(incoming.usdtRateInr) > 0 ? Number(incoming.usdtRateInr) : current.usdtRateInr,
+    // Email auto-verify (IMAP)
+    mailVerifyEnabled:
+      typeof incoming.mailVerifyEnabled === "boolean" ? incoming.mailVerifyEnabled : current.mailVerifyEnabled,
+    mailImapHost: String(incoming.mailImapHost ?? current.mailImapHost).trim(),
+    mailImapPort: Number(incoming.mailImapPort) || current.mailImapPort || 993,
+    mailImapUser: String(incoming.mailImapUser ?? current.mailImapUser).trim(),
+    mailImapPass:
+      typeof incoming.mailImapPass === "string" ? incoming.mailImapPass.trim() : current.mailImapPass,
+    mailFromFilter: String(incoming.mailFromFilter ?? current.mailFromFilter).trim()
   };
 
   await setPaymentsConfig(next, guard.user.id);

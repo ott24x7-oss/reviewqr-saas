@@ -29,6 +29,7 @@ export type AiConfig = {
 };
 
 export type PaymentsConfig = {
+  // legacy (unused in UI, kept for back-compat)
   razorpayKeyId: string;
   razorpayKeySecret: string;
   razorpayWebhookSecret: string;
@@ -36,8 +37,23 @@ export type PaymentsConfig = {
   stripeSecretKey: string;
   stripeWebhookSecret: string;
   stripePublishableKey: string;
+  // UPI (INR)
+  upiEnabled: boolean;
   upiId: string;
   upiPayeeName: string;
+  upiQrDataUrl: string;
+  // USDT (crypto)
+  usdtEnabled: boolean;
+  usdtNetwork: string; // e.g. TRC20 / BEP20
+  usdtAddress: string;
+  usdtRateInr: number; // 1 USDT = X INR (converts plan INR price → USDT)
+  // Email auto-verify (IMAP)
+  mailVerifyEnabled: boolean;
+  mailImapHost: string;
+  mailImapPort: number;
+  mailImapUser: string;
+  mailImapPass: string;
+  mailFromFilter: string; // comma-separated sender substrings, e.g. "alerts@hdfcbank.net,noreply@binance.com"
 };
 
 export type EmailConfig = {
@@ -182,8 +198,20 @@ export const DEFAULT_PAYMENTS: PaymentsConfig = {
   stripeSecretKey: "",
   stripeWebhookSecret: "",
   stripePublishableKey: "",
+  upiEnabled: false,
   upiId: "",
-  upiPayeeName: "ReviewQR"
+  upiPayeeName: "ReviewQR",
+  upiQrDataUrl: "",
+  usdtEnabled: false,
+  usdtNetwork: "TRC20",
+  usdtAddress: "",
+  usdtRateInr: 90,
+  mailVerifyEnabled: false,
+  mailImapHost: "imap.gmail.com",
+  mailImapPort: 993,
+  mailImapUser: "",
+  mailImapPass: "",
+  mailFromFilter: ""
 };
 
 export const DEFAULT_EMAIL: EmailConfig = {
@@ -265,8 +293,20 @@ export async function getPaymentsConfig(): Promise<PaymentsConfig> {
     stripeWebhookSecret: stored.stripeWebhookSecret || process.env.STRIPE_WEBHOOK_SECRET || "",
     stripePublishableKey:
       stored.stripePublishableKey || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "",
+    upiEnabled: stored.upiEnabled ?? false,
     upiId: stored.upiId || "",
-    upiPayeeName: stored.upiPayeeName || DEFAULT_PAYMENTS.upiPayeeName
+    upiPayeeName: stored.upiPayeeName || DEFAULT_PAYMENTS.upiPayeeName,
+    upiQrDataUrl: stored.upiQrDataUrl || "",
+    usdtEnabled: stored.usdtEnabled ?? false,
+    usdtNetwork: stored.usdtNetwork || DEFAULT_PAYMENTS.usdtNetwork,
+    usdtAddress: stored.usdtAddress || "",
+    usdtRateInr: stored.usdtRateInr || DEFAULT_PAYMENTS.usdtRateInr,
+    mailVerifyEnabled: stored.mailVerifyEnabled ?? false,
+    mailImapHost: stored.mailImapHost || process.env.IMAP_HOST || DEFAULT_PAYMENTS.mailImapHost,
+    mailImapPort: stored.mailImapPort || Number(process.env.IMAP_PORT) || DEFAULT_PAYMENTS.mailImapPort,
+    mailImapUser: stored.mailImapUser || process.env.IMAP_USER || "",
+    mailImapPass: stored.mailImapPass || process.env.IMAP_PASS || "",
+    mailFromFilter: stored.mailFromFilter || ""
   };
 }
 export async function setPaymentsConfig(v: PaymentsConfig, by?: string) {
