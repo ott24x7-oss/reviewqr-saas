@@ -3,6 +3,9 @@ import { prisma } from "@/lib/db";
 import { ReviewFlow } from "./review-flow";
 import { getBrand } from "@/lib/brand";
 import { getAiConfig, getTurnstileConfig } from "@/lib/settings";
+import { effectiveTier } from "@/lib/payments";
+import { readAdminThemes } from "@/lib/tap/theme-store";
+import { resolveTheme, tokensToStyle } from "@/lib/tap/themes";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -124,7 +127,22 @@ export default async function ReviewPage({
       }))
   ];
 
+  const [tapPage, owner, extraThemes] = await Promise.all([
+    prisma.tapPage.findUnique({ where: { businessId: business.id }, select: { published: true } }),
+    prisma.user.findUnique({
+      where: { id: business.ownerId },
+      select: { subscriptionTier: true, subscriptionStatus: true, trialEndsAt: true, subscriptionEndsAt: true }
+    }),
+    readAdminThemes().catch(() => [])
+  ]);
+  const theme = resolveTheme({
+    published: tapPage?.published,
+    paid: owner ? effectiveTier(owner) !== "FREE" : false,
+    extra: extraThemes
+  });
+
   return (
+    <div className="review-shell" style={tokensToStyle(theme.tokens)} data-buttons={theme.tokens.buttons}>
     <ReviewFlow
       business={{
         id: business.id,
@@ -160,5 +178,6 @@ export default async function ReviewPage({
       aiEnabled={aiEnabled}
       turnstileSiteKey={turnstile.secretKey && turnstile.siteKey ? turnstile.siteKey : null}
     />
+    </div>
   );
 }

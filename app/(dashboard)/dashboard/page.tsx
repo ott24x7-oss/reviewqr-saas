@@ -15,17 +15,24 @@ export default async function DashboardOverview() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const [businesses, owned, memberCount] = await Promise.all([
+  const [businesses, owned, memberCount, printedQr] = await Promise.all([
     prisma.business.findMany({
       where: readableBusinessWhere(user.id),
       select: { id: true }
     }),
     prisma.business.findFirst({
       where: { ownerId: user.id, archived: false },
-      select: { id: true, logo: true, googleReviewUrl: true, _count: { select: { qrCodes: true } } },
+      select: {
+        id: true,
+        logo: true,
+        googleReviewUrl: true,
+        whatsappNumber: true,
+        _count: { select: { qrCodes: true, menuItems: true } }
+      },
       orderBy: { createdAt: "asc" }
     }),
-    prisma.businessMember.count({ where: { userId: user.id } })
+    prisma.businessMember.count({ where: { userId: user.id } }),
+    prisma.onboardingMark.findUnique({ where: { userId_kind: { userId: user.id, kind: "printed_qr" } } })
   ]);
   const skip = cookies().get("rq_onboarding_skip")?.value === "1";
   if (!owned && memberCount === 0 && !skip) redirect("/dashboard/onboarding");
@@ -46,6 +53,21 @@ export default async function DashboardOverview() {
       label: "Create your first QR",
       done: (owned?._count.qrCodes || 0) > 0,
       href: owned ? `/dashboard/businesses/${owned.id}/qr` : "/dashboard/onboarding"
+    },
+    {
+      label: "Add a menu",
+      done: (owned?._count.menuItems || 0) > 0,
+      href: owned ? `/dashboard/businesses/${owned.id}/menu` : "/dashboard/onboarding"
+    },
+    {
+      label: "Add a WhatsApp number",
+      done: !!owned?.whatsappNumber,
+      href: owned ? "/dashboard/onboarding" : "/dashboard/onboarding"
+    },
+    {
+      label: "Activate a printed QR",
+      done: !!printedQr,
+      href: "/dashboard/qr-codes"
     }
   ];
 

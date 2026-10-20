@@ -7,7 +7,7 @@ import { TeamPanel } from "@/components/dashboard/team-panel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { absoluteUrl } from "@/lib/utils";
-import { ExternalLink, QrCode, MapPin, Users, Edit3, Star, FileText, Sparkles, Quote } from "lucide-react";
+import { ExternalLink, QrCode, MapPin, Users, Edit3, Star, FileText, Sparkles, Quote, Palette } from "lucide-react";
 import { getReviewUrl } from "@/lib/qr";
 import { BusinessActions } from "./business-actions";
 
@@ -144,6 +144,45 @@ export default async function BusinessDetailPage({ params }: { params: { id: str
               <div>
                 <div className="font-semibold">QR codes</div>
                 <div className="text-xs text-muted-foreground">{business._count.qrCodes} active</div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href={`/dashboard/businesses/${business.id}/menu`}>
+          <Card className="hover:shadow-card transition cursor-pointer">
+            <CardContent className="p-5 flex items-start gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50 text-amber-700">
+                <FileText className="h-5 w-5" />
+              </span>
+              <div>
+                <div className="font-semibold">Menu</div>
+                <div className="text-xs text-muted-foreground">Items, prices, and the café template</div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href={`/dashboard/businesses/${business.id}/tap`}>
+          <Card className="hover:shadow-card transition cursor-pointer">
+            <CardContent className="p-5 flex items-start gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-sky-50 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">
+                <ExternalLink className="h-5 w-5" />
+              </span>
+              <div>
+                <div className="font-semibold">Customer page</div>
+                <div className="text-xs text-muted-foreground">Buttons, bio, and hours</div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href={`/dashboard/businesses/${business.id}/theme`}>
+          <Card className="hover:shadow-card transition cursor-pointer">
+            <CardContent className="p-5 flex items-start gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-rose-50 text-rose-600 dark:bg-rose-500/15 dark:text-rose-300">
+                <Palette className="h-5 w-5" />
+              </span>
+              <div>
+                <div className="font-semibold">Page theme</div>
+                <div className="text-xs text-muted-foreground">Colours, type, and buttons</div>
               </div>
             </CardContent>
           </Card>

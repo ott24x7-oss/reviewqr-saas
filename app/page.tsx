@@ -18,15 +18,14 @@ import {
 } from "@/components/marketing/landing/sections";
 import { getPricingConfig } from "@/lib/settings";
 import { getBrand } from "@/lib/brand";
+import { marketingFontClass } from "@/components/brand/fonts";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const [plans, brand] = await Promise.all([getPricingConfig(), getBrand()]);
   return (
-    <main className="relative min-h-screen overflow-x-hidden" style={{ "--accent": "#2BAE69" } as any}>
-      <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 bg-slate-400/20" />
-
+    <main className={`marketing-page relative min-h-screen overflow-x-hidden ${marketingFontClass}`}>
       <MarketingNavbar brand={brand} />
 
       <div className="mx-auto w-full max-w-6xl space-y-4 px-3 py-5 sm:space-y-6 sm:px-4 sm:py-8">
@@ -51,6 +50,12 @@ export default async function HomePage() {
       </div>
 
       <Footer brand={brand} />
+      <nav className="marketing-anchor" aria-label="On this page">
+        <a href="#features">Features</a>
+        <a href="#store">Store</a>
+        <a href="#products">QR+NFC</a>
+        <a href="#pricing">Pricing</a>
+      </nav>
     </main>
   );
 }

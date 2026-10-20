@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { businessSchema } from "@/lib/validations";
-import { slugify, shortCode as makeShortCode } from "@/lib/utils";
+import { slugify } from "@/lib/utils";
 import { ownerLimitError } from "@/lib/entitlements";
+import { linksForNewBusiness } from "@/lib/tap/new-business";
+import { isReservedSlug } from "@/lib/tap/reserved-slugs";
 
 export async function POST(req: NextRequest) {
   const user = await requireUser().catch(() => null);
@@ -15,9 +17,6 @@ export async function POST(req: NextRequest) {
   }
   const limitError = await ownerLimitError(user, "businesses", owned);
   if (limitError) return NextResponse.json({ error: limitError }, { status: 402 });
-  const qrError = await ownerLimitError(user, "qrCodes", 0);
-  if (qrError) return NextResponse.json({ error: qrError }, { status: 402 });
-
   const parsed = businessSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message || "Invalid input" }, { status: 400 });
@@ -26,15 +25,18 @@ export async function POST(req: NextRequest) {
 
   let slug = slugify(data.name);
   let n = 0;
-  while (await prisma.business.findUnique({ where: { slug } })) {
+  while (isReservedSlug(slug) || (await prisma.business.findUnique({ where: { slug } }))) {
     n += 1;
     slug = n > 5 ? slugify(data.name, true) : `${slugify(data.name)}-${n + 1}`;
     if (n > 5) break;
   }
 
-  let code = makeShortCode();
-  while (await prisma.qRCode.findUnique({ where: { shortCode: code } })) code = makeShortCode();
-
+  const starterLinks = await linksForNewBusiness(data.industry, {
+    phone: data.phone,
+    address: data.address,
+    city: data.city,
+    googleReviewUrl: data.googleReviewUrl
+  });
   const created = await prisma.$transaction(async (tx) => {
     const business = await tx.business.create({
       data: {
@@ -51,16 +53,15 @@ export async function POST(req: NextRequest) {
         primaryColor: data.primaryColor
       }
     });
-    const qr = await tx.qRCode.create({
-      data: { businessId: business.id, type: "COUNTER", label: "Main counter", shortCode: code }
+    await tx.tapPage.create({
+      data: { businessId: business.id, draft: { links: starterLinks, bio: "", bioHi: "" } }
     });
-    return { business, qr };
+    return { business };
   });
 
   return NextResponse.json({
     businessId: created.business.id,
     name: created.business.name,
-    slug: created.business.slug,
-    shortCode: created.qr.shortCode
+    slug: created.business.slug
   });
 }

@@ -77,6 +77,7 @@ model User {
   memberships     BusinessMember[]
   supportTickets  SupportTicket[]
   supportMessages SupportMessage[] @relation("SupportMessageAuthor")
+  onboardingMarks OnboardingMark[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -138,6 +139,7 @@ model Business {
   email           String?
   phone           String?
   whatsappNumber  String?
+  whatsappVerifiedAt DateTime?
   website         String?
   address         String? @db.Text
   city            String?
@@ -179,6 +181,10 @@ model Business {
   aiUsage      AiUsage[]
   members      BusinessMember[]
   invites      BusinessInvite[]
+  tapPage      TapPage?
+  menuCategories MenuCategory[]
+  menuItems    MenuItem[]
+  menuOrders   MenuOrder[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -361,10 +367,18 @@ enum QRType {
   CUSTOM
 }
 
+enum QrStatus {
+  UNASSIGNED
+  ACTIVE
+  DISABLED
+}
+
 model QRCode {
   id         String  @id @default(cuid())
-  businessId String
-  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  // Null while the code is unassigned stock. Deleting a business detaches the
+  // code instead of destroying a URL that may already be printed.
+  businessId String?
+  business   Business? @relation(fields: [businessId], references: [id], onDelete: SetNull)
   locationId String?
   location   Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
   staffId    String?
@@ -374,14 +388,20 @@ model QRCode {
   label      String
   shortCode  String  @unique
   scans      Int     @default(0)
+  // Kept in step with status so older queries keep working.
   isActive   Boolean @default(true)
+  status     QrStatus @default(ACTIVE)
+  assignedAt DateTime?
 
   qrScans    QrScan[]
+  tapEvents  TapEvent[]
+  menuOrders MenuOrder[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([businessId])
+  @@index([status])
 }
 
 enum CampaignStatus {
@@ -661,9 +681,122 @@ model QrScan {
   qrCode     QRCode   @relation(fields: [qrCodeId], references: [id], onDelete: Cascade)
   ipHash     String
   deviceType String?
+  // qr | nfc | link. Older rows stay null and are treated as qr.
+  source     String?
+  event      String   @default("view")
   createdAt  DateTime @default(now())
 
   @@index([qrCodeId, ipHash, createdAt])
+}
+
+// Views and button clicks. The deduped visit counter stays on QrScan.
+model TapEvent {
+  id         String   @id @default(cuid())
+  businessId String?
+  qrCodeId   String?
+  qrCode     QRCode?  @relation(fields: [qrCodeId], references: [id], onDelete: SetNull)
+  type       String
+  linkKey    String?
+  source     String?
+  deviceType String?
+  ipHash     String
+  createdAt  DateTime @default(now())
+
+  @@index([businessId, createdAt])
+  @@index([qrCodeId, createdAt])
+}
+
+model TapPage {
+  id          String    @id @default(cuid())
+  businessId  String    @unique
+  business    Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  draft       Json      @default("{}")
+  published   Json?
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+enum VegMark {
+  VEG
+  NON_VEG
+  EGG
+  NONE
+}
+
+model MenuCategory {
+  id         String     @id @default(cuid())
+  businessId String
+  business   Business   @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name       String
+  nameHi     String?
+  sortOrder  Int        @default(0)
+  items      MenuItem[]
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  @@index([businessId])
+}
+
+model MenuItem {
+  id         String        @id @default(cuid())
+  businessId String
+  business   Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  categoryId String?
+  category   MenuCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  name       String
+  nameHi     String?
+  pricePaise Int
+  photo      String?
+  veg        VegMark       @default(NONE)
+  available  Boolean       @default(true)
+  sortOrder  Int           @default(0)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  @@index([businessId, available])
+  @@index([categoryId])
+}
+
+enum MenuOrderStatus {
+  NEW
+}
+
+model MenuOrder {
+  id              String          @id @default(cuid())
+  businessId      String
+  business        Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  qrCodeId        String?
+  qrCode          QRCode?         @relation(fields: [qrCodeId], references: [id], onDelete: SetNull)
+  number          String          @unique
+  customerName    String?
+  tableOrAddress  String?
+  note            String?         @db.Text
+  totalPaise      Int
+  items           Json
+  source          String?
+  status          MenuOrderStatus @default(NEW)
+  createdAt       DateTime        @default(now())
+
+  @@index([businessId, createdAt])
+}
+
+model IndustryPreset {
+  id        String   @id @default(cuid())
+  industry  String   @unique
+  links     Json
+  updatedAt DateTime @updatedAt
+}
+
+model OnboardingMark {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      String
+  createdAt DateTime @default(now())
+
+  @@unique([userId, kind])
+  @@index([userId])
 }
 
 // Per-business AI calls for a calendar month (Asia/Kolkata), key YYYY-MM.

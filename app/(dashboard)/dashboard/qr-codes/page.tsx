@@ -2,49 +2,74 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { accessRole, allows, readableBusinessWhere } from "@/lib/tenant";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Building2, Plus, QrCode } from "lucide-react";
-import { absoluteUrl } from "@/lib/utils";
+import { Building2, Plus } from "lucide-react";
+import { QrBoard } from "./qr-board";
 
 export const dynamic = "force-dynamic";
 
-export default async function QrCodesPage() {
+export default async function QrCodesPage({
+  searchParams
+}: {
+  searchParams: { status?: string; business?: string };
+}) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const businesses = await prisma.business.findMany({
-    where: { ownerId: user.id, archived: false },
+  const status = searchParams.status === "ACTIVE" || searchParams.status === "DISABLED" ? searchParams.status : "";
+  const businessId = searchParams.business || "";
+  const rows = await prisma.business.findMany({
+    where: readableBusinessWhere(user.id),
     include: {
+      members: { where: { userId: user.id }, select: { role: true }, take: 1 },
+      locations: { where: { isActive: true }, select: { id: true, name: true }, orderBy: { name: "asc" } },
       qrCodes: {
-        include: {
-          location: { select: { name: true } },
-          staff: { select: { name: true } }
-        },
+        include: { location: { select: { name: true } } },
         orderBy: { createdAt: "desc" }
       }
     },
-    orderBy: { createdAt: "desc" }
+    orderBy: { name: "asc" }
+  });
+
+  const businesses = rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    canManage: allows(accessRole(row.ownerId, user.id, row.members[0]?.role), "manage"),
+    locations: row.locations.map((location) => ({ id: location.id, name: location.name }))
+  }));
+  const items = rows.flatMap((row) => {
+    if (businessId && row.id !== businessId) return [];
+    return row.qrCodes
+      .filter((qr) => !status || qr.status === status)
+      .map((qr) => ({
+        code: qr.shortCode,
+        label: qr.label,
+        status: qr.status,
+        scans: qr.scans,
+        businessId: row.id,
+        businessName: row.name,
+        locationId: qr.locationId,
+        locationName: qr.location?.name || null
+      }));
   });
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold font-display">QR codes</h1>
-        <p className="text-sm text-muted-foreground">
-          Generate, print, and track QR codes for counter / table / bills
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold font-display sm:text-3xl">QR codes</h1>
+          <p className="text-sm text-muted-foreground">Activate, label, and download the codes for your businesses.</p>
+        </div>
       </div>
 
-      {businesses.length === 0 ? (
-        <Card className="text-center py-16">
+      {rows.length === 0 ? (
+        <Card className="py-16 text-center">
           <CardContent>
-            <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+            <Building2 className="mx-auto mb-3 h-12 w-12 text-muted-foreground" />
             <h3 className="text-lg font-semibold">Add a business first</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              You need a business before you can generate QR codes.
-            </p>
+            <p className="mt-1 text-sm text-muted-foreground">You need a business before you can generate QR codes.</p>
             <Button asChild variant="gradient" className="mt-5">
               <Link href="/dashboard/businesses/new">
                 <Plus className="h-4 w-4" /> Add Business
@@ -53,59 +78,32 @@ export default async function QrCodesPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-6">
-          {businesses.map((b) => (
-            <div key={b.id}>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div
-                    className="h-8 w-8 rounded-lg flex items-center justify-center text-white font-bold text-sm"
-                    style={{ background: b.primaryColor }}
-                  >
-                    {b.name[0]}
-                  </div>
-                  <h2 className="font-semibold">{b.name}</h2>
-                  <Badge variant="secondary">{b.qrCodes.length} codes</Badge>
-                </div>
-                <Button asChild size="sm" variant="outline">
-                  <Link href={`/dashboard/businesses/${b.id}/qr`}>
-                    <Plus className="h-3.5 w-3.5" /> New QR
-                  </Link>
-                </Button>
-              </div>
-
-              {b.qrCodes.length === 0 ? (
-                <Card className="text-center py-10">
-                  <CardContent>
-                    <QrCode className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">No QR codes yet for this business.</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {b.qrCodes.map((qr) => (
-                    <Card key={qr.id} className="hover:shadow-card transition">
-                      <CardContent className="p-4 text-center">
-                        <div className="aspect-square bg-white rounded-lg border flex items-center justify-center p-3">
-                          <img
-                            src={absoluteUrl(`/api/qr/${qr.shortCode}/image?format=svg`)}
-                            alt={qr.label}
-                            className="w-full h-full object-contain"
-                          />
-                        </div>
-                        <h3 className="mt-3 font-medium text-sm truncate">{qr.label}</h3>
-                        <p className="text-xs text-muted-foreground">{qr.scans} scans</p>
-                        <Button asChild size="sm" variant="outline" className="mt-2 w-full">
-                          <Link href={`/dashboard/qr-codes/${qr.shortCode}`}>View</Link>
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+        <>
+          <form className="flex flex-wrap gap-2" action="/dashboard/qr-codes">
+            <select name="status" defaultValue={status} className="input min-h-[44px]" aria-label="Status">
+              <option value="">All statuses</option>
+              <option value="ACTIVE">Active</option>
+              <option value="DISABLED">Disabled</option>
+            </select>
+            <select name="business" defaultValue={businessId} className="input min-h-[44px]" aria-label="Business">
+              <option value="">All businesses</option>
+              {businesses.map((business) => (
+                <option key={business.id} value={business.id}>{business.name}</option>
+              ))}
+            </select>
+            <Button type="submit" variant="outline" className="min-h-[44px]">Filter</Button>
+          </form>
+          <div className="flex flex-wrap gap-2">
+            {businesses.filter((business) => business.canManage).map((business) => (
+              <Button key={business.id} asChild size="sm" variant="outline" className="min-h-[44px]">
+                <Link href={`/dashboard/businesses/${business.id}/qr`}>
+                  <Plus className="h-3.5 w-3.5" /> New QR for {business.name}
+                </Link>
+              </Button>
+            ))}
+          </div>
+          <QrBoard businesses={businesses} items={items} />
+        </>
       )}
     </div>
   );

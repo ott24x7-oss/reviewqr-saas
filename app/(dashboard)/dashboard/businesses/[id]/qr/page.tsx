@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { requireBusinessRole } from "@/lib/tenant";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { absoluteUrl } from "@/lib/utils";
 import { QrCreateClient } from "./qr-create-client";
 
@@ -49,6 +50,9 @@ export default async function BusinessQrPage({ params }: { params: { id: string 
                 />
               </div>
               <h3 className="mt-3 font-medium text-sm truncate">{qr.label}</h3>
+              <Badge variant={qr.status === "ACTIVE" ? "success" : qr.status === "DISABLED" ? "destructive" : "secondary"} className="mt-1">
+                {qr.status === "ACTIVE" ? "Active" : qr.status === "DISABLED" ? "Disabled" : "Unassigned"}
+              </Badge>
               <p className="text-xs text-muted-foreground">{qr.scans} scans</p>
               <Link
                 href={`/dashboard/qr-codes/${qr.shortCode}`}

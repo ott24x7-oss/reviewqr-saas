@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import Link from "next/link";
-import { Menu, X, Star, Sparkles, ArrowRight } from "lucide-react";
+import { Menu, X, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const links = [
@@ -25,7 +25,7 @@ export function MarketingNavbar({
     <header className="sticky top-3 sm:top-4 z-50 px-3 sm:px-4">
       <div className="mx-auto max-w-5xl">
         {/* Floating glass pill */}
-        <div className="glass-strong rounded-2xl border border-white/60 shadow-[0_14px_40px_-16px_rgba(30,41,59,0.4)] px-3 sm:px-4">
+        <div className="marketing-nav px-3 sm:px-4">
           <div className="relative flex h-14 sm:h-16 items-center justify-between gap-4">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2 font-bold text-lg shrink-0">
@@ -61,11 +61,9 @@ export function MarketingNavbar({
               >
                 Login
               </Link>
-              <Button variant="skeuo" size="sm" asChild className="hidden sm:inline-flex">
-                <Link href="/register">
-                  <Sparkles className="h-4 w-4" /> Start Free
-                </Link>
-              </Button>
+              <Link href="/register" className="marketing-cta hidden items-center sm:inline-flex">
+                Start free
+              </Link>
 
               {/* Mobile toggle */}
               <button
@@ -81,7 +79,7 @@ export function MarketingNavbar({
 
         {/* Mobile dropdown */}
         {open && (
-          <div className="md:hidden mt-2 glass-strong rounded-2xl border border-white/60 shadow-xl p-3">
+          <div className="marketing-sheet mt-2 p-3 md:hidden">
             <div className="flex flex-col">
               {links.map((l) => (
                 <a
@@ -100,11 +98,9 @@ export function MarketingNavbar({
                   Login
                 </Link>
               </Button>
-              <Button variant="skeuo" asChild>
-                <Link href="/register" onClick={() => setOpen(false)}>
-                  Start Free <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
+              <Link href="/register" className="marketing-cta inline-flex justify-center" onClick={() => setOpen(false)}>
+                Start free
+              </Link>
             </div>
           </div>
         )}

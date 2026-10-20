@@ -7,6 +7,9 @@ import { rateLimitDb } from "@/lib/rate-limit";
 import { sendEmail, welcomeEmail } from "@/lib/email";
 import { sendVerificationEmail } from "@/lib/verify-email";
 import { absoluteUrl, getClientIp } from "@/lib/utils";
+import { attachTapDraft } from "@/lib/tap/new-business";
+import { markOnboarding } from "@/lib/tap/onboarding-mark";
+import { isReservedSlug } from "@/lib/tap/reserved-slugs";
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req.headers);
@@ -56,7 +59,7 @@ export async function POST(req: NextRequest) {
   if (data.businessName) {
     let slug = slugify(data.businessName);
     let count = 0;
-    while (await prisma.business.findUnique({ where: { slug } })) {
+    while (isReservedSlug(slug) || (await prisma.business.findUnique({ where: { slug } }))) {
       count += 1;
       slug = slugify(data.businessName) + "-" + (count + 1);
       if (count > 5) {
@@ -64,7 +67,7 @@ export async function POST(req: NextRequest) {
         break;
       }
     }
-    await prisma.business.create({
+    const business = await prisma.business.create({
       data: {
         ownerId: user.id,
         name: data.businessName,
@@ -75,7 +78,10 @@ export async function POST(req: NextRequest) {
         email
       }
     });
+    await attachTapDraft(business.id, null, { phone: data.phone, whatsappNumber: data.phone });
   }
+
+  await markOnboarding(user.id, "start");
 
   // Welcome and verify emails — best-effort. Login works before the inbox is confirmed.
   sendEmail({

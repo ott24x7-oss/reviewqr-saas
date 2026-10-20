@@ -23,6 +23,8 @@ test("owner registers, collects a private review, and sees UPI checkout", async 
   expect(code, shortUrl).toBeTruthy();
 
   await page.goto(`/q/${code}`);
+  await expect(page.getByRole("heading", { name: "Smoke Cafe" })).toBeVisible();
+  await page.getByRole("button", { name: "Give Feedback" }).click();
   await page.getByRole("button", { name: "2 stars" }).click();
   await page.getByLabel("What could we have done better?").fill(message);
   await page.getByRole("button", { name: "Send feedback" }).click();

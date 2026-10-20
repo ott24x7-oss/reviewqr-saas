@@ -127,6 +127,101 @@ export async function verifyLoginOtp(rawPhone: string, code: string) {
   return { ok: true as const, otpToken };
 }
 
+export async function createOtpSession(userId: string) {
+  const otpToken = randomToken();
+  await prisma.emailOtp.create({
+    data: {
+      identifier: userId,
+      tokenHash: hashToken(otpToken),
+      channel: "phone",
+      purpose: "session",
+      expires: new Date(Date.now() + OTP_SESSION_TTL_MS),
+      attempts: 0
+    }
+  });
+  return otpToken;
+}
+
+/** Signup codes are sent even when no account exists yet. */
+export async function requestSignupOtp(rawPhone: string, email?: string | null) {
+  const key = phoneKey(rawPhone);
+  if (!key) return { ok: false as const, error: "Enter a valid mobile number" };
+  const code = randomOtpCode();
+  await prisma.emailOtp.deleteMany({ where: { identifier: key, purpose: "signup" } });
+  await prisma.emailOtp.create({
+    data: {
+      identifier: key,
+      tokenHash: hashToken(code),
+      channel: "phone",
+      purpose: "signup",
+      expires: new Date(Date.now() + OTP_TTL_MS),
+      attempts: 0
+    }
+  });
+  const delivery = await deliverCode({ phone: rawPhone, email, code });
+  if (delivery === "none") return { ok: false as const, error: "We could not send a code right now" };
+  return { ok: true as const };
+}
+
+export async function verifySignupOtp(rawPhone: string, code: string) {
+  const key = phoneKey(rawPhone);
+  if (!key || !/^\d{6}$/.test(code)) return { ok: false as const, error: "Invalid code" };
+  const row = await prisma.emailOtp.findFirst({
+    where: { identifier: key, purpose: "signup" },
+    orderBy: { createdAt: "desc" }
+  });
+  if (!row || !otpStillValid(row.expires, row.attempts)) {
+    return { ok: false as const, error: "Code expired. Request a new one." };
+  }
+  if (row.tokenHash !== hashToken(code)) {
+    const attempts = row.attempts + 1;
+    if (attempts >= OTP_MAX_ATTEMPTS) await prisma.emailOtp.delete({ where: { id: row.id } });
+    else await prisma.emailOtp.update({ where: { id: row.id }, data: { attempts } });
+    return { ok: false as const, error: "Invalid code" };
+  }
+  await prisma.emailOtp.deleteMany({ where: { identifier: key, purpose: "signup" } });
+  return { ok: true as const, phone: key };
+}
+
+export async function requestPurposeOtp(opts: { identifier: string; phone: string; purpose: string; email?: string | null }) {
+  const key = phoneKey(opts.phone);
+  if (!key) return { ok: false as const, error: "Enter a valid mobile number" };
+  const code = randomOtpCode();
+  await prisma.emailOtp.deleteMany({ where: { identifier: opts.identifier, purpose: opts.purpose } });
+  await prisma.emailOtp.create({
+    data: {
+      identifier: opts.identifier,
+      tokenHash: hashToken(code),
+      channel: "phone",
+      purpose: opts.purpose,
+      expires: new Date(Date.now() + OTP_TTL_MS),
+      attempts: 0
+    }
+  });
+  const delivery = await deliverCode({ phone: opts.phone, email: opts.email, code });
+  if (delivery === "none") return { ok: false as const, error: "We could not send a code right now" };
+  return { ok: true as const, phone: key };
+}
+
+export async function verifyPurposeOtp(identifier: string, purpose: string, code: string) {
+  if (!/^\d{6}$/.test(code)) return { ok: false as const, error: "Invalid code" };
+  const row = await prisma.emailOtp.findFirst({
+    where: { identifier, purpose },
+    orderBy: { createdAt: "desc" }
+  });
+  if (!row || !otpStillValid(row.expires, row.attempts)) {
+    return { ok: false as const, error: "Code expired. Request a new one." };
+  }
+  if (row.tokenHash !== hashToken(code)) {
+    const attempts = row.attempts + 1;
+    if (attempts >= OTP_MAX_ATTEMPTS) await prisma.emailOtp.delete({ where: { id: row.id } });
+    else await prisma.emailOtp.update({ where: { id: row.id }, data: { attempts } });
+    return { ok: false as const, error: "Invalid code" };
+  }
+  await prisma.emailOtp.delete({ where: { id: row.id } });
+  return { ok: true as const };
+}
+
 /** Single use. Returns the user id or null. */
 export async function consumeOtpSession(otpToken: string) {
   if (!otpToken) return null;

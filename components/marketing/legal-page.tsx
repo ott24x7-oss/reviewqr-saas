@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { MarketingNavbar } from "@/components/marketing/navbar";
 import { Footer } from "@/components/marketing/footer";
 import { getBrand } from "@/lib/brand";
+import { marketingFontClass } from "@/components/brand/fonts";
 
 /**
  * Shared shell for static company/legal pages (About, Privacy, Terms, Refunds).
@@ -22,7 +23,7 @@ export async function LegalPage({
 }) {
   const brand = await getBrand();
   return (
-    <main className="min-h-screen bg-background">
+    <main className={`marketing-page min-h-screen ${marketingFontClass}`}>
       <MarketingNavbar brand={brand} />
 
       <section className="relative overflow-hidden border-b bg-secondary/40 pt-28 pb-10 sm:pt-32">

@@ -25,7 +25,7 @@ export function AcceptInvite({ token }: { token: string }) {
   }
 
   return (
-    <Button onClick={accept} disabled={busy}>
+    <Button type="button" className="auth-primary w-full" onClick={accept} disabled={busy}>
       {busy ? "Joining…" : "Accept invite"}
     </Button>
   );

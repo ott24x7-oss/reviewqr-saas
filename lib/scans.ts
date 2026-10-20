@@ -26,7 +26,7 @@ export function deviceTypeFromUa(ua: string): "mobile" | "tablet" | "desktop" {
 }
 
 /** Writes a scan row and increments QRCode.scans once per IP hash per 30 minutes. */
-export async function recordQrScan(qrId: string, headers: Headers) {
+export async function recordQrScan(qrId: string, headers: Headers, source: "qr" | "nfc" | "link" = "qr") {
   const ipHash = hashIp(getClientIp(headers));
   const since = new Date(Date.now() - SCAN_DEDUPE_MS);
   const recent = await prisma.qrScan.findFirst({
@@ -38,7 +38,9 @@ export async function recordQrScan(qrId: string, headers: Headers) {
     data: {
       qrCodeId: qrId,
       ipHash,
-      deviceType: deviceTypeFromUa(headers.get("user-agent") || "")
+      deviceType: deviceTypeFromUa(headers.get("user-agent") || ""),
+      source,
+      event: "view"
     }
   });
   await prisma.qRCode.update({

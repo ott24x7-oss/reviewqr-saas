@@ -14,7 +14,7 @@
 - 4★+ ratings auto-redirect to Google review URL
 - 1–3★ ratings flow into a private feedback form (with tags + NPS)
 - Per-location and per-staff review URLs (`?l=branch&s=arjun`)
-- Short QR codes (`/q/[code]`) for printable posters
+- Short QR codes (`/q/[code]`) open the customer tap page. The same page is at `/t/[code]` and at `/<business-slug>`.
 
 **Business dashboard** (mobile responsive, bottom-nav on mobile)
 - Real-time analytics (avg rating, distribution, redirect rate)
@@ -64,6 +64,18 @@ Open <http://localhost:3000>
 - Owner: `demo@reviewqr.in` / `Demo@123` → has 120 demo reviews
 - Admin: the email and password you set in `ADMIN_EMAIL` and `ADMIN_PASSWORD`. There is no default password. Seeding again does not change it.
 - Public review page: <http://localhost:3000/r/demo-cafe>
+- Tap page: <http://localhost:3000/q/DEMO-CNTR> and <http://localhost:3000/demo-cafe>
+
+---
+
+## Tap page and NFC
+
+`/q/<code>` is the customer page for a printed QR. A visit with no `src` is counted as `qr`.
+`/t/<code>` is the same page. A visit with no `src` is counted as `nfc`.
+`src` may be `qr`, `nfc`, or `link`. An explicit value wins.
+Point an NFC tag at `https://<your-domain>/t/<code>?src=nfc`.
+The QR image itself encodes `https://<your-domain>/q/<code>?src=qr`.
+`/<slug>` opens that business page too, for example `/demo-cafe`. Slugs that match an app route, such as `demo` or `login`, are reserved.
 
 ---
 

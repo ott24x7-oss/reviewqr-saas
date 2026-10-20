@@ -16,15 +16,24 @@ const nextConfig = {
     serverComponentsExternalPackages: ["@whiskeysockets/baileys", "pino", "sharp", "@aws-sdk/client-s3"]
   },
   async headers() {
+    const security = [
+      { key: "X-Frame-Options", value: "SAMEORIGIN" },
+      { key: "X-Content-Type-Options", value: "nosniff" },
+      { key: "Referrer-Policy", value: "origin-when-cross-origin" },
+      { key: "X-XSS-Protection", value: "1; mode=block" }
+    ];
+    const hsts =
+      process.env.NODE_ENV === "production"
+        ? [{ key: "Strict-Transport-Security", value: "max-age=15552000; includeSubDomains" }]
+        : [];
     return [
       {
-        source: "/(.*)",
-        headers: [
-          { key: "X-Frame-Options", value: "SAMEORIGIN" },
-          { key: "X-Content-Type-Options", value: "nosniff" },
-          { key: "Referrer-Policy", value: "origin-when-cross-origin" },
-          { key: "X-XSS-Protection", value: "1; mode=block" }
-        ]
+        source: "/api/health",
+        headers: security
+      },
+      {
+        source: "/((?!api/health$).*)",
+        headers: [...security, ...hsts]
       },
       {
         source: "/api/widget/:path*",

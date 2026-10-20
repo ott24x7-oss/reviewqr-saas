@@ -5,100 +5,101 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ImageUpload } from "@/components/ui/image-upload";
+import { CodeScan } from "@/components/dashboard/code-scan";
+import { codeFromScan } from "@/lib/tap/qr-stock";
 
-const COLORS = ["#1a73e8", "#0f766e", "#b45309", "#be123c", "#111827"];
 const STORAGE_KEY = "rq-onboarding";
+const CATEGORIES = ["Café", "Restaurant", "Salon", "Shop", "Other"];
+
+type Existing = {
+  id: string;
+  name: string;
+  industry: string | null;
+  whatsappNumber: string | null;
+  googleReviewUrl: string | null;
+} | null;
 
 type Draft = {
   step: number;
+  businessId: string;
   name: string;
   industry: string;
-  city: string;
-  address: string;
-  phone: string;
-  googlePlaceId: string;
-  googleReviewUrl: string;
-  logo: string | null;
-  primaryColor: string;
+  code: string;
+  digitalCode: string;
+  itemName: string;
+  itemPrice: string;
+  items: string[];
+  whatsapp: string;
+  waCode: string;
+  waVerified: boolean;
+  google: string;
+  justdial: string;
+  zomato: string;
+  trustpilot: string;
+  facebook: string;
+  custom: string;
 };
 
 const empty: Draft = {
   step: 1,
+  businessId: "",
   name: "",
-  industry: "",
-  city: "",
-  address: "",
-  phone: "",
-  googlePlaceId: "",
-  googleReviewUrl: "",
-  logo: null,
-  primaryColor: COLORS[0],
+  industry: "Café",
+  code: "",
+  digitalCode: "",
+  itemName: "",
+  itemPrice: "",
+  items: [],
+  whatsapp: "",
+  waCode: "",
+  waVerified: false,
+  google: "",
+  justdial: "",
+  zomato: "",
+  trustpilot: "",
+  facebook: "",
+  custom: ""
 };
 
-type Prediction = { placeId: string; description: string };
-type Done = { businessId: string; name: string; shortCode: string };
-
-export function OnboardingWizard({
-  placesEnabled,
-  orderHref
-}: {
-  placesEnabled: boolean;
-  orderHref: string | null;
-}) {
+export function OnboardingWizard({ existing }: { existing: Existing }) {
   const router = useRouter();
   const [draft, setDraft] = React.useState<Draft>(empty);
-  const [predictions, setPredictions] = React.useState<Prediction[]>([]);
+  const [ready, setReady] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
-  const [done, setDone] = React.useState<Done | null>(null);
+  const [claimMessage, setClaimMessage] = React.useState("");
+  const [claimReady, setClaimReady] = React.useState(false);
 
   React.useEffect(() => {
+    let next = empty;
     try {
       const saved = sessionStorage.getItem(STORAGE_KEY);
-      if (saved) setDraft({ ...empty, ...JSON.parse(saved) });
+      if (saved) next = { ...empty, ...JSON.parse(saved), items: [] };
     } catch {
       /* ignore a bad draft */
     }
-  }, []);
+    if (existing) {
+      const same = next.businessId === existing.id;
+      next = {
+        ...(same ? next : empty),
+        businessId: existing.id,
+        name: (same && next.name) || existing.name,
+        industry: (same && next.industry) || existing.industry || "Café",
+        whatsapp: (same && next.whatsapp) || existing.whatsappNumber || "",
+        google: (same && next.google) || existing.googleReviewUrl || "",
+        step: same && next.step > 1 ? next.step : 2
+      };
+    }
+    setDraft(next);
+    setReady(true);
+  }, [existing]);
 
   React.useEffect(() => {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
-  }, [draft]);
+    if (ready) sessionStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
+  }, [draft, ready]);
 
   function update<K extends keyof Draft>(key: K, value: Draft[K]) {
     setDraft((current) => ({ ...current, [key]: value }));
-  }
-
-  async function searchPlaces(query: string) {
-    update("name", query);
-    if (!placesEnabled || query.trim().length < 2) {
-      setPredictions([]);
-      return;
-    }
-    const res = await fetch(`/api/places/search?q=${encodeURIComponent(query)}`);
-    const json = await res.json().catch(() => ({}));
-    setPredictions(Array.isArray(json.predictions) ? json.predictions : []);
-  }
-
-  async function pickPlace(placeId: string) {
-    setPredictions([]);
-    const res = await fetch(`/api/places/details?placeId=${encodeURIComponent(placeId)}`);
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok || !json.place) {
-      toast.error(json.error || "Could not load that place");
-      return;
-    }
-    setDraft((current) => ({
-      ...current,
-      name: json.place.name || current.name,
-      address: json.place.address || "",
-      phone: json.place.phone || "",
-      city: json.place.city || "",
-      googlePlaceId: json.place.googlePlaceId,
-      googleReviewUrl: json.place.googleReviewUrl
-    }));
   }
 
   async function skip() {
@@ -107,154 +108,328 @@ export function OnboardingWizard({
     router.refresh();
   }
 
-  async function finish() {
+  async function createBusiness() {
+    if (draft.businessId) {
+      update("step", 2);
+      return;
+    }
+    if (draft.name.trim().length < 2) {
+      toast.error("Enter the business name");
+      return;
+    }
     setBusy(true);
     try {
       const res = await fetch("/api/onboarding", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(draft)
+        body: JSON.stringify({ name: draft.name.trim(), industry: draft.industry, primaryColor: "#1a73e8" })
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error || "Could not create the business");
-      sessionStorage.removeItem(STORAGE_KEY);
-      setDone(json);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not create the business");
+      setDraft((current) => ({ ...current, businessId: json.businessId, step: 2 }));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not create the business");
     } finally {
       setBusy(false);
     }
   }
 
-  if (done) {
-    const qrPng = `/api/qr/${done.shortCode}/image?format=png`;
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Your QR is ready</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Short link: <span className="font-mono text-foreground">/q/{done.shortCode}</span>
-          </p>
-          <img src={qrPng} alt="QR code" className="h-48 w-48 rounded-xl border" />
-          <div className="flex flex-wrap gap-2">
-            <Button asChild variant="gradient">
-              <a href={orderHref || "/"}>{orderHref ? "Order your printed QR/NFC" : "Contact us to order a printed QR"}</a>
-            </Button>
-            <Button asChild variant="outline">
-              <a href={`/dashboard/businesses/${done.businessId}`}>Open business</a>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
+  async function claim(confirm: boolean) {
+    const code = codeFromScan(draft.code);
+    if (!code || !draft.businessId) {
+      toast.error("Enter the code printed on the QR");
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/businesses/${draft.businessId}/qr/claim`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ code, confirm, label: "Counter" })
+      });
+      const json = await res.json().catch(() => ({}));
+      if (json.needsConfirm) {
+        setClaimMessage(json.message || json.error);
+        setClaimReady(true);
+        return;
+      }
+      if (!res.ok) {
+        setClaimMessage(json.error || "Could not activate this QR");
+        setClaimReady(false);
+        return;
+      }
+      setClaimMessage(json.already ? "This QR is already active for this business" : "QR activated");
+      setClaimReady(false);
+      update("step", 3);
+    } finally {
+      setBusy(false);
+    }
   }
+
+  async function digitalQr() {
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/businesses/${draft.businessId}/qr`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ type: "CUSTOM", label: "Digital" })
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || "Could not create a QR");
+      update("digitalCode", json.qrCode.shortCode);
+      toast.success("Digital QR ready");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not create a QR");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function addItem() {
+    const name = draft.itemName.trim();
+    const price = Number(draft.itemPrice);
+    if (!name || !Number.isFinite(price) || price < 0) {
+      toast.error("Enter an item name and price");
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/businesses/${draft.businessId}/menu`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "item", name, priceRupees: price, veg: "NONE" })
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || "Could not add the item");
+      setDraft((current) => ({
+        ...current,
+        itemName: "",
+        itemPrice: "",
+        items: [...current.items, `${name} · ₹${price}`]
+      }));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not add the item");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function cafeTemplate() {
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/businesses/${draft.businessId}/menu`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "template" })
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || "Could not add the café menu");
+      toast.success("Café menu added");
+      update("step", 4);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not add the café menu");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function sendWhatsApp() {
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/businesses/${draft.businessId}/whatsapp`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "request", phone: draft.whatsapp })
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || "Could not send a code");
+      toast.success("Code sent");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not send a code");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function confirmWhatsApp() {
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/businesses/${draft.businessId}/whatsapp`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "verify", phone: draft.whatsapp, code: draft.waCode })
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || "Could not verify WhatsApp");
+      update("waVerified", true);
+      toast.success("WhatsApp verified");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not verify WhatsApp");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function goLive() {
+    setBusy(true);
+    try {
+      const links = [
+        ["justdial", draft.justdial],
+        ["zomato", draft.zomato],
+        ["trustpilot", draft.trustpilot],
+        ["facebook", draft.facebook],
+        ["custom", draft.custom]
+      ]
+        .filter(([, url]) => url.trim())
+        .map(([type, url]) => ({ type, url: url.trim() }));
+      const res = await fetch("/api/onboarding/live", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          businessId: draft.businessId,
+          whatsappNumber: draft.whatsapp,
+          googleReviewUrl: draft.google,
+          links
+        })
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || "Could not go live");
+      sessionStorage.removeItem(STORAGE_KEY);
+      toast.success("Your page is live");
+      router.push(`/dashboard/businesses/${draft.businessId}`);
+      router.refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not go live");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!ready) return null;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold font-display">Set up your business</h1>
-          <p className="text-sm text-muted-foreground">Step {draft.step} of 2. You can skip and come back.</p>
+          <h1 className="text-2xl font-bold font-display">Set up your page</h1>
+          <p className="text-sm text-muted-foreground">Step {draft.step} of 4. You can skip and come back.</p>
         </div>
-        <Button type="button" variant="outline" onClick={skip}>
-          Skip
-        </Button>
+        <Button type="button" variant="outline" className="min-h-[44px]" onClick={skip}>Skip</Button>
+      </div>
+      <div className="h-2 rounded-full bg-secondary" aria-hidden>
+        <div className="h-2 rounded-full bg-foreground" style={{ width: `${(draft.step / 4) * 100}%` }} />
       </div>
 
       {draft.step === 1 && (
         <Card>
-          <CardHeader>
-            <CardTitle>Business</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle>Business</CardTitle></CardHeader>
           <CardContent className="space-y-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="name">Name</Label>
-              <Input id="name" value={draft.name} onChange={(e) => searchPlaces(e.target.value)} />
-              {predictions.length > 0 && (
-                <div className="rounded-lg border bg-white dark:bg-slate-900">
-                  {predictions.map((row) => (
-                    <button
-                      key={row.placeId}
-                      type="button"
-                      className="block w-full px-3 py-2 text-left text-sm hover:bg-secondary"
-                      onClick={() => pickPlace(row.placeId)}
-                    >
-                      {row.description}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="grid sm:grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="industry">Category</Label>
-                <Input id="industry" value={draft.industry} onChange={(e) => update("industry", e.target.value)} />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="city">City</Label>
-                <Input id="city" value={draft.city} onChange={(e) => update("city", e.target.value)} />
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="address">Address</Label>
-              <Input id="address" value={draft.address} onChange={(e) => update("address", e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="phone">Phone</Label>
-              <Input id="phone" value={draft.phone} onChange={(e) => update("phone", e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="google">Google review link</Label>
-              <Input
-                id="google"
-                value={draft.googleReviewUrl}
-                onChange={(e) => update("googleReviewUrl", e.target.value)}
-                placeholder="https://search.google.com/local/writereview?placeid=..."
-              />
-            </div>
-            <Button type="button" onClick={() => update("step", 2)} disabled={draft.name.trim().length < 2}>
-              Continue
-            </Button>
+            <label className="block space-y-1 text-sm">
+              <span>Business name</span>
+              <Input className="min-h-[44px]" value={draft.name} onChange={(event) => update("name", event.target.value)} />
+            </label>
+            <label className="block space-y-1 text-sm">
+              <span>Category</span>
+              <select className="input min-h-[44px] w-full" value={draft.industry} onChange={(event) => update("industry", event.target.value)}>
+                {CATEGORIES.map((category) => <option key={category}>{category}</option>)}
+              </select>
+            </label>
+            <Button type="button" className="min-h-[44px]" disabled={busy} onClick={createBusiness}>Continue</Button>
           </CardContent>
         </Card>
       )}
 
       {draft.step === 2 && (
         <Card>
-          <CardHeader>
-            <CardTitle>Logo and colour</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <ImageUpload variant="logo" value={draft.logo} onChange={(logo) => update("logo", logo)} label="Logo" />
+          <CardHeader><CardTitle>Activate your QR</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            <label className="block space-y-1 text-sm">
+              <span>Printed code</span>
+              <Input className="min-h-[44px]" value={draft.code} onChange={(event) => { update("code", event.target.value); setClaimReady(false); }} />
+            </label>
+            <CodeScan onCode={(code) => { update("code", code); setClaimReady(false); }} />
+            {claimMessage ? <p className="text-sm">{claimMessage}</p> : null}
             <div className="flex flex-wrap gap-2">
-              {COLORS.map((color) => (
-                <button
-                  key={color}
-                  type="button"
-                  aria-label={color}
-                  onClick={() => update("primaryColor", color)}
-                  className="h-9 w-9 rounded-full border-2"
-                  style={{
-                    background: color,
-                    borderColor: draft.primaryColor === color ? "#111" : "transparent"
-                  }}
-                />
-              ))}
-              <Input
-                value={draft.primaryColor}
-                onChange={(e) => update("primaryColor", e.target.value)}
-                className="w-32 font-mono"
-              />
+              <Button type="button" className="min-h-[44px]" disabled={busy} onClick={() => claim(claimReady)}>
+                {claimReady ? "Activate" : "Check code"}
+              </Button>
+              <Button type="button" variant="outline" className="min-h-[44px]" disabled={busy} onClick={digitalQr}>Download a digital QR</Button>
             </div>
+            {draft.digitalCode ? (
+              <img src={`/api/qr/${draft.digitalCode}/image?format=png`} alt="Digital QR" className="h-40 w-40 rounded-xl border" />
+            ) : null}
             <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={() => update("step", 1)}>
-                Back
-              </Button>
-              <Button type="button" onClick={finish} disabled={busy}>
-                {busy ? "Creating…" : "Create business and QR"}
-              </Button>
+              <Button type="button" variant="outline" className="min-h-[44px]" onClick={() => update("step", 1)}>Back</Button>
+              <Button type="button" variant="outline" className="min-h-[44px]" onClick={() => update("step", 3)}>Skip this step</Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {draft.step === 3 && (
+        <Card>
+          <CardHeader><CardTitle>Menu</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            <label className="block space-y-1 text-sm">
+              <span>Item name</span>
+              <Input className="min-h-[44px]" value={draft.itemName} onChange={(event) => update("itemName", event.target.value)} />
+            </label>
+            <label className="block space-y-1 text-sm">
+              <span>Price in rupees</span>
+              <Input className="min-h-[44px]" inputMode="decimal" value={draft.itemPrice} onChange={(event) => update("itemPrice", event.target.value)} />
+            </label>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" className="min-h-[44px]" disabled={busy} onClick={addItem}>Add another</Button>
+              <Button type="button" variant="outline" className="min-h-[44px]" disabled={busy} onClick={cafeTemplate}>Café template</Button>
+            </div>
+            {draft.items.length > 0 ? (
+              <ul className="space-y-1 text-sm">{draft.items.map((item) => <li key={item}>{item}</li>)}</ul>
+            ) : null}
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" className="min-h-[44px]" onClick={() => update("step", 2)}>Back</Button>
+              <Button type="button" className="min-h-[44px]" onClick={() => update("step", 4)}>Continue</Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {draft.step === 4 && (
+        <Card>
+          <CardHeader><CardTitle>Review and contact links</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            <label className="block space-y-1 text-sm">
+              <span>WhatsApp number</span>
+              <Input className="min-h-[44px]" value={draft.whatsapp} onChange={(event) => update("whatsapp", event.target.value)} />
+            </label>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="outline" className="min-h-[44px]" disabled={busy} onClick={sendWhatsApp}>Send code</Button>
+            </div>
+            <label className="block space-y-1 text-sm">
+              <span>WhatsApp code</span>
+              <Input className="min-h-[44px]" value={draft.waCode} onChange={(event) => update("waCode", event.target.value)} />
+            </label>
+            <Button type="button" variant="outline" className="min-h-[44px]" disabled={busy} onClick={confirmWhatsApp}>
+              {draft.waVerified ? "WhatsApp verified" : "Verify WhatsApp"}
+            </Button>
+            <label className="block space-y-1 text-sm">
+              <span>Google review link</span>
+              <Input className="min-h-[44px]" value={draft.google} onChange={(event) => update("google", event.target.value)} placeholder="https://" />
+            </label>
+            {([
+              ["justdial", "Justdial"],
+              ["zomato", "Zomato"],
+              ["trustpilot", "Trustpilot"],
+              ["facebook", "Facebook"],
+              ["custom", "Custom link"]
+            ] as const).map(([key, label]) => (
+              <label key={key} className="block space-y-1 text-sm">
+                <span>{label}</span>
+                <Input className="min-h-[44px]" value={draft[key]} onChange={(event) => update(key, event.target.value)} placeholder="https://" />
+              </label>
+            ))}
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" className="min-h-[44px]" onClick={() => update("step", 3)}>Back</Button>
+              <Button type="button" className="min-h-[44px]" disabled={busy} onClick={goLive}>Go live</Button>
             </div>
           </CardContent>
         </Card>
