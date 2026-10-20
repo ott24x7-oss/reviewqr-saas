@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { requireBusinessRole } from "@/lib/tenant";
 import { EditBusinessForm } from "./edit-form";
 
 export const dynamic = "force-dynamic";
@@ -8,8 +9,10 @@ export const dynamic = "force-dynamic";
 export default async function EditBusinessPage({ params }: { params: { id: string } }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  const access = await requireBusinessRole(user.id, params.id, "manage");
+  if (!access) notFound();
   const business = await prisma.business.findFirst({
-    where: { id: params.id, ownerId: user.id, archived: false }
+    where: { id: params.id, archived: false }
   });
   if (!business) notFound();
 

@@ -5,8 +5,10 @@ import bcrypt from "bcryptjs";
 import { prisma } from "./db";
 import { getServerSession } from "next-auth/next";
 import type { UserRole, SubscriptionTier } from "@prisma/client";
+import { cookies } from "next/headers";
 import { consumeOtpSession } from "./otp";
 import { rateLimitDb } from "./rate-limit";
+import { canImpersonateTarget, IMPERSONATION_COOKIE, impersonationAllowed, openImpersonation } from "./impersonation";
 
 declare module "next-auth" {
   interface Session {
@@ -143,12 +145,37 @@ export async function comparePassword(password: string, hash: string) {
   return bcrypt.compare(password, hash);
 }
 
-export async function getCurrentUser() {
+/** The real session user. Ignores the impersonation cookie. */
+export async function getSessionUser() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return null;
   const user = await prisma.user.findUnique({ where: { id: session.user.id } });
   if (!user || user.deletedAt) return null;
   return user;
+}
+
+/**
+ * Dashboard viewer. When a valid impersonation cookie matches this admin,
+ * dashboard data is loaded for the target. The session itself stays the admin.
+ */
+export async function getDashboardViewer() {
+  const sessionUser = await getSessionUser();
+  if (!sessionUser) return null;
+  const token = cookies().get(IMPERSONATION_COOKIE)?.value;
+  const payload = token ? openImpersonation(token) : null;
+  if (!payload || !impersonationAllowed(sessionUser, payload)) {
+    return { user: sessionUser, impersonation: null as { exp: number } | null };
+  }
+  const target = await prisma.user.findUnique({ where: { id: payload.targetUserId } });
+  if (!target || target.deletedAt || !canImpersonateTarget(target.role)) {
+    return { user: sessionUser, impersonation: null as { exp: number } | null };
+  }
+  return { user: target, impersonation: { exp: payload.exp } };
+}
+
+export async function getCurrentUser() {
+  const view = await getDashboardViewer();
+  return view?.user ?? null;
 }
 
 export async function requireUser() {
@@ -158,7 +185,7 @@ export async function requireUser() {
 }
 
 export async function requireAdmin() {
-  const user = await getCurrentUser();
+  const user = await getSessionUser();
   if (!user || user.role !== "ADMIN") throw new Error("FORBIDDEN");
   return user;
 }

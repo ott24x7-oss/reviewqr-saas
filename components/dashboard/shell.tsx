@@ -19,7 +19,8 @@ import {
   Bell,
   ChevronDown,
   Plus,
-  ShieldCheck
+  ShieldCheck,
+  LifeBuoy
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { VerifyEmailBanner } from "@/components/dashboard/verify-email-banner";
@@ -80,6 +81,7 @@ const nav = [
   { href: "/dashboard/ai", label: "AI Reviews", icon: Sparkles },
   { href: "/dashboard/campaigns", label: "Campaigns", icon: Send },
   { href: "/dashboard/billing", label: "Billing", icon: CreditCard },
+  { href: "/dashboard/help", label: "Help", icon: LifeBuoy },
   { href: "/dashboard/settings", label: "Settings", icon: Settings }
 ];
 
@@ -87,11 +89,13 @@ export function DashboardShell({
   user,
   businesses,
   brand,
+  impersonation,
   children
 }: {
   user: User;
   businesses: Business[];
   brand?: { name: string; logoUrl: string };
+  impersonation?: { exp: number } | null;
   children: React.ReactNode;
 }) {
   const brandName = brand?.name || "ReviewQR";
@@ -230,6 +234,9 @@ export function DashboardShell({
                     ))}
                   </div>
                 )}
+                <Link href="/dashboard/notifications" className="block px-3 py-2 text-xs font-medium text-primary-700">
+                  View all
+                </Link>
               </DropdownMenuContent>
             </DropdownMenu>
 
@@ -346,6 +353,21 @@ export function DashboardShell({
         {/* Main content */}
         <main className="flex-1 min-w-0">
           <div className="container max-w-7xl py-5 sm:py-7 px-3 sm:px-6">
+            {impersonation && (
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                <span>You are viewing this account as an admin. This session ends in 30 minutes from when it started.</span>
+                <button
+                  type="button"
+                  className="font-medium underline"
+                  onClick={async () => {
+                    await fetch("/api/admin/impersonate", { method: "DELETE" });
+                    window.location.href = "/admin";
+                  }}
+                >
+                  Return to admin
+                </button>
+              </div>
+            )}
             {user.emailVerified === false && <VerifyEmailBanner />}
             {children}
           </div>

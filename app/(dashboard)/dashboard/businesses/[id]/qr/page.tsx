@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { requireBusinessRole } from "@/lib/tenant";
 import { Card, CardContent } from "@/components/ui/card";
 import { absoluteUrl } from "@/lib/utils";
 import { QrCreateClient } from "./qr-create-client";
@@ -11,8 +12,10 @@ export const dynamic = "force-dynamic";
 export default async function BusinessQrPage({ params }: { params: { id: string } }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  const access = await requireBusinessRole(user.id, params.id, "manage");
+  if (!access) notFound();
   const business = await prisma.business.findFirst({
-    where: { id: params.id, ownerId: user.id, archived: false },
+    where: { id: params.id, archived: false },
     include: {
       locations: { where: { isActive: true } },
       staffMembers: { where: { isActive: true } },

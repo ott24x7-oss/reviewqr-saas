@@ -2,14 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
+import { requireBusinessRole } from "@/lib/tenant";
 
 // Testimonial has only a scalar businessId (no relation), so we verify the
-// owning business separately, then confirm the testimonial belongs to it.
-async function getOwnedTestimonial(businessId: string, tid: string, userId: string) {
-  const business = await prisma.business.findFirst({
-    where: { id: businessId, ownerId: userId, archived: false },
-    select: { id: true }
-  });
+// business access separately, then confirm the testimonial belongs to it.
+async function managedTestimonial(businessId: string, tid: string, userId: string) {
+  const business = await requireBusinessRole(userId, businessId, "manage");
   if (!business) return null;
   const testimonial = await prisma.testimonial.findUnique({ where: { id: tid } });
   if (!testimonial || testimonial.businessId !== business.id) return null;
@@ -27,7 +25,7 @@ export async function PATCH(
 ) {
   const user = await requireUser().catch(() => null);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const testimonial = await getOwnedTestimonial(params.id, params.tid, user.id);
+  const testimonial = await managedTestimonial(params.id, params.tid, user.id);
   if (!testimonial) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const parsed = patchSchema.safeParse(await req.json().catch(() => ({})));
@@ -52,7 +50,7 @@ export async function DELETE(
 ) {
   const user = await requireUser().catch(() => null);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const testimonial = await getOwnedTestimonial(params.id, params.tid, user.id);
+  const testimonial = await managedTestimonial(params.id, params.tid, user.id);
   if (!testimonial) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   await prisma.testimonial.delete({ where: { id: testimonial.id } });

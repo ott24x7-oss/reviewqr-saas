@@ -4,20 +4,20 @@ import { requireUser } from "@/lib/auth";
 import { staffSchema } from "@/lib/validations";
 import { slugify, nanoSlug } from "@/lib/utils";
 import { ownerLimitError } from "@/lib/entitlements";
-import { locationInBusiness } from "@/lib/tenant";
+import { locationInBusiness, planOwner, requireBusinessRole } from "@/lib/tenant";
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await requireUser().catch(() => null);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const business = await prisma.business.findFirst({
-    where: { id: params.id, ownerId: user.id }
-  });
+  const business = await requireBusinessRole(user.id, params.id, "manage");
   if (!business) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const owner = await planOwner(user, business.ownerId);
+  if (!owner) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const count = await prisma.staff.count({
-    where: { business: { ownerId: user.id }, isActive: true }
+    where: { business: { ownerId: business.ownerId }, isActive: true }
   });
-  const limitError = await ownerLimitError(user, "staff", count);
+  const limitError = await ownerLimitError(owner, "staff", count);
   if (limitError) {
     return NextResponse.json({ error: limitError }, { status: 402 });
   }

@@ -2,10 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
+import { requireBusinessRole } from "@/lib/tenant";
 
-async function ownedTemplate(businessId: string, tid: string, userId: string) {
+async function managedTemplate(businessId: string, tid: string, userId: string) {
+  const business = await requireBusinessRole(userId, businessId, "manage");
+  if (!business) return null;
   return prisma.reviewTemplate.findFirst({
-    where: { id: tid, business: { id: businessId, ownerId: userId, archived: false } }
+    where: { id: tid, businessId: business.id }
   });
 }
 
@@ -20,7 +23,7 @@ export async function PATCH(
 ) {
   const user = await requireUser().catch(() => null);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const tpl = await ownedTemplate(params.id, params.tid, user.id);
+  const tpl = await managedTemplate(params.id, params.tid, user.id);
   if (!tpl) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const parsed = patchSchema.safeParse(await req.json().catch(() => ({})));
@@ -48,7 +51,7 @@ export async function DELETE(
 ) {
   const user = await requireUser().catch(() => null);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const tpl = await ownedTemplate(params.id, params.tid, user.id);
+  const tpl = await managedTemplate(params.id, params.tid, user.id);
   if (!tpl) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   await prisma.reviewTemplate.delete({ where: { id: tpl.id } });

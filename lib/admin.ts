@@ -46,7 +46,10 @@ export type AuditAction =
   | "payment.reject"
   | "payment.refund"
   | "feedback.erase_contact"
-  | "account.delete";
+  | "account.delete"
+  | "user.impersonate"
+  | "business.suspend"
+  | "support.reply";
 
 export async function logAudit(opts: {
   userId?: string;

@@ -1,16 +1,18 @@
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth";
+import { getDashboardViewer } from "@/lib/auth";
 import { DashboardShell } from "@/components/dashboard/shell";
 import { prisma } from "@/lib/db";
 import { getBrand } from "@/lib/brand";
+import { readableBusinessWhere } from "@/lib/tenant";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login?callbackUrl=/dashboard");
+  const view = await getDashboardViewer();
+  if (!view) redirect("/login?callbackUrl=/dashboard");
+  const user = view.user;
 
   const [businesses, brand] = await Promise.all([
     prisma.business.findMany({
-      where: { ownerId: user.id, archived: false },
+      where: readableBusinessWhere(user.id),
       select: { id: true, name: true, slug: true, logo: true },
       orderBy: { createdAt: "asc" }
     }),
@@ -32,6 +34,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       }}
       businesses={businesses}
       brand={brand}
+      impersonation={view.impersonation}
     >
       {children}
     </DashboardShell>

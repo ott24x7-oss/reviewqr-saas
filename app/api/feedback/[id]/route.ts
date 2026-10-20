@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { logAudit } from "@/lib/admin";
 import { getClientIp } from "@/lib/utils";
 import { z } from "zod";
+import { requireBusinessRole } from "@/lib/tenant";
 
 const patchSchema = z.object({
   status: z.enum(["NEW", "IN_PROGRESS", "RESOLVED", "IGNORED"]).optional(),
@@ -15,10 +16,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const user = await requireUser().catch(() => null);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const feedback = await prisma.feedback.findFirst({
-    where: { id: params.id, business: { ownerId: user.id } }
-  });
+  const feedback = await prisma.feedback.findFirst({ where: { id: params.id } });
   if (!feedback) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const access = await requireBusinessRole(user.id, feedback.businessId, "manage");
+  if (!access) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const parsed = patchSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {

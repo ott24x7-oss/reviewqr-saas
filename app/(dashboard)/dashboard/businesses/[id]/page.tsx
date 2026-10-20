@@ -2,6 +2,8 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { requireBusinessRole } from "@/lib/tenant";
+import { TeamPanel } from "@/components/dashboard/team-panel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { absoluteUrl } from "@/lib/utils";
@@ -15,8 +17,10 @@ export default async function BusinessDetailPage({ params }: { params: { id: str
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
+  const access = await requireBusinessRole(user.id, params.id, "read");
+  if (!access) notFound();
   const business = await prisma.business.findFirst({
-    where: { id: params.id, ownerId: user.id, archived: false },
+    where: { id: params.id, archived: false },
     include: {
       _count: {
         select: {
@@ -65,11 +69,13 @@ export default async function BusinessDetailPage({ params }: { params: { id: str
               <ExternalLink className="h-3.5 w-3.5" /> View page
             </a>
           </Button>
-          <Button asChild variant="outline" size="sm">
-            <Link href={`/dashboard/businesses/${business.id}/edit`}>
-              <Edit3 className="h-3.5 w-3.5" /> Edit
-            </Link>
-          </Button>
+          {access.accessRole !== "STAFF" && (
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/dashboard/businesses/${business.id}/edit`}>
+                <Edit3 className="h-3.5 w-3.5" /> Edit
+              </Link>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -101,6 +107,8 @@ export default async function BusinessDetailPage({ params }: { params: { id: str
 
       {/* Sub-resources nav */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        {access.accessRole !== "STAFF" && (
+        <>
         <Link href={`/dashboard/businesses/${business.id}/locations`}>
           <Card className="hover:shadow-card transition cursor-pointer">
             <CardContent className="p-5 flex items-start gap-3">
@@ -171,7 +179,10 @@ export default async function BusinessDetailPage({ params }: { params: { id: str
             </CardContent>
           </Card>
         </Link>
+        </>
+        )}
 
+        {access.accessRole === "OWNER" && (
         <Link href={`/dashboard/businesses/${business.id}/ai`}>
           <Card className="hover:shadow-card transition cursor-pointer">
             <CardContent className="p-5 flex items-start gap-3">
@@ -187,7 +198,9 @@ export default async function BusinessDetailPage({ params }: { params: { id: str
             </CardContent>
           </Card>
         </Link>
+        )}
       </div>
+      {access.accessRole === "OWNER" && <TeamPanel businessId={business.id} />}
     </div>
   );
 }

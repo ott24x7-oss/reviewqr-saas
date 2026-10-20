@@ -3,16 +3,17 @@ import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { campaignSchema } from "@/lib/validations";
 import { ownerLimitError } from "@/lib/entitlements";
+import { planOwner, requireBusinessRole } from "@/lib/tenant";
 
 /** Creates a draft campaign. Sending is not built; the plan cap still applies. */
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await requireUser().catch(() => null);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const business = await prisma.business.findFirst({
-    where: { id: params.id, ownerId: user.id, archived: false }
-  });
+  const business = await requireBusinessRole(user.id, params.id, "manage");
   if (!business) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const owner = await planOwner(user, business.ownerId);
+  if (!owner) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const parsed = campaignSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {
@@ -20,9 +21,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   }
 
   const count = await prisma.campaign.count({
-    where: { business: { ownerId: user.id } }
+    where: { business: { ownerId: business.ownerId } }
   });
-  const limitError = await ownerLimitError(user, "campaigns", count);
+  const limitError = await ownerLimitError(owner, "campaigns", count);
   if (limitError) return NextResponse.json({ error: limitError }, { status: 402 });
 
   const campaign = await prisma.campaign.create({

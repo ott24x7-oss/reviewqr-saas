@@ -3,17 +3,12 @@ import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { businessSchema } from "@/lib/validations";
 import { omitUnchangedImages } from "@/lib/images";
-
-async function getBusinessForUser(id: string, userId: string) {
-  return prisma.business.findFirst({
-    where: { id, ownerId: userId, archived: false }
-  });
-}
+import { requireBusinessRole } from "@/lib/tenant";
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const user = await requireUser().catch(() => null);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const business = await getBusinessForUser(params.id, user.id);
+  const business = await requireBusinessRole(user.id, params.id, "read");
   if (!business) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json({ business });
 }
@@ -21,7 +16,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await requireUser().catch(() => null);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const existing = await getBusinessForUser(params.id, user.id);
+  const existing = await requireBusinessRole(user.id, params.id, "manage");
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const raw = await req.json().catch(() => ({}));
@@ -48,8 +43,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   const user = await requireUser().catch(() => null);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const existing = await getBusinessForUser(params.id, user.id);
-  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const existing = await requireBusinessRole(user.id, params.id, "manage");
+  if (!existing || existing.accessRole !== "OWNER") {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
   await prisma.business.update({
     where: { id: existing.id },
     data: { archived: true, isActive: false }

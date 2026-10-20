@@ -2,13 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
-
-async function getOwnedBusiness(id: string, userId: string) {
-  return prisma.business.findFirst({
-    where: { id, ownerId: userId, archived: false },
-    select: { id: true }
-  });
-}
+import { requireBusinessRole } from "@/lib/tenant";
 
 const manualSchema = z.object({
   authorName: z.string().trim().min(1).max(120).optional(),
@@ -23,7 +17,7 @@ export async function POST(
 ) {
   const user = await requireUser().catch(() => null);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const biz = await getOwnedBusiness(params.id, user.id);
+  const biz = await requireBusinessRole(user.id, params.id, "manage");
   if (!biz) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const parsed = manualSchema.safeParse(await req.json().catch(() => ({})));
