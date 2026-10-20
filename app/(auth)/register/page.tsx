@@ -21,6 +21,9 @@ export default function RegisterPage() {
     password: ""
   });
   const [loading, setLoading] = React.useState(false);
+  const [otpOpen, setOtpOpen] = React.useState(false);
+  const [otpSent, setOtpSent] = React.useState(false);
+  const [otp, setOtp] = React.useState({ name: "", phone: "", email: "", code: "" });
 
   function update<K extends keyof typeof form>(key: K, v: string) {
     setForm((s) => ({ ...s, [key]: v }));
@@ -151,6 +154,71 @@ export default function RegisterPage() {
             </li>
           </ul>
         </form>
+        {!otpOpen ? (
+          <Button type="button" variant="outline" className="mt-4 min-h-[44px] w-full" onClick={() => setOtpOpen(true)}>
+            Sign up with mobile
+          </Button>
+        ) : (
+          <form
+            className="mt-4 space-y-3 border-t pt-4"
+            onSubmit={async (event) => {
+              event.preventDefault();
+              setLoading(true);
+              try {
+                if (!otpSent) {
+                  const res = await fetch("/api/auth/otp/signup", {
+                    method: "POST",
+                    headers: { "content-type": "application/json" },
+                    body: JSON.stringify({ action: "request", phone: otp.phone, email: otp.email })
+                  });
+                  const json = await res.json().catch(() => ({}));
+                  if (!res.ok) throw new Error(json.error || "Could not send a code");
+                  setOtpSent(true);
+                  toast.success("Code sent");
+                  return;
+                }
+                const res = await fetch("/api/auth/otp/signup", {
+                  method: "POST",
+                  headers: { "content-type": "application/json" },
+                  body: JSON.stringify({ action: "verify", phone: otp.phone, email: otp.email, name: otp.name, code: otp.code })
+                });
+                const json = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(json.error || "Could not create the account");
+                const sign = await signIn("credentials", { otpToken: json.otpToken, redirect: false });
+                if (sign?.error) throw new Error("Account created — please sign in");
+                router.push("/dashboard/onboarding");
+                router.refresh();
+              } catch (error) {
+                toast.error(error instanceof Error ? error.message : "Could not sign up");
+              } finally {
+                setLoading(false);
+              }
+            }}
+          >
+            <p className="text-sm font-medium">Sign up with mobile OTP</p>
+            <label className="block space-y-1 text-sm">
+              <span>Full name</span>
+              <Input className="h-11" value={otp.name} onChange={(event) => setOtp((current) => ({ ...current, name: event.target.value }))} />
+            </label>
+            <label className="block space-y-1 text-sm">
+              <span>Mobile number</span>
+              <Input className="h-11" value={otp.phone} onChange={(event) => setOtp((current) => ({ ...current, phone: event.target.value }))} />
+            </label>
+            <label className="block space-y-1 text-sm">
+              <span>Contact address</span>
+              <Input className="h-11" value={otp.email} onChange={(event) => setOtp((current) => ({ ...current, email: event.target.value }))} />
+            </label>
+            {otpSent ? (
+              <label className="block space-y-1 text-sm">
+                <span>6-digit code</span>
+                <Input className="h-11" inputMode="numeric" value={otp.code} onChange={(event) => setOtp((current) => ({ ...current, code: event.target.value }))} />
+              </label>
+            ) : null}
+            <Button type="submit" variant="outline" className="min-h-[44px] w-full" disabled={loading}>
+              {otpSent ? "Verify and continue" : "Send code"}
+            </Button>
+          </form>
+        )}
         <div className="mt-6 text-center text-sm text-muted-foreground">
           Already have an account?{" "}
           <Link href="/login" className="font-medium text-primary hover:underline">

@@ -12,6 +12,7 @@ import {
   ArrowRight
 } from "lucide-react";
 import { getPaymentsConfig, getEmailConfig, getWhatsAppConfig } from "@/lib/settings";
+import { medianMinutes, pairSetupMarks } from "@/lib/tap/setup-time";
 
 export default async function AdminOverview() {
   const since30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
@@ -68,6 +69,12 @@ export default async function AdminOverview() {
       _count: { _all: true }
     })
   ]);
+
+  const setupMarks = await prisma.onboardingMark.findMany({
+    where: { kind: { in: ["start", "qr_activated"] } },
+    select: { userId: true, kind: true, createdAt: true }
+  });
+  const setupTime = medianMinutes(pairSetupMarks(setupMarks));
 
   const totalRevenue = revenueAgg._sum.amount || 0;
   const revenue30 = revenue30Agg._sum.amount || 0;
@@ -150,6 +157,20 @@ export default async function AdminOverview() {
           </Link>
         ))}
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Time to first QR</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">
+            {setupTime.median === null ? "—" : `${setupTime.median} min`}
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Median from signup to the first active code. Sample size {setupTime.sample}.
+          </p>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="lg:col-span-2">

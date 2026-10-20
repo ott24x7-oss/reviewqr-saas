@@ -7,6 +7,7 @@ import { logAudit } from "@/lib/admin";
 import { getClientIp } from "@/lib/utils";
 import { codeFromScan } from "@/lib/tap/qr-stock";
 import { assignQr } from "@/lib/tap/qr-mutate";
+import { markOnboarding } from "@/lib/tap/onboarding-mark";
 
 const schema = z.object({
   code: z.string().min(4).max(500),
@@ -42,6 +43,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     );
   }
   if (result.change) {
+    await markOnboarding(business.ownerId, "printed_qr");
     await logAudit({
       userId: user.id,
       action: "qr.assign",

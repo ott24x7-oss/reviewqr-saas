@@ -8,6 +8,7 @@ import { sendEmail, welcomeEmail } from "@/lib/email";
 import { sendVerificationEmail } from "@/lib/verify-email";
 import { absoluteUrl, getClientIp } from "@/lib/utils";
 import { attachTapDraft } from "@/lib/tap/new-business";
+import { markOnboarding } from "@/lib/tap/onboarding-mark";
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req.headers);
@@ -78,6 +79,8 @@ export async function POST(req: NextRequest) {
     });
     await attachTapDraft(business.id, null, { phone: data.phone, whatsappNumber: data.phone });
   }
+
+  await markOnboarding(user.id, "start");
 
   // Welcome and verify emails — best-effort. Login works before the inbox is confirmed.
   sendEmail({

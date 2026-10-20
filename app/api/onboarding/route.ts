@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { businessSchema } from "@/lib/validations";
-import { slugify, shortCode as makeShortCode } from "@/lib/utils";
+import { slugify } from "@/lib/utils";
 import { ownerLimitError } from "@/lib/entitlements";
 import { linksForNewBusiness } from "@/lib/tap/new-business";
 
@@ -16,9 +16,6 @@ export async function POST(req: NextRequest) {
   }
   const limitError = await ownerLimitError(user, "businesses", owned);
   if (limitError) return NextResponse.json({ error: limitError }, { status: 402 });
-  const qrError = await ownerLimitError(user, "qrCodes", 0);
-  if (qrError) return NextResponse.json({ error: qrError }, { status: 402 });
-
   const parsed = businessSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message || "Invalid input" }, { status: 400 });
@@ -32,9 +29,6 @@ export async function POST(req: NextRequest) {
     slug = n > 5 ? slugify(data.name, true) : `${slugify(data.name)}-${n + 1}`;
     if (n > 5) break;
   }
-
-  let code = makeShortCode();
-  while (await prisma.qRCode.findUnique({ where: { shortCode: code } })) code = makeShortCode();
 
   const starterLinks = await linksForNewBusiness(data.industry, {
     phone: data.phone,
@@ -61,16 +55,12 @@ export async function POST(req: NextRequest) {
     await tx.tapPage.create({
       data: { businessId: business.id, draft: { links: starterLinks, bio: "", bioHi: "" } }
     });
-    const qr = await tx.qRCode.create({
-      data: { businessId: business.id, type: "COUNTER", label: "Main counter", shortCode: code }
-    });
-    return { business, qr };
+    return { business };
   });
 
   return NextResponse.json({
     businessId: created.business.id,
     name: created.business.name,
-    slug: created.business.slug,
-    shortCode: created.qr.shortCode
+    slug: created.business.slug
   });
 }

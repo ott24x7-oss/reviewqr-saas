@@ -5,6 +5,7 @@ import { ownerLimitError, type LimitUser } from "@/lib/entitlements";
 import { locationInBusiness } from "@/lib/tenant";
 import { makeQrPublicId } from "./ids";
 import { claimDecision, plainLabel, storedStatus, type QrStatusName } from "./qr-stock";
+import { markOnboarding } from "./onboarding-mark";
 
 const ownerSelect = {
   id: true,
@@ -107,6 +108,8 @@ export async function createAssignedCode(input: {
         }
       });
       touch(qr.shortCode, [input.businessId]);
+      const owner = await prisma.business.findUnique({ where: { id: input.businessId }, select: { ownerId: true } });
+      if (owner) await markOnboarding(owner.ownerId, "qr_activated");
       return qr;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") continue;
@@ -164,6 +167,7 @@ export async function assignQr(input: {
     }
   });
   touch(updated.shortCode, [qr.businessId, business.id]);
+  await markOnboarding(business.ownerId, "qr_activated");
   return {
     ok: true,
     change: {
