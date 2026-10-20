@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { generateQrSvg } from "@/lib/qr";
 import { absoluteUrl } from "@/lib/utils";
+import { qrSheetPdf } from "@/lib/tap/qr-pdf";
 
 export async function GET(req: NextRequest, { params }: { params: { code: string } }) {
   const url = new URL(req.url);
@@ -18,6 +19,18 @@ export async function GET(req: NextRequest, { params }: { params: { code: string
 
   const targetUrl = absoluteUrl(`/q/${params.code}?src=qr`);
   const c = color || qr.business?.primaryColor || "#1a73e8";
+
+  if (format === "pdf") {
+    const pdf = await qrSheetPdf([params.code], c);
+    const safe = params.code.replace(/[^A-Za-z0-9_-]/g, "");
+    return new NextResponse(Buffer.from(pdf), {
+      headers: {
+        "content-type": "application/pdf",
+        "content-disposition": `attachment; filename="qr-${safe}.pdf"`,
+        "cache-control": "public, max-age=86400"
+      }
+    });
+  }
 
   if (format === "svg") {
     const svg = await generateQrSvg(targetUrl, { color: c });

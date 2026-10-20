@@ -6,6 +6,7 @@ import { absoluteUrl } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Download, Printer, ExternalLink, Star } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { QrPosterActions } from "./poster-actions";
 
 export const dynamic = "force-dynamic";
@@ -32,7 +33,12 @@ export default async function QrDetailPage({ params }: { params: { code: string 
   return (
     <div className="max-w-3xl mx-auto space-y-5">
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold font-display">{qr.label}</h1>
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="text-2xl sm:text-3xl font-bold font-display">{qr.label}</h1>
+          <Badge variant={qr.status === "ACTIVE" ? "success" : qr.status === "DISABLED" ? "destructive" : "secondary"}>
+            {qr.status === "ACTIVE" ? "Active" : qr.status === "DISABLED" ? "Disabled" : "Unassigned"}
+          </Badge>
+        </div>
         <p className="text-sm text-muted-foreground">
           {qr.business.name}
           {qr.location && ` · ${qr.location.name}`}
@@ -50,15 +56,20 @@ export default async function QrDetailPage({ params }: { params: { code: string 
               <img src={svgUrl} alt={qr.label} className="w-full h-full object-contain" />
             </div>
 
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              <Button asChild variant="outline" size="sm">
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              <Button asChild variant="outline" size="sm" className="min-h-[44px]">
                 <a href={pngUrl} download={`${qr.business.slug}-${qr.shortCode}.png`}>
                   <Download className="h-3.5 w-3.5" /> PNG
                 </a>
               </Button>
-              <Button asChild variant="outline" size="sm">
+              <Button asChild variant="outline" size="sm" className="min-h-[44px]">
                 <a href={svgUrl} download={`${qr.business.slug}-${qr.shortCode}.svg`}>
                   <Download className="h-3.5 w-3.5" /> SVG
+                </a>
+              </Button>
+              <Button asChild variant="outline" size="sm" className="min-h-[44px]">
+                <a href={`/api/qr/${qr.shortCode}/image?format=pdf`}>
+                  <Download className="h-3.5 w-3.5" /> PDF
                 </a>
               </Button>
             </div>

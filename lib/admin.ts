@@ -53,7 +53,15 @@ export type AuditAction =
   | "theme.update"
   | "theme.admin"
   | "tap.publish"
-  | "preset.update";
+  | "preset.update"
+  | "qr.generate"
+  | "qr.assign"
+  | "qr.reassign"
+  | "qr.unassign"
+  | "qr.disable"
+  | "qr.enable"
+  | "qr.label"
+  | "qr.location";
 
 export async function logAudit(opts: {
   userId?: string;
