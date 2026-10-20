@@ -38,7 +38,7 @@ export function PasswordField({
         type="button"
         className="auth-eye"
         onClick={() => setShow((v) => !v)}
-        aria-label={show ? "Hide password" : "Show password"}
+        aria-label={show ? "Hide characters" : "Show characters"}
       >
         {show ? "Hide" : "Show"}
       </button>

@@ -506,7 +506,157 @@
 @media (prefers-reduced-motion: reduce) {
   .auth-shell button,
   .marketing-cta,
-  .marketing-anchor {
+  .marketing-anchor,
+  .tap-page button,
+  .tap-page a {
     transition: none;
   }
+}
+
+.tap-page {
+  min-height: 100vh;
+  background: var(--marketing-bg);
+  color: var(--marketing-ink);
+  font-family: var(--font-inter), var(--font-mukta), var(--font-noto-deva), sans-serif;
+}
+.tap-card {
+  width: min(420px, 100%);
+  margin: 0 auto;
+  padding: 24px 16px 40px;
+}
+.tap-cover {
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+  border-radius: 20px;
+}
+.tap-lang {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin: 12px 0;
+}
+.tap-lang button {
+  min-height: 44px;
+  border: 1px solid var(--marketing-line);
+  border-radius: 999px;
+  background: transparent;
+  padding: 0 14px;
+  color: var(--marketing-ink);
+}
+.tap-lang button[aria-pressed="true"] {
+  background: var(--marketing-ink);
+  color: var(--marketing-bg);
+}
+.tap-id {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.tap-logo {
+  width: 64px;
+  height: 64px;
+  border-radius: 999px;
+  object-fit: cover;
+}
+.tap-page h1 {
+  margin: 0;
+  font-size: 1.75rem;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.tap-hours,
+.tap-bio,
+.tap-privacy,
+.tap-error {
+  color: var(--marketing-muted);
+}
+.tap-actions,
+.tap-feedback {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+.tap-primary {
+  display: flex;
+  min-height: 56px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  background: var(--marketing-ink);
+  padding: 0 16px;
+  color: var(--marketing-bg);
+  font-weight: 650;
+  text-decoration: none;
+}
+.tap-stars {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+.tap-stars button,
+.tap-feedback input,
+.tap-feedback textarea {
+  min-height: 44px;
+  border: 1px solid var(--marketing-line);
+  border-radius: 12px;
+  background: white;
+  color: var(--marketing-ink);
+  padding: 8px 12px;
+}
+.tap-stars button[aria-pressed="true"] {
+  background: var(--marketing-ink);
+  color: var(--marketing-bg);
+}
+.tap-feedback textarea {
+  min-height: 96px;
+}
+.tap-secondary {
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.tap-secondary a,
+.tap-social a,
+.tap-privacy a {
+  color: var(--marketing-ink);
+}
+.tap-secondary li,
+.tap-social {
+  margin-top: 8px;
+}
+.tap-social {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.tap-social a,
+.tap-secondary a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+}
+.tap-gallery {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 16px;
+}
+.tap-gallery img {
+  width: 100%;
+  height: 96px;
+  object-fit: cover;
+  border-radius: 16px;
+}
+.tap-consent {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+.tap-thanks {
+  margin-top: 16px;
+  font-weight: 650;
 }
