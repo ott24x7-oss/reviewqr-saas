@@ -10,10 +10,10 @@ export function Footer({
   const logoUrl = brand?.logoUrl || "";
   const supportEmail = brand?.supportEmail || "hello@reviewqr.in";
   return (
-    <footer className="border-t bg-white">
+    <footer className="marketing-footer border-t border-[var(--marketing-line)]">
       <div className="container max-w-6xl py-12">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-          <div className="col-span-2">
+        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="sm:col-span-2">
             <Link href="/" className="flex items-center gap-2 font-bold text-xl">
               {logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element

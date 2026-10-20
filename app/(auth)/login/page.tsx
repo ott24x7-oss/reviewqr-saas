@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { PasswordField } from "@/components/brand/password-field";
 
 function LoginForm() {
   const router = useRouter();
@@ -73,15 +74,13 @@ function LoginForm() {
                 Forgot?
               </Link>
             </div>
-            <Input
+            <PasswordField
               id="password"
-              type="password"
               autoComplete="current-password"
               required
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={setPassword}
               placeholder="••••••••"
-              className="h-11"
             />
           </div>
           <Button type="submit" variant="gradient" size="lg" className="w-full" disabled={loading}>

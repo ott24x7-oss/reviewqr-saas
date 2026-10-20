@@ -34,7 +34,7 @@ export function HeroV2() {
             <Nfc className="h-3.5 w-3.5" /> Tap
           </span>
 
-          <h1 className="mt-4 text-[2.1rem] leading-[1.1] sm:text-5xl lg:text-[3.6rem] font-extrabold tracking-tight text-ink text-balance">
+          <h1 className="marketing-display mt-4 text-balance">
             One smart stand.{" "}
             <span className="bg-gradient-to-r from-primary-600 to-emerald-500 bg-clip-text text-transparent">
               Menu, orders &amp; reviews

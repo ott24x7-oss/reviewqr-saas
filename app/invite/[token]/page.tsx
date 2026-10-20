@@ -5,6 +5,7 @@ import { getSessionUser } from "@/lib/auth";
 import { hashToken } from "@/lib/tokens";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AcceptInvite } from "./accept";
+import { AuthFrame } from "@/components/brand/auth-frame";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +17,7 @@ export default async function InvitePage({ params }: { params: { token: string }
   const valid = invite && !invite.acceptedAt && invite.expiresAt.getTime() > Date.now();
   if (!valid || !invite) {
     return (
-      <main className="max-w-md mx-auto px-4 py-16">
+      <AuthFrame>
         <Card>
           <CardHeader>
             <CardTitle>Invite unavailable</CardTitle>
@@ -25,7 +26,7 @@ export default async function InvitePage({ params }: { params: { token: string }
             This invite was already used or it has expired. Ask the owner to send a new one.
           </CardContent>
         </Card>
-      </main>
+      </AuthFrame>
     );
   }
 
@@ -35,7 +36,7 @@ export default async function InvitePage({ params }: { params: { token: string }
 
   const matches = user.email.toLowerCase() === invite.email;
   return (
-    <main className="max-w-md mx-auto px-4 py-16">
+    <AuthFrame>
       <Card>
         <CardHeader>
           <CardTitle>Join {invite.business.name}</CardTitle>
@@ -61,6 +62,6 @@ export default async function InvitePage({ params }: { params: { token: string }
           )}
         </CardContent>
       </Card>
-    </main>
+    </AuthFrame>
   );
 }

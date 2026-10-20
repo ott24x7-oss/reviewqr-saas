@@ -6,9 +6,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { PasswordField } from "@/components/brand/password-field";
 
 function ResetForm() {
   const router = useRouter();
@@ -56,14 +56,13 @@ function ResetForm() {
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="password">New password</Label>
-              <Input
+              <PasswordField
                 id="password"
-                type="password"
+                autoComplete="new-password"
                 required
                 minLength={8}
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="h-11"
+                onChange={setPassword}
               />
             </div>
             <Button type="submit" variant="gradient" size="lg" className="w-full" disabled={loading}>
