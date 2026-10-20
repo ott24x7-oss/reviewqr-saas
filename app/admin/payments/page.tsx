@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatINR, formatDate } from "@/lib/utils";
 import { PaymentsConfigForm } from "./payments-form";
+import { PaymentActions } from "./payment-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -64,6 +65,7 @@ export default async function AdminPaymentsPage() {
           mailImapPass: maskSecret(cfg.mailImapPass),
           razorpayKeySecret: maskSecret(cfg.razorpayKeySecret),
           razorpayWebhookSecret: maskSecret(cfg.razorpayWebhookSecret),
+          youpiWebhookSecret: maskSecret(cfg.youpiWebhookSecret),
           stripeSecretKey: maskSecret(cfg.stripeSecretKey),
           stripeWebhookSecret: maskSecret(cfg.stripeWebhookSecret)
         }}
@@ -84,6 +86,7 @@ export default async function AdminPaymentsPage() {
                   <th className="text-left py-2.5 px-4">Provider</th>
                   <th className="text-right py-2.5 px-4">Amount</th>
                   <th className="text-right py-2.5 px-4">Status</th>
+                  <th className="text-right py-2.5 px-4">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -104,7 +107,7 @@ export default async function AdminPaymentsPage() {
                         variant={
                           p.status === "COMPLETED"
                             ? "success"
-                            : p.status === "PENDING"
+                            : p.status === "PENDING" || p.status === "QUEUED"
                             ? "warning"
                             : "destructive"
                         }
@@ -112,11 +115,14 @@ export default async function AdminPaymentsPage() {
                         {p.status}
                       </Badge>
                     </td>
+                    <td className="py-2.5 px-4 text-right">
+                      <PaymentActions id={p.id} status={p.status} provider={p.provider} />
+                    </td>
                   </tr>
                 ))}
                 {payments.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
+                    <td colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
                       No payments yet.
                     </td>
                   </tr>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { ArrowUpRight, Building2, MessageSquare, Star, TrendingUp, AlertTriangle } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
@@ -6,6 +7,7 @@ import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatNumber, timeAgo } from "@/lib/utils";
+import { readableBusinessWhere } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -13,11 +15,39 @@ export default async function DashboardOverview() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const businesses = await prisma.business.findMany({
-    where: { ownerId: user.id, archived: false },
-    select: { id: true }
-  });
+  const [businesses, owned, memberCount] = await Promise.all([
+    prisma.business.findMany({
+      where: readableBusinessWhere(user.id),
+      select: { id: true }
+    }),
+    prisma.business.findFirst({
+      where: { ownerId: user.id, archived: false },
+      select: { id: true, logo: true, googleReviewUrl: true, _count: { select: { qrCodes: true } } },
+      orderBy: { createdAt: "asc" }
+    }),
+    prisma.businessMember.count({ where: { userId: user.id } })
+  ]);
+  const skip = cookies().get("rq_onboarding_skip")?.value === "1";
+  if (!owned && memberCount === 0 && !skip) redirect("/dashboard/onboarding");
   const businessIds = businesses.map((b) => b.id);
+  const setupSteps = [
+    { label: "Add a business", done: !!owned, href: "/dashboard/onboarding" },
+    {
+      label: "Upload a logo",
+      done: !!owned?.logo,
+      href: owned ? `/dashboard/businesses/${owned.id}/edit` : "/dashboard/onboarding"
+    },
+    {
+      label: "Add your Google review link",
+      done: !!owned?.googleReviewUrl,
+      href: owned ? `/dashboard/businesses/${owned.id}/edit` : "/dashboard/onboarding"
+    },
+    {
+      label: "Create your first QR",
+      done: (owned?._count.qrCodes || 0) > 0,
+      href: owned ? `/dashboard/businesses/${owned.id}/qr` : "/dashboard/onboarding"
+    }
+  ];
 
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
@@ -82,6 +112,22 @@ export default async function DashboardOverview() {
           </Link>
         </Button>
       </div>
+
+      {owned && setupSteps.some((step) => !step.done) && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Finish setup</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {setupSteps.map((step) => (
+              <Link key={step.label} href={step.href} className="flex items-center justify-between text-sm">
+                <span className={step.done ? "text-muted-foreground line-through" : ""}>{step.label}</span>
+                <span className="text-xs text-muted-foreground">{step.done ? "Done" : "Continue"}</span>
+              </Link>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -249,7 +295,7 @@ function EmptyState() {
         Add your first business to get a smart review link, generate QR codes, and start collecting Google reviews.
       </p>
       <Button asChild variant="gradient" size="lg" className="mt-6">
-        <Link href="/dashboard/businesses/new">
+        <Link href="/dashboard/onboarding">
           <Building2 className="h-4 w-4" /> Add your first business
         </Link>
       </Button>

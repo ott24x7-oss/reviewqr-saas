@@ -86,10 +86,55 @@ export function PaymentsConfigForm({ initial }: { initial: PaymentsConfig }) {
   return (
     <div className="space-y-4">
       <div className="rounded-xl border dark:border-slate-800 bg-white dark:bg-slate-900 p-4 text-sm text-muted-foreground">
-        Customers pay by UPI or USDT directly to the details you set below. When your bank or
-        exchange emails the confirmation, ReviewQR matches the exact amount and activates their
-        plan automatically.
+        Checkout uses YouPI. Manual UPI and USDT stay as a fallback. Razorpay stays off unless
+        PAYMENTS_RAZORPAY_ENABLED is set on the server.
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>YouPI and GST</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">YouPI base URL</Label>
+              <Input value={cfg.youpiBaseUrl} onChange={(e) => update("youpiBaseUrl", e.target.value)} placeholder="https://pay.example.com" />
+            </div>
+            <div>
+              <Label className="text-xs">Merchant id</Label>
+              <Input value={cfg.youpiMerchantId} onChange={(e) => update("youpiMerchantId", e.target.value)} />
+            </div>
+            <div className="sm:col-span-2">
+              <Label className="text-xs">Webhook secret</Label>
+              <Input
+                value={cfg.youpiWebhookSecret}
+                onChange={(e) => update("youpiWebhookSecret", e.target.value)}
+                placeholder="Leave masked to keep the saved secret"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Seller legal name</Label>
+              <Input value={cfg.sellerLegalName} onChange={(e) => update("sellerLegalName", e.target.value)} />
+            </div>
+            <div>
+              <Label className="text-xs">Seller GSTIN</Label>
+              <Input value={cfg.sellerGstin} onChange={(e) => update("sellerGstin", e.target.value)} />
+            </div>
+            <div>
+              <Label className="text-xs">Seller state</Label>
+              <Input value={cfg.sellerState} onChange={(e) => update("sellerState", e.target.value)} placeholder="Karnataka" />
+            </div>
+            <div>
+              <Label className="text-xs">GST rate %</Label>
+              <Input
+                type="number"
+                value={cfg.gstRate}
+                onChange={(e) => update("gstRate", Number(e.target.value) || 18)}
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

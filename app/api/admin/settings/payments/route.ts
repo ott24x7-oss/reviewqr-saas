@@ -41,7 +41,14 @@ export async function PUT(req: NextRequest) {
     mailImapPort: Number(incoming.mailImapPort) || current.mailImapPort || 993,
     mailImapUser: String(incoming.mailImapUser ?? current.mailImapUser).trim(),
     mailImapPass: secret(incoming.mailImapPass, current.mailImapPass),
-    mailFromFilter: String(incoming.mailFromFilter ?? current.mailFromFilter).trim()
+    mailFromFilter: String(incoming.mailFromFilter ?? current.mailFromFilter).trim(),
+    youpiBaseUrl: String(incoming.youpiBaseUrl ?? current.youpiBaseUrl).trim().replace(/\/$/, ""),
+    youpiMerchantId: String(incoming.youpiMerchantId ?? current.youpiMerchantId).trim(),
+    youpiWebhookSecret: secret(incoming.youpiWebhookSecret, current.youpiWebhookSecret),
+    sellerLegalName: String(incoming.sellerLegalName ?? current.sellerLegalName).trim() || "ReviewQR",
+    sellerGstin: String(incoming.sellerGstin ?? current.sellerGstin).trim(),
+    sellerState: String(incoming.sellerState ?? current.sellerState).trim(),
+    gstRate: Number(incoming.gstRate) > 0 ? Number(incoming.gstRate) : current.gstRate
   };
 
   await setPaymentsConfig(next, guard.user.id);

@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { reviewSubmitSchema } from "@/lib/validations";
-import { rateLimit, verifyTurnstile } from "@/lib/rate-limit";
+import { rateLimitDb, verifyTurnstile } from "@/lib/rate-limit";
 import { sanitizeFeedback, sanitizeText, isLikelyDuplicate } from "@/lib/sanitize";
 import { fingerprint, getClientIp } from "@/lib/utils";
 import { notifyNegativeFeedback } from "@/lib/notify";
+import { monthlyReviewCount, ownerLimitError } from "@/lib/entitlements";
+import { reviewContact } from "@/lib/privacy";
 import type { ReviewSentiment } from "@prisma/client";
 
 export async function POST(req: NextRequest) {
@@ -12,7 +14,7 @@ export async function POST(req: NextRequest) {
   const ua = req.headers.get("user-agent") || "";
 
   // Rate limit by IP — public endpoint, expect bots
-  const rl = await rateLimit({ key: `pubreview:${ip}`, limit: 10, windowSeconds: 60 });
+  const rl = await rateLimitDb({ key: `pubreview:${ip}`, limit: 10, windowSeconds: 60 });
   if (!rl.ok) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
@@ -33,12 +35,9 @@ export async function POST(req: NextRequest) {
   }
   const data = parsed.data;
 
-  // Optional Turnstile when submitting feedback (not pure rating-redirect)
-  if (data.feedback && data.feedback.length > 0 && data.turnstileToken) {
-    const verify = await verifyTurnstile(data.turnstileToken, ip);
-    if (!verify.ok && !verify.skipped) {
-      return NextResponse.json({ error: "Captcha failed" }, { status: 400 });
-    }
+  const verify = await verifyTurnstile(data.turnstileToken, ip);
+  if (!verify.ok) {
+    return NextResponse.json({ error: "Captcha failed" }, { status: 400 });
   }
 
   const business = await prisma.business.findUnique({
@@ -82,9 +81,16 @@ export async function POST(req: NextRequest) {
     data.rating >= 4 ? "POSITIVE" : data.rating === 3 ? "NEUTRAL" : "NEGATIVE";
 
   const cleanFeedback = data.feedback ? sanitizeFeedback(data.feedback) : "";
-  const customerName = data.customerName ? sanitizeText(data.customerName, 80) : null;
-  const customerEmail = data.customerEmail ? sanitizeText(data.customerEmail, 200) : null;
-  const customerPhone = data.customerPhone ? sanitizeText(data.customerPhone, 20) : null;
+  const contact = reviewContact({
+    consent: data.consent === true,
+    name: data.customerName ? sanitizeText(data.customerName, 80) : null,
+    email: data.customerEmail ? sanitizeText(data.customerEmail, 200) : null,
+    phone: data.customerPhone ? sanitizeText(data.customerPhone, 20) : null
+  });
+  const customerName = contact.customerName;
+  const customerEmail = contact.customerEmail;
+  const customerPhone = contact.customerPhone;
+  const consentAt = contact.consented ? new Date() : null;
 
   const redirected = data.rating >= business.ratingThreshold && !cleanFeedback;
 
@@ -105,37 +111,59 @@ export async function POST(req: NextRequest) {
       })
     : null;
 
-  const review = existingBare
-    ? await prisma.review.update({
-        where: { id: existingBare.id },
-        data: {
-          locationId: location?.id ?? existingBare.locationId,
-          staffId: staff?.id ?? existingBare.staffId,
-          sentiment,
-          redirected,
-          source: data.source || existingBare.source,
-          customerName: customerName ?? existingBare.customerName,
-          customerEmail: customerEmail ?? existingBare.customerEmail,
-          customerPhone: customerPhone ?? existingBare.customerPhone
-        }
-      })
-    : await prisma.review.create({
-        data: {
-          businessId: business.id,
-          locationId: location?.id || null,
-          staffId: staff?.id || null,
-          rating: data.rating,
-          sentiment,
-          redirected,
-          source: data.source || "link",
-          customerName,
-          customerEmail,
-          customerPhone,
-          ipAddress: ip,
-          userAgent: ua.slice(0, 500),
-          fingerprint: fp
-        }
-      });
+  let review;
+  if (existingBare) {
+    review = await prisma.review.update({
+      where: { id: existingBare.id },
+      data: {
+        locationId: location?.id ?? existingBare.locationId,
+        staffId: staff?.id ?? existingBare.staffId,
+        sentiment,
+        redirected,
+        source: data.source || existingBare.source,
+        customerName,
+        customerEmail,
+        customerPhone,
+        consentAt
+      }
+    });
+  } else {
+    const owner = await prisma.user.findUnique({
+      where: { id: business.ownerId },
+      select: {
+        id: true,
+        subscriptionTier: true,
+        subscriptionStatus: true,
+        trialEndsAt: true,
+        subscriptionEndsAt: true
+      }
+    });
+    if (owner) {
+      const used = await monthlyReviewCount(owner.id);
+      const limitError = await ownerLimitError(owner, "reviews", used);
+      if (limitError) {
+        return NextResponse.json({ error: limitError }, { status: 402 });
+      }
+    }
+    review = await prisma.review.create({
+      data: {
+        businessId: business.id,
+        locationId: location?.id || null,
+        staffId: staff?.id || null,
+        rating: data.rating,
+        sentiment,
+        redirected,
+        source: data.source || "link",
+        customerName,
+        customerEmail,
+        customerPhone,
+        consentAt,
+        ipAddress: ip,
+        userAgent: ua.slice(0, 500),
+        fingerprint: fp
+      }
+    });
+  }
 
   // If feedback supplied, persist it
   if (cleanFeedback) {

@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { rateLimit } from "@/lib/rate-limit";
+import { rateLimitDb } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/utils";
 import { getAiConfig } from "@/lib/settings";
 import { generateQuestions, type AiQuestion, type BusinessContext } from "@/lib/ai";
+import { AiQuotaError } from "@/lib/entitlements";
 
 // Per-business question cache so we don't regenerate on every visitor.
 const cache = new Map<string, { at: number; questions: AiQuestion[] }>();
@@ -16,7 +17,7 @@ const TTL_MS = 60 * 60 * 1000; // 1 hour
  */
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req.headers);
-  const rl = await rateLimit({ key: `ai-q:${ip}`, limit: 20, windowSeconds: 60 });
+  const rl = await rateLimitDb({ key: `ai-q:${ip}`, limit: 20, windowSeconds: 60 });
   if (!rl.ok) return NextResponse.json({ available: false }, { status: 429 });
 
   const body = (await req.json().catch(() => ({}))) as { slug?: string };
@@ -60,10 +61,13 @@ export async function POST(req: NextRequest) {
   };
 
   try {
-    const questions = await generateQuestions(cfg, ctx);
+    const questions = await generateQuestions(cfg, ctx, business.id);
     cache.set(business.id, { at: Date.now(), questions });
     return NextResponse.json({ available: true, questions });
-  } catch {
+  } catch (e) {
+    if (e instanceof AiQuotaError) {
+      return NextResponse.json({ available: false, reason: e.reason });
+    }
     return NextResponse.json({ available: false });
   }
 }

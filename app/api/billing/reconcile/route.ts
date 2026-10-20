@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminApi } from "@/lib/admin";
 import { reconcileAllPending, expireStale } from "@/lib/manual-payments";
+import { expireLapsedSubscriptions, sendRenewalReminders } from "@/lib/billing-jobs";
+import { timingSafeEqualString } from "@/lib/timing-safe";
 
 /**
  * Reconcile all pending UPI/USDT orders against the inbox in one pass.
@@ -8,10 +10,10 @@ import { reconcileAllPending, expireStale } from "@/lib/manual-payments";
  * job) or an admin session (manual "check now" from the admin panel).
  */
 export async function POST(req: NextRequest) {
-  const secret = req.headers.get("x-cron-secret");
-  const envSecret = process.env.CRON_SECRET;
+  const secret = req.headers.get("x-cron-secret") || "";
+  const envSecret = process.env.CRON_SECRET || "";
   let authed = false;
-  if (envSecret && secret && secret === envSecret) {
+  if (envSecret && secret && timingSafeEqualString(secret, envSecret)) {
     authed = true;
   } else {
     const guard = await requireAdminApi();
@@ -21,8 +23,15 @@ export async function POST(req: NextRequest) {
 
   try {
     const result = await reconcileAllPending();
-    const expired = await expireStale();
-    return NextResponse.json({ ...result, expired });
+    const expiredOrders = await expireStale();
+    const expiredSubscriptions = await expireLapsedSubscriptions();
+    const reminders = await sendRenewalReminders();
+    return NextResponse.json({
+      ...result,
+      expired: expiredOrders,
+      expiredSubscriptions,
+      reminders
+    });
   } catch (e: any) {
     return NextResponse.json({ error: e.message || "Reconcile failed" }, { status: 500 });
   }

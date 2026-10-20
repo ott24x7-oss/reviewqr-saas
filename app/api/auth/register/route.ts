@@ -3,13 +3,14 @@ import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/auth";
 import { registerSchema } from "@/lib/validations";
 import { slugify } from "@/lib/utils";
-import { rateLimit } from "@/lib/rate-limit";
+import { rateLimitDb } from "@/lib/rate-limit";
 import { sendEmail, welcomeEmail } from "@/lib/email";
+import { sendVerificationEmail } from "@/lib/verify-email";
 import { absoluteUrl, getClientIp } from "@/lib/utils";
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req.headers);
-  const rl = await rateLimit({ key: `register:${ip}`, limit: 5, windowSeconds: 600 });
+  const rl = await rateLimitDb({ key: `register:${ip}`, limit: 5, windowSeconds: 600 });
   if (!rl.ok) {
     return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
   }
@@ -76,7 +77,7 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // Welcome email — best-effort
+  // Welcome and verify emails — best-effort. Login works before the inbox is confirmed.
   sendEmail({
     to: email,
     subject: "Welcome to ReviewQR 🎉",
@@ -86,6 +87,7 @@ export async function POST(req: NextRequest) {
       loginUrl: absoluteUrl("/dashboard")
     })
   }).catch(() => {});
+  sendVerificationEmail({ id: user.id, email, name: data.name }).catch(() => {});
 
   return NextResponse.json({ ok: true, userId: user.id });
 }

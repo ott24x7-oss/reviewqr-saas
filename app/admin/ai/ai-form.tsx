@@ -189,6 +189,32 @@ export function AiConfigForm({ initial }: { initial: AiConfig }) {
             </p>
           </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">Daily spend cap (paise)</Label>
+              <Input
+                type="number"
+                min={0}
+                value={cfg.dailyCapPaise}
+                onChange={(e) => update("dailyCapPaise", Math.max(0, Number(e.target.value || 0)))}
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">
+                20000 is ₹200. When this is reached, review pages use the non-AI path.
+              </p>
+            </div>
+            <div>
+              <Label className="text-xs">Estimate per call (paise)</Label>
+              <Input
+                type="number"
+                min={0}
+                value={cfg.estimatePaisePerCall}
+                onChange={(e) =>
+                  update("estimatePaisePerCall", Math.max(0, Number(e.target.value || 0)))
+                }
+              />
+            </div>
+          </div>
+
           <div>
             <Label className="text-xs">API key</Label>
             <Input

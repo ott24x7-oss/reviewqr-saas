@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { rateLimit } from "@/lib/rate-limit";
+import { rateLimitDb } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/utils";
 import { getAiConfig } from "@/lib/settings";
 import { generateReviews, type BusinessContext } from "@/lib/ai";
+import { AiQuotaError } from "@/lib/entitlements";
 
 /**
  * Public — AI-generated Google review suggestions from the customer's answers.
@@ -11,7 +12,7 @@ import { generateReviews, type BusinessContext } from "@/lib/ai";
  */
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req.headers);
-  const rl = await rateLimit({ key: `ai-r:${ip}`, limit: 15, windowSeconds: 60 });
+  const rl = await rateLimitDb({ key: `ai-r:${ip}`, limit: 15, windowSeconds: 60 });
   if (!rl.ok) return NextResponse.json({ reviews: [] }, { status: 429 });
 
   const body = (await req.json().catch(() => ({}))) as {
@@ -31,6 +32,7 @@ export async function POST(req: NextRequest) {
   const business = await prisma.business.findUnique({
     where: { slug },
     select: {
+      id: true,
       name: true,
       industry: true,
       description: true,
@@ -59,9 +61,12 @@ export async function POST(req: NextRequest) {
   };
 
   try {
-    const reviews = await generateReviews(cfg, ctx, rating, answers);
+    const reviews = await generateReviews(cfg, ctx, rating, answers, business.id);
     return NextResponse.json({ reviews });
-  } catch {
+  } catch (e) {
+    if (e instanceof AiQuotaError) {
+      return NextResponse.json({ reviews: [], fallback: true, reason: e.reason });
+    }
     return NextResponse.json({ reviews: [] });
   }
 }

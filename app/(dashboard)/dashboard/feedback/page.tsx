@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { readableBusinessWhere } from "@/lib/tenant";
 import { Card, CardContent } from "@/components/ui/card";
 import { timeAgo } from "@/lib/utils";
 import { MessageSquare } from "lucide-react";
@@ -18,7 +19,7 @@ export default async function FeedbackPage({
   if (!user) redirect("/login");
 
   const businesses = await prisma.business.findMany({
-    where: { ownerId: user.id, archived: false },
+    where: readableBusinessWhere(user.id),
     select: { id: true }
   });
   const businessIds = businesses.map((b) => b.id);

@@ -32,6 +32,7 @@ export function UserEditForm({ user }: Props) {
   const [saving, setSaving] = React.useState(false);
   const [deleting, setDeleting] = React.useState(false);
   const [resetting, setResetting] = React.useState(false);
+  const [impersonating, setImpersonating] = React.useState(false);
   const [form, setForm] = React.useState({
     name: user.name || "",
     phone: user.phone || "",
@@ -74,6 +75,23 @@ export function UserEditForm({ user }: Props) {
       toast.error(e.message);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function impersonate() {
+    setImpersonating(true);
+    try {
+      const res = await fetch("/api/admin/impersonate", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ userId: user.id })
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || "Could not start");
+      window.location.href = "/dashboard";
+    } catch (e: any) {
+      toast.error(e.message);
+      setImpersonating(false);
     }
   }
 
@@ -208,6 +226,12 @@ export function UserEditForm({ user }: Props) {
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             Save changes
           </Button>
+          {user.role !== "ADMIN" && (
+            <Button type="button" variant="outline" onClick={impersonate} disabled={impersonating}>
+              {impersonating ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              Log in as user
+            </Button>
+          )}
         </div>
 
         <div className="border-t pt-4">

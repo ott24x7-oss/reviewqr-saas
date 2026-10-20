@@ -13,7 +13,15 @@ export async function PUT(req: NextRequest) {
     enabled: typeof incoming.enabled === "boolean" ? incoming.enabled : current.enabled,
     apiUrl: String(incoming.apiUrl ?? current.apiUrl).trim().replace(/\/$/, ""),
     apiKey: typeof incoming.apiKey === "string" ? incoming.apiKey.trim() : current.apiKey,
-    model: String(incoming.model ?? current.model).trim()
+    model: String(incoming.model ?? current.model).trim(),
+    dailyCapPaise: Math.max(
+      0,
+      Math.floor(Number(incoming.dailyCapPaise ?? current.dailyCapPaise))
+    ),
+    estimatePaisePerCall: Math.max(
+      0,
+      Math.floor(Number(incoming.estimatePaisePerCall ?? current.estimatePaisePerCall))
+    )
   };
 
   await setAiConfig(next, guard.user.id);

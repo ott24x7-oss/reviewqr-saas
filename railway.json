@@ -5,7 +5,7 @@
     "buildCommand": "npm run build"
   },
   "deploy": {
-    "preDeployCommand": "npx prisma db push --skip-generate && npm run seed:admin",
+    "preDeployCommand": "node scripts/predeploy-migrate.js",
     "startCommand": "npm run start",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10,

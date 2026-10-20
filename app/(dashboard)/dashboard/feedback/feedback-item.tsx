@@ -43,13 +43,39 @@ export function FeedbackItem({ feedback }: { feedback: FeedbackItemData }) {
   const [status, setStatus] = React.useState<FeedbackStatus>(feedback.status);
   const [note, setNote] = React.useState(feedback.internalNote || "");
   const [saving, setSaving] = React.useState(false);
+  const [contact, setContact] = React.useState({
+    name: feedback.customerName,
+    phone: feedback.customerPhone,
+    email: feedback.customerEmail
+  });
 
   // Baseline reflects what's persisted; enables a "no unsaved changes" state.
   const [savedStatus, setSavedStatus] = React.useState<FeedbackStatus>(feedback.status);
   const [savedNote, setSavedNote] = React.useState(feedback.internalNote || "");
 
   const dirty = status !== savedStatus || note !== savedNote;
-  const customer = feedback.customerName || "Anonymous";
+  const customer = contact.name || "Anonymous";
+  const hasContact = !!(contact.name || contact.phone || contact.email);
+
+  async function eraseContact() {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/feedback/${feedback.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ eraseContact: true })
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || "Couldn't erase contact");
+      setContact({ name: null, phone: null, email: null });
+      toast.success("Customer contact erased");
+    } catch (e: any) {
+      toast.error(e.message || "Something went wrong");
+    } finally {
+      setSaving(false);
+    }
+  }
   const badge = STATUS_BADGE[savedStatus] || STATUS_BADGE.NEW;
 
   async function patch(nextStatus: FeedbackStatus) {
@@ -117,23 +143,33 @@ export function FeedbackItem({ feedback }: { feedback: FeedbackItemData }) {
         )}
 
         <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-          {feedback.customerPhone && (
+          {contact.phone && (
             <a
-              href={`https://wa.me/${feedback.customerPhone.replace(/\D/g, "")}`}
+              href={`https://wa.me/${contact.phone.replace(/\D/g, "")}`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 hover:text-foreground"
             >
-              <Phone className="h-3 w-3" /> {feedback.customerPhone}
+              <Phone className="h-3 w-3" /> {contact.phone}
             </a>
           )}
-          {feedback.customerEmail && (
+          {contact.email && (
             <a
-              href={`mailto:${feedback.customerEmail}`}
+              href={`mailto:${contact.email}`}
               className="inline-flex items-center gap-1 hover:text-foreground"
             >
-              <Mail className="h-3 w-3" /> {feedback.customerEmail}
+              <Mail className="h-3 w-3" /> {contact.email}
             </a>
+          )}
+          {hasContact && (
+            <button
+              type="button"
+              onClick={eraseContact}
+              disabled={saving}
+              className="underline hover:text-foreground disabled:opacity-50"
+            >
+              Erase customer contact
+            </button>
           )}
         </div>
 

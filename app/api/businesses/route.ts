@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { businessSchema } from "@/lib/validations";
 import { slugify } from "@/lib/utils";
-import { planLimit, effectiveTier } from "@/lib/payments";
+import { ownerLimitError } from "@/lib/entitlements";
 
 export async function GET() {
   const user = await requireUser().catch(() => null);
@@ -26,13 +26,9 @@ export async function POST(req: NextRequest) {
   const count = await prisma.business.count({
     where: { ownerId: user.id, archived: false }
   });
-  const tier = effectiveTier(user);
-  const limit = await planLimit(tier, "businesses");
-  if (count >= limit) {
-    return NextResponse.json(
-      { error: `Your ${tier} plan allows ${limit} business(es). Upgrade to add more.` },
-      { status: 402 }
-    );
+  const limitError = await ownerLimitError(user, "businesses", count);
+  if (limitError) {
+    return NextResponse.json({ error: limitError }, { status: 402 });
   }
 
   const parsed = businessSchema.safeParse(await req.json().catch(() => ({})));
@@ -72,7 +68,9 @@ export async function POST(req: NextRequest) {
       pincode: data.pincode || null,
       googleReviewUrl: data.googleReviewUrl || null,
       ratingThreshold: data.ratingThreshold,
-      primaryColor: data.primaryColor
+      primaryColor: data.primaryColor,
+      logo: data.logo || null,
+      coverImage: data.coverImage || null
     }
   });
 

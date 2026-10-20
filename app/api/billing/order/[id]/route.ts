@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { attachReference, reconcilePayment } from "@/lib/manual-payments";
+import {
+  youpiAmountsMatch,
+  youpiConfirmed,
+  youpiGetPayment,
+  youpiMatchesOrder,
+  youpiStatusFailed
+} from "@/lib/payments/youpi";
+import { activateCompletedPayment } from "@/lib/subscription";
 
 // Throttle IMAP checks per order so client polling doesn't hammer the inbox.
 const lastCheck = new Map<string, number>();
@@ -32,7 +40,37 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   let order = await loadOrder(params.id, user.id);
   if (!order) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  if (order.status === "PENDING" && order.expiresAt && order.expiresAt > new Date()) {
+  if (order.status === "PENDING" && order.provider === "YOUPI" && order.providerPaymentId) {
+    const last = lastCheck.get(order.id) || 0;
+    if (Date.now() - last > THROTTLE_MS) {
+      lastCheck.set(order.id, Date.now());
+      try {
+        const remote = await youpiGetPayment(order.providerPaymentId);
+        if (
+          youpiMatchesOrder(remote, order) &&
+          youpiAmountsMatch(order.amount, remote) &&
+          youpiConfirmed(remote)
+        ) {
+          await activateCompletedPayment({
+            paymentId: order.id,
+            providerPaymentId: remote.paymentId,
+            providerOrderId: order.id,
+            utr: remote.utr,
+            verifiedVia: "poll",
+            expectedAmountPaise: order.amount,
+            expectedOrderId: order.id
+          });
+          order = (await loadOrder(params.id, user.id)) || order;
+        } else if (youpiStatusFailed(remote.status)) {
+          await prisma.payment.updateMany({
+            where: { id: order.id, status: "PENDING" },
+            data: { status: "FAILED" }
+          });
+          order = (await loadOrder(params.id, user.id)) || order;
+        }
+      } catch {}
+    }
+  } else if (order.status === "PENDING" && order.expiresAt && order.expiresAt > new Date()) {
     const last = lastCheck.get(order.id) || 0;
     if (Date.now() - last > THROTTLE_MS) {
       lastCheck.set(order.id, Date.now());

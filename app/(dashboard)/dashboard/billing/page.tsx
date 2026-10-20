@@ -70,6 +70,7 @@ export default async function BillingPage() {
         plans={plans}
         upiEnabled={cfg.upiEnabled && !!cfg.upiId}
         usdtEnabled={cfg.usdtEnabled && !!cfg.usdtAddress}
+        youpiEnabled={!!(cfg.youpiBaseUrl && cfg.youpiMerchantId)}
       />
 
       <Card>
@@ -88,6 +89,7 @@ export default async function BillingPage() {
                     <th className="text-left py-2 px-2">Plan</th>
                     <th className="text-right py-2 px-2">Amount</th>
                     <th className="text-right py-2 px-2">Status</th>
+                    <th className="text-right py-2 px-2">Invoice</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -110,6 +112,15 @@ export default async function BillingPage() {
                         >
                           {p.status}
                         </Badge>
+                      </td>
+                      <td className="py-2 px-2 text-right">
+                        {p.invoiceNumber ? (
+                          <a className="text-primary text-xs font-medium" href={`/api/billing/invoices/${p.id}`}>
+                            {p.invoiceNumber}
+                          </a>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
                       </td>
                     </tr>
                   ))}

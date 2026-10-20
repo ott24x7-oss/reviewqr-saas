@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { rateLimit } from "@/lib/rate-limit";
+import { rateLimitDb } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/utils";
 
 /**
@@ -9,7 +9,7 @@ import { getClientIp } from "@/lib/utils";
  */
 export async function GET(req: NextRequest) {
   const ip = getClientIp(req.headers);
-  const rl = await rateLimit({ key: `tpl-pick:${ip}`, limit: 30, windowSeconds: 60 });
+  const rl = await rateLimitDb({ key: `tpl-pick:${ip}`, limit: 30, windowSeconds: 60 });
   if (!rl.ok) return NextResponse.json({ error: "Slow down" }, { status: 429 });
 
   const slug = new URL(req.url).searchParams.get("slug")?.trim();

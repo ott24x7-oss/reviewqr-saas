@@ -13,6 +13,7 @@ import {
   MessageCircle,
   Globe,
   History,
+  LifeBuoy,
   Sparkles,
   ArrowLeft,
   ShieldCheck,
@@ -32,7 +33,8 @@ const nav = [
   { href: "/admin/whatsapp", label: "WhatsApp", icon: MessageCircle },
   { href: "/admin/ai", label: "AI Reviews", icon: Sparkles },
   { href: "/admin/site", label: "Site Settings", icon: Globe },
-  { href: "/admin/audit", label: "Audit Log", icon: History }
+  { href: "/admin/audit", label: "Audit Log", icon: History },
+  { href: "/admin/support", label: "Support", icon: LifeBuoy }
 ];
 
 export function AdminShell({

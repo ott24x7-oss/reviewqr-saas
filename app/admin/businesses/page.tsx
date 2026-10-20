@@ -122,14 +122,19 @@ export default async function AdminBusinessesPage({
                       {timeAgo(b.createdAt)}
                     </td>
                     <td className="py-2.5 px-4">
-                      <a
-                        href={absoluteUrl(`/r/${b.slug}`)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-muted-foreground hover:text-foreground"
-                      >
-                        <ExternalLink className="h-3.5 w-3.5" />
-                      </a>
+                      <div className="flex items-center gap-3">
+                        <Link href={`/admin/businesses/${b.id}`} className="text-xs font-medium hover:underline">
+                          Edit
+                        </Link>
+                        <a
+                          href={absoluteUrl(`/r/${b.slug}`)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </a>
+                      </div>
                     </td>
                   </tr>
                 ))}

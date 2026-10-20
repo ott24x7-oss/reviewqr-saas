@@ -3,13 +3,16 @@ import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { locationSchema } from "@/lib/validations";
 import { slugify, nanoSlug } from "@/lib/utils";
-import { planLimit, effectiveTier } from "@/lib/payments";
+import { ownerLimitError } from "@/lib/entitlements";
+import { planOwner, requireBusinessRole } from "@/lib/tenant";
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const user = await requireUser().catch(() => null);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const access = await requireBusinessRole(user.id, params.id, "manage");
+  if (!access) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const locations = await prisma.location.findMany({
-    where: { businessId: params.id, business: { ownerId: user.id } },
+    where: { businessId: params.id },
     orderBy: { createdAt: "asc" }
   });
   return NextResponse.json({ locations });
@@ -18,16 +21,17 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await requireUser().catch(() => null);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const business = await prisma.business.findFirst({
-    where: { id: params.id, ownerId: user.id }
-  });
+  const business = await requireBusinessRole(user.id, params.id, "manage");
   if (!business) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const owner = await planOwner(user, business.ownerId);
+  if (!owner) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const count = await prisma.location.count({
-    where: { business: { ownerId: user.id }, isActive: true }
+    where: { business: { ownerId: business.ownerId }, isActive: true }
   });
-  if (count >= (await planLimit(effectiveTier(user), "locations"))) {
-    return NextResponse.json({ error: "Plan location limit reached" }, { status: 402 });
+  const limitError = await ownerLimitError(owner, "locations", count);
+  if (limitError) {
+    return NextResponse.json({ error: limitError }, { status: 402 });
   }
 
   const parsed = locationSchema.safeParse(await req.json().catch(() => ({})));

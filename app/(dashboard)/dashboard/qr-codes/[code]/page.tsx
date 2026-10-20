@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { readableBusinessWhere } from "@/lib/tenant";
 import { absoluteUrl } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,7 @@ export default async function QrDetailPage({ params }: { params: { code: string 
   if (!user) redirect("/login");
 
   const qr = await prisma.qRCode.findFirst({
-    where: { shortCode: params.code, business: { ownerId: user.id } },
+    where: { shortCode: params.code, business: readableBusinessWhere(user.id) },
     include: {
       business: { select: { name: true, slug: true, primaryColor: true } },
       location: { select: { name: true } },

@@ -7,57 +7,20 @@ import { cn } from "@/lib/utils";
 type Variant = "logo" | "cover";
 
 const PRESET = {
-  logo: { maxSide: 512, thumbSide: 256, quality: 0.85, aspect: "1 / 1" },
-  cover: { maxSide: 1600, thumbSide: 1200, quality: 0.82, aspect: "16 / 9" }
+  logo: { aspect: "1 / 1" },
+  cover: { aspect: "16 / 9" }
 } as const;
 
-async function resizeImage(file: File, variant: Variant): Promise<string> {
-  const preset = PRESET[variant];
-  const dataUrl = await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(new Error("Could not read file"));
-    reader.readAsDataURL(file);
-  });
-
-  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-    const i = new Image();
-    i.onload = () => resolve(i);
-    i.onerror = () => reject(new Error("Could not decode image"));
-    i.src = dataUrl;
-  });
-
-  const max = preset.maxSide;
-  let { width, height } = img;
-
-  if (variant === "logo") {
-    // Center-crop to square, then scale to thumbSide
-    const side = Math.min(width, height);
-    const sx = (width - side) / 2;
-    const sy = (height - side) / 2;
-    const out = preset.thumbSide;
-    const canvas = document.createElement("canvas");
-    canvas.width = out;
-    canvas.height = out;
-    const ctx = canvas.getContext("2d")!;
-    ctx.imageSmoothingQuality = "high";
-    ctx.drawImage(img, sx, sy, side, side, 0, 0, out, out);
-    return canvas.toDataURL("image/jpeg", preset.quality);
+async function uploadImage(file: File, variant: Variant): Promise<string> {
+  const body = new FormData();
+  body.set("file", file);
+  body.set("variant", variant);
+  const res = await fetch("/api/uploads", { method: "POST", body });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok || typeof json.url !== "string") {
+    throw new Error(json.error || "Couldn't upload image");
   }
-
-  // cover: preserve aspect ratio, scale longest side to maxSide
-  if (width > max || height > max) {
-    const scale = max / Math.max(width, height);
-    width = Math.round(width * scale);
-    height = Math.round(height * scale);
-  }
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d")!;
-  ctx.imageSmoothingQuality = "high";
-  ctx.drawImage(img, 0, 0, width, height);
-  return canvas.toDataURL("image/jpeg", preset.quality);
+  return json.url;
 }
 
 export function ImageUpload({
@@ -92,7 +55,7 @@ export function ImageUpload({
     }
     setBusy(true);
     try {
-      const out = await resizeImage(file, variant);
+      const out = await uploadImage(file, variant);
       onChange(out);
     } catch (err: any) {
       toast.error(err.message || "Couldn't process image");
@@ -115,6 +78,11 @@ export function ImageUpload({
         {value ? (
           <>
             <img src={value} alt="" className="absolute inset-0 w-full h-full object-cover" />
+            {busy && (
+              <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                <Loader2 className="h-5 w-5 animate-spin text-white" />
+              </div>
+            )}
             <button
               type="button"
               onClick={() => onChange(null)}
@@ -154,7 +122,7 @@ export function ImageUpload({
       <input
         ref={inputRef}
         type="file"
-        accept="image/png,image/jpeg,image/webp,image/svg+xml"
+        accept="image/png,image/jpeg,image/webp"
         className="sr-only"
         onChange={onFile}
       />

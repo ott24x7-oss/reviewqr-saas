@@ -6,7 +6,9 @@
  * (it's local to each Railway replica, but spam usually comes from
  * the same IP) and the DB for cross-replica counters where needed.
  */
+import crypto from "crypto";
 import { prisma } from "./db";
+import { getTurnstileConfig } from "./settings";
 
 type Bucket = { count: number; expiresAt: number };
 const memory = new Map<string, Bucket>();
@@ -48,29 +50,34 @@ export async function rateLimit({ key, limit, windowSeconds }: RateLimitOpts) {
 export async function rateLimitDb({ key, limit, windowSeconds }: RateLimitOpts) {
   const expiresAt = new Date(Date.now() + windowSeconds * 1000);
   try {
-    const row = await prisma.rateLimit.upsert({
-      where: { key },
-      create: { key, count: 1, expiresAt },
-      update: { count: { increment: 1 } }
-    });
-    if (row.expiresAt < new Date()) {
-      // expired, reset
-      await prisma.rateLimit.update({
-        where: { key },
-        data: { count: 1, expiresAt }
-      });
-      return { ok: true as const, remaining: limit - 1 };
-    }
+    // Reset an expired window in the same statement. The old upsert incremented
+    // first, so a stale row could deny a request that should have started fresh.
+    const rows = await prisma.$queryRaw<Array<{ count: number; expiresAt: Date }>>`
+      INSERT INTO "RateLimit" ("id", "key", "count", "expiresAt")
+      VALUES (${crypto.randomUUID()}, ${key}, 1, ${expiresAt})
+      ON CONFLICT ("key") DO UPDATE SET
+        "count" = CASE
+          WHEN "RateLimit"."expiresAt" <= NOW() THEN 1
+          ELSE "RateLimit"."count" + 1
+        END,
+        "expiresAt" = CASE
+          WHEN "RateLimit"."expiresAt" <= NOW() THEN ${expiresAt}
+          ELSE "RateLimit"."expiresAt"
+        END
+      RETURNING "count", "expiresAt"
+    `;
+    const row = rows[0];
+    if (!row) return { ok: true as const, remaining: limit - 1 };
     if (row.count > limit) {
+      const exp = row.expiresAt instanceof Date ? row.expiresAt : new Date(row.expiresAt);
       return {
         ok: false as const,
         remaining: 0,
-        retryAfter: Math.ceil((row.expiresAt.getTime() - Date.now()) / 1000)
+        retryAfter: Math.max(1, Math.ceil((exp.getTime() - Date.now()) / 1000))
       };
     }
     return { ok: true as const, remaining: limit - row.count };
   } catch {
-    // Fall back to in-memory if DB hiccups
     return rateLimit({ key, limit, windowSeconds });
   }
 }
@@ -79,10 +86,20 @@ export async function rateLimitDb({ key, limit, windowSeconds }: RateLimitOpts) 
  * Verify Cloudflare Turnstile (preferred over reCAPTCHA in India for
  * faster load and no Google dependency).
  */
-export async function verifyTurnstile(token: string, ip?: string) {
-  const secret = process.env.TURNSTILE_SECRET_KEY;
-  if (!secret) return { ok: true, skipped: true };
-  if (!token) return { ok: false, error: "missing_token" };
+/** Missing token is a failure only when a secret is configured (admin setting, then env). */
+export function turnstileRequired(secretConfigured: boolean, token: string | undefined | null) {
+  if (!secretConfigured) return "skip" as const;
+  if (!token) return "missing" as const;
+  return "verify" as const;
+}
+
+export async function verifyTurnstile(token: string | undefined, ip?: string) {
+  const secret = (await getTurnstileConfig()).secretKey;
+  const decision = turnstileRequired(!!secret, token);
+  if (decision === "skip") return { ok: true, skipped: true as const };
+  if (decision === "missing" || !token) {
+    return { ok: false, skipped: false as const, error: "missing_token" };
+  }
   const body = new URLSearchParams({ secret, response: token });
   if (ip) body.append("remoteip", ip);
   const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {

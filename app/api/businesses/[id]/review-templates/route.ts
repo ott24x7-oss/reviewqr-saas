@@ -2,13 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
-
-async function getOwnedBusiness(id: string, userId: string) {
-  return prisma.business.findFirst({
-    where: { id, ownerId: userId, archived: false },
-    select: { id: true }
-  });
-}
+import { ownerLimitError } from "@/lib/entitlements";
+import { planOwner, requireBusinessRole } from "@/lib/tenant";
 
 export async function GET(
   req: NextRequest,
@@ -16,7 +11,7 @@ export async function GET(
 ) {
   const user = await requireUser().catch(() => null);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const biz = await getOwnedBusiness(params.id, user.id);
+  const biz = await requireBusinessRole(user.id, params.id, "manage");
   if (!biz) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const url = new URL(req.url);
@@ -49,8 +44,10 @@ export async function POST(
 ) {
   const user = await requireUser().catch(() => null);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const biz = await getOwnedBusiness(params.id, user.id);
+  const biz = await requireBusinessRole(user.id, params.id, "manage");
   if (!biz) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const owner = await planOwner(user, biz.ownerId);
+  if (!owner) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const parsed = bulkSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {
@@ -74,6 +71,14 @@ export async function POST(
 
   if (data.length === 0) {
     return NextResponse.json({ error: "No valid templates to add" }, { status: 400 });
+  }
+
+  const existing = await prisma.reviewTemplate.count({
+    where: { business: { ownerId: biz.ownerId } }
+  });
+  const limitError = await ownerLimitError(owner, "reviewTemplates", existing, data.length);
+  if (limitError) {
+    return NextResponse.json({ error: limitError }, { status: 402 });
   }
 
   const result = await prisma.reviewTemplate.createMany({ data });

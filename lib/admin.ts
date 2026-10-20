@@ -41,7 +41,15 @@ export type AuditAction =
   | "settings.turnstile.update"
   | "pricing.update"
   | "email.test"
-  | "admin.login";
+  | "admin.login"
+  | "payment.approve"
+  | "payment.reject"
+  | "payment.refund"
+  | "feedback.erase_contact"
+  | "account.delete"
+  | "user.impersonate"
+  | "business.suspend"
+  | "support.reply";
 
 export async function logAudit(opts: {
   userId?: string;

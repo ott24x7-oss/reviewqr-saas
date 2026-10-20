@@ -27,7 +27,8 @@ const SECRET_FIELDS: Record<string, string[]> = {
     "razorpayWebhookSecret",
     "stripeSecretKey",
     "stripeWebhookSecret",
-    "mailImapPass"
+    "mailImapPass",
+    "youpiWebhookSecret"
   ],
   [SETTING_KEYS.email]: ["relaySecret", "smtpPass"],
   [SETTING_KEYS.whatsapp]: ["apiToken"],
@@ -55,6 +56,10 @@ export type AiConfig = {
   apiKey: string;
   /** Model id, e.g. openai/gpt-4o-mini (OpenRouter) or gpt-4o-mini (OpenAI) */
   model: string;
+  /** Platform-wide estimated spend cap for one Indian calendar day, in paise. */
+  dailyCapPaise: number;
+  /** Paise added to the daily cap for each AI call. */
+  estimatePaisePerCall: number;
 };
 
 export type PaymentsConfig = {
@@ -83,6 +88,14 @@ export type PaymentsConfig = {
   mailImapUser: string;
   mailImapPass: string;
   mailFromFilter: string; // comma-separated sender substrings, e.g. "alerts@hdfcbank.net,noreply@binance.com"
+  // YouPI (default checkout). Razorpay stays in the fields above and is off unless enabled by env.
+  youpiBaseUrl: string;
+  youpiMerchantId: string;
+  youpiWebhookSecret: string;
+  sellerLegalName: string;
+  sellerGstin: string;
+  sellerState: string;
+  gstRate: number;
 };
 
 export type EmailConfig = {
@@ -135,7 +148,14 @@ export type PlanInfo = {
     locations: number;
     staff: number;
     qrCodes: number;
+    /** Monthly review cap across the owner's businesses. */
     reviews: number;
+    aiCallsPerMonth: number;
+    campaigns: number;
+    reviewTemplates: number;
+    /** Reserved for the store phase. High so it does not block that work. */
+    storeProducts: number;
+    storeOrders: number;
   };
 };
 
@@ -156,7 +176,18 @@ export const DEFAULT_PLANS: PricingConfig = {
       "Up to 50 reviews/month"
     ],
     visible: true,
-    limits: { businesses: 1, locations: 1, staff: 1, qrCodes: 2, reviews: 50 }
+    limits: {
+      businesses: 1,
+      locations: 1,
+      staff: 1,
+      qrCodes: 2,
+      reviews: 50,
+      aiCallsPerMonth: 30,
+      campaigns: 1,
+      reviewTemplates: 10,
+      storeProducts: 100000,
+      storeOrders: 100000
+    }
   },
   STARTER: {
     tier: "STARTER",
@@ -173,7 +204,18 @@ export const DEFAULT_PLANS: PricingConfig = {
       "Email reports"
     ],
     visible: true,
-    limits: { businesses: 1, locations: 1, staff: 5, qrCodes: 50, reviews: 1000 }
+    limits: {
+      businesses: 1,
+      locations: 1,
+      staff: 5,
+      qrCodes: 50,
+      reviews: 1000,
+      aiCallsPerMonth: 300,
+      campaigns: 10,
+      reviewTemplates: 100,
+      storeProducts: 100000,
+      storeOrders: 100000
+    }
   },
   GROWTH: {
     tier: "GROWTH",
@@ -192,7 +234,18 @@ export const DEFAULT_PLANS: PricingConfig = {
     ],
     highlighted: true,
     visible: true,
-    limits: { businesses: 5, locations: 25, staff: 100, qrCodes: 500, reviews: 10000 }
+    limits: {
+      businesses: 5,
+      locations: 25,
+      staff: 100,
+      qrCodes: 500,
+      reviews: 10000,
+      aiCallsPerMonth: 2000,
+      campaigns: 50,
+      reviewTemplates: 1000,
+      storeProducts: 100000,
+      storeOrders: 100000
+    }
   },
   AGENCY: {
     tier: "AGENCY",
@@ -205,7 +258,6 @@ export const DEFAULT_PLANS: PricingConfig = {
       "White-label dashboard",
       "Custom domain",
       "Sub-account management",
-      "API access",
       "Dedicated success manager"
     ],
     visible: true,
@@ -214,7 +266,12 @@ export const DEFAULT_PLANS: PricingConfig = {
       locations: 100000,
       staff: 100000,
       qrCodes: 100000,
-      reviews: 1000000
+      reviews: 1000000,
+      aiCallsPerMonth: 100000,
+      campaigns: 100000,
+      reviewTemplates: 100000,
+      storeProducts: 100000,
+      storeOrders: 100000
     }
   }
 };
@@ -240,7 +297,14 @@ export const DEFAULT_PAYMENTS: PaymentsConfig = {
   mailImapPort: 993,
   mailImapUser: "",
   mailImapPass: "",
-  mailFromFilter: ""
+  mailFromFilter: "",
+  youpiBaseUrl: "",
+  youpiMerchantId: "",
+  youpiWebhookSecret: "",
+  sellerLegalName: "ReviewQR",
+  sellerGstin: "",
+  sellerState: "",
+  gstRate: 18
 };
 
 export const DEFAULT_EMAIL: EmailConfig = {
@@ -278,8 +342,16 @@ export const DEFAULT_AI: AiConfig = {
   enabled: false,
   apiUrl: "https://openrouter.ai/api/v1",
   apiKey: "",
-  model: "openai/gpt-4o-mini"
+  model: "openai/gpt-4o-mini",
+  dailyCapPaise: 20000,
+  estimatePaisePerCall: 100
 };
+
+function nonNegativeInt(value: unknown, fallback: number) {
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n) || n < 0) return fallback;
+  return Math.floor(n);
+}
 
 async function readKey<T>(key: string, fallback: T): Promise<T> {
   const hit = cache.get(key);
@@ -342,7 +414,14 @@ export async function getPaymentsConfig(): Promise<PaymentsConfig> {
     mailImapPort: stored.mailImapPort || Number(process.env.IMAP_PORT) || DEFAULT_PAYMENTS.mailImapPort,
     mailImapUser: stored.mailImapUser || process.env.IMAP_USER || "",
     mailImapPass: stored.mailImapPass || process.env.IMAP_PASS || "",
-    mailFromFilter: stored.mailFromFilter || ""
+    mailFromFilter: stored.mailFromFilter || "",
+    youpiBaseUrl: stored.youpiBaseUrl || process.env.YOUPI_BASE_URL || "",
+    youpiMerchantId: stored.youpiMerchantId || process.env.YOUPI_MERCHANT_ID || "",
+    youpiWebhookSecret: stored.youpiWebhookSecret || process.env.YOUPI_WEBHOOK_SECRET || "",
+    sellerLegalName: stored.sellerLegalName || DEFAULT_PAYMENTS.sellerLegalName,
+    sellerGstin: stored.sellerGstin || process.env.SELLER_GSTIN || "",
+    sellerState: stored.sellerState || "",
+    gstRate: stored.gstRate && stored.gstRate > 0 ? stored.gstRate : DEFAULT_PAYMENTS.gstRate
   };
 }
 export async function setPaymentsConfig(v: PaymentsConfig, by?: string) {
@@ -350,13 +429,22 @@ export async function setPaymentsConfig(v: PaymentsConfig, by?: string) {
 }
 
 /* ============== Pricing ============== */
+function mergePlan(base: PlanInfo, stored?: Partial<PlanInfo>): PlanInfo {
+  return {
+    ...base,
+    ...(stored || {}),
+    tier: base.tier,
+    limits: { ...base.limits, ...(stored?.limits || {}) }
+  };
+}
+
 export async function getPricingConfig(): Promise<PricingConfig> {
   const stored = await readKey<Partial<PricingConfig>>(SETTING_KEYS.pricing, {});
   return {
-    FREE: { ...DEFAULT_PLANS.FREE, ...(stored.FREE || {}) },
-    STARTER: { ...DEFAULT_PLANS.STARTER, ...(stored.STARTER || {}) },
-    GROWTH: { ...DEFAULT_PLANS.GROWTH, ...(stored.GROWTH || {}) },
-    AGENCY: { ...DEFAULT_PLANS.AGENCY, ...(stored.AGENCY || {}) }
+    FREE: mergePlan(DEFAULT_PLANS.FREE, stored.FREE),
+    STARTER: mergePlan(DEFAULT_PLANS.STARTER, stored.STARTER),
+    GROWTH: mergePlan(DEFAULT_PLANS.GROWTH, stored.GROWTH),
+    AGENCY: mergePlan(DEFAULT_PLANS.AGENCY, stored.AGENCY)
   };
 }
 export async function setPricingConfig(v: PricingConfig, by?: string) {
@@ -432,11 +520,21 @@ export async function setTurnstileConfig(v: TurnstileConfig, by?: string) {
 /* ============== AI (OpenAI-compatible) ============== */
 export async function getAiConfig(): Promise<AiConfig> {
   const stored = await readKey<Partial<AiConfig>>(SETTING_KEYS.ai, {});
+  const envCap = process.env.AI_DAILY_CAP_PAISE;
+  const envEstimate = process.env.AI_ESTIMATE_PAISE;
   return {
     enabled: stored.enabled ?? (process.env.AI_ENABLED === "true"),
     apiUrl: (stored.apiUrl || process.env.AI_API_URL || DEFAULT_AI.apiUrl).replace(/\/$/, ""),
     apiKey: stored.apiKey || process.env.AI_API_KEY || "",
-    model: stored.model || process.env.AI_MODEL || DEFAULT_AI.model
+    model: stored.model || process.env.AI_MODEL || DEFAULT_AI.model,
+    dailyCapPaise: nonNegativeInt(
+      stored.dailyCapPaise ?? envCap,
+      DEFAULT_AI.dailyCapPaise
+    ),
+    estimatePaisePerCall: nonNegativeInt(
+      stored.estimatePaisePerCall ?? envEstimate,
+      DEFAULT_AI.estimatePaisePerCall
+    )
   };
 }
 export async function setAiConfig(v: AiConfig, by?: string) {

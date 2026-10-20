@@ -12,6 +12,7 @@
  */
 import type { AiConfig } from "./settings";
 import { assertSafeOutboundUrl } from "./ssrf";
+import { consumeAiCall } from "./entitlements";
 
 export type BusinessContext = {
   name: string;
@@ -40,9 +41,10 @@ function contextBlock(ctx: BusinessContext): string {
 async function chat(
   cfg: AiConfig,
   messages: Array<{ role: "system" | "user"; content: string }>,
-  opts: { maxTokens?: number; temperature?: number } = {}
+  opts: { maxTokens?: number; temperature?: number; businessId?: string } = {}
 ): Promise<string> {
   if (!cfg.enabled || !cfg.apiKey) throw new Error("AI not configured");
+  if (opts.businessId) await consumeAiCall(opts.businessId);
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 20_000);
@@ -156,7 +158,8 @@ function parseJson(content: string): any {
 
 export async function generateQuestions(
   cfg: AiConfig,
-  ctx: BusinessContext
+  ctx: BusinessContext,
+  businessId?: string
 ): Promise<AiQuestion[]> {
   const system =
     "You help a happy customer quickly describe their positive experience so a great Google review can be drafted. " +
@@ -171,7 +174,7 @@ export async function generateQuestions(
   const raw = await chat(cfg, [
     { role: "system", content: system },
     { role: "user", content: user }
-  ], { maxTokens: 350, temperature: 0.6 });
+  ], { maxTokens: 350, temperature: 0.6, businessId });
 
   const data = parseJson(raw);
   const arr = Array.isArray(data) ? data : data.questions;
@@ -195,7 +198,8 @@ export async function generateReviews(
   cfg: AiConfig,
   ctx: BusinessContext,
   rating: number,
-  answers: Array<{ question: string; answer: string }>
+  answers: Array<{ question: string; answer: string }>,
+  businessId?: string
 ): Promise<string[]> {
   const answerBlock = answers.length
     ? answers.map((a) => `- ${a.question} → ${a.answer}`).join("\n")
@@ -216,7 +220,7 @@ export async function generateReviews(
   const raw = await chat(cfg, [
     { role: "system", content: system },
     { role: "user", content: user }
-  ], { maxTokens: 350, temperature: 0.85 });
+  ], { maxTokens: 350, temperature: 0.85, businessId });
 
   const data = parseJson(raw);
   const arr = Array.isArray(data) ? data : data.reviews;

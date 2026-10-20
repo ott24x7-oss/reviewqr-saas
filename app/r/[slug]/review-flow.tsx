@@ -71,6 +71,7 @@ type Props = {
   reviews: PublicReview[];
   brand?: { name: string; appUrl: string };
   aiEnabled?: boolean;
+  turnstileSiteKey?: string | null;
 };
 
 type AiQuestion = { id: string; question: string; options: string[] };
@@ -208,6 +209,67 @@ function fullAddress(b: Business) {
 
 type TemplatePick = { id: string; content: string };
 
+type TurnstileHandle = { reset: () => void };
+
+const TurnstileField = React.forwardRef<
+  TurnstileHandle,
+  { siteKey: string; onToken: (token: string) => void }
+>(function TurnstileField({ siteKey, onToken }, ref) {
+  const holder = React.useRef<HTMLDivElement>(null);
+  const widgetId = React.useRef<string | null>(null);
+  const onTokenRef = React.useRef(onToken);
+  onTokenRef.current = onToken;
+
+  React.useImperativeHandle(ref, () => ({
+    reset() {
+      onTokenRef.current("");
+      const ts = (window as unknown as { turnstile?: { reset: (id: string) => void } }).turnstile;
+      if (ts && widgetId.current) ts.reset(widgetId.current);
+    }
+  }));
+
+  React.useEffect(() => {
+    let dead = false;
+    const src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+    function render() {
+      const ts = (
+        window as unknown as {
+          turnstile?: {
+            render: (el: HTMLElement, opts: Record<string, unknown>) => string;
+          };
+        }
+      ).turnstile;
+      if (dead || !holder.current || !ts || widgetId.current) return;
+      widgetId.current = ts.render(holder.current, {
+        sitekey: siteKey,
+        callback: (token: string) => onTokenRef.current(token),
+        "expired-callback": () => onTokenRef.current(""),
+        "error-callback": () => onTokenRef.current("")
+      });
+    }
+    if ((window as unknown as { turnstile?: unknown }).turnstile) {
+      render();
+      return () => {
+        dead = true;
+      };
+    }
+    let script = document.querySelector(`script[src="${src}"]`) as HTMLScriptElement | null;
+    if (!script) {
+      script = document.createElement("script");
+      script.src = src;
+      script.async = true;
+      document.head.appendChild(script);
+    }
+    script.addEventListener("load", render);
+    return () => {
+      dead = true;
+      script?.removeEventListener("load", render);
+    };
+  }, [siteKey]);
+
+  return <div ref={holder} className="my-2 flex justify-center" />;
+});
+
 export function ReviewFlow(props: Props) {
   const [step, setStep] = React.useState<Step>("rate");
   const [tab, setTab] = React.useState<Tab>("reviews");
@@ -219,6 +281,9 @@ export function ReviewFlow(props: Props) {
   const [email, setEmail] = React.useState("");
   const [tags, setTags] = React.useState<string[]>([]);
   const [npsScore, setNpsScore] = React.useState<number | null>(null);
+  const [consent, setConsent] = React.useState(false);
+  const [turnstileToken, setTurnstileToken] = React.useState("");
+  const turnstileRef = React.useRef<TurnstileHandle>(null);
   const [loading, setLoading] = React.useState(false);
   const [templates, setTemplates] = React.useState<TemplatePick[]>([]);
   const [templatesLoading, setTemplatesLoading] = React.useState(false);
@@ -234,6 +299,10 @@ export function ReviewFlow(props: Props) {
   const platformLabel = business.reviewPlatform === "trustpilot" ? "Trustpilot" : "Google";
 
   function pickRating(n: number) {
+    if (props.turnstileSiteKey && !turnstileToken) {
+      toast.error("Complete the security check, then tap a star");
+      return;
+    }
     setRating(n);
     if (n >= business.ratingThreshold && business.googleReviewUrl) {
       // High rating + Google URL: try to fetch templates first.
@@ -391,6 +460,9 @@ export function ReviewFlow(props: Props) {
   }
 
   async function submitReview(opts: { rating: number; feedback: string; redirected: boolean }) {
+    if (props.turnstileSiteKey && !turnstileToken) {
+      throw new Error("Complete the security check, then try again");
+    }
     const res = await fetch("/api/public/reviews", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -401,16 +473,20 @@ export function ReviewFlow(props: Props) {
         customerName: name,
         customerPhone: phone,
         customerEmail: email,
+        consent,
         npsScore,
         tags,
         source: props.qrCode ? "qr" : "link",
         locationSlug: props.location?.slug,
         staffSlug: props.staff?.slug,
-        qrCode: props.qrCode
+        qrCode: props.qrCode,
+        turnstileToken: turnstileToken || undefined
       })
     });
     const json = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(json.error || "Failed to submit");
+    setTurnstileToken("");
+    turnstileRef.current?.reset();
     return json;
   }
 
@@ -672,6 +748,15 @@ export function ReviewFlow(props: Props) {
       )}
 
       <main className="flex-1">
+        {(step === "rate" || step === "feedback") && props.turnstileSiteKey ? (
+          <div className="container max-w-2xl px-4 pt-4">
+            <TurnstileField
+              ref={turnstileRef}
+              siteKey={props.turnstileSiteKey}
+              onToken={setTurnstileToken}
+            />
+          </div>
+        ) : null}
         {step === "rate" && tab === "reviews" && <ReviewsTab reviews={props.reviews} />}
         {step === "rate" && tab === "info" && <InfoTab business={business} />}
 
@@ -693,6 +778,8 @@ export function ReviewFlow(props: Props) {
             setNpsScore={setNpsScore}
             onSubmit={onSubmitFeedback}
             loading={loading}
+            consent={consent}
+            setConsent={setConsent}
           />
         )}
         {step === "thank-you-google" && <ThankYouGoogle business={business} />}
@@ -1456,6 +1543,8 @@ function FeedbackStep(props: {
   setNpsScore: (n: number) => void;
   onSubmit: (e: React.FormEvent) => void;
   loading: boolean;
+  consent: boolean;
+  setConsent: (v: boolean) => void;
 }) {
   return (
     <div className="container max-w-2xl px-4 py-5">
@@ -1549,6 +1638,27 @@ function FeedbackStep(props: {
             <p className="text-xs rv-sub">
               We'll only contact you if you'd like us to follow up.
             </p>
+          </div>
+
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs leading-relaxed rv-body">
+            <p>
+              {props.business.name} collects your star rating and this message so the owner can
+              follow up. Your name, mobile, and email are saved only if you tick the box below, and
+              only the business owner can see them. To ask for deletion, use the link in our{" "}
+              <a href="/privacy" className="underline">
+                privacy notice
+              </a>
+              .
+            </p>
+            <label className="mt-2 flex items-start gap-2">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={props.consent}
+                onChange={(e) => props.setConsent(e.target.checked)}
+              />
+              <span>I agree to share my name, mobile, or email with this business.</span>
+            </label>
           </div>
 
           <Button

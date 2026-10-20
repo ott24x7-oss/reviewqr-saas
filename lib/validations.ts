@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { storageConfigured, storedImageAllowed } from "./images";
 
 export const emailSchema = z.string().email("Enter a valid email").max(200).toLowerCase();
 export const phoneSchema = z
@@ -27,15 +28,23 @@ export const loginSchema = z.object({
   password: z.string().min(1)
 });
 
-// Accept either an http(s) URL or a base64 data URL (≤ ~700KB encoded). Logos
-// are auto-resized client-side so they comfortably fit; covers are larger.
-// Reject quotes/whitespace/angle-brackets so a value can't break out of an
-// HTML attribute when rendered (e.g. in the embeddable widget).
+// With object storage configured, a new image must be an https URL on our
+// public base. Data URLs are rejected so they cannot be written again.
+// Without storage, http(s) and data:image still work for local dev.
+// Quotes, whitespace, and angle brackets are rejected so a value cannot
+// break out of an HTML attribute.
 const imageString = z
   .string()
   .max(1_500_000)
-  .refine((s) => /^(https?:\/\/|data:image\/)/i.test(s), "Invalid image")
-  .refine((s) => !/["'<>\s]/.test(s), "Invalid image URL");
+  .superRefine((s, ctx) => {
+    if (storedImageAllowed(s)) return;
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: storageConfigured()
+        ? "Image must be uploaded to storage"
+        : "Invalid image"
+    });
+  });
 
 // A safe, navigable URL: must parse AND be http(s). Blocks javascript:, data:,
 // and other schemes that would enable XSS or malicious auto-redirects when the
@@ -60,6 +69,7 @@ export const businessSchema = z.object({
   state: z.string().max(60).optional().or(z.literal("")),
   pincode: z.string().regex(/^\d{6}$/, "Enter 6-digit PIN").optional().or(z.literal("")),
   googleReviewUrl: httpUrl.optional().or(z.literal("")),
+  googlePlaceId: z.string().max(200).optional().or(z.literal("")),
   trustpilotUrl: httpUrl.optional().or(z.literal("")),
   reviewPlatform: z.enum(["google", "trustpilot"]).optional(),
   ratingThreshold: z.number().int().min(1).max(5).default(4),
@@ -94,13 +104,14 @@ export const reviewSubmitSchema = z.object({
   customerName: z.string().max(80).optional().or(z.literal("")),
   customerEmail: emailSchema.optional().or(z.literal("")),
   customerPhone: phoneSchema.optional().or(z.literal("")),
-  npsScore: z.number().int().min(0).max(10).optional(),
+  npsScore: z.number().int().min(0).max(10).nullish(),
   tags: z.array(z.string()).optional(),
   source: z.string().max(20).optional(),
   locationSlug: z.string().max(100).optional().or(z.literal("")),
   staffSlug: z.string().max(100).optional().or(z.literal("")),
   qrCode: z.string().max(20).optional().or(z.literal("")),
-  turnstileToken: z.string().optional().or(z.literal(""))
+  turnstileToken: z.string().optional().or(z.literal("")),
+  consent: z.boolean().optional()
 });
 
 export const qrCodeSchema = z.object({

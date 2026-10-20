@@ -45,6 +45,8 @@ model User {
   name           String?
   phone          String?
   image          String?
+  // Set when the account is anonymized. The row stays so Payment records can.
+  deletedAt      DateTime?
   role           UserRole  @default(USER)
   agencyId       String?
   agency         User?     @relation("AgencyClients", fields: [agencyId], references: [id], onDelete: SetNull)
@@ -71,6 +73,10 @@ model User {
   payments    Payment[]
   apiKeys     ApiKey[]
   notifications Notification[]
+  subscriptionReminders SubscriptionReminder[]
+  memberships     BusinessMember[]
+  supportTickets  SupportTicket[]
+  supportMessages SupportMessage[] @relation("SupportMessageAuthor")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -170,6 +176,9 @@ model Business {
   contacts     Contact[]
   tags         FeedbackTag[]
   reviewTemplates ReviewTemplate[]
+  aiUsage      AiUsage[]
+  members      BusinessMember[]
+  invites      BusinessInvite[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -268,6 +277,8 @@ model Review {
   customerName  String?
   customerEmail String?
   customerPhone String?
+  // Set only when the customer agreed to store contact details.
+  consentAt  DateTime?
 
   ipAddress  String?
   userAgent  String? @db.Text
@@ -278,6 +289,7 @@ model Review {
   createdAt DateTime @default(now())
 
   @@index([businessId, createdAt])
+  @@index([businessId, rating])
   @@index([locationId])
   @@index([staffId])
   @@index([fingerprint])
@@ -309,6 +321,7 @@ model Feedback {
 
   @@index([businessId, createdAt])
   @@index([status])
+  @@index([businessId, status])
 }
 
 model FeedbackTag {
@@ -363,11 +376,12 @@ model QRCode {
   scans      Int     @default(0)
   isActive   Boolean @default(true)
 
+  qrScans    QrScan[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([businessId])
-  @@index([shortCode])
 }
 
 enum CampaignStatus {
@@ -446,6 +460,7 @@ model CampaignContact {
 
 enum PaymentStatus {
   PENDING
+  QUEUED
   COMPLETED
   FAILED
   REFUNDED
@@ -457,21 +472,40 @@ enum PaymentProvider {
   MANUAL
   UPI
   USDT
+  YOUPI
 }
 
 model Payment {
   id        String  @id @default(cuid())
   userId    String
-  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Restrict so deleting a user cannot delete GST payment records.
+  user      User    @relation(fields: [userId], references: [id], onDelete: Restrict)
   amount    Int     // in paise
   currency  String  @default("INR")
   status    PaymentStatus @default(PENDING)
   provider  PaymentProvider @default(RAZORPAY)
-  providerOrderId   String?
-  providerPaymentId String?
+  providerOrderId   String? @unique
+  providerPaymentId String? @unique
   tier      SubscriptionTier
   periodMonths Int @default(1)
   invoiceUrl String?
+  invoiceNumber String? @unique
+  utr          String?
+  refundUtr    String?
+  queuePosition Int?
+  checkoutUrl  String? @db.Text
+
+  // Snapshot taken when the invoice number is issued. Later profile edits do not change it.
+  invoiceBuyerName    String?
+  invoiceBuyerGstin   String?
+  invoiceSellerName   String?
+  invoiceSellerGstin  String?
+  invoicePlaceOfSupply String?
+  invoiceTaxablePaise Int?
+  invoiceCgstPaise    Int?
+  invoiceSgstPaise    Int?
+  invoiceIgstPaise    Int?
+  invoiceIssuedAt     DateTime?
 
   // Manual UPI / USDT collection + email auto-verify
   method       String?   // "upi" | "usdt"
@@ -482,11 +516,40 @@ model Payment {
   matchedEmail String?   // uid/subject of the confirmation email that matched
   expiresAt    DateTime? // pending order expiry
 
+  deliveries PaymentDelivery[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@index([status, expiresAt])
+  @@index([provider, status])
+}
+
+// One row per Indian financial year. Locked with SELECT … FOR UPDATE while issuing invoice numbers.
+model InvoiceSequence {
+  fy         String @id
+  lastNumber Int    @default(0)
+}
+
+model PaymentDelivery {
+  id         String   @id @default(cuid())
+  deliveryId String   @unique
+  paymentId  String
+  payment    Payment  @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  createdAt  DateTime @default(now())
+}
+
+model SubscriptionReminder {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      String
+  periodEnd DateTime
+  createdAt DateTime @default(now())
+
+  @@unique([userId, kind, periodEnd])
+  @@index([userId])
 }
 
 // ==========================
@@ -505,6 +568,65 @@ model ApiKey {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+enum BusinessMemberRole {
+  MANAGER
+  STAFF
+}
+
+// Someone invited onto a business. The platform User.role is unchanged.
+model BusinessMember {
+  id         String             @id @default(cuid())
+  businessId String
+  business   Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role       BusinessMemberRole
+  createdAt  DateTime           @default(now())
+
+  @@unique([businessId, userId])
+  @@index([userId])
+}
+
+model BusinessInvite {
+  id         String             @id @default(cuid())
+  businessId String
+  business   Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  email      String
+  role       BusinessMemberRole
+  tokenHash  String             @unique
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  createdAt  DateTime           @default(now())
+
+  @@index([businessId, email])
+}
+
+model SupportTicket {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject   String
+  status    String           @default("OPEN")
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  messages  SupportMessage[]
+
+  @@index([userId, updatedAt])
+  @@index([status, updatedAt])
+}
+
+model SupportMessage {
+  id        String        @id @default(cuid())
+  ticketId  String
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User          @relation("SupportMessageAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  body      String        @db.Text
+  createdAt DateTime      @default(now())
+
+  @@index([ticketId, createdAt])
 }
 
 model Notification {
@@ -530,6 +652,52 @@ model RateLimit {
   expiresAt DateTime
 
   @@index([expiresAt])
+}
+
+// One counted visit per IP hash inside the dedupe window. ipHash is SHA-256, not reversible.
+model QrScan {
+  id         String   @id @default(cuid())
+  qrCodeId   String
+  qrCode     QRCode   @relation(fields: [qrCodeId], references: [id], onDelete: Cascade)
+  ipHash     String
+  deviceType String?
+  createdAt  DateTime @default(now())
+
+  @@index([qrCodeId, ipHash, createdAt])
+}
+
+// Per-business AI calls for a calendar month (Asia/Kolkata), key YYYY-MM.
+model AiUsage {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  month      String
+  calls      Int      @default(0)
+
+  @@unique([businessId, month])
+  @@index([businessId])
+}
+
+// Platform-wide estimated AI spend for one calendar day, key YYYY-MM-DD.
+model PlatformAiSpend {
+  day   String @id
+  paise Int    @default(0)
+}
+
+// Login OTPs for email and phone. Password reset and email-verify links stay on VerificationToken.
+// channel is "email" or "phone". Only the hash of the code is stored.
+model EmailOtp {
+  id         String   @id @default(cuid())
+  identifier String
+  tokenHash  String
+  channel    String
+  purpose    String
+  expires    DateTime
+  attempts   Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  @@index([identifier, purpose])
+  @@index([tokenHash])
 }
 
 model AuditLog {

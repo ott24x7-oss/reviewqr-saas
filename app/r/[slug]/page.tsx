@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { ReviewFlow } from "./review-flow";
 import { getBrand } from "@/lib/brand";
-import { getAiConfig } from "@/lib/settings";
+import { getAiConfig, getTurnstileConfig } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -90,7 +90,7 @@ export default async function ReviewPage({
   ]);
 
   const brand = await getBrand();
-  const aiCfg = await getAiConfig();
+  const [aiCfg, turnstile] = await Promise.all([getAiConfig(), getTurnstileConfig()]);
   const aiEnabled = aiCfg.enabled && !!aiCfg.apiKey && !!business.aiReviewsEnabled;
 
   // Where do happy reviews go — Google or Trustpilot?
@@ -158,6 +158,7 @@ export default async function ReviewPage({
       reviews={reviews}
       brand={brand}
       aiEnabled={aiEnabled}
+      turnstileSiteKey={turnstile.secretKey && turnstile.siteKey ? turnstile.siteKey : null}
     />
   );
 }

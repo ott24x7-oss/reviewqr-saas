@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { rateLimit } from "@/lib/rate-limit";
+import { rateLimitDb } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/utils";
 import { notifyPositiveReviewCopy } from "@/lib/notify";
 
@@ -18,7 +18,7 @@ const schema = z.object({
  */
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req.headers);
-  const rl = await rateLimit({ key: `tpl-consume:${ip}`, limit: 20, windowSeconds: 60 });
+  const rl = await rateLimitDb({ key: `tpl-consume:${ip}`, limit: 20, windowSeconds: 60 });
   if (!rl.ok) return NextResponse.json({ error: "Slow down" }, { status: 429 });
 
   const parsed = schema.safeParse(await req.json().catch(() => ({})));

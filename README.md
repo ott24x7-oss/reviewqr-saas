@@ -27,7 +27,7 @@
 - WhatsApp click-to-chat templates + Cloud API
 - Public testimonial widget (`<script>` snippet)
 - White-label (Agency plan): logo, colors, custom domain
-- API-ready (Razorpay billing + REST endpoints)
+- YouPI checkout, with manual UPI as the fallback. Razorpay stays off unless enabled.
 
 **Production-ready**
 - NextAuth credential auth, bcrypt-hashed passwords
@@ -50,9 +50,9 @@ npm install
 cp .env.example .env
 # Edit DATABASE_URL, NEXTAUTH_SECRET, ADMIN_EMAIL, ADMIN_PASSWORD
 
-# 3. Database setup
-npm run db:push       # create tables
-npm run db:seed       # admin + demo café with ~120 reviews
+# 3. Database setup. Use migrations. Do not use `prisma db push`.
+npm run db:migrate    # prisma migrate dev — creates and applies migrations locally
+npm run db:seed       # demo café. Set ADMIN_EMAIL and ADMIN_PASSWORD first.
 
 # 4. Run
 npm run dev
@@ -62,7 +62,7 @@ Open <http://localhost:3000>
 
 **Demo accounts** (after seed):
 - Owner: `demo@reviewqr.in` / `Demo@123` → has 120 demo reviews
-- Admin: `admin@reviewqr.in` / `ChangeMe@123`
+- Admin: the email and password you set in `ADMIN_EMAIL` and `ADMIN_PASSWORD`. There is no default password. Seeding again does not change it.
 - Public review page: <http://localhost:3000/r/demo-cafe>
 
 ---
@@ -109,14 +109,40 @@ Open <http://localhost:3000>
    SMTP_PASS=re_...
    ```
 
-5. **Razorpay** (optional — payments):
+5. **YouPI** (UPI checkout) and a cron secret:
+   ```
+   YOUPI_BASE_URL=https://pay.yourdomain.com
+   YOUPI_MERCHANT_ID=...
+   YOUPI_WEBHOOK_SECRET=...
+   CRON_SECRET=...
+   SELLER_GSTIN=...
+   PAYMENTS_RAZORPAY_ENABLED=false
+   ```
+   Point a daily Railway cron `POST` at `/api/billing/reconcile` with header `x-cron-secret`. The secret is compared with `timingSafeEqual` and must match `CRON_SECRET`. Manual UPI/USDT stays as the fallback. Razorpay checkout is not shown. This repo does not create the cron service.
+
+6. **Object storage** (optional, Cloudflare R2 or any S3-compatible bucket). Leave these blank and uploads stay as resized data URLs.
+   ```
+   S3_ENDPOINT=https://<account>.r2.cloudflarestorage.com
+   S3_BUCKET=reviewqr
+   S3_ACCESS_KEY_ID=...
+   S3_SECRET_ACCESS_KEY=...
+   S3_PUBLIC_BASE_URL=https://files.yourdomain.com
+   S3_REGION=auto
+   ```
+   `S3_PUBLIC_BASE_URL` must be `https`. Move existing data URLs yourself when you are ready. It is not part of deploy:
+   ```bash
+   npx tsx scripts/migrate-images.ts --dry-run
+   npx tsx scripts/migrate-images.ts
+   ```
+
+7. **Razorpay** (optional, off unless `PAYMENTS_RAZORPAY_ENABLED=true`):
    ```
    RAZORPAY_KEY_ID=rzp_live_...
    RAZORPAY_KEY_SECRET=...
    RAZORPAY_WEBHOOK_SECRET=...
    ```
 
-6. **WhatsApp Cloud API** (optional — auto-send instead of click-to-chat):
+8. **WhatsApp Cloud API** (optional — auto-send instead of click-to-chat):
    ```
    WHATSAPP_API_URL=https://graph.facebook.com/v20.0
    WHATSAPP_API_TOKEN=EAAxxxxxxx
@@ -131,23 +157,23 @@ git push     # if connected to GitHub
 railway up   # CLI deploy
 ```
 
-Railway runs (configured in `package.json` and `railway.json`):
+Railway's pre-deploy command (`railway.json`) is `node scripts/predeploy-migrate.js`. It runs `prisma migrate deploy`; it does not run `db push` and it does not reset the admin password.
+
+### Existing database that was created with `db push`
+
+The pre-deploy script handles this automatically. If the database already has tables but no record of `20260426000000_baseline` / `20260427000000_platform_branding` in `_prisma_migrations`, it marks them as applied (without executing their SQL) and then runs `migrate deploy`. It is safe to run on every deploy. To do it by hand instead:
 
 ```bash
-npm install
-npx prisma generate
-npx prisma migrate deploy   # applies migrations
-npm run build
-npm run start               # binds to $PORT automatically
+railway run npx prisma migrate resolve --applied 20260426000000_baseline
+railway run npx prisma migrate resolve --applied 20260427000000_platform_branding
 ```
 
 ### First-deploy commands
 
 ```bash
-# In Railway shell or via railway run:
-railway run npm run db:deploy        # apply Prisma migrations
-railway run npm run seed:admin       # create the super admin
-# (or `npm run db:seed` for full demo data)
+# Fresh database: pre-deploy already applies migrations.
+# Create the super admin once. Later runs leave the password alone.
+railway run npm run seed:admin
 ```
 
 ### Custom domain (white-label)
@@ -203,17 +229,20 @@ railway run npm run seed:admin       # create the super admin
 | `npm run dev` | Start dev server |
 | `npm run build` | Build for production |
 | `npm run start` | Start production server |
-| `npm run db:push` | Push schema to DB (no migration) |
-| `npm run db:migrate` | Create + apply a new migration |
-| `npm run db:deploy` | Apply pending migrations (production) |
-| `npm run db:seed` | Seed admin + demo data |
-| `npm run seed:admin` | Seed admin only (production-safe) |
+| `npm run db:migrate` | `prisma migrate dev` — create and apply a migration locally |
+| `npm run db:deploy` | `prisma migrate deploy` — apply pending migrations |
+| `npm test` | Vitest unit tests |
+| `npm run test:e2e` | Playwright owner smoke test. Needs `DATABASE_URL`, a migrated database, and `npx playwright install chromium`. |
+| `npm run db:seed` | Seed demo data. Creates an admin only if that email is missing. |
+| `npm run seed:admin` | Create the admin once. Does not reset the password. |
 | `npm run db:studio` | Open Prisma Studio |
 | `npm run db:reset` | Drop all + re-migrate (DEV ONLY) |
 
 ---
 
-## 🔌 Public REST endpoints
+## 🔌 Public endpoints
+
+There is no partner API. These routes are the customer and widget pages:
 
 | Endpoint | Purpose |
 | --- | --- |
@@ -250,7 +279,7 @@ Authenticated endpoints under `/api/businesses`, `/api/feedback`, `/api/billing`
 | Free | ₹0 | ₹0 | 1 business, 50 reviews/mo |
 | Starter | ₹499 | ₹4,999 | 1 business, unlimited QR, WhatsApp |
 | Growth ⭐ | ₹999 | ₹9,999 | 5 businesses, 25 locations, branding |
-| Agency | ₹2,999 | ₹29,999 | Unlimited, white-label, custom domain, API |
+| Agency | ₹2,999 | ₹29,999 | Unlimited, white-label, custom domain |
 
 Edit pricing in `lib/payments.ts → PLANS`.
 

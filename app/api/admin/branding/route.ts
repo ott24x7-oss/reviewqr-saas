@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdminApi, logAudit } from "@/lib/admin";
 import { prisma } from "@/lib/db";
 import { getClientIp } from "@/lib/utils";
+import { storedImageAllowed } from "@/lib/images";
 
 export const dynamic = "force-dynamic";
 
@@ -45,8 +46,13 @@ export async function PUT(req: NextRequest) {
     primaryColor: string;
   }>;
 
+  const current = await read();
   const logoDataUrl = (incoming.logoDataUrl ?? "").trim();
-  if (logoDataUrl) {
+  const unchanged = logoDataUrl !== "" && logoDataUrl === current.logoDataUrl;
+  if (logoDataUrl && !unchanged && !storedImageAllowed(logoDataUrl)) {
+    return NextResponse.json({ error: "Upload a PNG, JPEG, or WebP logo" }, { status: 400 });
+  }
+  if (logoDataUrl.startsWith("data:")) {
     if (!DATA_URL_RE.test(logoDataUrl)) {
       return NextResponse.json(
         { error: "Logo must be a data URL of type svg+xml, png, jpeg, jpg, or webp" },

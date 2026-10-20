@@ -11,7 +11,6 @@ import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "admin@reviewqr.in").toLowerCase().trim();
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "ChangeMe@123";
 const DEMO_EMAIL = "demo@reviewqr.in";
 const DEMO_PASSWORD = "Demo@123";
 
@@ -73,21 +72,30 @@ function daysAgo(d: number) {
 async function main() {
   console.log("🌱 Seeding ReviewQR...");
 
-  const adminHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
-  const admin = await prisma.user.upsert({
-    where: { email: ADMIN_EMAIL },
-    create: {
-      email: ADMIN_EMAIL,
-      name: "ReviewQR Admin",
-      password: adminHash,
-      role: "ADMIN",
-      subscriptionTier: "AGENCY",
-      subscriptionStatus: "ACTIVE",
-      subscriptionEndsAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
-    },
-    update: { password: adminHash, role: "ADMIN" }
-  });
-  console.log(`  ✓ Admin: ${admin.email}`);
+  const existingAdmin = await prisma.user.findUnique({ where: { email: ADMIN_EMAIL } });
+  if (existingAdmin) {
+    console.log(`  ✓ Admin already exists: ${existingAdmin.email} (password unchanged)`);
+  } else {
+    const adminPassword = process.env.ADMIN_PASSWORD;
+    if (!adminPassword || adminPassword.length < 8) {
+      throw new Error(
+        "Set ADMIN_PASSWORD (8+ characters) before seeding a new admin. The old default password is not used."
+      );
+    }
+    const adminHash = await bcrypt.hash(adminPassword, 12);
+    const admin = await prisma.user.create({
+      data: {
+        email: ADMIN_EMAIL,
+        name: "ReviewQR Admin",
+        password: adminHash,
+        role: "ADMIN",
+        subscriptionTier: "AGENCY",
+        subscriptionStatus: "ACTIVE",
+        subscriptionEndsAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+      }
+    });
+    console.log(`  ✓ Admin created: ${admin.email}`);
+  }
 
   const demoHash = await bcrypt.hash(DEMO_PASSWORD, 12);
   const demoUser = await prisma.user.upsert({
@@ -294,7 +302,7 @@ async function main() {
   }
 
   console.log("\n✅ Seed complete!");
-  console.log(`\n   Admin: ${ADMIN_EMAIL} / ${ADMIN_PASSWORD}`);
+  console.log(`\n   Admin: ${ADMIN_EMAIL} (password is ADMIN_PASSWORD; unchanged if the user already existed)`);
   console.log(`   Demo:  ${DEMO_EMAIL} / ${DEMO_PASSWORD}`);
   console.log(`   Try:   http://localhost:3000/r/demo-cafe\n`);
 }
