@@ -12,12 +12,12 @@ export async function GET(req: NextRequest, { params }: { params: { code: string
     where: { shortCode: params.code },
     include: { business: { select: { primaryColor: true, isActive: true } } }
   });
-  if (!qr || !qr.business.isActive) {
+  if (!qr || (qr.business && !qr.business.isActive)) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const targetUrl = absoluteUrl(`/q/${params.code}`);
-  const c = color || qr.business.primaryColor || "#1a73e8";
+  const targetUrl = absoluteUrl(`/q/${params.code}?src=qr`);
+  const c = color || qr.business?.primaryColor || "#1a73e8";
 
   if (format === "svg") {
     const svg = await generateQrSvg(targetUrl, { color: c });

@@ -29,7 +29,7 @@ export async function GET(req: NextRequest, { params }: { params: { code: string
     }
   });
 
-  if (!qr || !qr.isActive || !qr.business.isActive || qr.business.archived) {
+  if (!qr || !qr.isActive || !qr.business || !qr.business.isActive || qr.business.archived) {
     return NextResponse.redirect(new URL("/?error=qr-not-found", base));
   }
 

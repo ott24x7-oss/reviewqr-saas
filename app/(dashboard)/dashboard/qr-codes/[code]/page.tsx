@@ -22,7 +22,7 @@ export default async function QrDetailPage({ params }: { params: { code: string 
       staff: { select: { name: true } }
     }
   });
-  if (!qr) notFound();
+  if (!qr?.business) notFound();
 
   const targetUrl = absoluteUrl(`/q/${qr.shortCode}`);
   const directUrl = absoluteUrl(`/r/${qr.business.slug}?q=${qr.shortCode}`);
