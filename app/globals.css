@@ -910,6 +910,42 @@
   object-fit: cover;
   border-radius: 16px;
 }
+.tap-note,
+.tap-offer,
+.tap-upi {
+  margin-top: 8px;
+  padding: 12px;
+  border: 1px solid var(--marketing-line);
+  border-radius: 16px;
+  background: var(--tap-card, white);
+}
+.tap-offer {
+  background: color-mix(in srgb, var(--tap-button-bg, var(--marketing-ink)) 12%, white);
+}
+.tap-note p,
+.tap-offer p {
+  margin: 4px 0 0;
+  white-space: pre-wrap;
+}
+.tap-upi img,
+.tap-youtube img {
+  display: block;
+  width: 160px;
+  max-width: 100%;
+  height: auto;
+  margin-top: 8px;
+  border-radius: 12px;
+}
+.tap-youtube a {
+  display: block;
+  margin-top: 12px;
+  color: var(--marketing-ink);
+}
+.tap-youtube img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
 .tap-consent {
   display: flex;
   align-items: center;

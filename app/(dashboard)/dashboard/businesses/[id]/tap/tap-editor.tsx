@@ -25,7 +25,8 @@ export function TapEditor({
   bio: initialBio,
   bioHi: initialBioHi,
   links: initialLinks,
-  hours: initialHours
+  hours: initialHours,
+  gallery: initialGallery
 }: {
   businessId: string;
   businessName: string;
@@ -39,12 +40,14 @@ export function TapEditor({
   bioHi: string;
   links: StoredLink[];
   hours: Record<string, { open: string; close: string }>;
+  gallery: string[];
 }) {
   const router = useRouter();
   const [bio, setBio] = React.useState(initialBio);
   const [bioHi, setBioHi] = React.useState(initialBioHi);
   const [links, setLinks] = React.useState(initialLinks);
   const [hours, setHours] = React.useState(initialHours);
+  const [galleryText, setGalleryText] = React.useState(initialGallery.join("\n"));
   const [busy, setBusy] = React.useState(false);
   const previewCode = code || "preview";
   const view = presentBusiness(
@@ -62,7 +65,13 @@ export function TapEditor({
       googleReviewUrl: null,
       whatsappNumber: null,
       menuCount: 0,
-      published: { bio, bioHi, links, hours: hoursPayload(hours) }
+      published: {
+        bio,
+        bioHi,
+        links,
+        hours: hoursPayload(hours),
+        gallery: galleryText.split(/\n+/).map((line) => line.trim()).filter(Boolean)
+      }
     },
     "q",
     previewCode
@@ -74,7 +83,14 @@ export function TapEditor({
       const res = await fetch(`/api/businesses/${businessId}/tap`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action, bio, bioHi, links, hours: hoursPayload(hours) })
+        body: JSON.stringify({
+          action,
+          bio,
+          bioHi,
+          links,
+          hours: hoursPayload(hours),
+          gallery: galleryText.split(/\n+/).map((line) => line.trim()).filter(Boolean)
+        })
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error || "Could not save the page");
@@ -130,6 +146,17 @@ export function TapEditor({
               <Input value={bioHi} disabled={!canEdit} onChange={(event) => setBioHi(event.target.value)} />
             </div>
             <LinkRows links={links} onChange={setLinks} canEdit={canEdit} />
+            <div>
+              <Label className="text-xs">Photo gallery</Label>
+              <textarea
+                aria-label="Photo URLs"
+                className="input min-h-[88px] w-full"
+                disabled={!canEdit}
+                value={galleryText}
+                placeholder="One https image link per line"
+                onChange={(event) => setGalleryText(event.target.value)}
+              />
+            </div>
             <details>
               <summary className="cursor-pointer text-sm font-medium">Opening hours</summary>
               <div className="mt-3 space-y-2">

@@ -18,6 +18,7 @@ export type TapExperienceProps = {
   open: boolean | null;
   links: PublicLink[];
   gallery: string[];
+  upiQr?: Record<string, string>;
   locationSlug: string;
   staffSlug: string;
   turnstileSiteKey: string;
@@ -42,6 +43,7 @@ export function TapExperience(props: TapExperienceProps) {
   }, []);
 
   React.useEffect(() => {
+    if (!props.code) return;
     const body = JSON.stringify({ code: props.code, type: "view", source });
     if (body.length > 1024) return;
     const blob = new Blob([body], { type: "application/json" });
@@ -128,23 +130,58 @@ export function TapExperience(props: TapExperienceProps) {
 
         {groups.secondary.length > 0 ? (
           <ul className="tap-secondary">
-            {groups.secondary.map((item) => (
-              <li key={item.key}>
-                <a href={item.href || "#"} onClick={() => track(item.key)} rel="noreferrer">
-                  {label(item)}
-                </a>
-              </li>
-            ))}
+            {groups.secondary.map((item) => {
+              if (item.type === "wifi" || item.type === "offer" || (item.type === "appointment" && !item.href)) {
+                return (
+                  <li key={item.key} className={item.type === "offer" ? "tap-offer" : "tap-note"}>
+                    <strong>{label(item)}</strong>
+                    {item.detail ? <p>{item.detail}</p> : null}
+                  </li>
+                );
+              }
+              if (item.type === "upi" && item.href) {
+                return (
+                  <li key={item.key} className="tap-upi">
+                    <a href={item.href} onClick={() => track(item.key)}>
+                      {label(item)}
+                    </a>
+                    {props.upiQr?.[item.key] ? <img src={props.upiQr[item.key]} alt="UPI QR" /> : null}
+                  </li>
+                );
+              }
+              return (
+                <li key={item.key}>
+                  <a href={item.href || "#"} onClick={() => track(item.key)} rel="noreferrer">
+                    {label(item)}
+                  </a>
+                </li>
+              );
+            })}
           </ul>
         ) : null}
 
-        {groups.social.length > 0 ? (
+        {groups.social.some((item) => item.type === "youtube" && item.thumb) ? (
+          <div className="tap-youtube">
+            {groups.social
+              .filter((item) => item.type === "youtube" && item.thumb && item.href)
+              .map((item) => (
+                <a key={item.key} href={item.href || "#"} onClick={() => track(item.key)} rel="noreferrer">
+                  <img src={item.thumb || ""} alt={label(item)} />
+                  <span>{label(item)}</span>
+                </a>
+              ))}
+          </div>
+        ) : null}
+
+        {groups.social.some((item) => item.type !== "youtube") ? (
           <div className="tap-social">
-            {groups.social.map((item) => (
-              <a key={item.key} href={item.href || "#"} onClick={() => track(item.key)} rel="noreferrer">
-                {label(item)}
-              </a>
-            ))}
+            {groups.social
+              .filter((item) => item.type !== "youtube")
+              .map((item) => (
+                <a key={item.key} href={item.href || "#"} onClick={() => track(item.key)} rel="noreferrer">
+                  {label(item)}
+                </a>
+              ))}
           </div>
         ) : null}
 

@@ -13,6 +13,7 @@
 import type { AiConfig } from "./settings";
 import { assertSafeOutboundUrl } from "./ssrf";
 import { consumeAiCall } from "./entitlements";
+import { parseMenuDraft, type MenuDraftItem } from "./tap/menu-draft";
 
 export type BusinessContext = {
   name: string;
@@ -38,9 +39,13 @@ function contextBlock(ctx: BusinessContext): string {
 }
 
 /** Low-level call. Returns the assistant message content string. */
+type ChatContent =
+  | string
+  | Array<{ type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }>;
+
 async function chat(
   cfg: AiConfig,
-  messages: Array<{ role: "system" | "user"; content: string }>,
+  messages: Array<{ role: "system" | "user"; content: ChatContent }>,
   opts: { maxTokens?: number; temperature?: number; businessId?: string } = {}
 ): Promise<string> {
   if (!cfg.enabled || !cfg.apiKey) throw new Error("AI not configured");
@@ -231,4 +236,39 @@ export async function generateReviews(
     .slice(0, 2);
   if (reviews.length === 0) throw new Error("No usable reviews");
   return reviews;
+}
+
+/** Reads a menu photo. Throws when AI is not configured. Does not save items. */
+export async function generateMenuFromPhoto(
+  cfg: AiConfig,
+  imageDataUrl: string,
+  businessId: string
+): Promise<MenuDraftItem[]> {
+  if (!/^data:image\/(?:png|jpeg|jpg|webp);base64,[a-z0-9+/=\s]+$/i.test(imageDataUrl)) {
+    throw new Error("Use a JPEG or PNG photo");
+  }
+  if (imageDataUrl.length > 2_000_000) throw new Error("That photo is too large");
+  const raw = await chat(
+    cfg,
+    [
+      {
+        role: "system",
+        content: "You read a café or restaurant menu photo. Return only JSON. Do not invent dishes that are not visible."
+      },
+      {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text:
+              'List the visible dishes. Respond as JSON: {"items":[{"name":"Filter coffee","priceRupees":80,"veg":"VEG"}]}. ' +
+              "veg is VEG, NON_VEG, EGG, or NONE. Use 0 when a price is not printed. Skip section headings."
+          },
+          { type: "image_url", image_url: { url: imageDataUrl } }
+        ]
+      }
+    ],
+    { maxTokens: 900, temperature: 0.2, businessId }
+  );
+  return parseMenuDraft(raw);
 }

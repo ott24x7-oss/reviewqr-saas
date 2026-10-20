@@ -5,6 +5,7 @@ import { businessSchema } from "@/lib/validations";
 import { slugify } from "@/lib/utils";
 import { ownerLimitError } from "@/lib/entitlements";
 import { linksForNewBusiness } from "@/lib/tap/new-business";
+import { isReservedSlug } from "@/lib/tap/reserved-slugs";
 
 export async function POST(req: NextRequest) {
   const user = await requireUser().catch(() => null);
@@ -24,7 +25,7 @@ export async function POST(req: NextRequest) {
 
   let slug = slugify(data.name);
   let n = 0;
-  while (await prisma.business.findUnique({ where: { slug } })) {
+  while (isReservedSlug(slug) || (await prisma.business.findUnique({ where: { slug } }))) {
     n += 1;
     slug = n > 5 ? slugify(data.name, true) : `${slugify(data.name)}-${n + 1}`;
     if (n > 5) break;

@@ -2,6 +2,7 @@ import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/db";
 import { effectiveTier } from "@/lib/payments";
 import type { TapBusinessFields } from "./links";
+import { isReservedSlug } from "./reserved-slugs";
 
 export type TapRecord =
   | { status: "not_found" }
@@ -10,6 +11,7 @@ export type TapRecord =
   | {
       status: "limited";
       qrId: string;
+      shortCode: string;
       ownerId: string;
       businessId: string;
       paid: boolean;
@@ -20,6 +22,7 @@ export type TapRecord =
   | {
       status: "active";
       qrId: string;
+      shortCode: string;
       ownerId: string;
       businessId: string;
       paid: boolean;
@@ -77,6 +80,7 @@ async function queryTap(code: string): Promise<TapRecord> {
   const owner = qr.business.owner;
   const shared = {
     qrId: qr.id,
+    shortCode: qr.shortCode,
     ownerId: owner.id,
     businessId: qr.business.id,
     paid: effectiveTier(owner) !== "FREE",
@@ -100,4 +104,75 @@ export async function loadPublicTap(code: string): Promise<TapRecord> {
     revalidate: 60,
     tags
   })();
+}
+
+/** Pretty URL. Uses the oldest active QR when the business has one. */
+export async function loadPublicSlug(slug: string): Promise<TapRecord> {
+  const clean = slug.trim().toLowerCase();
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(clean) || isReservedSlug(clean)) {
+    return { status: "not_found" };
+  }
+  const business = await prisma.business.findFirst({
+    where: { slug: clean, archived: false, isActive: true },
+    select: { id: true }
+  });
+  if (!business) return { status: "not_found" };
+  const qr = await prisma.qRCode.findFirst({
+    where: { businessId: business.id, status: "ACTIVE", isActive: true },
+    orderBy: { createdAt: "asc" },
+    select: { shortCode: true }
+  });
+  if (qr) return loadPublicTap(qr.shortCode);
+  return queryBusinessPage(business.id);
+}
+
+async function queryBusinessPage(businessId: string): Promise<TapRecord> {
+  const business = await prisma.business.findFirst({
+    where: { id: businessId, archived: false, isActive: true },
+    include: {
+      owner: {
+        select: {
+          id: true,
+          subscriptionTier: true,
+          subscriptionStatus: true,
+          trialEndsAt: true,
+          subscriptionEndsAt: true
+        }
+      }
+    }
+  });
+  if (!business) return { status: "not_found" };
+  const [menuCount, tapPage] = await Promise.all([
+    prisma.menuItem.count({ where: { businessId: business.id } }),
+    prisma.tapPage.findUnique({ where: { businessId: business.id }, select: { published: true } })
+  ]);
+  const fields: TapBusinessFields = {
+    name: business.name,
+    slug: business.slug,
+    description: business.description || "",
+    logo: business.logo,
+    cover: business.coverImage,
+    phone: business.phone,
+    address: business.address,
+    city: business.city,
+    state: business.state,
+    pincode: business.pincode,
+    googleReviewUrl: business.googleReviewUrl,
+    whatsappNumber: business.whatsappNumber,
+    menuCount,
+    published: tapPage?.published ?? null
+  };
+  const paid = effectiveTier(business.owner) !== "FREE";
+  const shared = {
+    qrId: "",
+    shortCode: "",
+    ownerId: business.owner.id,
+    businessId: business.id,
+    paid,
+    business: fields,
+    locationSlug: "",
+    staffSlug: ""
+  };
+  const limited = business.owner.subscriptionTier !== "FREE" && !paid;
+  return limited ? { status: "limited", ...shared } : { status: "active", ...shared };
 }

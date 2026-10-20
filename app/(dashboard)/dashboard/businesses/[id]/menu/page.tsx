@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { requireBusinessRole } from "@/lib/tenant";
+import { getAiConfig } from "@/lib/settings";
 import { MenuEditor } from "./menu-editor";
 
 export const dynamic = "force-dynamic";
@@ -16,14 +17,18 @@ export default async function BusinessMenuPage({ params }: { params: { id: strin
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     include: { items: { orderBy: [{ sortOrder: "asc" }, { name: "asc" }] } }
   });
-  const loose = await prisma.menuItem.findMany({
-    where: { businessId: access.id, categoryId: null },
-    orderBy: [{ sortOrder: "asc" }, { name: "asc" }]
-  });
+  const [loose, ai] = await Promise.all([
+    prisma.menuItem.findMany({
+      where: { businessId: access.id, categoryId: null },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }]
+    }),
+    getAiConfig().catch(() => null)
+  ]);
   return (
     <MenuEditor
       businessId={access.id}
       businessName={access.name}
+      aiReady={!!(ai?.enabled && ai.apiKey)}
       canEdit={access.accessRole !== "STAFF"}
       categories={categories.map((category) => ({
         id: category.id,

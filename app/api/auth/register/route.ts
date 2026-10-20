@@ -9,6 +9,7 @@ import { sendVerificationEmail } from "@/lib/verify-email";
 import { absoluteUrl, getClientIp } from "@/lib/utils";
 import { attachTapDraft } from "@/lib/tap/new-business";
 import { markOnboarding } from "@/lib/tap/onboarding-mark";
+import { isReservedSlug } from "@/lib/tap/reserved-slugs";
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req.headers);
@@ -58,7 +59,7 @@ export async function POST(req: NextRequest) {
   if (data.businessName) {
     let slug = slugify(data.businessName);
     let count = 0;
-    while (await prisma.business.findUnique({ where: { slug } })) {
+    while (isReservedSlug(slug) || (await prisma.business.findUnique({ where: { slug } }))) {
       count += 1;
       slug = slugify(data.businessName) + "-" + (count + 1);
       if (count > 5) {

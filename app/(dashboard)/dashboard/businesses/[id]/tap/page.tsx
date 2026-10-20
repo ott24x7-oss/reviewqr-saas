@@ -45,8 +45,14 @@ export default async function TapEditorPage({ params }: { params: { id: string }
       bioHi={typeof draft?.bioHi === "string" ? draft.bioHi : ""}
       links={links}
       hours={blankHours(hours)}
+      gallery={galleryLines(draft)}
     />
   );
+}
+
+function galleryLines(draft: { gallery?: unknown } | null) {
+  if (!draft || !Array.isArray(draft.gallery)) return [];
+  return draft.gallery.filter((item): item is string => typeof item === "string").slice(0, 8);
 }
 
 function blankHours(hours: WeekHours) {

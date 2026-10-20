@@ -1,5 +1,7 @@
 import { inClockWindow, isOpenAt, WEEK_DAYS, type WeekHours } from "./hours";
+import { isLookupCode } from "./ids";
 import { safeTapUrl } from "./urls";
+import { youtubeThumb } from "./youtube";
 
 export type PublicLink = {
   key: string;
@@ -9,6 +11,9 @@ export type PublicLink = {
   href: string | null;
   featured: boolean;
   sort: number;
+  /** Plain text for wifi, offers, and notes. Empty when the button is only a link. */
+  detail?: string;
+  thumb?: string | null;
 };
 
 export type TapBusinessFields = {
@@ -122,8 +127,12 @@ function link(
   return { key, type, labelEn, labelHi, href, featured, sort };
 }
 
-function hrefFor(type: string, url: unknown, channel: "q" | "t", code: string) {
-  if (type === "feedback") return null;
+function hrefFor(type: string, url: unknown, channel: "q" | "t", code: string, slug: string) {
+  if (type === "feedback" || type === "wifi") return null;
+  if (type === "vcard") {
+    if (isLookupCode(code)) return `/${channel}/${code}/contact`;
+    return slug ? `/${slug}/contact` : null;
+  }
   if ((type === "menu" || type === "whatsapp_order") && (typeof url !== "string" || !url.trim())) {
     return menuPath(channel, code);
   }
@@ -131,6 +140,7 @@ function hrefFor(type: string, url: unknown, channel: "q" | "t", code: string) {
   if (type === "call") return safeTapUrl(url, "tel");
   if (type === "directions") return safeTapUrl(url, "maps");
   if (type === "upi") return safeTapUrl(url, "upi");
+  if (type === "offer" || type === "appointment") return safeTapUrl(url, "https");
   return safeTapUrl(url, "https");
 }
 
@@ -140,7 +150,8 @@ export function resolveLinks(
   fallback: PublicLink[],
   channel: "q" | "t",
   code: string,
-  now = new Date()
+  now = new Date(),
+  slug = ""
 ): PublicLink[] {
   if (!published || typeof published !== "object" || Array.isArray(published)) return fallback;
   const rows = (published as { links?: unknown }).links;
@@ -152,8 +163,11 @@ export function resolveLinks(
     if (item.enabled === false) return;
     if (!scheduleAllows(item.schedule, now)) return;
     const type = plain(item.type, 40) || "custom";
-    const href = hrefFor(type, item.url, channel, code);
-    if (type !== "feedback" && !href) return;
+    const rawUrl = typeof item.url === "string" ? item.url : "";
+    const href = hrefFor(type, rawUrl, channel, code, slug);
+    const detail = plain(rawUrl, 240);
+    const textBlock = type === "wifi" || type === "offer" || type === "appointment" || type === "vcard";
+    if (type !== "feedback" && !href && !(textBlock && detail)) return;
     const emoji = plain(item.emoji, 8);
     const labelEn = plain(item.labelEn, 80) || type;
     const labelHi = plain(item.labelHi, 80) || labelEn;
@@ -164,7 +178,9 @@ export function resolveLinks(
       labelHi: emoji ? `${emoji} ${labelHi}` : labelHi,
       href,
       featured: item.featured === true,
-      sort: typeof item.sort === "number" ? item.sort : index
+      sort: typeof item.sort === "number" ? item.sort : index,
+      detail: textBlock ? detail : "",
+      thumb: type === "youtube" && href ? youtubeThumb(href) : null
     });
   });
   return links.sort((a, b) => a.sort - b.sort);
@@ -250,7 +266,7 @@ export function presentBusiness(fields: TapBusinessFields, channel: "q" | "t", c
     bio: bioPublished || plain(fields.description, 400),
     bioHi,
     open: isOpenAt(hours, now),
-    links: resolveLinks(published, synthesizeLinks({ ...fields, channel, code }), channel, code, now),
+    links: resolveLinks(published, synthesizeLinks({ ...fields, channel, code }), channel, code, now, fields.slug),
     gallery: galleryFromPublished(published),
     call: telUrl(fields.phone),
     directions: directionsUrl([fields.address, fields.city, fields.state, fields.pincode])

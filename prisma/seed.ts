@@ -110,7 +110,12 @@ async function main() {
       subscriptionStatus: "TRIALING",
       trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
     },
-    update: { password: demoHash }
+    update: {
+      password: demoHash,
+      subscriptionTier: "GROWTH",
+      subscriptionStatus: "TRIALING",
+      trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
+    }
   });
   console.log(`  ✓ Demo user: ${demoUser.email} / ${DEMO_PASSWORD}`);
 
@@ -217,6 +222,67 @@ async function main() {
     });
   }
   console.log(`  ✓ ${qrData.length} QR codes`);
+
+  const demoPage = {
+    bio: "Filter coffee, dosa, and a quiet corner in Indiranagar.",
+    bioHi: "फ़िल्टर कॉफ़ी, डोसा, और एक शांत कोना।",
+    theme: "cafe",
+    links: [
+      { key: "menu", type: "menu", labelEn: "View Menu", labelHi: "मेनू देखें", enabled: true, sort: 10, featured: true, url: "", emoji: "", schedule: null },
+      { key: "order", type: "whatsapp_order", labelEn: "Order on WhatsApp", labelHi: "WhatsApp पर ऑर्डर", enabled: true, sort: 20, featured: true, url: "", emoji: "", schedule: null },
+      { key: "feedback", type: "feedback", labelEn: "Give Feedback", labelHi: "प्रतिक्रिया दें", enabled: true, sort: 30, featured: true, url: "", emoji: "", schedule: null },
+      { key: "upi", type: "upi", labelEn: "Pay by UPI", labelHi: "UPI से भुगतान", enabled: true, sort: 40, featured: false, url: "upi://pay?pa=spice@upi&pn=Spice%20Junction&cu=INR", emoji: "", schedule: null },
+      { key: "wifi", type: "wifi", labelEn: "Wi-Fi", labelHi: "वाई-फाई", enabled: true, sort: 50, featured: false, url: "Network SpiceGuest · Password filtercoffee", emoji: "", schedule: null },
+      { key: "offer", type: "offer", labelEn: "Today's offer", labelHi: "आज का ऑफ़र", enabled: true, sort: 60, featured: false, url: "Filter coffee and bun for ₹99 before 11am", emoji: "", schedule: null },
+      { key: "instagram", type: "instagram", labelEn: "Instagram", labelHi: "Instagram", enabled: true, sort: 70, featured: false, url: "https://instagram.com/spicejunctioncafe", emoji: "", schedule: null },
+      { key: "youtube", type: "youtube", labelEn: "Watch the café", labelHi: "कैफ़े देखें", enabled: true, sort: 80, featured: false, url: "https://youtu.be/aqz-KE-bpKQ", emoji: "", schedule: null },
+      { key: "card", type: "vcard", labelEn: "Save contact", labelHi: "संपर्क सहेजें", enabled: true, sort: 90, featured: false, url: "", emoji: "", schedule: null }
+    ],
+    gallery: []
+  };
+  await prisma.tapPage.upsert({
+    where: { businessId: demoCafe.id },
+    create: { businessId: demoCafe.id, draft: demoPage, published: demoPage, publishedAt: new Date() },
+    update: { draft: demoPage, published: demoPage, publishedAt: new Date() }
+  });
+  console.log("  ✓ Published tap page");
+
+  const menuCount = await prisma.menuItem.count({ where: { businessId: demoCafe.id } });
+  if (menuCount === 0) {
+    const drinks = await prisma.menuCategory.create({
+      data: { businessId: demoCafe.id, name: "Drinks", nameHi: "पेय", sortOrder: 0 }
+    });
+    const food = await prisma.menuCategory.create({
+      data: { businessId: demoCafe.id, name: "Food", nameHi: "खाना", sortOrder: 1 }
+    });
+    await prisma.menuItem.createMany({
+      data: [
+        { businessId: demoCafe.id, categoryId: drinks.id, name: "Filter coffee", nameHi: "फ़िल्टर कॉफ़ी", pricePaise: 8000, veg: "VEG", sortOrder: 0 },
+        { businessId: demoCafe.id, categoryId: food.id, name: "Masala dosa", nameHi: "मसाला डोसा", pricePaise: 12000, veg: "VEG", sortOrder: 0 }
+      ]
+    });
+  }
+  const demoQr = await prisma.qRCode.findUnique({ where: { shortCode: "DEMO-CNTR" }, select: { id: true } });
+  await prisma.menuOrder.upsert({
+    where: { number: "DEMO-1001" },
+    create: {
+      businessId: demoCafe.id,
+      qrCodeId: demoQr?.id || null,
+      number: "DEMO-1001",
+      customerName: "Ananya",
+      tableOrAddress: "Table 4",
+      note: "Less sugar",
+      totalPaise: 20000,
+      items: [
+        { name: "Filter coffee", qty: 1, linePaise: 8000 },
+        { name: "Masala dosa", qty: 1, linePaise: 12000 }
+      ],
+      source: "qr",
+      status: "NEW"
+    },
+    update: {}
+  });
+  console.log("  ✓ Menu and one sample order");
 
   // Tags
   for (const t of TAGS_POOL) {

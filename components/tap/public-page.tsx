@@ -2,32 +2,44 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { tapFontClass } from "@/components/brand/tap-font";
 import { getBrand } from "@/lib/brand";
+import { generateQrDataUrl } from "@/lib/qr";
 import { getTurnstileConfig } from "@/lib/settings";
 import { recordQrScan } from "@/lib/scans";
 import { remindExpiredOwner } from "@/lib/tap/expiry-notice";
 import { tapText } from "@/lib/tap/i18n";
 import { isLookupCode } from "@/lib/tap/ids";
-import { presentBusiness } from "@/lib/tap/links";
-import { loadPublicTap } from "@/lib/tap/resolve";
+import { presentBusiness, type PublicLink } from "@/lib/tap/links";
+import { loadPublicTap, type TapRecord } from "@/lib/tap/resolve";
 import { scanSource } from "@/lib/tap/source";
 import { readAdminThemes } from "@/lib/tap/theme-store";
 import { resolveTheme, tokensToStyle } from "@/lib/tap/themes";
 import { StatusCard } from "./status-card";
 import { TapExperience } from "./tap-experience";
 
+async function upiImages(links: PublicLink[]) {
+  const images: Record<string, string> = {};
+  for (const link of links) {
+    if (link.type !== "upi" || !link.href) continue;
+    images[link.key] = await generateQrDataUrl(link.href, { size: 220 });
+  }
+  return images;
+}
+
 export async function PublicTap({
   code,
   channel,
   src,
-  countScan
+  countScan,
+  record: prepared
 }: {
   code: string;
   channel: "q" | "t";
   src?: string;
   countScan: boolean;
+  record?: TapRecord;
 }) {
-  if (!isLookupCode(code)) notFound();
-  const record = await loadPublicTap(code);
+  if (!prepared && !isLookupCode(code)) notFound();
+  const record = prepared || (await loadPublicTap(code));
   if (record.status === "not_found") notFound();
 
   const source = scanSource(channel, src);
@@ -86,6 +98,7 @@ export async function PublicTap({
   }
 
   const turnstileSiteKey = (await getTurnstileConfig().catch(() => ({ siteKey: "" }))).siteKey || "";
+  const upiQr = await upiImages(view.links).catch(() => ({}));
   return (
     <div className={tapFontClass}>
       <TapExperience
@@ -101,6 +114,7 @@ export async function PublicTap({
         open={view.open}
         links={view.links}
         gallery={view.gallery}
+        upiQr={upiQr}
         locationSlug={record.locationSlug}
         staffSlug={record.staffSlug}
         turnstileSiteKey={turnstileSiteKey}

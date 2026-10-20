@@ -9,7 +9,7 @@ import { CAFE_TEMPLATE } from "@/lib/tap/cafe-template";
 
 const veg = z.enum(["VEG", "NON_VEG", "EGG", "NONE"]);
 const schema = z.object({
-  action: z.enum(["category", "item", "update", "delete", "template"]),
+  action: z.enum(["category", "item", "update", "delete", "template", "items"]),
   id: z.string().optional(),
   kind: z.enum(["item", "category"]).optional(),
   name: z.string().max(80).optional(),
@@ -18,7 +18,17 @@ const schema = z.object({
   veg: veg.optional(),
   categoryId: z.string().nullable().optional(),
   available: z.boolean().optional(),
-  photo: z.string().max(400).optional()
+  photo: z.string().max(400).optional(),
+  items: z
+    .array(
+      z.object({
+        name: z.string().min(1).max(80),
+        priceRupees: z.number().min(0).max(100000),
+        veg: veg.optional()
+      })
+    )
+    .max(40)
+    .optional()
 });
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
@@ -99,6 +109,20 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         ...(data.categoryId !== undefined ? { categoryId: data.categoryId } : {}),
         ...(data.photo !== undefined ? { photo: data.photo.trim() || null } : {})
       }
+    });
+  } else if (data.action === "items") {
+    const rows = data.items || [];
+    if (!rows.length) return NextResponse.json({ error: "Add at least one item" }, { status: 400 });
+    const limitError = await ownerLimitError(owner, "storeProducts", count, rows.length);
+    if (limitError) return NextResponse.json({ error: limitError }, { status: 402 });
+    await prisma.menuItem.createMany({
+      data: rows.map((item, index) => ({
+        businessId: business.id,
+        name: item.name.trim(),
+        pricePaise: Math.round(item.priceRupees * 100),
+        veg: item.veg || "NONE",
+        sortOrder: count + index
+      }))
     });
   } else if (data.action === "delete" && data.id) {
     if (data.kind === "category") {

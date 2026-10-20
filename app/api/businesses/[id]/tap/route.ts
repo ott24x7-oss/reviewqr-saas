@@ -6,7 +6,7 @@ import { requireUser } from "@/lib/auth";
 import { requireBusinessRole } from "@/lib/tenant";
 import { logAudit } from "@/lib/admin";
 import { sanitizeText } from "@/lib/sanitize";
-import { hoursFromPublished } from "@/lib/tap/links";
+import { hoursFromPublished, safeImageSrc } from "@/lib/tap/links";
 import { normalizeLinks } from "@/lib/tap/page-draft";
 import { jsonObject, revalidateBusinessTap } from "@/lib/tap/theme-store";
 
@@ -15,7 +15,8 @@ const schema = z.object({
   bio: z.string().max(800).optional(),
   bioHi: z.string().max(800).optional(),
   hours: z.unknown().optional(),
-  links: z.array(z.unknown()).max(40)
+  links: z.array(z.unknown()).max(40),
+  gallery: z.array(z.string().max(500)).max(8).optional()
 });
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
@@ -40,6 +41,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   draft.bioHi = bioHi;
   draft.hours = hours as Prisma.JsonValue;
   draft.links = links.links as unknown as Prisma.JsonValue;
+  if (parsed.data.gallery) {
+    const gallery = parsed.data.gallery.map((url) => safeImageSrc(url)).filter((url): url is string => !!url);
+    draft.gallery = gallery as unknown as Prisma.JsonValue;
+  }
 
   const publish = parsed.data.action === "publish";
   const published = jsonObject(existing?.published ?? null);
@@ -48,6 +53,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     published.bioHi = bioHi;
     published.hours = draft.hours;
     published.links = draft.links;
+    if (draft.gallery) published.gallery = draft.gallery;
   }
 
   const data = {

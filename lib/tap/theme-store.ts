@@ -34,10 +34,14 @@ export async function writeAdminThemes(themes: ThemePreset[], userId?: string) {
 
 export async function revalidateBusinessTap(businessId: string) {
   revalidateTag(`biz:${businessId}`);
-  const codes = await prisma.qRCode.findMany({
-    where: { businessId },
-    select: { shortCode: true }
-  });
+  const [codes, business] = await Promise.all([
+    prisma.qRCode.findMany({
+      where: { businessId },
+      select: { shortCode: true }
+    }),
+    prisma.business.findUnique({ where: { id: businessId }, select: { slug: true } })
+  ]);
+  if (business?.slug) revalidateTag(`slug:${business.slug}`);
   for (const code of codes) revalidateTag(`tap:${code.shortCode}`);
 }
 

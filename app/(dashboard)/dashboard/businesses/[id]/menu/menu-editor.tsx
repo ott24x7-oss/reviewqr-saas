@@ -20,12 +20,14 @@ type Item = {
 export function MenuEditor({
   businessId,
   businessName,
+  aiReady,
   canEdit,
   categories,
   loose
 }: {
   businessId: string;
   businessName: string;
+  aiReady: boolean;
   canEdit: boolean;
   categories: { id: string; name: string; nameHi: string; items: Item[] }[];
   loose: Item[];
@@ -38,6 +40,8 @@ export function MenuEditor({
   const [categoryId, setCategoryId] = React.useState("");
   const [categoryName, setCategoryName] = React.useState("");
   const [busy, setBusy] = React.useState(false);
+  const [draftItems, setDraftItems] = React.useState<Array<{ name: string; priceRupees: number; veg: Item["veg"] }>>([]);
+  const fileRef = React.useRef<HTMLInputElement>(null);
 
   async function send(body: Record<string, unknown>) {
     setBusy(true);
@@ -55,8 +59,10 @@ export function MenuEditor({
       setPrice("");
       setCategoryName("");
       router.refresh();
+      return true;
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not save the menu");
+      return false;
     } finally {
       setBusy(false);
     }
@@ -97,7 +103,76 @@ export function MenuEditor({
               <Button type="button" variant="outline" disabled={busy} onClick={() => send({ action: "template" })}>
                 Café template
               </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={busy}
+                onClick={() => {
+                  if (!aiReady) {
+                    toast.message("Menu photo import needs an AI key. Add items by hand.");
+                    return;
+                  }
+                  fileRef.current?.click();
+                }}
+              >
+                Read a menu photo
+              </Button>
             </div>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              aria-label="Menu photo"
+              className="sr-only"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.target.value = "";
+                if (!file) return;
+                if (file.size > 4_000_000) {
+                  toast.error("Choose a photo under 4 MB");
+                  return;
+                }
+                const reader = new FileReader();
+                reader.onload = async () => {
+                  setBusy(true);
+                  try {
+                    const res = await fetch(`/api/businesses/${businessId}/menu/import`, {
+                      method: "POST",
+                      headers: { "content-type": "application/json" },
+                      body: JSON.stringify({ image: String(reader.result || "") })
+                    });
+                    const json = await res.json().catch(() => ({}));
+                    if (!res.ok) throw new Error(json.error || "Could not read that photo. Add items by hand.");
+                    setDraftItems(Array.isArray(json.items) ? json.items : []);
+                  } catch (err) {
+                    toast.error(err instanceof Error ? err.message : "Could not read that photo. Add items by hand.");
+                  } finally {
+                    setBusy(false);
+                  }
+                };
+                reader.readAsDataURL(file);
+              }}
+            />
+            {draftItems.length > 0 ? (
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Found {draftItems.length} items. Check them, then add.</p>
+                <ul className="space-y-1 text-sm">
+                  {draftItems.map((item, index) => (
+                    <li key={`${item.name}-${index}`}>{item.name} · ₹{item.priceRupees}</li>
+                  ))}
+                </ul>
+                <Button
+                  type="button"
+                  disabled={busy}
+                  onClick={async () => {
+                    const saved = await send({ action: "items", items: draftItems });
+                    if (saved) setDraftItems([]);
+                  }}
+                >
+                  Add these items
+                </Button>
+              </div>
+            ) : null}
           </CardContent>
         </Card>
       )}
