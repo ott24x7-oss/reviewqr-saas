@@ -17,16 +17,6 @@ type Branding = {
 };
 
 const ALLOWED_TYPES = ["image/svg+xml", "image/png", "image/jpeg", "image/webp"];
-const MAX_BYTES = 614400; // 600 KB — keeps the data URL under our API cap
-
-function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(String(r.result));
-    r.onerror = () => reject(r.error);
-    r.readAsDataURL(file);
-  });
-}
 
 export function BrandingForm({ initial }: { initial: Branding }) {
   const [b, setB] = React.useState<Branding>(initial);
@@ -41,16 +31,23 @@ export function BrandingForm({ initial }: { initial: Branding }) {
       e.target.value = "";
       return;
     }
-    if (f.size > MAX_BYTES) {
-      toast.error(`Logo must be ≤ ${Math.round(MAX_BYTES / 1024)} KB`);
+    if (f.size > 8 * 1024 * 1024) {
+      toast.error("Logo must be 8MB or smaller");
       e.target.value = "";
       return;
     }
     try {
-      const url = await fileToDataUrl(f);
-      setB((prev) => ({ ...prev, logoDataUrl: url }));
-    } catch {
-      toast.error("Failed to read file");
+      const body = new FormData();
+      body.set("file", f);
+      body.set("variant", "logo");
+      const res = await fetch("/api/uploads", { method: "POST", body });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || typeof json.url !== "string") {
+        throw new Error(json.error || "Upload failed");
+      }
+      setB((prev) => ({ ...prev, logoDataUrl: json.url }));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to read file");
     } finally {
       e.target.value = "";
     }
@@ -120,8 +117,8 @@ export function BrandingForm({ initial }: { initial: Branding }) {
             )}
           </div>
           <p className="text-xs text-muted-foreground">
-            SVG, PNG, JPEG or WebP. Max {Math.round(MAX_BYTES / 1024)} KB. Stored as a
-            data URL — no separate file hosting needed.
+            SVG, PNG, JPEG, or WebP. Max 8MB. Stored on object storage when it is
+            configured, otherwise as a resized data URL.
           </p>
         </CardContent>
       </Card>

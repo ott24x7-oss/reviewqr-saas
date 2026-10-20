@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { businessSchema } from "@/lib/validations";
+import { omitUnchangedImages } from "@/lib/images";
 
 async function getBusinessForUser(id: string, userId: string) {
   return prisma.business.findFirst({
@@ -23,7 +24,15 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const existing = await getBusinessForUser(params.id, user.id);
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const parsed = businessSchema.partial().safeParse(await req.json().catch(() => ({})));
+  const raw = await req.json().catch(() => ({}));
+  const body =
+    raw && typeof raw === "object" && !Array.isArray(raw)
+      ? omitUnchangedImages(raw as Record<string, unknown>, {
+          logo: existing.logo,
+          coverImage: existing.coverImage
+        }, ["logo", "coverImage"])
+      : {};
+  const parsed = businessSchema.partial().safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message }, { status: 400 });
   }

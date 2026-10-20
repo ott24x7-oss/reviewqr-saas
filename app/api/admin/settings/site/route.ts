@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdminApi, logAudit } from "@/lib/admin";
 import { getSiteConfig, setSiteConfig } from "@/lib/settings";
 import { getClientIp } from "@/lib/utils";
+import { storedImageAllowed } from "@/lib/images";
 
 export async function PUT(req: NextRequest) {
   const guard = await requireAdminApi();
@@ -13,8 +14,10 @@ export async function PUT(req: NextRequest) {
   let logoUrl = current.logoUrl;
   if (typeof incoming.logoUrl === "string") {
     const v = incoming.logoUrl.trim();
-    if (v === "" || /^(https?:|data:image\/)/i.test(v)) {
+    if (v === "" || v === current.logoUrl || storedImageAllowed(v)) {
       logoUrl = v;
+    } else {
+      return NextResponse.json({ error: "Logo must be an uploaded image" }, { status: 400 });
     }
   }
 

@@ -68,7 +68,9 @@ export async function POST(req: NextRequest) {
       pincode: data.pincode || null,
       googleReviewUrl: data.googleReviewUrl || null,
       ratingThreshold: data.ratingThreshold,
-      primaryColor: data.primaryColor
+      primaryColor: data.primaryColor,
+      logo: data.logo || null,
+      coverImage: data.coverImage || null
     }
   });
 
