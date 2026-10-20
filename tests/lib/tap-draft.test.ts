@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { CAFE_TEMPLATE } from "../../lib/tap/cafe-template";
 import { presentBusiness, type TapBusinessFields } from "../../lib/tap/links";
 import { fillKnownUrls, normalizeLinks } from "../../lib/tap/page-draft";
 import { CODE_PRESETS, industryKey } from "../../lib/tap/presets";
@@ -19,6 +20,13 @@ const cafe: TapBusinessFields = {
   menuCount: 0,
   published: null
 };
+
+describe("café template", () => {
+  it("starts with coffee, tea, snacks, and desserts", () => {
+    expect(CAFE_TEMPLATE.map((group) => group.category)).toEqual(["Coffee", "Tea", "Snacks", "Desserts"]);
+    expect(CAFE_TEMPLATE[0].items[0].pricePaise).toBe(12000);
+  });
+});
 
 describe("industry presets", () => {
   it("maps a café category onto the café button set", () => {

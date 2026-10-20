@@ -148,6 +148,19 @@ export default async function BusinessDetailPage({ params }: { params: { id: str
             </CardContent>
           </Card>
         </Link>
+        <Link href={`/dashboard/businesses/${business.id}/menu`}>
+          <Card className="hover:shadow-card transition cursor-pointer">
+            <CardContent className="p-5 flex items-start gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50 text-amber-700">
+                <FileText className="h-5 w-5" />
+              </span>
+              <div>
+                <div className="font-semibold">Menu</div>
+                <div className="text-xs text-muted-foreground">Items, prices, and the café template</div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
         <Link href={`/dashboard/businesses/${business.id}/tap`}>
           <Card className="hover:shadow-card transition cursor-pointer">
             <CardContent className="p-5 flex items-start gap-3">

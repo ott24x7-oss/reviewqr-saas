@@ -645,6 +645,212 @@
 .tap-preview .tap-card {
   padding-bottom: 24px;
 }
+
+.store-page {
+  --store-veg: #1f7a45;
+  --store-egg: #8a5a12;
+  --store-nonveg: #9b2c2c;
+  min-height: 100vh;
+  background: linear-gradient(180deg, var(--store-bg), var(--store-bg-2));
+  color: var(--store-ink);
+  font-family: var(--font-fraunces), var(--font-mukta), sans-serif;
+}
+.store-wrap {
+  width: min(960px, 100%);
+  margin: 0 auto;
+  padding: 16px 16px 120px;
+}
+.store-kicker {
+  margin: 0;
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.store-page h1 {
+  margin: 4px 0 12px;
+  font-size: 2rem;
+  line-height: 1.1;
+}
+.store-search,
+.store-sheet input,
+.store-sheet textarea {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid rgba(28, 24, 19, 0.14);
+  border-radius: 999px;
+  background: var(--store-card);
+  color: var(--store-ink);
+  padding: 8px 14px;
+}
+.store-chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  margin: 12px 0;
+  padding-bottom: 4px;
+}
+.store-chips button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--store-ink);
+  padding: 0 14px;
+  white-space: nowrap;
+}
+.store-chips button[aria-pressed="true"] {
+  background: var(--store-ink);
+  color: var(--store-bg);
+}
+.store-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.store-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-radius: var(--store-radius);
+  background: var(--store-card);
+  box-shadow: var(--store-shadow);
+  padding: 10px;
+}
+.store-photo {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 92px;
+  border-radius: 16px;
+  background: #f3e6d8;
+  overflow: hidden;
+}
+.store-card:nth-child(3n + 2) .store-photo { background: #e7efe4; }
+.store-card:nth-child(3n) .store-photo { background: #f6e4e1; }
+.store-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.store-pill {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: white;
+}
+.store-pill[data-veg="VEG"] { background: var(--store-veg); }
+.store-pill[data-veg="EGG"] { background: var(--store-egg); }
+.store-pill[data-veg="NON_VEG"] { background: var(--store-nonveg); }
+.store-name {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+.store-price {
+  font-weight: 700;
+}
+.store-add {
+  min-height: 44px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--store-ink);
+  color: var(--store-bg);
+  padding: 0 12px;
+}
+.store-step {
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  min-height: 44px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--store-ink);
+  color: var(--store-bg);
+}
+.store-step button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  min-height: 44px;
+}
+.store-bag,
+.store-bar {
+  position: fixed;
+  z-index: 20;
+}
+.store-bag {
+  right: 16px;
+  bottom: 88px;
+  width: 56px;
+  height: 56px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--store-ink);
+  color: var(--store-bg);
+}
+.store-bar {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 72px;
+  padding: 12px 16px;
+  background: var(--store-card);
+}
+.store-order {
+  min-height: 56px;
+  width: 100%;
+  border: 0;
+  border-radius: 999px;
+  background: var(--store-ink);
+  color: var(--store-bg);
+  font-weight: 650;
+}
+.store-sheet {
+  position: fixed;
+  z-index: 30;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 86vh;
+  overflow: auto;
+  border-radius: 24px 24px 0 0;
+  background: var(--store-card);
+  color: var(--store-ink);
+  padding: 16px 16px 24px;
+}
+.store-privacy {
+  color: var(--store-muted);
+  font-size: 0.85rem;
+}
+.store-privacy a { color: inherit; }
+@media (min-width: 768px) {
+  .store-grid { grid-template-columns: repeat(3, 1fr); }
+  .store-bar { display: none; }
+  .store-bag { bottom: 16px; }
+  .store-sheet {
+    left: auto;
+    top: 0;
+    width: min(400px, 100%);
+    max-height: none;
+    height: 100vh;
+    border-radius: 0;
+  }
+}
+@media (min-width: 1024px) {
+  .store-grid { grid-template-columns: repeat(4, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .store-add, .store-bag { transition: none; }
+}
 .tap-stars {
   display: grid;
   grid-template-columns: repeat(5, 1fr);

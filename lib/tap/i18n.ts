@@ -18,6 +18,13 @@ const STRINGS = {
     add: "Add",
     total: "Total",
     yourOrder: "Your order",
+    search: "Search the menu",
+    customerName: "Name",
+    table: "Table or address",
+    note: "Note",
+    bag: "Open bag",
+    closeBag: "Close bag",
+    emptyMenu: "The menu is not published yet.",
     hindi: "हिंदी",
     english: "English"
   },
@@ -38,6 +45,13 @@ const STRINGS = {
     add: "जोड़ें",
     total: "कुल",
     yourOrder: "आपका ऑर्डर",
+    search: "मेनू खोजें",
+    customerName: "नाम",
+    table: "टेबल या पता",
+    note: "नोट",
+    bag: "बैग खोलें",
+    closeBag: "बैग बंद करें",
+    emptyMenu: "मेनू अभी प्रकाशित नहीं हुआ है।",
     hindi: "हिंदी",
     english: "English"
   }
