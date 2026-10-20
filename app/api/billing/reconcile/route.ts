@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminApi } from "@/lib/admin";
 import { reconcileAllPending, expireStale } from "@/lib/manual-payments";
-import { expireLapsedSubscriptions, promoteYoupiQueue, sendRenewalReminders } from "@/lib/billing-jobs";
+import { expireLapsedSubscriptions, sendRenewalReminders } from "@/lib/billing-jobs";
 import { timingSafeEqualString } from "@/lib/timing-safe";
 
 /**
@@ -26,13 +26,11 @@ export async function POST(req: NextRequest) {
     const expiredOrders = await expireStale();
     const expiredSubscriptions = await expireLapsedSubscriptions();
     const reminders = await sendRenewalReminders();
-    const queue = await promoteYoupiQueue();
     return NextResponse.json({
       ...result,
       expired: expiredOrders,
       expiredSubscriptions,
-      reminders,
-      queue
+      reminders
     });
   } catch (e: any) {
     return NextResponse.json({ error: e.message || "Reconcile failed" }, { status: 500 });

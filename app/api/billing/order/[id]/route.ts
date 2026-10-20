@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { attachReference, reconcilePayment } from "@/lib/manual-payments";
-import { youpiAmountsMatch, youpiGetPayment, youpiStatusFailed, youpiStatusSuccess } from "@/lib/payments/youpi";
+import {
+  youpiAmountsMatch,
+  youpiConfirmed,
+  youpiGetPayment,
+  youpiMatchesOrder,
+  youpiStatusFailed
+} from "@/lib/payments/youpi";
 import { activateCompletedPayment } from "@/lib/subscription";
 
 // Throttle IMAP checks per order so client polling doesn't hammer the inbox.
@@ -41,9 +47,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       try {
         const remote = await youpiGetPayment(order.providerPaymentId);
         if (
-          remote.orderId === order.id &&
+          youpiMatchesOrder(remote, order) &&
           youpiAmountsMatch(order.amount, remote) &&
-          youpiStatusSuccess(remote.status)
+          youpiConfirmed(remote)
         ) {
           await activateCompletedPayment({
             paymentId: order.id,

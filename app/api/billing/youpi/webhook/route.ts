@@ -5,9 +5,10 @@ import {
   getYoupiConfig,
   verifyYoupiWebhook,
   youpiAmountsMatch,
+  youpiConfirmed,
   youpiGetPayment,
-  youpiStatusFailed,
-  youpiStatusSuccess
+  youpiMatchesOrder,
+  youpiStatusFailed
 } from "@/lib/payments/youpi";
 
 export async function POST(req: NextRequest) {
@@ -52,15 +53,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: e.message || "Could not confirm payment" }, { status: 502 });
   }
 
-  if (remote.orderId && remote.orderId !== payment.id) {
+  if (!youpiMatchesOrder(remote, payment)) {
     return NextResponse.json({ error: "Order mismatch" }, { status: 400 });
   }
   if (!youpiAmountsMatch(payment.amount, remote)) {
     return NextResponse.json({ error: "Amount mismatch" }, { status: 400 });
   }
 
-  // Not settled yet. Do not record the delivery id, so the gateway can retry.
-  if (!youpiStatusSuccess(remote.status) && !youpiStatusFailed(remote.status)) {
+  // Not settled, or paid but not yet seen in a bank alert. Do not record the
+  // delivery id, so the gateway can retry.
+  if (!youpiConfirmed(remote) && !youpiStatusFailed(remote.status)) {
     return NextResponse.json({ error: "Payment not settled yet" }, { status: 503 });
   }
 
@@ -72,7 +74,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, duplicate: true });
   }
 
-  if (youpiStatusSuccess(remote.status)) {
+  if (youpiConfirmed(remote)) {
     const result = await activateCompletedPayment({
       paymentId: payment.id,
       providerPaymentId: remote.paymentId || gatewayId,

@@ -44,38 +44,21 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const live = await prisma.payment.findFirst({
-    where: { provider: "YOUPI", status: "PENDING" },
-    select: { id: true }
-  });
-
-  const queuedCount = await prisma.payment.count({
-    where: { provider: "YOUPI", status: "QUEUED" }
-  });
-
   const payment = await prisma.payment.create({
     data: {
       userId: user.id,
       amount,
       currency: "INR",
-      status: live ? "QUEUED" : "PENDING",
+      status: "PENDING",
       provider: "YOUPI",
       tier,
       periodMonths: months,
-      queuePosition: live ? queuedCount + 1 : null,
       expiresAt: new Date(Date.now() + 45 * 60_000)
     }
   });
 
-  if (live) {
-    return NextResponse.json({
-      id: payment.id,
-      queued: true,
-      position: queuedCount + 1,
-      message: "Another payment is in progress. Please wait. You are in the queue."
-    });
-  }
-
+  // YouPI serves one payment per VPA and queues the rest on its own checkout
+  // page, so always create the session and pass its queue position through.
   try {
     const remote = await youpiCreatePayment({
       orderId: payment.id,
@@ -88,12 +71,15 @@ export async function POST(req: NextRequest) {
       data: {
         providerPaymentId: remote.paymentId || undefined,
         providerOrderId: remote.orderId || payment.id,
-        checkoutUrl: remote.checkoutUrl || undefined
+        checkoutUrl: remote.checkoutUrl || undefined,
+        queuePosition: remote.queuePosition || null
       }
     });
+    const queued = String(remote.status || "").toUpperCase() === "QUEUED";
     return NextResponse.json({
       id: payment.id,
-      queued: false,
+      queued,
+      position: queued ? remote.queuePosition ?? null : null,
       checkoutUrl: remote.checkoutUrl || null
     });
   } catch (e: any) {

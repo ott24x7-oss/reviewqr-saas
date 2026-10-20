@@ -14,6 +14,8 @@ export type YoupiPayment = {
   status?: string;
   checkoutUrl?: string;
   utr?: string | null;
+  queuePosition?: number;
+  verificationLevel?: number;
 };
 
 export type YoupiConfig = {
@@ -61,6 +63,41 @@ export function youpiStatusSuccess(status: string | undefined) {
 
 export function youpiStatusFailed(status: string | undefined) {
   return ["FAILED", "EXPIRED", "CANCELLED", "CANCELED"].includes(String(status || "").toUpperCase());
+}
+
+/** Paid and seen by at least one bank alert (verificationLevel 0 means unverified). */
+export function youpiConfirmed(remote: { status?: string; verificationLevel?: number }) {
+  return youpiStatusSuccess(remote.status) && (remote.verificationLevel ?? 0) >= 1;
+}
+
+/** The gateway record must point at our order and, once known, at the same gateway payment. */
+export function youpiMatchesOrder(
+  remote: { orderId?: string; paymentId?: string },
+  order: { id: string; providerPaymentId?: string | null }
+) {
+  if (!remote.orderId || remote.orderId !== order.id) return false;
+  if (order.providerPaymentId && remote.paymentId !== order.providerPaymentId) return false;
+  return true;
+}
+
+function toNumber(v: unknown): number | undefined {
+  if (v == null || v === "") return undefined;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+function parsePayment(json: any, fallback: { paymentId?: string; orderId?: string }): YoupiPayment {
+  return {
+    paymentId: String(json.paymentId || fallback.paymentId || ""),
+    orderId: String(json.orderId || fallback.orderId || ""),
+    amount: json.amount != null ? String(json.amount) : undefined,
+    amountPaise: toNumber(json.amountPaise),
+    status: json.status,
+    checkoutUrl: json.checkoutUrl,
+    utr: json.utr ?? null,
+    queuePosition: toNumber(json.queuePosition),
+    verificationLevel: toNumber(json.verificationLevel)
+  };
 }
 
 /** HMAC over the raw body. Header value is `sha256=<hex>`. Timestamp is ms or seconds. */
@@ -127,15 +164,7 @@ export async function youpiCreatePayment(opts: {
       returnUrl: opts.returnUrl
     })
   });
-  return {
-    paymentId: String(json.paymentId || ""),
-    orderId: String(json.orderId || opts.orderId),
-    amount: json.amount != null ? String(json.amount) : undefined,
-    amountPaise: typeof json.amountPaise === "number" ? json.amountPaise : undefined,
-    status: json.status,
-    checkoutUrl: json.checkoutUrl,
-    utr: json.utr ?? null
-  };
+  return parsePayment(json, { orderId: opts.orderId });
 }
 
 export async function youpiGetPayment(paymentId: string): Promise<YoupiPayment> {
@@ -144,13 +173,5 @@ export async function youpiGetPayment(paymentId: string): Promise<YoupiPayment> 
   const json = await youpiFetch(cfg, `/api/v1/payments/${encodeURIComponent(paymentId)}`, {
     method: "GET"
   });
-  return {
-    paymentId: String(json.paymentId || paymentId),
-    orderId: String(json.orderId || ""),
-    amount: json.amount != null ? String(json.amount) : undefined,
-    amountPaise: typeof json.amountPaise === "number" ? json.amountPaise : undefined,
-    status: json.status,
-    checkoutUrl: json.checkoutUrl,
-    utr: json.utr ?? null
-  };
+  return parsePayment(json, { paymentId });
 }

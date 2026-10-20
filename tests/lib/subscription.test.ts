@@ -7,7 +7,12 @@ import {
   splitGst
 } from "../../lib/subscription";
 import { timingSafeEqualString } from "../../lib/timing-safe";
-import { verifyYoupiWebhook } from "../../lib/payments/youpi";
+import {
+  verifyYoupiWebhook,
+  youpiAmountsMatch,
+  youpiConfirmed,
+  youpiMatchesOrder
+} from "../../lib/payments/youpi";
 
 describe("subscription dates and invoices", () => {
   it("uses the Indian financial year", () => {
@@ -84,5 +89,29 @@ describe("YouPI webhook checks", () => {
   it("does not throw when the compared strings differ in length", () => {
     expect(timingSafeEqualString("short", "much-longer-value")).toBe(false);
     expect(timingSafeEqualString("same", "same")).toBe(true);
+  });
+});
+
+describe("YouPI payment confirmation", () => {
+  it("activates only on SUCCESS seen in a bank alert", () => {
+    expect(youpiConfirmed({ status: "SUCCESS", verificationLevel: 1 })).toBe(true);
+    expect(youpiConfirmed({ status: "SUCCESS", verificationLevel: 0 })).toBe(false);
+    expect(youpiConfirmed({ status: "SUCCESS" })).toBe(false);
+    expect(youpiConfirmed({ status: "PROCESSING", verificationLevel: 2 })).toBe(false);
+  });
+
+  it("requires the gateway record to point at our order", () => {
+    const order = { id: "pay_1", providerPaymentId: "gw_1" };
+    expect(youpiMatchesOrder({ orderId: "pay_1", paymentId: "gw_1" }, order)).toBe(true);
+    expect(youpiMatchesOrder({ orderId: "", paymentId: "gw_1" }, order)).toBe(false);
+    expect(youpiMatchesOrder({ orderId: "pay_2", paymentId: "gw_1" }, order)).toBe(false);
+    expect(youpiMatchesOrder({ orderId: "pay_1", paymentId: "gw_2" }, order)).toBe(false);
+    expect(youpiMatchesOrder({ orderId: "pay_1", paymentId: "gw_9" }, { id: "pay_1" })).toBe(true);
+  });
+
+  it("matches amounts given in paise or rupees", () => {
+    expect(youpiAmountsMatch(49900, { amountPaise: 49900 })).toBe(true);
+    expect(youpiAmountsMatch(49900, { amount: "499.00" })).toBe(true);
+    expect(youpiAmountsMatch(49900, { amount: "4.99" })).toBe(false);
   });
 });

@@ -1,6 +1,6 @@
 /**
- * Scheduled billing work: expire lapsed plans, send renewal reminders,
- * and promote the next queued YouPI payment when the VPA is free.
+ * Scheduled billing work: expire lapsed plans and send renewal reminders.
+ * YouPI queues concurrent payments itself, so there is no local queue to promote.
  */
 import { differenceInCalendarDays } from "date-fns";
 import { prisma } from "./db";
@@ -8,7 +8,6 @@ import { sendEmail } from "./email";
 import { sendWhatsAppCloud } from "./whatsapp";
 import { getWhatsAppConfig } from "./settings";
 import { absoluteUrl } from "./utils";
-import { youpiCreatePayment, youpiConfigured, getYoupiConfig } from "./payments/youpi";
 
 const REMINDER_DAYS = [7, 3, 1, 0] as const;
 
@@ -66,41 +65,4 @@ export async function sendRenewalReminders(): Promise<number> {
     sent++;
   }
   return sent;
-}
-
-/** Start the oldest queued YouPI payment when none is already live. */
-export async function promoteYoupiQueue(): Promise<{ promoted: boolean }> {
-  const cfg = await getYoupiConfig();
-  if (!youpiConfigured(cfg)) return { promoted: false };
-
-  const live = await prisma.payment.findFirst({
-    where: { provider: "YOUPI", status: "PENDING" },
-    select: { id: true }
-  });
-  if (live) return { promoted: false };
-
-  const next = await prisma.payment.findFirst({
-    where: { provider: "YOUPI", status: "QUEUED" },
-    orderBy: { createdAt: "asc" }
-  });
-  if (!next) return { promoted: false };
-
-  const remote = await youpiCreatePayment({
-    orderId: next.id,
-    amountPaise: next.amount,
-    returnUrl: absoluteUrl(`/dashboard/billing?payment=${next.id}`),
-    idempotencyKey: next.id
-  });
-  await prisma.payment.update({
-    where: { id: next.id },
-    data: {
-      status: "PENDING",
-      providerPaymentId: remote.paymentId || undefined,
-      providerOrderId: remote.orderId || next.id,
-      checkoutUrl: remote.checkoutUrl || undefined,
-      queuePosition: null,
-      expiresAt: new Date(Date.now() + 45 * 60_000)
-    }
-  });
-  return { promoted: true };
 }
