@@ -51,8 +51,8 @@ cp .env.example .env
 # Edit DATABASE_URL, NEXTAUTH_SECRET, ADMIN_EMAIL, ADMIN_PASSWORD
 
 # 3. Database setup
-npm run db:push       # create tables
-npm run db:seed       # admin + demo café with ~120 reviews
+npm run db:migrate    # create tables from prisma/migrations (dev)
+npm run db:seed       # demo café. Set ADMIN_EMAIL and ADMIN_PASSWORD first.
 
 # 4. Run
 npm run dev
@@ -62,7 +62,7 @@ Open <http://localhost:3000>
 
 **Demo accounts** (after seed):
 - Owner: `demo@reviewqr.in` / `Demo@123` → has 120 demo reviews
-- Admin: `admin@reviewqr.in` / `ChangeMe@123`
+- Admin: the email and password you set in `ADMIN_EMAIL` and `ADMIN_PASSWORD`. There is no default password. Seeding again does not change it.
 - Public review page: <http://localhost:3000/r/demo-cafe>
 
 ---
@@ -131,23 +131,25 @@ git push     # if connected to GitHub
 railway up   # CLI deploy
 ```
 
-Railway runs (configured in `package.json` and `railway.json`):
+Railway's pre-deploy command (`railway.json`) is `npx prisma migrate deploy`. It does not run `db push` and it does not reset the admin password.
+
+### Existing database that was created with `db push`
+
+Do not execute the baseline migration against that database. Mark the history as already applied, once:
 
 ```bash
-npm install
-npx prisma generate
-npx prisma migrate deploy   # applies migrations
-npm run build
-npm run start               # binds to $PORT automatically
+railway run npx prisma migrate resolve --applied 20260426000000_baseline
+railway run npx prisma migrate resolve --applied 20260427000000_platform_branding
 ```
+
+Skip a name that is already recorded in `_prisma_migrations`. After that, `migrate deploy` only applies new migrations.
 
 ### First-deploy commands
 
 ```bash
-# In Railway shell or via railway run:
-railway run npm run db:deploy        # apply Prisma migrations
-railway run npm run seed:admin       # create the super admin
-# (or `npm run db:seed` for full demo data)
+# Fresh database: pre-deploy already applies migrations.
+# Create the super admin once. Later runs leave the password alone.
+railway run npm run seed:admin
 ```
 
 ### Custom domain (white-label)
@@ -203,11 +205,10 @@ railway run npm run seed:admin       # create the super admin
 | `npm run dev` | Start dev server |
 | `npm run build` | Build for production |
 | `npm run start` | Start production server |
-| `npm run db:push` | Push schema to DB (no migration) |
-| `npm run db:migrate` | Create + apply a new migration |
+| `npm run db:migrate` | Create + apply a new migration (dev) |
 | `npm run db:deploy` | Apply pending migrations (production) |
-| `npm run db:seed` | Seed admin + demo data |
-| `npm run seed:admin` | Seed admin only (production-safe) |
+| `npm run db:seed` | Seed demo data. Creates an admin only if that email is missing. |
+| `npm run seed:admin` | Create the admin once. Does not reset the password. |
 | `npm run db:studio` | Open Prisma Studio |
 | `npm run db:reset` | Drop all + re-migrate (DEV ONLY) |
 

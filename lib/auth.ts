@@ -28,8 +28,12 @@ declare module "next-auth/jwt" {
     role: UserRole;
     tier: SubscriptionTier;
     agencyId?: string | null;
+    /** Epoch ms of the last database refresh of role, tier, and agencyId. */
+    claimsRefreshedAt?: number;
   }
 }
+
+const CLAIMS_TTL_MS = 5 * 60 * 1000;
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as any,
@@ -50,32 +54,7 @@ export const authOptions: NextAuthOptions = {
         const email = String(credentials.email).toLowerCase().trim();
         const password = String(credentials.password);
 
-        let user = await prisma.user.findUnique({ where: { email } });
-
-        // Self-bootstrap: if the configured admin matches and NO admin exists,
-        // create one on the fly. Lets a fresh deploy log in without manual seed.
-        if (!user) {
-          const adminEmail = (process.env.ADMIN_EMAIL || "admin@reviewqr.in").toLowerCase().trim();
-          const adminPassword = process.env.ADMIN_PASSWORD || "ChangeMe@123";
-          if (email === adminEmail && password === adminPassword) {
-            const adminCount = await prisma.user.count({ where: { role: "ADMIN" } });
-            if (adminCount === 0) {
-              const hash = await bcrypt.hash(adminPassword, 12);
-              user = await prisma.user.create({
-                data: {
-                  email: adminEmail,
-                  name: "Super Admin",
-                  password: hash,
-                  role: "ADMIN",
-                  subscriptionTier: "AGENCY",
-                  subscriptionStatus: "ACTIVE",
-                  subscriptionEndsAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
-                }
-              });
-              console.log(`[auth] bootstrapped admin ${adminEmail}`);
-            }
-          }
-        }
+        const user = await prisma.user.findUnique({ where: { email } });
 
         if (!user || !user.password) {
           console.warn(`[auth] login failed for ${email}: user not found or no password set`);
@@ -105,8 +84,12 @@ export const authOptions: NextAuthOptions = {
         token.role = (user as any).role;
         token.tier = (user as any).tier;
         token.agencyId = (user as any).agencyId;
-      } else if (token.id) {
-        // Refresh role/tier on each request to keep claims fresh after upgrades
+        token.claimsRefreshedAt = Date.now();
+        return token;
+      }
+
+      const refreshedAt = typeof token.claimsRefreshedAt === "number" ? token.claimsRefreshedAt : 0;
+      if (token.id && Date.now() - refreshedAt > CLAIMS_TTL_MS) {
         const u = await prisma.user.findUnique({
           where: { id: token.id as string },
           select: { role: true, subscriptionTier: true, agencyId: true }
@@ -116,6 +99,7 @@ export const authOptions: NextAuthOptions = {
           token.tier = u.subscriptionTier;
           token.agencyId = u.agencyId;
         }
+        token.claimsRefreshedAt = Date.now();
       }
       return token;
     },
