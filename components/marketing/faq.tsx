@@ -44,7 +44,7 @@ const faqs = [
   },
   {
     q: "Can I export my data?",
-    a: "Yes. CSV export is included on every paid plan. Monthly PDF reports auto-emailed. We also have a REST API and webhooks for advanced workflows."
+    a: "Yes. CSV export is included on every paid plan. Monthly PDF reports auto-emailed."
   },
   {
     q: "Is my data safe?",

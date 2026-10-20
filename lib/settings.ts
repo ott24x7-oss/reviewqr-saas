@@ -258,7 +258,6 @@ export const DEFAULT_PLANS: PricingConfig = {
       "White-label dashboard",
       "Custom domain",
       "Sub-account management",
-      "API access",
       "Dedicated success manager"
     ],
     visible: true,

@@ -27,7 +27,7 @@
 - WhatsApp click-to-chat templates + Cloud API
 - Public testimonial widget (`<script>` snippet)
 - White-label (Agency plan): logo, colors, custom domain
-- API-ready (Razorpay billing + REST endpoints)
+- YouPI checkout, with manual UPI as the fallback. Razorpay stays off unless enabled.
 
 **Production-ready**
 - NextAuth credential auth, bcrypt-hashed passwords
@@ -50,8 +50,8 @@ npm install
 cp .env.example .env
 # Edit DATABASE_URL, NEXTAUTH_SECRET, ADMIN_EMAIL, ADMIN_PASSWORD
 
-# 3. Database setup
-npm run db:migrate    # create tables from prisma/migrations (dev)
+# 3. Database setup. Use migrations. Do not use `prisma db push`.
+npm run db:migrate    # prisma migrate dev — creates and applies migrations locally
 npm run db:seed       # demo café. Set ADMIN_EMAIL and ADMIN_PASSWORD first.
 
 # 4. Run
@@ -118,16 +118,31 @@ Open <http://localhost:3000>
    SELLER_GSTIN=...
    PAYMENTS_RAZORPAY_ENABLED=false
    ```
-   Point a daily Railway cron `POST` at `/api/billing/reconcile` with header `x-cron-secret`. Manual UPI/USDT stays as a fallback. Razorpay checkout is not shown.
+   Point a daily Railway cron `POST` at `/api/billing/reconcile` with header `x-cron-secret`. The secret is compared with `timingSafeEqual` and must match `CRON_SECRET`. Manual UPI/USDT stays as the fallback. Razorpay checkout is not shown. This repo does not create the cron service.
 
-6. **Razorpay** (optional, off unless `PAYMENTS_RAZORPAY_ENABLED=true`):
+6. **Object storage** (optional, Cloudflare R2 or any S3-compatible bucket). Leave these blank and uploads stay as resized data URLs.
+   ```
+   S3_ENDPOINT=https://<account>.r2.cloudflarestorage.com
+   S3_BUCKET=reviewqr
+   S3_ACCESS_KEY_ID=...
+   S3_SECRET_ACCESS_KEY=...
+   S3_PUBLIC_BASE_URL=https://files.yourdomain.com
+   S3_REGION=auto
+   ```
+   `S3_PUBLIC_BASE_URL` must be `https`. Move existing data URLs yourself when you are ready. It is not part of deploy:
+   ```bash
+   npx tsx scripts/migrate-images.ts --dry-run
+   npx tsx scripts/migrate-images.ts
+   ```
+
+7. **Razorpay** (optional, off unless `PAYMENTS_RAZORPAY_ENABLED=true`):
    ```
    RAZORPAY_KEY_ID=rzp_live_...
    RAZORPAY_KEY_SECRET=...
    RAZORPAY_WEBHOOK_SECRET=...
    ```
 
-7. **WhatsApp Cloud API** (optional — auto-send instead of click-to-chat):
+8. **WhatsApp Cloud API** (optional — auto-send instead of click-to-chat):
    ```
    WHATSAPP_API_URL=https://graph.facebook.com/v20.0
    WHATSAPP_API_TOKEN=EAAxxxxxxx
@@ -216,8 +231,10 @@ railway run npm run seed:admin
 | `npm run dev` | Start dev server |
 | `npm run build` | Build for production |
 | `npm run start` | Start production server |
-| `npm run db:migrate` | Create + apply a new migration (dev) |
-| `npm run db:deploy` | Apply pending migrations (production) |
+| `npm run db:migrate` | `prisma migrate dev` — create and apply a migration locally |
+| `npm run db:deploy` | `prisma migrate deploy` — apply pending migrations |
+| `npm test` | Vitest unit tests |
+| `npm run test:e2e` | Playwright owner smoke test. Needs `DATABASE_URL`, a migrated database, and `npx playwright install chromium`. |
 | `npm run db:seed` | Seed demo data. Creates an admin only if that email is missing. |
 | `npm run seed:admin` | Create the admin once. Does not reset the password. |
 | `npm run db:studio` | Open Prisma Studio |
@@ -225,7 +242,9 @@ railway run npm run seed:admin
 
 ---
 
-## 🔌 Public REST endpoints
+## 🔌 Public endpoints
+
+There is no partner API. These routes are the customer and widget pages:
 
 | Endpoint | Purpose |
 | --- | --- |
@@ -262,7 +281,7 @@ Authenticated endpoints under `/api/businesses`, `/api/feedback`, `/api/billing`
 | Free | ₹0 | ₹0 | 1 business, 50 reviews/mo |
 | Starter | ₹499 | ₹4,999 | 1 business, unlimited QR, WhatsApp |
 | Growth ⭐ | ₹999 | ₹9,999 | 5 businesses, 25 locations, branding |
-| Agency | ₹2,999 | ₹29,999 | Unlimited, white-label, custom domain, API |
+| Agency | ₹2,999 | ₹29,999 | Unlimited, white-label, custom domain |
 
 Edit pricing in `lib/payments.ts → PLANS`.
 

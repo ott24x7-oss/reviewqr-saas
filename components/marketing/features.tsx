@@ -8,7 +8,6 @@ import {
   Tag,
   FileDown,
   Globe,
-  Code2,
   Mail,
   Send,
   Star,
@@ -51,7 +50,6 @@ export function Features() {
             { icon: Layers, label: "White-label" },
             { icon: Building2, label: "Multi-business" },
             { icon: Mail, label: "Email reports" },
-            { icon: Code2, label: "REST API" },
             { icon: ShieldCheck, label: "Spam protection" }
           ].map((f) => (
             <div key={f.label} className="neu rounded-lg p-3 flex items-center gap-2 transition">
