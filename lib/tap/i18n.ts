@@ -11,10 +11,11 @@ const STRINGS = {
     disabledTitle: "This QR is currently inactive",
     notFoundTitle: "We could not find this QR",
     privacyOrder:
-      "Your name and table or address are saved with this order so the business can prepare it. Only that business can see them. To ask for deletion, use the privacy policy.",
+      "Your name and table or address are saved with this order so the business can prepare it. Only that business can see them.",
     privacyFeedback:
-      "Your rating is saved for the business owner. A name or phone number is saved only if you agree. To ask for deletion, use the privacy policy.",
+      "Your rating is saved for the business owner. A name or phone number is saved only if you agree.",
     consent: "Save my phone number with this feedback",
+    privacyLink: "How to ask for deletion",
     add: "Add",
     total: "Total",
     yourOrder: "Your order",
@@ -38,10 +39,11 @@ const STRINGS = {
     disabledTitle: "यह QR अभी निष्क्रिय है",
     notFoundTitle: "यह QR नहीं मिला",
     privacyOrder:
-      "आपका नाम और टेबल या पता इस ऑर्डर के साथ इसलिए सेव होता है ताकि दुकान उसे तैयार कर सके। सिर्फ वही दुकान इसे देख सकती है। मिटाने के लिए गोपनीयता नीति देखें।",
+      "आपका नाम और टेबल या पता इस ऑर्डर के साथ इसलिए सेव होता है ताकि दुकान उसे तैयार कर सके। सिर्फ वही दुकान इसे देख सकती है।",
     privacyFeedback:
-      "आपकी रेटिंग दुकान के मालिक के लिए सेव होती है। नाम या फोन तभी सेव होता है जब आप सहमति दें। मिटाने के लिए गोपनीयता नीति देखें।",
+      "आपकी रेटिंग दुकान के मालिक के लिए सेव होती है। नाम या फोन तभी सेव होता है जब आप सहमति दें।",
     consent: "मेरा फोन नंबर इस प्रतिक्रिया के साथ सेव करें",
+    privacyLink: "डेटा मिटाने का तरीका",
     add: "जोड़ें",
     total: "कुल",
     yourOrder: "आपका ऑर्डर",

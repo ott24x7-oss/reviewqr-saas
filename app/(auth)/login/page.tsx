@@ -168,9 +168,11 @@ function LoginForm() {
             Create an account
           </Link>
         </div>
-        <div className="mt-4 p-3 rounded-lg bg-secondary text-xs text-muted-foreground">
-          <strong>Demo:</strong> demo@reviewqr.in / Demo@123
-        </div>
+        {process.env.NODE_ENV !== "production" ? (
+          <div className="mt-4 p-3 rounded-lg bg-secondary text-xs text-muted-foreground">
+            <strong>Demo:</strong> demo@reviewqr.in / Demo@123
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );

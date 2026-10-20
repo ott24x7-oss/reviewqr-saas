@@ -1,9 +1,11 @@
 "use client";
 
 import * as React from "react";
+import { Check, ChevronRight, Copy, Star } from "lucide-react";
 import { tapLang, tapText, type TapLang } from "@/lib/tap/i18n";
 import { splitLinks, type PublicLink } from "@/lib/tap/links";
 import { scanSource, type ScanSource } from "@/lib/tap/source";
+import { TapIcon } from "./tap-icons";
 
 export type TapExperienceProps = {
   code: string;
@@ -73,6 +75,15 @@ export function TapExperience(props: TapExperienceProps) {
   const label = (item: PublicLink) => (lang === "hi" ? item.labelHi : item.labelEn);
   const bio = lang === "hi" && props.bioHi ? props.bioHi : props.bio;
 
+  const initials = props.name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0]?.toUpperCase() || "")
+    .join("");
+  const offers = groups.secondary.filter((item) => item.type === "offer");
+  const rows = groups.secondary.filter((item) => item.type !== "offer");
+
   return (
     <div
       className="tap-page"
@@ -83,37 +94,81 @@ export function TapExperience(props: TapExperienceProps) {
     >
       {props.video && motionOk ? <video className="tap-video" src={props.video} muted playsInline loop autoPlay /> : null}
       <div className="tap-card">
-        {props.cover ? <img className="tap-cover" src={props.cover} alt="" /> : null}
-        <div className="tap-lang">
-          <button type="button" aria-pressed={lang === "en"} onClick={() => choose("en")}>
-            {tapText("en", "english")}
-          </button>
-          <button type="button" aria-pressed={lang === "hi"} onClick={() => choose("hi")}>
-            {tapText("hi", "hindi")}
-          </button>
-        </div>
-        <div className="tap-id">
-          {props.logo ? <img className="tap-logo" src={props.logo} alt="" /> : null}
-          <div>
+        <header className="tap-hero">
+          <div className="tap-banner">
+            {props.cover ? <img className="tap-cover" src={props.cover} alt="" /> : null}
+            <div className="tap-lang" role="group" aria-label="Language">
+              <button type="button" aria-pressed={lang === "en"} onClick={() => choose("en")}>
+                EN
+              </button>
+              <button type="button" aria-pressed={lang === "hi"} onClick={() => choose("hi")} lang="hi">
+                हिं
+              </button>
+            </div>
+          </div>
+          <div className="tap-id">
+            {props.logo ? (
+              <img className="tap-logo" src={props.logo} alt="" />
+            ) : (
+              <span className="tap-logo tap-initials" aria-hidden="true">
+                {initials}
+              </span>
+            )}
             <h1>{props.name}</h1>
             {props.open === null ? null : (
-              <p className="tap-hours">{tapText(lang, props.open ? "openNow" : "closedNow")}</p>
+              <p className="tap-hours" data-open={props.open ? "true" : "false"}>
+                <span aria-hidden="true" />
+                {tapText(lang, props.open ? "openNow" : "closedNow")}
+              </p>
             )}
+            {bio ? <p className="tap-bio">{bio}</p> : null}
           </div>
-        </div>
+        </header>
+
+        {offers.map((item) => (
+          <div key={item.key} className="tap-offer">
+            <TapIcon type="offer" className="tap-offer-icon" />
+            <div>
+              <strong>{label(item)}</strong>
+              {item.detail ? <p>{item.detail}</p> : null}
+            </div>
+          </div>
+        ))}
 
         <div className="tap-actions">
-          {groups.primary.map((item) =>
-            item.type === "feedback" ? (
-              <button key={item.key} type="button" className="tap-primary" data-featured={item.featured ? "true" : "false"} onClick={() => setFeedbackOpen(true)}>
-                {label(item)}
+          {groups.primary.map((item) => {
+            const inner = (
+              <>
+                <span className="tap-btn-icon">
+                  <TapIcon type={item.type} />
+                </span>
+                <span className="tap-btn-label">{label(item)}</span>
+                <ChevronRight className="tap-btn-chev" aria-hidden="true" />
+              </>
+            );
+            return item.type === "feedback" ? (
+              <button
+                key={item.key}
+                type="button"
+                className="tap-primary"
+                data-featured={item.featured ? "true" : "false"}
+                aria-expanded={feedbackOpen}
+                onClick={() => setFeedbackOpen((open) => !open)}
+              >
+                {inner}
               </button>
             ) : (
-              <a key={item.key} className="tap-primary" data-featured={item.featured ? "true" : "false"} href={item.href || "#"} onClick={() => track(item.key)}>
-                {label(item)}
+              <a
+                key={item.key}
+                className="tap-primary"
+                data-featured={item.featured ? "true" : "false"}
+                href={item.href || "#"}
+                onClick={() => track(item.key)}
+              >
+                {inner}
               </a>
-            )
-          )}
+            );
+          })}
         </div>
 
         {feedbackOpen ? (
@@ -128,31 +183,50 @@ export function TapExperience(props: TapExperienceProps) {
           />
         ) : null}
 
-        {groups.secondary.length > 0 ? (
+        {rows.length > 0 ? (
           <ul className="tap-secondary">
-            {groups.secondary.map((item) => {
-              if (item.type === "wifi" || item.type === "offer" || (item.type === "appointment" && !item.href)) {
+            {rows.map((item) => {
+              if (item.type === "wifi" || (item.type === "appointment" && !item.href)) {
                 return (
-                  <li key={item.key} className={item.type === "offer" ? "tap-offer" : "tap-note"}>
-                    <strong>{label(item)}</strong>
-                    {item.detail ? <p>{item.detail}</p> : null}
+                  <li key={item.key} className="tap-note">
+                    <span className="tap-row-icon">
+                      <TapIcon type={item.type} />
+                    </span>
+                    <div className="tap-note-body">
+                      <strong>{label(item)}</strong>
+                      {item.detail ? <p>{item.detail}</p> : null}
+                    </div>
+                    {item.type === "wifi" && item.detail ? <CopyButton text={item.detail} lang={lang} /> : null}
                   </li>
                 );
               }
               if (item.type === "upi" && item.href) {
                 return (
                   <li key={item.key} className="tap-upi">
-                    <a href={item.href} onClick={() => track(item.key)}>
-                      {label(item)}
+                    <a className="tap-row" href={item.href} onClick={() => track(item.key)}>
+                      <span className="tap-row-icon">
+                        <TapIcon type="upi" />
+                      </span>
+                      <span className="tap-row-label">{label(item)}</span>
+                      <ChevronRight className="tap-row-chev" aria-hidden="true" />
                     </a>
-                    {props.upiQr?.[item.key] ? <img src={props.upiQr[item.key]} alt="UPI QR" /> : null}
+                    {props.upiQr?.[item.key] ? (
+                      <details className="tap-upi-qr">
+                        <summary>{lang === "hi" ? "दूसरे फ़ोन से स्कैन करें" : "Scan from another phone"}</summary>
+                        <img src={props.upiQr[item.key]} alt="UPI QR" width={180} height={180} />
+                      </details>
+                    ) : null}
                   </li>
                 );
               }
               return (
                 <li key={item.key}>
-                  <a href={item.href || "#"} onClick={() => track(item.key)} rel="noreferrer">
-                    {label(item)}
+                  <a className="tap-row" href={item.href || "#"} onClick={() => track(item.key)} rel="noreferrer">
+                    <span className="tap-row-icon" data-type={item.type}>
+                      <TapIcon type={item.type} />
+                    </span>
+                    <span className="tap-row-label">{label(item)}</span>
+                    <ChevronRight className="tap-row-chev" aria-hidden="true" />
                   </a>
                 </li>
               );
@@ -166,10 +240,20 @@ export function TapExperience(props: TapExperienceProps) {
               .filter((item) => item.type === "youtube" && item.thumb && item.href)
               .map((item) => (
                 <a key={item.key} href={item.href || "#"} onClick={() => track(item.key)} rel="noreferrer">
-                  <img src={item.thumb || ""} alt={label(item)} />
-                  <span>{label(item)}</span>
+                  <img src={item.thumb || ""} alt="" loading="lazy" />
+                  <span>
+                    <TapIcon type="youtube" /> {label(item)}
+                  </span>
                 </a>
               ))}
+          </div>
+        ) : null}
+
+        {props.gallery.length > 0 ? (
+          <div className="tap-gallery">
+            {props.gallery.map((src) => (
+              <img key={src} src={src} alt="" loading="lazy" />
+            ))}
           </div>
         ) : null}
 
@@ -178,24 +262,48 @@ export function TapExperience(props: TapExperienceProps) {
             {groups.social
               .filter((item) => item.type !== "youtube")
               .map((item) => (
-                <a key={item.key} href={item.href || "#"} onClick={() => track(item.key)} rel="noreferrer">
-                  {label(item)}
+                <a
+                  key={item.key}
+                  href={item.href || "#"}
+                  onClick={() => track(item.key)}
+                  rel="noreferrer"
+                  aria-label={label(item)}
+                  title={label(item)}
+                >
+                  <TapIcon type={item.type} />
                 </a>
               ))}
           </div>
         ) : null}
 
-        {bio ? <p className="tap-bio">{bio}</p> : null}
-
-        {props.gallery.length > 0 ? (
-          <div className="tap-gallery">
-            {props.gallery.map((src) => (
-              <img key={src} src={src} alt="" />
-            ))}
-          </div>
-        ) : null}
+        <p className="tap-footer">
+          Powered by <a href="/">ReviewQR</a>
+        </p>
       </div>
     </div>
+  );
+}
+
+function CopyButton({ text, lang }: { text: string; lang: TapLang }) {
+  const [copied, setCopied] = React.useState(false);
+  const password = /password\s*[:\-·]?\s*(\S+)/i.exec(text)?.[1] || text;
+  return (
+    <button
+      type="button"
+      className="tap-copy"
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(password);
+          setCopied(true);
+          window.setTimeout(() => setCopied(false), 1800);
+        } catch {
+          setCopied(false);
+        }
+      }}
+    >
+      {copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
+      {copied ? (lang === "hi" ? "कॉपी हुआ" : "Copied") : lang === "hi" ? "कॉपी" : "Copy"}
+    </button>
   );
 }
 
@@ -283,7 +391,7 @@ function FeedbackForm({
             aria-pressed={rating === n}
             onClick={() => setRating(n)}
           >
-            {n}
+            <Star aria-hidden="true" data-on={n <= rating ? "true" : "false"} />
           </button>
         ))}
       </div>
@@ -294,7 +402,7 @@ function FeedbackForm({
       <label htmlFor="tap-phone">{lang === "hi" ? "फोन" : "Phone"}</label>
       <input id="tap-phone" value={phone} onChange={(e) => setPhone(e.target.value)} maxLength={15} inputMode="tel" autoComplete="tel" />
       <p className="tap-privacy">
-        {tapText(lang, "privacyFeedback")} <a href="/privacy">Privacy</a>
+        {tapText(lang, "privacyFeedback")} <a href="/privacy">{tapText(lang, "privacyLink")}</a>
       </p>
       <label className="tap-consent">
         <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />

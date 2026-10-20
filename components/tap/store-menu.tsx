@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { ShoppingBag, X } from "lucide-react";
 import Link from "next/link";
 import { tapText, type TapLang } from "@/lib/tap/i18n";
 import { formatRupees } from "@/lib/tap/order-message";
@@ -156,7 +157,7 @@ export function StoreMenu({
             return (
               <article key={item.id} className="store-card">
                 <div className="store-photo">
-                  {photo ? <img src={photo} alt="" /> : <span>{item.name.slice(0, 1)}</span>}
+                  {photo ? <img src={photo} alt="" loading="lazy" /> : <span className="store-initial" aria-hidden="true">{item.name.slice(0, 1)}</span>}
                   {item.veg !== "NONE" ? <span className="store-pill" data-veg={item.veg}>{item.veg === "NON_VEG" ? "Non-veg" : item.veg === "EGG" ? "Egg" : "Veg"}</span> : null}
                 </div>
                 <h2 className="store-name">{label(item)}</h2>
@@ -179,29 +180,44 @@ export function StoreMenu({
       </div>
       {count > 0 ? (
         <button type="button" className="store-bag" aria-label={text("bag")} onClick={() => setOpen(true)}>
-          {count}
+          <ShoppingBag aria-hidden="true" />
+          <span className="store-bag-count">{count}</span>
         </button>
       ) : null}
       {count > 0 ? (
         <button type="button" className="store-bar" onClick={() => setOpen(true)}>
-          <span>{count}</span>
-          <span>{formatRupees(total)}</span>
-          <span>{text("yourOrder")}</span>
+          <span className="store-bar-count">
+            <ShoppingBag aria-hidden="true" /> {count}
+          </span>
+          <span className="store-bar-total">{formatRupees(total)}</span>
+          <span className="store-bar-cta">{text("yourOrder")} →</span>
         </button>
       ) : null}
       {open ? (
-        <div className="store-sheet" role="dialog" aria-label={text("yourOrder")}>
-          <button type="button" className="store-add" onClick={() => setOpen(false)}>
-            {text("closeBag")}
-          </button>
-          <h2>{text("yourOrder")}</h2>
+        <>
+        <div className="store-backdrop" aria-hidden="true" onClick={() => setOpen(false)} />
+        <div className="store-sheet" role="dialog" aria-modal="true" aria-label={text("yourOrder")}>
+          <span className="store-handle" aria-hidden="true" />
+          <div className="store-sheet-head">
+            <h2>{text("yourOrder")}</h2>
+            <button type="button" className="store-close" aria-label={text("closeBag")} onClick={() => setOpen(false)}>
+              <X aria-hidden="true" />
+            </button>
+          </div>
           {cart.map((line) => {
             const item = items.find((row) => row.id === line.id);
             if (!item) return null;
             return (
-              <div key={line.id} className="store-card">
-                <strong>{label(item)}</strong>
-                <span>{line.qty} · {formatRupees(item.pricePaise * line.qty)}</span>
+              <div key={line.id} className="store-line">
+                <div className="store-line-top">
+                  <strong className="store-line-name">{label(item)}</strong>
+                  <span className="store-line-price">{formatRupees(item.pricePaise * line.qty)}</span>
+                </div>
+                <div className="store-step store-step-sm">
+                  <button type="button" aria-label="Decrease" onClick={() => setQty(item.id, line.qty - 1)}>−</button>
+                  <span style={{ alignSelf: "center", textAlign: "center" }}>{line.qty}</span>
+                  <button type="button" aria-label="Increase" onClick={() => setQty(item.id, line.qty + 1)}>+</button>
+                </div>
                 <input
                   aria-label={text("note")}
                   value={line.note}
@@ -213,17 +229,22 @@ export function StoreMenu({
               </div>
             );
           })}
+          <div className="store-total">
+            <span>{text("total")}</span>
+            <strong>{formatRupees(total)}</strong>
+          </div>
           <input aria-label={text("customerName")} value={name} placeholder={text("customerName")} onChange={(event) => setName(event.target.value)} />
           <input aria-label={text("table")} value={table} placeholder={text("table")} onChange={(event) => setTable(event.target.value)} />
           <textarea aria-label={text("note")} value={note} placeholder={text("note")} onChange={(event) => setNote(event.target.value)} />
           <p className="store-privacy">
-            {text("privacyOrder")} <Link href="/privacy">{lang === "hi" ? "गोपनीयता" : "Privacy"}</Link>
+            {text("privacyOrder")} <Link href="/privacy">{text("privacyLink")}</Link>
           </p>
           {error ? <p className="store-privacy">{error}</p> : null}
           <button type="button" className="store-order" disabled={busy || count === 0} onClick={placeOrder}>
             {text("orderWhatsApp")} · {formatRupees(total)}
           </button>
         </div>
+        </>
       ) : null}
     </div>
   );
