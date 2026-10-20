@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { businessSchema } from "@/lib/validations";
 import { slugify, shortCode as makeShortCode } from "@/lib/utils";
 import { ownerLimitError } from "@/lib/entitlements";
+import { linksForNewBusiness } from "@/lib/tap/new-business";
 
 export async function POST(req: NextRequest) {
   const user = await requireUser().catch(() => null);
@@ -35,6 +36,12 @@ export async function POST(req: NextRequest) {
   let code = makeShortCode();
   while (await prisma.qRCode.findUnique({ where: { shortCode: code } })) code = makeShortCode();
 
+  const starterLinks = await linksForNewBusiness(data.industry, {
+    phone: data.phone,
+    address: data.address,
+    city: data.city,
+    googleReviewUrl: data.googleReviewUrl
+  });
   const created = await prisma.$transaction(async (tx) => {
     const business = await tx.business.create({
       data: {
@@ -50,6 +57,9 @@ export async function POST(req: NextRequest) {
         logo: data.logo || null,
         primaryColor: data.primaryColor
       }
+    });
+    await tx.tapPage.create({
+      data: { businessId: business.id, draft: { links: starterLinks, bio: "", bioHi: "" } }
     });
     const qr = await tx.qRCode.create({
       data: { businessId: business.id, type: "COUNTER", label: "Main counter", shortCode: code }

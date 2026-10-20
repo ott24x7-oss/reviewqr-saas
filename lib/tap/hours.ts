@@ -45,6 +45,16 @@ function covers(row: DayHours | undefined, nowMinutes: number, yesterdaySpill: b
  * True when the business is open, false when closed, null when no hours are set.
  * A missing day is closed. An overnight range (22:00–02:00) stays open after midnight.
  */
+/** True during a same-day or overnight HH:MM window in India. An empty or equal range stays visible. */
+export function inClockWindow(from: string, to: string, now = new Date()) {
+  const start = minutes(from);
+  const end = minutes(to);
+  if (start == null || end == null || start === end) return true;
+  const nowMinutes = kolkataClock(now).minutes;
+  if (end > start) return nowMinutes >= start && nowMinutes < end;
+  return nowMinutes >= start || nowMinutes < end;
+}
+
 export function isOpenAt(hours: WeekHours | null | undefined, now = new Date()): boolean | null {
   if (!hours || Object.keys(hours).length === 0) return null;
   const clock = kolkataClock(now);

@@ -103,11 +103,11 @@ export function TapExperience(props: TapExperienceProps) {
         <div className="tap-actions">
           {groups.primary.map((item) =>
             item.type === "feedback" ? (
-              <button key={item.key} type="button" className="tap-primary" onClick={() => setFeedbackOpen(true)}>
+              <button key={item.key} type="button" className="tap-primary" data-featured={item.featured ? "true" : "false"} onClick={() => setFeedbackOpen(true)}>
                 {label(item)}
               </button>
             ) : (
-              <a key={item.key} className="tap-primary" href={item.href || "#"} onClick={() => track(item.key)}>
+              <a key={item.key} className="tap-primary" data-featured={item.featured ? "true" : "false"} href={item.href || "#"} onClick={() => track(item.key)}>
                 {label(item)}
               </a>
             )

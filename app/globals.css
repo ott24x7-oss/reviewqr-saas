@@ -614,6 +614,9 @@
 .tap-page[data-buttons="raised"] .tap-primary {
   box-shadow: 0 10px 24px rgba(28, 24, 19, 0.16);
 }
+.tap-primary[data-featured="true"] {
+  box-shadow: 0 8px 20px rgba(28, 24, 19, 0.18);
+}
 .tap-page[data-avatar="square"] .tap-logo { border-radius: 0; }
 .tap-page[data-avatar="rounded"] .tap-logo { border-radius: 16px; }
 .tap-video {

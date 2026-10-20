@@ -7,6 +7,7 @@ import { rateLimitDb } from "@/lib/rate-limit";
 import { sendEmail, welcomeEmail } from "@/lib/email";
 import { sendVerificationEmail } from "@/lib/verify-email";
 import { absoluteUrl, getClientIp } from "@/lib/utils";
+import { attachTapDraft } from "@/lib/tap/new-business";
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req.headers);
@@ -64,7 +65,7 @@ export async function POST(req: NextRequest) {
         break;
       }
     }
-    await prisma.business.create({
+    const business = await prisma.business.create({
       data: {
         ownerId: user.id,
         name: data.businessName,
@@ -75,6 +76,7 @@ export async function POST(req: NextRequest) {
         email
       }
     });
+    await attachTapDraft(business.id, null, { phone: data.phone, whatsappNumber: data.phone });
   }
 
   // Welcome and verify emails — best-effort. Login works before the inbox is confirmed.

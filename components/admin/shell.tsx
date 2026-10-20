@@ -15,6 +15,7 @@ import {
   History,
   LifeBuoy,
   Palette,
+  Link2,
   Sparkles,
   ArrowLeft,
   ShieldCheck,
@@ -35,6 +36,7 @@ const nav = [
   { href: "/admin/ai", label: "AI Reviews", icon: Sparkles },
   { href: "/admin/site", label: "Site Settings", icon: Globe },
   { href: "/admin/themes", label: "Tap themes", icon: Palette },
+  { href: "/admin/presets", label: "Page presets", icon: Link2 },
   { href: "/admin/audit", label: "Audit Log", icon: History },
   { href: "/admin/support", label: "Support", icon: LifeBuoy }
 ];

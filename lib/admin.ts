@@ -51,7 +51,9 @@ export type AuditAction =
   | "business.suspend"
   | "support.reply"
   | "theme.update"
-  | "theme.admin";
+  | "theme.admin"
+  | "tap.publish"
+  | "preset.update";
 
 export async function logAudit(opts: {
   userId?: string;

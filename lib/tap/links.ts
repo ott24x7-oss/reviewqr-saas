@@ -1,4 +1,4 @@
-import { isOpenAt, WEEK_DAYS, type WeekHours } from "./hours";
+import { inClockWindow, isOpenAt, WEEK_DAYS, type WeekHours } from "./hours";
 import { safeTapUrl } from "./urls";
 
 export type PublicLink = {
@@ -139,7 +139,8 @@ export function resolveLinks(
   published: unknown,
   fallback: PublicLink[],
   channel: "q" | "t",
-  code: string
+  code: string,
+  now = new Date()
 ): PublicLink[] {
   if (!published || typeof published !== "object" || Array.isArray(published)) return fallback;
   const rows = (published as { links?: unknown }).links;
@@ -149,20 +150,32 @@ export function resolveLinks(
     if (!row || typeof row !== "object") return;
     const item = row as Record<string, unknown>;
     if (item.enabled === false) return;
+    if (!scheduleAllows(item.schedule, now)) return;
     const type = plain(item.type, 40) || "custom";
     const href = hrefFor(type, item.url, channel, code);
     if (type !== "feedback" && !href) return;
+    const emoji = plain(item.emoji, 8);
+    const labelEn = plain(item.labelEn, 80) || type;
+    const labelHi = plain(item.labelHi, 80) || labelEn;
     links.push({
       key: plain(item.key, 40) || `${type}-${index}`,
       type,
-      labelEn: plain(item.labelEn, 80) || type,
-      labelHi: plain(item.labelHi, 80) || plain(item.labelEn, 80) || type,
+      labelEn: emoji ? `${emoji} ${labelEn}` : labelEn,
+      labelHi: emoji ? `${emoji} ${labelHi}` : labelHi,
       href,
       featured: item.featured === true,
       sort: typeof item.sort === "number" ? item.sort : index
     });
   });
   return links.sort((a, b) => a.sort - b.sort);
+}
+
+function scheduleAllows(value: unknown, now: Date) {
+  if (!value || typeof value !== "object") return true;
+  const from = plain((value as { from?: unknown }).from, 5);
+  const to = plain((value as { to?: unknown }).to, 5);
+  if (!from || !to) return true;
+  return inClockWindow(from, to, now);
 }
 
 export function hoursFromPublished(published: unknown): WeekHours | null {
@@ -237,7 +250,7 @@ export function presentBusiness(fields: TapBusinessFields, channel: "q" | "t", c
     bio: bioPublished || plain(fields.description, 400),
     bioHi,
     open: isOpenAt(hours, now),
-    links: resolveLinks(published, synthesizeLinks({ ...fields, channel, code }), channel, code),
+    links: resolveLinks(published, synthesizeLinks({ ...fields, channel, code }), channel, code, now),
     gallery: galleryFromPublished(published),
     call: telUrl(fields.phone),
     directions: directionsUrl([fields.address, fields.city, fields.state, fields.pincode])

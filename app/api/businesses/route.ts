@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { businessSchema } from "@/lib/validations";
 import { slugify } from "@/lib/utils";
 import { ownerLimitError } from "@/lib/entitlements";
+import { attachTapDraft } from "@/lib/tap/new-business";
 
 export async function GET() {
   const user = await requireUser().catch(() => null);
@@ -72,6 +73,16 @@ export async function POST(req: NextRequest) {
       logo: data.logo || null,
       coverImage: data.coverImage || null
     }
+  });
+
+  await attachTapDraft(business.id, data.industry, {
+    phone: data.phone,
+    address: data.address,
+    city: data.city,
+    state: data.state,
+    pincode: data.pincode,
+    googleReviewUrl: data.googleReviewUrl,
+    whatsappNumber: data.whatsappNumber
   });
 
   return NextResponse.json({ business });
