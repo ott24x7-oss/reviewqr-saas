@@ -14,7 +14,7 @@ test("owner registers, collects a private review, and sees UPI checkout", async 
 
   await page.goto("/dashboard/businesses");
   await page.getByRole("link", { name: "Manage" }).click();
-  await page.getByRole("link", { name: "QR codes" }).click();
+  await page.getByRole("main").getByRole("link", { name: /^QR codes/ }).click();
   await page.getByLabel("Label").fill("Front counter");
   await page.getByRole("button", { name: "Create QR code" }).click();
   await expect(page.getByText("Short URL")).toBeVisible();

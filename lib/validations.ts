@@ -104,7 +104,7 @@ export const reviewSubmitSchema = z.object({
   customerName: z.string().max(80).optional().or(z.literal("")),
   customerEmail: emailSchema.optional().or(z.literal("")),
   customerPhone: phoneSchema.optional().or(z.literal("")),
-  npsScore: z.number().int().min(0).max(10).optional(),
+  npsScore: z.number().int().min(0).max(10).nullish(),
   tags: z.array(z.string()).optional(),
   source: z.string().max(20).optional(),
   locationSlug: z.string().max(100).optional().or(z.literal("")),
