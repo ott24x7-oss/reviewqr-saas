@@ -4,6 +4,7 @@
  */
 import Razorpay from "razorpay";
 import crypto from "crypto";
+import { timingSafeEqualString } from "./timing-safe";
 import type { SubscriptionTier, SubscriptionStatus } from "@prisma/client";
 import {
   getPaymentsConfig,
@@ -108,7 +109,7 @@ export async function verifyRazorpaySignature(opts: {
     .createHmac("sha256", cfg.razorpayKeySecret)
     .update(`${opts.orderId}|${opts.paymentId}`)
     .digest("hex");
-  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(opts.signature));
+  return timingSafeEqualString(expected, opts.signature);
 }
 
 export async function verifyRazorpayWebhook(rawBody: string, signature: string) {
@@ -118,7 +119,7 @@ export async function verifyRazorpayWebhook(rawBody: string, signature: string) 
     .createHmac("sha256", cfg.razorpayWebhookSecret)
     .update(rawBody)
     .digest("hex");
-  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
+  return timingSafeEqualString(expected, signature);
 }
 
 export function getUpiPaymentLink(opts: {

@@ -71,6 +71,7 @@ model User {
   payments    Payment[]
   apiKeys     ApiKey[]
   notifications Notification[]
+  subscriptionReminders SubscriptionReminder[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -446,6 +447,7 @@ model CampaignContact {
 
 enum PaymentStatus {
   PENDING
+  QUEUED
   COMPLETED
   FAILED
   REFUNDED
@@ -457,21 +459,40 @@ enum PaymentProvider {
   MANUAL
   UPI
   USDT
+  YOUPI
 }
 
 model Payment {
   id        String  @id @default(cuid())
   userId    String
-  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Restrict so deleting a user cannot delete GST payment records.
+  user      User    @relation(fields: [userId], references: [id], onDelete: Restrict)
   amount    Int     // in paise
   currency  String  @default("INR")
   status    PaymentStatus @default(PENDING)
   provider  PaymentProvider @default(RAZORPAY)
-  providerOrderId   String?
-  providerPaymentId String?
+  providerOrderId   String? @unique
+  providerPaymentId String? @unique
   tier      SubscriptionTier
   periodMonths Int @default(1)
   invoiceUrl String?
+  invoiceNumber String? @unique
+  utr          String?
+  refundUtr    String?
+  queuePosition Int?
+  checkoutUrl  String? @db.Text
+
+  // Snapshot taken when the invoice number is issued. Later profile edits do not change it.
+  invoiceBuyerName    String?
+  invoiceBuyerGstin   String?
+  invoiceSellerName   String?
+  invoiceSellerGstin  String?
+  invoicePlaceOfSupply String?
+  invoiceTaxablePaise Int?
+  invoiceCgstPaise    Int?
+  invoiceSgstPaise    Int?
+  invoiceIgstPaise    Int?
+  invoiceIssuedAt     DateTime?
 
   // Manual UPI / USDT collection + email auto-verify
   method       String?   // "upi" | "usdt"
@@ -482,11 +503,40 @@ model Payment {
   matchedEmail String?   // uid/subject of the confirmation email that matched
   expiresAt    DateTime? // pending order expiry
 
+  deliveries PaymentDelivery[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@index([status, expiresAt])
+  @@index([provider, status])
+}
+
+// One row per Indian financial year. Locked with SELECT … FOR UPDATE while issuing invoice numbers.
+model InvoiceSequence {
+  fy         String @id
+  lastNumber Int    @default(0)
+}
+
+model PaymentDelivery {
+  id         String   @id @default(cuid())
+  deliveryId String   @unique
+  paymentId  String
+  payment    Payment  @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  createdAt  DateTime @default(now())
+}
+
+model SubscriptionReminder {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      String
+  periodEnd DateTime
+  createdAt DateTime @default(now())
+
+  @@unique([userId, kind, periodEnd])
+  @@index([userId])
 }
 
 // ==========================

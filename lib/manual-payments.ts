@@ -9,6 +9,7 @@
 import { prisma } from "./db";
 import { getPaymentsConfig, getPricingConfig } from "./settings";
 import { fetchRecentPaymentEmails, type ParsedEmail } from "./email-verify";
+import { activateCompletedPayment } from "./subscription";
 import type { Payment, SubscriptionTier } from "@prisma/client";
 
 export type PayMethod = "upi" | "usdt";
@@ -133,22 +134,13 @@ async function emailAlreadyUsed(messageId: string): Promise<boolean> {
 }
 
 async function activate(payment: Payment, via: string, matchedEmail: string | null) {
-  const months = payment.periodMonths || 1;
-  const ends = new Date(Date.now() + months * 30 * 86_400_000);
-  await prisma.$transaction([
-    prisma.payment.update({
-      where: { id: payment.id },
-      data: { status: "COMPLETED", verifiedVia: via, matchedEmail: matchedEmail?.slice(0, 200) || null }
-    }),
-    prisma.user.update({
-      where: { id: payment.userId },
-      data: {
-        subscriptionTier: payment.tier,
-        subscriptionStatus: "ACTIVE",
-        subscriptionEndsAt: ends
-      }
-    })
-  ]);
+  const result = await activateCompletedPayment({
+    paymentId: payment.id,
+    verifiedVia: via,
+    matchedEmail,
+    utr: payment.reference
+  });
+  if (!result.ok) throw new Error(result.error);
 }
 
 /** Try to verify a single pending order against the inbox. Returns true if activated. */

@@ -109,14 +109,25 @@ Open <http://localhost:3000>
    SMTP_PASS=re_...
    ```
 
-5. **Razorpay** (optional — payments):
+5. **YouPI** (UPI checkout) and a cron secret:
+   ```
+   YOUPI_BASE_URL=https://pay.yourdomain.com
+   YOUPI_MERCHANT_ID=...
+   YOUPI_WEBHOOK_SECRET=...
+   CRON_SECRET=...
+   SELLER_GSTIN=...
+   PAYMENTS_RAZORPAY_ENABLED=false
+   ```
+   Point a daily Railway cron `POST` at `/api/billing/reconcile` with header `x-cron-secret`. Manual UPI/USDT stays as a fallback. Razorpay checkout is not shown.
+
+6. **Razorpay** (optional, off unless `PAYMENTS_RAZORPAY_ENABLED=true`):
    ```
    RAZORPAY_KEY_ID=rzp_live_...
    RAZORPAY_KEY_SECRET=...
    RAZORPAY_WEBHOOK_SECRET=...
    ```
 
-6. **WhatsApp Cloud API** (optional — auto-send instead of click-to-chat):
+7. **WhatsApp Cloud API** (optional — auto-send instead of click-to-chat):
    ```
    WHATSAPP_API_URL=https://graph.facebook.com/v20.0
    WHATSAPP_API_TOKEN=EAAxxxxxxx

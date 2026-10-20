@@ -27,7 +27,8 @@ const SECRET_FIELDS: Record<string, string[]> = {
     "razorpayWebhookSecret",
     "stripeSecretKey",
     "stripeWebhookSecret",
-    "mailImapPass"
+    "mailImapPass",
+    "youpiWebhookSecret"
   ],
   [SETTING_KEYS.email]: ["relaySecret", "smtpPass"],
   [SETTING_KEYS.whatsapp]: ["apiToken"],
@@ -83,6 +84,14 @@ export type PaymentsConfig = {
   mailImapUser: string;
   mailImapPass: string;
   mailFromFilter: string; // comma-separated sender substrings, e.g. "alerts@hdfcbank.net,noreply@binance.com"
+  // YouPI (default checkout). Razorpay stays in the fields above and is off unless enabled by env.
+  youpiBaseUrl: string;
+  youpiMerchantId: string;
+  youpiWebhookSecret: string;
+  sellerLegalName: string;
+  sellerGstin: string;
+  sellerState: string;
+  gstRate: number;
 };
 
 export type EmailConfig = {
@@ -240,7 +249,14 @@ export const DEFAULT_PAYMENTS: PaymentsConfig = {
   mailImapPort: 993,
   mailImapUser: "",
   mailImapPass: "",
-  mailFromFilter: ""
+  mailFromFilter: "",
+  youpiBaseUrl: "",
+  youpiMerchantId: "",
+  youpiWebhookSecret: "",
+  sellerLegalName: "ReviewQR",
+  sellerGstin: "",
+  sellerState: "",
+  gstRate: 18
 };
 
 export const DEFAULT_EMAIL: EmailConfig = {
@@ -342,7 +358,14 @@ export async function getPaymentsConfig(): Promise<PaymentsConfig> {
     mailImapPort: stored.mailImapPort || Number(process.env.IMAP_PORT) || DEFAULT_PAYMENTS.mailImapPort,
     mailImapUser: stored.mailImapUser || process.env.IMAP_USER || "",
     mailImapPass: stored.mailImapPass || process.env.IMAP_PASS || "",
-    mailFromFilter: stored.mailFromFilter || ""
+    mailFromFilter: stored.mailFromFilter || "",
+    youpiBaseUrl: stored.youpiBaseUrl || process.env.YOUPI_BASE_URL || "",
+    youpiMerchantId: stored.youpiMerchantId || process.env.YOUPI_MERCHANT_ID || "",
+    youpiWebhookSecret: stored.youpiWebhookSecret || process.env.YOUPI_WEBHOOK_SECRET || "",
+    sellerLegalName: stored.sellerLegalName || DEFAULT_PAYMENTS.sellerLegalName,
+    sellerGstin: stored.sellerGstin || process.env.SELLER_GSTIN || "",
+    sellerState: stored.sellerState || "",
+    gstRate: stored.gstRate && stored.gstRate > 0 ? stored.gstRate : DEFAULT_PAYMENTS.gstRate
   };
 }
 export async function setPaymentsConfig(v: PaymentsConfig, by?: string) {

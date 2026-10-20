@@ -97,6 +97,7 @@ function PaymentModal({
   months,
   upiEnabled,
   usdtEnabled,
+  youpiEnabled,
   onClose
 }: {
   tier: SubscriptionTier;
@@ -104,6 +105,7 @@ function PaymentModal({
   months: number;
   upiEnabled: boolean;
   usdtEnabled: boolean;
+  youpiEnabled: boolean;
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -115,7 +117,39 @@ function PaymentModal({
   const [status, setStatus] = React.useState<OrderStatus>("PENDING");
   const [expired, setExpired] = React.useState(false);
 
-  const anyEnabled = upiEnabled || usdtEnabled;
+  const [youpiNote, setYoupiNote] = React.useState<string | null>(null);
+  const [youpiBusy, setYoupiBusy] = React.useState(false);
+  const anyEnabled = youpiEnabled || upiEnabled || usdtEnabled;
+
+  async function startYoupi() {
+    setYoupiBusy(true);
+    setYoupiNote(null);
+    try {
+      const res = await fetch("/api/billing/youpi/order", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ tier, months })
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || "Could not start payment");
+      if (json.checkoutUrl) {
+        window.location.href = json.checkoutUrl;
+        return;
+      }
+      if (json.queued) {
+        setYoupiNote(
+          json.message ||
+            `Another payment is in progress. Your queue position is ${json.position}.`
+        );
+        return;
+      }
+      throw new Error("Checkout link was not returned");
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setYoupiBusy(false);
+    }
+  }
 
   async function createOrder(method: PayMethod) {
     setCreating(method);
@@ -307,6 +341,28 @@ function PaymentModal({
               ) : (
                 <>
                   <p className="text-sm text-muted-foreground">Choose how you'd like to pay:</p>
+                  {youpiNote && (
+                    <p className="text-sm rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900">
+                      {youpiNote}
+                    </p>
+                  )}
+                  {youpiEnabled && (
+                    <button
+                      onClick={startYoupi}
+                      disabled={youpiBusy || creating !== null}
+                      className="w-full flex items-center gap-3 rounded-xl border border-primary p-3.5 text-left hover:bg-secondary/50 transition disabled:opacity-60"
+                    >
+                      <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        {youpiBusy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Smartphone className="h-5 w-5" />}
+                      </span>
+                      <span>
+                        <span className="block font-medium text-sm">Pay with UPI</span>
+                        <span className="block text-xs text-muted-foreground">
+                          Opens secure checkout. Manual UPI stays below if you need it.
+                        </span>
+                      </span>
+                    </button>
+                  )}
                   {upiEnabled && (
                     <button
                       onClick={() => createOrder("upi")}
@@ -464,12 +520,14 @@ export function BillingClient({
   currentTier,
   plans,
   upiEnabled,
-  usdtEnabled
+  usdtEnabled,
+  youpiEnabled
 }: {
   currentTier: SubscriptionTier;
   plans: PricingConfig;
   upiEnabled: boolean;
   usdtEnabled: boolean;
+  youpiEnabled: boolean;
 }) {
   const [annual, setAnnual] = React.useState(true);
   const [modalTier, setModalTier] = React.useState<SubscriptionTier | null>(null);
@@ -487,7 +545,7 @@ export function BillingClient({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
             <div>
               <h2 className="text-lg font-semibold">Choose a plan</h2>
-              <p className="text-sm text-muted-foreground">Pay securely via UPI or USDT</p>
+              <p className="text-sm text-muted-foreground">Pay by UPI. Manual transfer stays available.</p>
             </div>
             <div className="inline-flex items-center gap-1 p-1 rounded-full bg-secondary">
               <button
@@ -594,6 +652,7 @@ export function BillingClient({
           months={months}
           upiEnabled={upiEnabled}
           usdtEnabled={usdtEnabled}
+          youpiEnabled={youpiEnabled}
           onClose={() => setModalTier(null)}
         />
       )}
