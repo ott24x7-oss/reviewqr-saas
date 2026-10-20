@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { logAudit, requireAdminApi } from "@/lib/admin";
 import { readAdminThemes, writeAdminThemes } from "@/lib/tap/theme-store";
-import { THEME_PRESETS, themeContrastError, type ThemePreset, type ThemeTokens } from "@/lib/tap/themes";
+import { THEME_PRESETS, freeTheme, themeContrastError, type ThemePreset, type ThemeTokens } from "@/lib/tap/themes";
 
 const schema = z.object({
   id: z.string().min(2).max(40).regex(/^[a-z0-9-]+$/),
@@ -42,14 +42,7 @@ export async function POST(req: NextRequest) {
         id: data.id,
         name: data.name,
         premium: data.premium,
-        tokens: {
-          ...THEME_PRESETS[0].tokens,
-          bg: data.bg,
-          ink: data.ink,
-          buttonBg: data.ink,
-          buttonInk: data.bg,
-          background: data.bg
-        } satisfies ThemeTokens
+        tokens: extraTokens(data.bg, data.ink)
       });
   await writeAdminThemes(next, admin.user?.id);
   await logAudit({
@@ -60,6 +53,12 @@ export async function POST(req: NextRequest) {
     metadata: { premium: data.premium, remove: !!data.remove }
   });
   return NextResponse.json({ ok: true, extra: next });
+}
+
+function extraTokens(bg: string, ink: string): ThemeTokens {
+  const base = { ...freeTheme().tokens };
+  delete base.buttonFill;
+  return { ...base, bg, ink, buttonBg: ink, buttonInk: bg, background: bg };
 }
 
 function upsert(list: ThemePreset[], theme: ThemePreset) {

@@ -51,9 +51,9 @@ export function AdminThemesForm({ presets, extra }: { presets: ThemePreset[]; ex
           {presets.map((theme) => (
             <span
               key={theme.id}
-              className="rounded-full border px-3 py-2 text-xs font-medium"
-              style={{ background: theme.tokens.bg, color: theme.tokens.ink }}
+              className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-background px-2 py-1 text-xs font-medium text-foreground"
             >
+              <span aria-hidden className="h-8 w-8 shrink-0 rounded-full border border-border" style={{ background: theme.tokens.background }} />
               {theme.name}
               {theme.premium ? " · Paid" : ""}
             </span>

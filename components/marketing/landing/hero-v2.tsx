@@ -83,16 +83,15 @@ export function HeroV2() {
           </Phone>
           <OrderToast className="absolute -left-1 top-24 hidden min-[400px]:flex sm:-left-24" />
           <AlertToast className="absolute -right-1 bottom-20 hidden min-[400px]:flex sm:-right-12" />
-          <div className="mt-4 flex items-center justify-center gap-2" aria-label="Theme previews">
+          <div className="mt-4 flex max-w-full flex-wrap items-center justify-center gap-2" aria-label="Theme previews">
             {TAP_THEMES.map((th, i) => (
               <button
                 key={th.name}
                 type="button"
                 onClick={() => setT(i)}
                 aria-label={`Show ${th.name} theme`}
-                className={`h-7 w-7 rounded-full ring-2 ring-offset-2 ring-offset-[#eef1f6] transition ${th.bg} ${
-                  i === t ? "ring-primary-500" : "ring-transparent"
-                }`}
+                className={`h-7 w-7 rounded-full ring-2 ring-offset-2 transition ${i === t ? "ring-primary-500" : "ring-transparent"}`}
+                style={{ background: th.background }}
               />
             ))}
           </div>

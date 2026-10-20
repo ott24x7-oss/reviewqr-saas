@@ -15,71 +15,30 @@ import {
   Lock
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { THEME_PRESETS } from "@/lib/tap/themes";
 
 /* ───────────── Linktree-style tap page ───────────── */
 export type TapTheme = {
   name: string;
-  bg: string;
-  card: string;
+  background: string;
   text: string;
   sub: string;
   primary: string;
   primaryText: string;
-  button: string;
+  buttonBg: string;
+  buttonText: string;
 };
 
-export const TAP_THEMES: TapTheme[] = [
-  {
-    name: "Fresh",
-    bg: "bg-gradient-to-b from-emerald-50 to-white",
-    card: "bg-white",
-    text: "text-slate-900",
-    sub: "text-slate-500",
-    primary: "bg-emerald-500",
-    primaryText: "text-white",
-    button: "bg-white border border-slate-200 text-slate-800"
-  },
-  {
-    name: "Dark luxe",
-    bg: "bg-gradient-to-b from-slate-950 to-slate-800",
-    card: "bg-slate-800",
-    text: "text-amber-100",
-    sub: "text-slate-400",
-    primary: "bg-amber-400",
-    primaryText: "text-slate-950",
-    button: "bg-white/5 border border-amber-200/20 text-amber-50"
-  },
-  {
-    name: "Café warm",
-    bg: "bg-gradient-to-b from-orange-100 to-amber-50",
-    card: "bg-white",
-    text: "text-stone-900",
-    sub: "text-stone-500",
-    primary: "bg-orange-700",
-    primaryText: "text-white",
-    button: "bg-white/80 border border-orange-200 text-stone-800"
-  },
-  {
-    name: "Royal",
-    bg: "bg-gradient-to-b from-rose-950 to-red-900",
-    card: "bg-rose-900",
-    text: "text-yellow-100",
-    sub: "text-rose-200",
-    primary: "bg-yellow-400",
-    primaryText: "text-rose-950",
-    button: "bg-white/10 border border-yellow-300/25 text-yellow-50"
-  },
-  {
-    name: "Ocean",
-    bg: "bg-gradient-to-b from-sky-500 to-indigo-600",
-    card: "bg-white/10",
-    text: "text-white",
-    sub: "text-sky-100",
-    primary: "bg-white",
-    primaryText: "text-indigo-700",
-    button: "bg-white/15 border border-white/25 text-white"
-  }
-];
+export const TAP_THEMES: TapTheme[] = THEME_PRESETS.map((theme) => ({
+  name: theme.name,
+  background: theme.tokens.background,
+  text: theme.tokens.ink,
+  sub: theme.tokens.muted,
+  primary: theme.tokens.buttonFill || theme.tokens.buttonBg,
+  primaryText: theme.tokens.buttonInk,
+  buttonBg: theme.tokens.buttons === "glass" ? "color-mix(in srgb, white 22%, transparent)" : theme.tokens.bg,
+  buttonText: theme.tokens.buttons === "glass" ? theme.tokens.buttonBg : theme.tokens.ink
+}));
 
 const TAP_LINKS = [
   { icon: Star, label: "Review us on Google" },
@@ -89,34 +48,34 @@ const TAP_LINKS = [
 
 export function TapPageScreen({ theme = TAP_THEMES[0] }: { theme?: TapTheme }) {
   return (
-    <div className={cn("flex h-full flex-col items-center px-4 pb-4 pt-10 transition-colors duration-500", theme.bg)}>
-      <div className={cn("flex h-16 w-16 items-center justify-center rounded-2xl text-2xl font-bold shadow-md", theme.primary, theme.primaryText)}>
+    <div className="flex h-full flex-col items-center px-4 pb-4 pt-10 transition-colors duration-500" style={{ background: theme.background, color: theme.text }}>
+      <div className="flex h-16 w-16 items-center justify-center rounded-2xl text-2xl font-bold shadow-md" style={{ background: theme.primary, color: theme.primaryText }}>
         S
       </div>
-      <p className={cn("mt-2 text-base font-bold", theme.text)}>Spice Junction Café</p>
-      <p className={cn("text-xs", theme.sub)}>Dosa · Coffee · Snacks</p>
-      <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-600">
-        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Open now
+      <p className="mt-2 text-base font-bold">Spice Junction Café</p>
+      <p className="text-xs" style={{ color: theme.sub }}>Dosa · Coffee · Snacks</p>
+      <p className="mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: "color-mix(in srgb, currentColor 12%, transparent)" }}>
+        <span className="h-1.5 w-1.5 rounded-full bg-current" /> Open now
       </p>
 
       <div className="mt-4 w-full space-y-2">
-        <div className={cn("flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold shadow-sm", theme.primary, theme.primaryText)}>
+        <div className="flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold shadow-sm" style={{ background: theme.primary, color: theme.primaryText }}>
           <Utensils className="h-4 w-4" /> View menu &amp; order
         </div>
         {TAP_LINKS.map((l) => (
-          <div key={l.label} className={cn("flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-medium", theme.button)}>
+          <div key={l.label} className="flex items-center justify-center gap-2 rounded-xl border py-3 text-sm font-medium" style={{ background: theme.buttonBg, color: theme.buttonText, borderColor: "color-mix(in srgb, currentColor 25%, transparent)" }}>
             <l.icon className="h-4 w-4" /> {l.label}
           </div>
         ))}
       </div>
 
-      <div className={cn("mt-4 flex gap-4", theme.sub)}>
+      <div className="mt-4 flex gap-4" style={{ color: theme.sub }}>
         <PhoneIcon className="h-5 w-5" />
         <MapPin className="h-5 w-5" />
         <Instagram className="h-5 w-5" />
         <Wifi className="h-5 w-5" />
       </div>
-      <p className={cn("mt-auto text-[10px]", theme.sub)}>Powered by ReviewQR</p>
+      <p className="mt-auto text-[10px]" style={{ color: theme.sub }}>Powered by ReviewQR</p>
     </div>
   );
 }

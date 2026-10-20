@@ -29,7 +29,7 @@ const schema = z.object({
   avatar: z.enum(["circle", "rounded", "square"]).optional(),
   entrance: z.enum(["none", "fade", "rise"]).optional(),
   radius: z.enum(["0px", "12px", "16px", "24px", "999px"]).optional(),
-  backgroundType: z.enum(["solid", "gradient", "image", "pattern", "video"]).optional(),
+  backgroundType: z.enum(["preset", "solid", "gradient", "image", "pattern", "video"]).optional(),
   backgroundTo: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
   imageUrl: z.string().max(400).optional().or(z.literal("")),
   video: z.string().max(400).optional().or(z.literal("")),
@@ -93,6 +93,11 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         return NextResponse.json({ error: err instanceof Error ? err.message : "Video URL was rejected" }, { status: 400 });
       }
     }
+    const keepArt = data.backgroundType === "preset";
+    const sameButtons =
+      (data.buttonBg || preset.tokens.buttonBg) === preset.tokens.buttonBg &&
+      (data.buttonInk || preset.tokens.buttonInk) === preset.tokens.buttonInk &&
+      (!data.buttons || data.buttons === preset.tokens.buttons);
     const custom: ThemeCustom = {
       bg,
       ink,
@@ -103,7 +108,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       avatar: data.avatar,
       entrance: data.entrance,
       radius: data.radius,
-      background: buildBackground({ type: data.backgroundType, bg, to: data.backgroundTo, imageUrl: data.imageUrl || "" }),
+      background: keepArt
+        ? preset.tokens.background
+        : buildBackground({ type: data.backgroundType, bg, to: data.backgroundTo, imageUrl: data.imageUrl || "" }),
+      buttonFill: keepArt && sameButtons ? preset.tokens.buttonFill || null : null,
       video
     };
     published.theme = themeId;

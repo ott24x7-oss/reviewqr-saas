@@ -5,7 +5,7 @@ import { tapFontClass } from "@/components/brand/tap-font";
 import { isLookupCode } from "@/lib/tap/ids";
 import { loadPublicTap } from "@/lib/tap/resolve";
 import { readAdminThemes } from "@/lib/tap/theme-store";
-import { THEME_PRESETS, resolveTheme, tokensToStyle } from "@/lib/tap/themes";
+import { FREE_THEME_ID, THEME_PRESETS, resolveTheme, tokensToStyle } from "@/lib/tap/themes";
 import { PublicTap } from "./public-page";
 import { StoreMenu, type StoreItem } from "./store-menu";
 
@@ -37,8 +37,8 @@ export async function PublicMenu({ code, channel }: { code: string; channel: "q"
     ...loose.map(toItem)
   ];
   const theme = resolveTheme({ published: record.business.published, paid: record.paid, extra });
-  const stock = THEME_PRESETS[0].tokens;
-  const themed = theme.id !== "minimal" || theme.tokens.bg !== stock.bg || theme.tokens.ink !== stock.ink;
+  const stock = THEME_PRESETS.find((item) => item.id === FREE_THEME_ID)?.tokens || THEME_PRESETS[0].tokens;
+  const themed = theme.id !== FREE_THEME_ID || theme.tokens.bg !== stock.bg || theme.tokens.ink !== stock.ink;
   const themeStyle = themed
     ? {
         ...tokensToStyle(theme.tokens),
