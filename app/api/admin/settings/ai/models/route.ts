@@ -11,6 +11,7 @@ export async function POST(req: NextRequest) {
   const body = (await req.json().catch(() => ({}))) as any;
   const stored = await getAiConfig();
   const cfg = {
+    ...stored,
     enabled: true,
     apiUrl: String(body.apiUrl || stored.apiUrl).trim().replace(/\/$/, ""),
     apiKey:

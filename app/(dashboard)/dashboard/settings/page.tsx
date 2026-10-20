@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SettingsForm } from "./settings-form";
+import { AccountPrivacy } from "./account-privacy";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,7 @@ export default async function SettingsPage() {
           tier: user.subscriptionTier
         }}
       />
+      <AccountPrivacy />
     </div>
   );
 }

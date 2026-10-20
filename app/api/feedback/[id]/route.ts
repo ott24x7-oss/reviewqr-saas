@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
+import { logAudit } from "@/lib/admin";
+import { getClientIp } from "@/lib/utils";
 import { z } from "zod";
 
 const patchSchema = z.object({
   status: z.enum(["NEW", "IN_PROGRESS", "RESOLVED", "IGNORED"]).optional(),
-  internalNote: z.string().max(1000).optional()
+  internalNote: z.string().max(1000).optional(),
+  eraseContact: z.boolean().optional()
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
@@ -20,6 +23,23 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const parsed = patchSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message }, { status: 400 });
+  }
+
+  if (parsed.data.eraseContact) {
+    await prisma.review.update({
+      where: { id: feedback.reviewId },
+      data: { customerName: null, customerEmail: null, customerPhone: null }
+    });
+    await logAudit({
+      userId: user.id,
+      action: "feedback.erase_contact",
+      entity: "Review",
+      entityId: feedback.reviewId,
+      ip: getClientIp(req.headers)
+    });
+    if (!parsed.data.status && parsed.data.internalNote === undefined) {
+      return NextResponse.json({ ok: true, erased: true });
+    }
   }
 
   const updated = await prisma.feedback.update({

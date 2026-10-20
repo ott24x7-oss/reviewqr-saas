@@ -44,7 +44,9 @@ export type AuditAction =
   | "admin.login"
   | "payment.approve"
   | "payment.reject"
-  | "payment.refund";
+  | "payment.refund"
+  | "feedback.erase_contact"
+  | "account.delete";
 
 export async function logAudit(opts: {
   userId?: string;

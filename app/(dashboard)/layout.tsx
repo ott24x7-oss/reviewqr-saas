@@ -27,7 +27,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
         role: user.role,
         tier: user.subscriptionTier,
         trialEndsAt: user.trialEndsAt,
-        subscriptionEndsAt: user.subscriptionEndsAt
+        subscriptionEndsAt: user.subscriptionEndsAt,
+        emailVerified: !!user.emailVerified
       }}
       businesses={businesses}
       brand={brand}

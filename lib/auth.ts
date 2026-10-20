@@ -5,6 +5,8 @@ import bcrypt from "bcryptjs";
 import { prisma } from "./db";
 import { getServerSession } from "next-auth/next";
 import type { UserRole, SubscriptionTier } from "@prisma/client";
+import { consumeOtpSession } from "./otp";
+import { rateLimitDb } from "./rate-limit";
 
 declare module "next-auth" {
   interface Session {
@@ -47,16 +49,34 @@ export const authOptions: NextAuthOptions = {
       name: "Credentials",
       credentials: {
         email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
+        password: { label: "Password", type: "password" },
+        otpToken: { label: "OTP token", type: "text" }
       },
       async authorize(credentials) {
+        const otpToken = credentials?.otpToken ? String(credentials.otpToken) : "";
+        if (otpToken) {
+          const user = await consumeOtpSession(otpToken);
+          if (!user) return null;
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            image: user.image,
+            role: user.role,
+            tier: user.subscriptionTier,
+            agencyId: user.agencyId
+          } as any;
+        }
+
         if (!credentials?.email || !credentials?.password) return null;
         const email = String(credentials.email).toLowerCase().trim();
         const password = String(credentials.password);
+        const rl = await rateLimitDb({ key: `login:${email}`, limit: 10, windowSeconds: 600 });
+        if (!rl.ok) return null;
 
         const user = await prisma.user.findUnique({ where: { email } });
 
-        if (!user || !user.password) {
+        if (!user || !user.password || user.deletedAt) {
           console.warn(`[auth] login failed for ${email}: user not found or no password set`);
           return null;
         }
@@ -126,7 +146,9 @@ export async function comparePassword(password: string, hash: string) {
 export async function getCurrentUser() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return null;
-  return prisma.user.findUnique({ where: { id: session.user.id } });
+  const user = await prisma.user.findUnique({ where: { id: session.user.id } });
+  if (!user || user.deletedAt) return null;
+  return user;
 }
 
 export async function requireUser() {

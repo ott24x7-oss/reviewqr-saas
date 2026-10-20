@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { recordQrScan } from "@/lib/scans";
 
 /**
  * Build a redirect base URL that works behind a reverse proxy (Railway, etc).
@@ -32,9 +33,7 @@ export async function GET(req: NextRequest, { params }: { params: { code: string
     return NextResponse.redirect(new URL("/?error=qr-not-found", base));
   }
 
-  prisma.qRCode
-    .update({ where: { id: qr.id }, data: { scans: { increment: 1 } } })
-    .catch(() => {});
+  await recordQrScan(qr.id, req.headers).catch(() => {});
 
   const params2 = new URLSearchParams();
   if (qr.location?.slug) params2.set("l", qr.location.slug);

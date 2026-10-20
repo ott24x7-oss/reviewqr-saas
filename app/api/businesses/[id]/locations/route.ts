@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { locationSchema } from "@/lib/validations";
 import { slugify, nanoSlug } from "@/lib/utils";
-import { planLimit, effectiveTier } from "@/lib/payments";
+import { ownerLimitError } from "@/lib/entitlements";
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const user = await requireUser().catch(() => null);
@@ -26,8 +26,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const count = await prisma.location.count({
     where: { business: { ownerId: user.id }, isActive: true }
   });
-  if (count >= (await planLimit(effectiveTier(user), "locations"))) {
-    return NextResponse.json({ error: "Plan location limit reached" }, { status: 402 });
+  const limitError = await ownerLimitError(user, "locations", count);
+  if (limitError) {
+    return NextResponse.json({ error: limitError }, { status: 402 });
   }
 
   const parsed = locationSchema.safeParse(await req.json().catch(() => ({})));

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
+import { ownerLimitError } from "@/lib/entitlements";
 
 async function getOwnedBusiness(id: string, userId: string) {
   return prisma.business.findFirst({
@@ -74,6 +75,14 @@ export async function POST(
 
   if (data.length === 0) {
     return NextResponse.json({ error: "No valid templates to add" }, { status: 400 });
+  }
+
+  const existing = await prisma.reviewTemplate.count({
+    where: { business: { ownerId: user.id } }
+  });
+  const limitError = await ownerLimitError(user, "reviewTemplates", existing, data.length);
+  if (limitError) {
+    return NextResponse.json({ error: limitError }, { status: 402 });
   }
 
   const result = await prisma.reviewTemplate.createMany({ data });

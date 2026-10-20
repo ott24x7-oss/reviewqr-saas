@@ -156,11 +156,23 @@ export function PricingForm({ initial }: { initial: PricingConfig }) {
 
                 <div>
                   <Label className="text-xs">Plan limits</Label>
-                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mt-1">
-                    {(["businesses", "locations", "staff", "qrCodes", "reviews"] as const).map(
-                      (k) => (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 mt-1">
+                    {(
+                      [
+                        ["businesses", "Businesses"],
+                        ["locations", "Locations"],
+                        ["staff", "Staff"],
+                        ["qrCodes", "QR codes"],
+                        ["reviews", "Reviews/mo"],
+                        ["aiCallsPerMonth", "AI/mo"],
+                        ["campaigns", "Campaigns"],
+                        ["reviewTemplates", "Templates"],
+                        ["storeProducts", "Products"],
+                        ["storeOrders", "Orders"]
+                      ] as const
+                    ).map(([k, label]) => (
                         <div key={k}>
-                          <Label className="text-[10px] uppercase">{k}</Label>
+                          <Label className="text-[10px] uppercase">{label}</Label>
                           <Input
                             type="number"
                             min={0}
@@ -170,8 +182,7 @@ export function PricingForm({ initial }: { initial: PricingConfig }) {
                             }
                           />
                         </div>
-                      )
-                    )}
+                    ))}
                   </div>
                 </div>
               </CardContent>

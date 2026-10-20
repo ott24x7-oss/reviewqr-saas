@@ -45,6 +45,8 @@ model User {
   name           String?
   phone          String?
   image          String?
+  // Set when the account is anonymized. The row stays so Payment records can.
+  deletedAt      DateTime?
   role           UserRole  @default(USER)
   agencyId       String?
   agency         User?     @relation("AgencyClients", fields: [agencyId], references: [id], onDelete: SetNull)
@@ -171,6 +173,7 @@ model Business {
   contacts     Contact[]
   tags         FeedbackTag[]
   reviewTemplates ReviewTemplate[]
+  aiUsage      AiUsage[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -269,6 +272,8 @@ model Review {
   customerName  String?
   customerEmail String?
   customerPhone String?
+  // Set only when the customer agreed to store contact details.
+  consentAt  DateTime?
 
   ipAddress  String?
   userAgent  String? @db.Text
@@ -279,6 +284,7 @@ model Review {
   createdAt DateTime @default(now())
 
   @@index([businessId, createdAt])
+  @@index([businessId, rating])
   @@index([locationId])
   @@index([staffId])
   @@index([fingerprint])
@@ -310,6 +316,7 @@ model Feedback {
 
   @@index([businessId, createdAt])
   @@index([status])
+  @@index([businessId, status])
 }
 
 model FeedbackTag {
@@ -364,11 +371,12 @@ model QRCode {
   scans      Int     @default(0)
   isActive   Boolean @default(true)
 
+  qrScans    QrScan[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([businessId])
-  @@index([shortCode])
 }
 
 enum CampaignStatus {
@@ -580,6 +588,52 @@ model RateLimit {
   expiresAt DateTime
 
   @@index([expiresAt])
+}
+
+// One counted visit per IP hash inside the dedupe window. ipHash is SHA-256, not reversible.
+model QrScan {
+  id         String   @id @default(cuid())
+  qrCodeId   String
+  qrCode     QRCode   @relation(fields: [qrCodeId], references: [id], onDelete: Cascade)
+  ipHash     String
+  deviceType String?
+  createdAt  DateTime @default(now())
+
+  @@index([qrCodeId, ipHash, createdAt])
+}
+
+// Per-business AI calls for a calendar month (Asia/Kolkata), key YYYY-MM.
+model AiUsage {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  month      String
+  calls      Int      @default(0)
+
+  @@unique([businessId, month])
+  @@index([businessId])
+}
+
+// Platform-wide estimated AI spend for one calendar day, key YYYY-MM-DD.
+model PlatformAiSpend {
+  day   String @id
+  paise Int    @default(0)
+}
+
+// Login OTPs for email and phone. Password reset and email-verify links stay on VerificationToken.
+// channel is "email" or "phone". Only the hash of the code is stored.
+model EmailOtp {
+  id         String   @id @default(cuid())
+  identifier String
+  tokenHash  String
+  channel    String
+  purpose    String
+  expires    DateTime
+  attempts   Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  @@index([identifier, purpose])
+  @@index([tokenHash])
 }
 
 model AuditLog {

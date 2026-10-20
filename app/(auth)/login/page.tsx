@@ -16,6 +16,15 @@ function LoginForm() {
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [loading, setLoading] = React.useState(false);
+  const [phone, setPhone] = React.useState("");
+  const [otpCode, setOtpCode] = React.useState("");
+  const [otpSent, setOtpSent] = React.useState(false);
+  const [otpLoading, setOtpLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    if (search.get("verified") === "1") toast.success("Email confirmed. You can sign in.");
+    if (search.get("verify") === "failed") toast.error("That confirmation link is invalid or expired.");
+  }, [search]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -80,6 +89,80 @@ function LoginForm() {
             Sign in
           </Button>
         </form>
+        <div className="my-6 border-t pt-5 space-y-3">
+          <p className="text-sm font-medium">Sign in with mobile OTP</p>
+          <div className="space-y-1.5">
+            <Label htmlFor="phone">Mobile</Label>
+            <Input
+              id="phone"
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="98xxxxxxxx"
+              className="h-11"
+            />
+          </div>
+          {otpSent && (
+            <div className="space-y-1.5">
+              <Label htmlFor="otp">6-digit code</Label>
+              <Input
+                id="otp"
+                inputMode="numeric"
+                value={otpCode}
+                onChange={(e) => setOtpCode(e.target.value)}
+                placeholder="000000"
+                className="h-11"
+              />
+            </div>
+          )}
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            disabled={otpLoading}
+            onClick={async () => {
+              setOtpLoading(true);
+              try {
+                if (!otpSent) {
+                  const res = await fetch("/api/auth/otp/request", {
+                    method: "POST",
+                    headers: { "content-type": "application/json" },
+                    body: JSON.stringify({ phone })
+                  });
+                  const json = await res.json().catch(() => ({}));
+                  if (!res.ok) throw new Error(json.error || "Could not send the code");
+                  setOtpSent(true);
+                  toast.success("If this number has an account, a code is on the way");
+                } else {
+                  const res = await fetch("/api/auth/otp/verify", {
+                    method: "POST",
+                    headers: { "content-type": "application/json" },
+                    body: JSON.stringify({ phone, code: otpCode })
+                  });
+                  const json = await res.json().catch(() => ({}));
+                  if (!res.ok) throw new Error(json.error || "Invalid code");
+                  const signed = await signIn("credentials", {
+                    otpToken: json.otpToken,
+                    email: "otp-login@invalid.local",
+                    password: "unused",
+                    redirect: false
+                  });
+                  if (signed?.error) throw new Error("Could not sign in");
+                  toast.success("Welcome back!");
+                  router.push(search.get("callbackUrl") || "/dashboard");
+                  router.refresh();
+                }
+              } catch (e: any) {
+                toast.error(e.message || "Something went wrong");
+              } finally {
+                setOtpLoading(false);
+              }
+            }}
+          >
+            {otpLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            {otpSent ? "Verify code" : "Send code"}
+          </Button>
+        </div>
         <div className="mt-6 text-center text-sm text-muted-foreground">
           New to ReviewQR?{" "}
           <Link href="/register" className="font-medium text-primary hover:underline">

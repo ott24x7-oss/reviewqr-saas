@@ -22,6 +22,7 @@ import {
   ShieldCheck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { VerifyEmailBanner } from "@/components/dashboard/verify-email-banner";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -67,6 +68,7 @@ type User = {
   tier: SubscriptionTier;
   trialEndsAt: Date | null;
   subscriptionEndsAt: Date | null;
+  emailVerified?: boolean;
 };
 
 const nav = [
@@ -343,7 +345,10 @@ export function DashboardShell({
 
         {/* Main content */}
         <main className="flex-1 min-w-0">
-          <div className="container max-w-7xl py-5 sm:py-7 px-3 sm:px-6">{children}</div>
+          <div className="container max-w-7xl py-5 sm:py-7 px-3 sm:px-6">
+            {user.emailVerified === false && <VerifyEmailBanner />}
+            {children}
+          </div>
         </main>
       </div>
 

@@ -48,6 +48,26 @@ export async function PUT(req: NextRequest) {
         reviews: Math.max(
           0,
           Math.floor(Number(incoming.limits?.reviews ?? next[t].limits.reviews))
+        ),
+        aiCallsPerMonth: Math.max(
+          0,
+          Math.floor(Number(incoming.limits?.aiCallsPerMonth ?? next[t].limits.aiCallsPerMonth))
+        ),
+        campaigns: Math.max(
+          0,
+          Math.floor(Number(incoming.limits?.campaigns ?? next[t].limits.campaigns))
+        ),
+        reviewTemplates: Math.max(
+          0,
+          Math.floor(Number(incoming.limits?.reviewTemplates ?? next[t].limits.reviewTemplates))
+        ),
+        storeProducts: Math.max(
+          0,
+          Math.floor(Number(incoming.limits?.storeProducts ?? next[t].limits.storeProducts))
+        ),
+        storeOrders: Math.max(
+          0,
+          Math.floor(Number(incoming.limits?.storeOrders ?? next[t].limits.storeOrders))
         )
       }
     };

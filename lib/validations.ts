@@ -100,7 +100,8 @@ export const reviewSubmitSchema = z.object({
   locationSlug: z.string().max(100).optional().or(z.literal("")),
   staffSlug: z.string().max(100).optional().or(z.literal("")),
   qrCode: z.string().max(20).optional().or(z.literal("")),
-  turnstileToken: z.string().optional().or(z.literal(""))
+  turnstileToken: z.string().optional().or(z.literal("")),
+  consent: z.boolean().optional()
 });
 
 export const qrCodeSchema = z.object({
