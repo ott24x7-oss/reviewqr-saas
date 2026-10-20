@@ -157,18 +157,16 @@ git push     # if connected to GitHub
 railway up   # CLI deploy
 ```
 
-Railway's pre-deploy command (`railway.json`) is `npx prisma migrate deploy`. It does not run `db push` and it does not reset the admin password.
+Railway's pre-deploy command (`railway.json`) is `node scripts/predeploy-migrate.js`. It runs `prisma migrate deploy`; it does not run `db push` and it does not reset the admin password.
 
 ### Existing database that was created with `db push`
 
-Do not execute the baseline migration against that database. Mark the history as already applied, once:
+The pre-deploy script handles this automatically. If the database already has tables but no record of `20260426000000_baseline` / `20260427000000_platform_branding` in `_prisma_migrations`, it marks them as applied (without executing their SQL) and then runs `migrate deploy`. It is safe to run on every deploy. To do it by hand instead:
 
 ```bash
 railway run npx prisma migrate resolve --applied 20260426000000_baseline
 railway run npx prisma migrate resolve --applied 20260427000000_platform_branding
 ```
-
-Skip a name that is already recorded in `_prisma_migrations`. After that, `migrate deploy` only applies new migrations.
 
 ### First-deploy commands
 
