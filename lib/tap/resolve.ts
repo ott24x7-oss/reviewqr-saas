@@ -12,6 +12,7 @@ export type TapRecord =
       qrId: string;
       ownerId: string;
       businessId: string;
+      paid: boolean;
       business: TapBusinessFields;
       locationSlug: string;
       staffSlug: string;
@@ -21,6 +22,7 @@ export type TapRecord =
       qrId: string;
       ownerId: string;
       businessId: string;
+      paid: boolean;
       business: TapBusinessFields;
       locationSlug: string;
       staffSlug: string;
@@ -72,16 +74,17 @@ async function queryTap(code: string): Promise<TapRecord> {
     menuCount,
     published: tapPage?.published ?? null
   };
+  const owner = qr.business.owner;
   const shared = {
     qrId: qr.id,
-    ownerId: qr.business.owner.id,
+    ownerId: owner.id,
     businessId: qr.business.id,
+    paid: effectiveTier(owner) !== "FREE",
     business,
     locationSlug: qr.location?.slug || "",
     staffSlug: qr.staff?.slug || ""
   };
-  const owner = qr.business.owner;
-  const limited = owner.subscriptionTier !== "FREE" && effectiveTier(owner) === "FREE";
+  const limited = owner.subscriptionTier !== "FREE" && !shared.paid;
   return limited ? { status: "limited", ...shared } : { status: "active", ...shared };
 }
 

@@ -10,6 +10,8 @@ import { isLookupCode } from "@/lib/tap/ids";
 import { presentBusiness } from "@/lib/tap/links";
 import { loadPublicTap } from "@/lib/tap/resolve";
 import { scanSource } from "@/lib/tap/source";
+import { readAdminThemes } from "@/lib/tap/theme-store";
+import { resolveTheme, tokensToStyle } from "@/lib/tap/themes";
 import { StatusCard } from "./status-card";
 import { TapExperience } from "./tap-experience";
 
@@ -50,10 +52,19 @@ export async function PublicTap({
   }
 
   const view = presentBusiness(record.business, channel, code);
+  const extra = await readAdminThemes().catch(() => []);
+  const theme = resolveTheme({ published: record.business.published, paid: record.paid, extra });
+  const themeProps = {
+    themeStyle: tokensToStyle(theme.tokens),
+    buttons: theme.tokens.buttons,
+    avatar: theme.tokens.avatar,
+    entrance: theme.tokens.entrance,
+    video: theme.video
+  };
   if (record.status === "limited") {
     await remindExpiredOwner(record.ownerId, view.name).catch(() => {});
     return (
-      <div className={`tap-page ${tapFontClass}`}>
+      <div className={`tap-page ${tapFontClass}`} style={themeProps.themeStyle} data-buttons={themeProps.buttons}>
         <div className="tap-card">
           <h1>{view.name}</h1>
           <p className="tap-bio">This page is limited until the business renews.</p>
@@ -93,6 +104,7 @@ export async function PublicTap({
         locationSlug={record.locationSlug}
         staffSlug={record.staffSlug}
         turnstileSiteKey={turnstileSiteKey}
+        {...themeProps}
       />
     </div>
   );

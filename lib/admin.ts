@@ -49,7 +49,9 @@ export type AuditAction =
   | "account.delete"
   | "user.impersonate"
   | "business.suspend"
-  | "support.reply";
+  | "support.reply"
+  | "theme.update"
+  | "theme.admin";
 
 export async function logAudit(opts: {
   userId?: string;

@@ -21,17 +21,24 @@ export type TapExperienceProps = {
   locationSlug: string;
   staffSlug: string;
   turnstileSiteKey: string;
+  themeStyle?: Record<string, string>;
+  buttons?: string;
+  avatar?: string;
+  entrance?: string;
+  video?: string | null;
 };
 
 export function TapExperience(props: TapExperienceProps) {
   const source = scanSource(props.channel, props.src);
   const [lang, setLang] = React.useState<TapLang>("en");
   const [feedbackOpen, setFeedbackOpen] = React.useState(false);
+  const [motionOk, setMotionOk] = React.useState(false);
   const groups = splitLinks(props.links);
 
   React.useEffect(() => {
     const stored = window.localStorage.getItem("rq-lang");
     setLang(tapLang(navigator.language, stored));
+    setMotionOk(!window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   }, []);
 
   React.useEffect(() => {
@@ -65,7 +72,14 @@ export function TapExperience(props: TapExperienceProps) {
   const bio = lang === "hi" && props.bioHi ? props.bioHi : props.bio;
 
   return (
-    <div className="tap-page">
+    <div
+      className="tap-page"
+      style={props.themeStyle}
+      data-buttons={props.buttons}
+      data-avatar={props.avatar}
+      data-entrance={props.entrance}
+    >
+      {props.video && motionOk ? <video className="tap-video" src={props.video} muted playsInline loop autoPlay /> : null}
       <div className="tap-card">
         {props.cover ? <img className="tap-cover" src={props.cover} alt="" /> : null}
         <div className="tap-lang">
