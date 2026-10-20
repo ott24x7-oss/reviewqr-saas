@@ -99,7 +99,7 @@ export function StoreScreen() {
               key={c}
               className={cn(
                 "shrink-0 rounded-full px-2.5 py-1",
-                i === 0 ? "bg-emerald-500 text-white" : "bg-white text-slate-600 border border-slate-200"
+                i === 0 ? "bg-emerald-800 text-white" : "bg-white text-slate-700 border border-slate-200"
               )}
             >
               {c}
@@ -118,25 +118,26 @@ export function StoreScreen() {
                     "inline-block h-2.5 w-2.5 shrink-0 rounded-[3px] border",
                     it.veg ? "border-emerald-600 bg-emerald-500/30" : "border-red-600 bg-red-500/30"
                   )}
+                  role="img"
                   aria-label={it.veg ? "Veg" : "Non-veg"}
                 />
                 {it.name}
               </p>
-              <p className="text-xs text-slate-500">₹{it.price}</p>
+              <p className="marketing-rupee text-xs text-slate-500">₹{it.price}</p>
             </div>
             {it.qty > 0 ? (
               <div className="flex shrink-0 items-center gap-1 rounded-lg bg-emerald-50 px-1 py-1 text-xs font-bold text-emerald-700">
                 <Minus className="h-3 w-3" /> {it.qty} <Plus className="h-3 w-3" />
               </div>
             ) : (
-              <span className="shrink-0 rounded-lg border border-emerald-500 px-2 py-1 text-xs font-bold text-emerald-600">ADD</span>
+              <span className="shrink-0 rounded-lg border border-emerald-800 px-2 py-1 text-xs font-bold text-emerald-800">ADD</span>
             )}
           </div>
         ))}
       </div>
-      <div className="m-3 flex items-center justify-between rounded-xl bg-emerald-600 px-3 py-3 text-white shadow-lg">
+      <div className="m-3 flex items-center justify-between rounded-xl bg-emerald-800 px-3 py-3 text-white shadow-lg">
         <span className="flex items-center gap-1.5 whitespace-nowrap text-[11px] font-semibold">
-          <ShoppingCart className="h-4 w-4" /> 4 · ₹320
+          <ShoppingCart className="h-4 w-4" /> 4 · <span className="marketing-rupee">₹320</span>
         </span>
         <span className="whitespace-nowrap text-[11px] font-bold">Order on WhatsApp →</span>
       </div>
@@ -148,11 +149,11 @@ export function WhatsAppOrderBubble({ className }: { className?: string }) {
   return (
     <div className={cn("w-[250px] rounded-2xl bg-[#e7ffdb] p-3 text-[12px] leading-relaxed text-slate-800 shadow-xl", className)}>
       <p className="font-bold">🧾 New order #1042</p>
-      <p>2 × Masala Dosa — ₹240</p>
-      <p>2 × Filter Coffee — ₹80</p>
-      <p className="mt-1 font-bold">Total: ₹320 · Table 4</p>
+      <p>2 × Masala Dosa — <span className="marketing-rupee">₹240</span></p>
+      <p>2 × Filter Coffee — <span className="marketing-rupee">₹80</span></p>
+      <p className="mt-1 font-bold">Total: <span className="marketing-rupee">₹320</span> · Table 4</p>
       <p className="text-emerald-700 underline">Pay by UPI: upi://pay?am=320</p>
-      <p className="mt-1 text-right text-[10px] text-slate-500">10:24 AM ✓✓</p>
+      <p className="mt-1 text-right text-[10px] text-slate-700">10:24 AM ✓✓</p>
     </div>
   );
 }
@@ -205,7 +206,9 @@ export function OrderToast({ className }: { className?: string }) {
         <CircleCheck className="h-4 w-4" />
       </span>
       <div>
-        <p className="text-xs font-bold text-slate-900">New order · ₹320</p>
+        <p className="text-xs font-bold text-slate-900">
+          New order · <span className="marketing-rupee">₹320</span>
+        </p>
         <p className="text-[11px] text-slate-500">Table 4 · via NFC tap</p>
       </div>
     </div>

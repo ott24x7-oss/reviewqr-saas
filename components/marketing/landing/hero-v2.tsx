@@ -6,6 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Phone } from "./ui";
 import { TapPageScreen, TAP_THEMES, OrderToast, AlertToast } from "./mockups";
 
+/** Rail thumbnails keep the real gradient and drop the SVG grain filter, which is invisible at this size. */
+function railBackground(background: string) {
+  return background
+    .replace(/url\("data:image\/svg\+xml,[^"]*"\)/g, "")
+    .replace(/,\s*,/g, ",")
+    .replace(/^\s*,\s*|\s*,\s*$/g, "");
+}
+
 const TRUST = [
   { icon: Smartphone, label: "No app for customers" },
   { icon: Clock, label: "Live in 10 minutes" },
@@ -14,23 +22,29 @@ const TRUST = [
 
 export function HeroV2() {
   const [t, setT] = React.useState(0);
+  const rail = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (media.matches) return;
     const id = setInterval(() => setT((v) => (v + 1) % TAP_THEMES.length), 2600);
     return () => clearInterval(id);
   }, []);
+  React.useEffect(() => {
+    const row = rail.current;
+    const card = row?.querySelector<HTMLElement>(`[data-theme="${t}"]`);
+    if (!row || !card) return;
+    const left = card.offsetLeft - (row.clientWidth - card.clientWidth) / 2;
+    row.scrollTo({ left: Math.max(0, left), behavior: "auto" });
+  }, [t]);
 
   return (
-    <section className="relative overflow-hidden rounded-[1.75rem] sm:rounded-[2rem] neu">
-      <div
-        aria-hidden
-        className="absolute -top-32 left-1/2 -z-0 h-[420px] w-[720px] -translate-x-1/2 rounded-full bg-gradient-to-tr from-primary-200/60 via-emerald-100/40 to-sky-200/50 blur-3xl"
-      />
-      <div className="relative grid items-center gap-10 px-4 pb-12 pt-10 sm:px-8 sm:pt-14 lg:grid-cols-[1.1fr_1fr] lg:gap-6 lg:px-12 lg:pb-16 lg:pt-16">
+    <section className="marketing-band marketing-hero relative overflow-hidden">
+      <div className="relative mx-auto grid w-full max-w-6xl items-center gap-10 px-4 pb-8 lg:grid-cols-[1.1fr_0.9fr] lg:gap-8 lg:px-12">
         {/* Copy first on every screen size */}
         <div className="text-center lg:text-left">
           <span className="inline-flex items-center gap-2 rounded-full border border-primary-100 bg-white/80 px-3 py-1.5 text-xs font-semibold text-primary-800">
             <QrCode className="h-3.5 w-3.5" /> Scan
-            <span className="text-slate-300">or</span>
+            <span className="text-muted-ink">or</span>
             <Nfc className="h-3.5 w-3.5" /> Tap
           </span>
 
@@ -77,26 +91,29 @@ export function HeroV2() {
         </div>
 
         {/* Visual */}
-        <div className="relative mx-auto w-full max-w-[360px]">
-          <Phone>
+        <div className="relative mx-auto w-full max-w-[340px]">
+          <Phone className="w-[280px] sm:w-[320px]">
             <TapPageScreen theme={TAP_THEMES[t]} />
           </Phone>
-          <OrderToast className="absolute -left-1 top-24 hidden min-[400px]:flex sm:-left-24" />
-          <AlertToast className="absolute -right-1 bottom-20 hidden min-[400px]:flex sm:-right-12" />
-          <div className="mt-4 flex max-w-full flex-wrap items-center justify-center gap-2" aria-label="Theme previews">
-            {TAP_THEMES.map((th, i) => (
-              <button
-                key={th.name}
-                type="button"
-                onClick={() => setT(i)}
-                aria-label={`Show ${th.name} theme`}
-                className={`h-7 w-7 rounded-full ring-2 ring-offset-2 transition ${i === t ? "ring-primary-500" : "ring-transparent"}`}
-                style={{ background: th.background }}
-              />
-            ))}
-          </div>
-          <p className="mt-2 text-center text-xs text-muted-ink">Tap a colour to preview themes</p>
+          <OrderToast className="absolute -left-1 top-24 hidden min-[400px]:flex sm:-left-16" />
+          <AlertToast className="absolute -right-1 bottom-20 hidden min-[400px]:flex sm:-right-8" />
         </div>
+      </div>
+      <div ref={rail} className="theme-rail" aria-label="Theme previews">
+        {TAP_THEMES.map((th, i) => (
+          <button
+            key={th.name}
+            type="button"
+            data-theme={i}
+            onClick={() => setT(i)}
+            aria-pressed={i === t}
+            aria-label={`Show ${th.name} theme`}
+            className="theme-card"
+          >
+            <span className="theme-card-art" style={{ background: railBackground(th.background) }} />
+            <span className="theme-card-name">{th.name}</span>
+          </button>
+        ))}
       </div>
     </section>
   );

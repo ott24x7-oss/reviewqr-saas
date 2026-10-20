@@ -25,29 +25,27 @@ export const dynamic = "force-dynamic";
 export default async function HomePage() {
   const [plans, brand] = await Promise.all([getPricingConfig(), getBrand()]);
   return (
-    <main className={`marketing-page relative min-h-screen overflow-x-hidden ${marketingFontClass}`}>
+    <main className={`marketing-page relative min-h-screen overflow-x-hidden pb-24 ${marketingFontClass}`}>
       <MarketingNavbar brand={brand} />
 
-      <div className="mx-auto w-full max-w-6xl space-y-4 px-3 py-5 sm:space-y-6 sm:px-4 sm:py-8">
-        <HeroV2 />
-        <ProductSuite />
-        <HowItWorksV2 />
-        <TapPageShowcase />
-        <StoreShowcase />
-        <ReviewsShowcase />
-        <ProductsShowcase />
-        <GrowthTools />
-        <section className="scroll-mt-24 overflow-hidden rounded-[1.75rem] neu sm:rounded-[2rem]">
-          <DashboardPreview />
-        </section>
-        <Industries />
-        <Comparison />
-        <section className="scroll-mt-24 overflow-hidden rounded-[1.75rem] neu sm:rounded-[2rem]">
-          <Pricing plans={plans} />
-        </section>
-        <FaqV2 />
-        <CtaV2 />
+      <HeroV2 />
+      <ProductSuite />
+      <HowItWorksV2 />
+      <TapPageShowcase />
+      <StoreShowcase />
+      <ReviewsShowcase />
+      <ProductsShowcase />
+      <GrowthTools />
+      <div className="marketing-band">
+        <DashboardPreview />
       </div>
+      <Industries />
+      <Comparison />
+      <div className="marketing-band">
+        <Pricing plans={plans} />
+      </div>
+      <FaqV2 />
+      <CtaV2 />
 
       <Footer brand={brand} />
       <nav className="marketing-anchor" aria-label="On this page">

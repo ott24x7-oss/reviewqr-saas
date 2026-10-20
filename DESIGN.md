@@ -45,7 +45,7 @@ All three are fully responsive. Design mobile-first at 360px, then 390, 768, 128
 - Background: warm off-white (`#F2EFE9`), ink (`#1C1B18`), with our brand green used only as an accent (badges, highlights, small icons), not for large surfaces.
 - Floating pill navbar: translucent, blurred, rounded, logo left, links centre, account icon + dark pill CTA right ("Start free"). On mobile: logo + CTA + menu button; the menu opens as a full-width rounded sheet.
 - Hero: very large **Bricolage Grotesque** headline (36–40px mobile, 64–72px desktop, weight ~650, tight leading), short subcopy, dark pill primary CTA + light secondary, a large product visual (phone mock of the tap page / NFC stand) with gentle reveal animation.
-- Sections as soft rounded panels (radius ~28px) on the off-white, lots of whitespace.
+- Sections are full-bleed edge-to-edge bands with alternating warm backgrounds, lots of whitespace, and no boxed card around a whole section.
 - Feature / product tiles: pastel backgrounds (sage, blush, sky, sand) with the object centered, small category label above, title + price-like metadata row, "Low stock"-style small pill tags for "Coming soon" / "New".
 - A floating bottom pill bar for quick filters/anchors on long pages (e.g. Features · Store · QR+NFC · Pricing) — hidden on very small screens if it covers content.
 - Footer: calm, multi-column on desktop, stacked on mobile.

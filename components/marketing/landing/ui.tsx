@@ -12,8 +12,8 @@ export function SectionShell({
   children: React.ReactNode;
 }) {
   return (
-    <section id={id} className={cn("scroll-mt-24 rounded-[1.75rem] sm:rounded-[2rem] neu overflow-hidden", className)}>
-      <div className="px-4 py-12 sm:px-8 sm:py-16 lg:px-12 lg:py-20">{children}</div>
+    <section id={id} className={cn("marketing-band scroll-mt-24", className)}>
+      <div className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-8 sm:py-24 lg:px-12 lg:py-28">{children}</div>
     </section>
   );
 }
@@ -40,7 +40,7 @@ export function SectionHeading({
   return (
     <div className={cn("max-w-2xl", align === "center" ? "mx-auto text-center" : "text-left")}>
       {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
-      <h2 className="mt-3 text-[1.75rem] leading-tight sm:text-4xl lg:text-[2.75rem] font-bold tracking-tight text-ink text-balance">
+      <h2 className="mt-3 text-[2rem] leading-tight sm:text-5xl lg:text-[3.25rem] font-bold tracking-tight text-ink text-balance">
         {title}
       </h2>
       {sub && <p className="mt-3 text-base sm:text-lg text-muted-ink text-pretty">{sub}</p>}
