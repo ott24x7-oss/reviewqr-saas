@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Home, LayoutGrid, Search, ShoppingBag } from "lucide-react";
+import { Home, LayoutGrid, ReceiptText, Search, ShoppingBag } from "lucide-react";
 import { tapText, type TapLang } from "@/lib/tap/i18n";
 import { formatRupees } from "@/lib/tap/order-message";
 import { safeImageSrc } from "@/lib/tap/links";
@@ -47,7 +47,8 @@ function Countdown({ endsAt, text }: { endsAt: string; text: (key: Parameters<ty
   );
 }
 
-function useScheme(enabled: boolean) {
+/** Premium follows the system until chosen; Bold Dark starts dark until chosen. */
+function useScheme(enabled: boolean, startDark = false) {
   const [choice, setChoice] = React.useState<"light" | "dark" | "system">("system");
   const [systemDark, setSystemDark] = React.useState(false);
   React.useEffect(() => {
@@ -60,13 +61,13 @@ function useScheme(enabled: boolean) {
     media.addEventListener("change", apply);
     return () => media.removeEventListener("change", apply);
   }, [enabled]);
-  const dark = choice === "dark" || (choice === "system" && systemDark);
+  const dark = choice === "dark" || (choice === "system" && (startDark || systemDark));
   function toggle() {
     const next = dark ? "light" : "dark";
     setChoice(next);
     window.localStorage.setItem("rq-store-scheme", next);
   }
-  return { scheme: choice === "system" ? undefined : choice, toggle, dark };
+  return { scheme: choice === "system" ? (startDark ? "dark" : undefined) : choice, toggle, dark };
 }
 
 type Look = "premium" | "minimal" | "bold";
@@ -126,7 +127,7 @@ function StoreLook({
 }) {
   const searchRef = React.useRef<HTMLInputElement>(null);
   const schemeOn = look !== "minimal" && !preview;
-  const { scheme, toggle, dark } = useScheme(schemeOn);
+  const { scheme, toggle, dark } = useScheme(schemeOn, look === "bold");
   const root = look === "minimal" ? styles.minimal : look === "bold" ? styles.bold : styles.premium;
   const shownScheme = preview ? (look === "bold" ? "dark" : look === "premium" ? "light" : undefined) : schemeOn ? scheme : undefined;
   const [rows, setRows] = React.useState(false);
@@ -275,9 +276,15 @@ function StoreLook({
           {count > 0 ? <span className={styles.badge}>{count}</span> : null}
         </button>
         {lastOrder.startsWith("/o/") ? (
-          <a href={lastOrder}>{text("orders")}</a>
+          <a href={lastOrder}>
+            <ReceiptText aria-hidden="true" size={18} />
+            {text("orders")}
+          </a>
         ) : (
-          <button type="button" disabled aria-label={text("noOrderYet")}>{text("orders")}</button>
+          <button type="button" disabled aria-label={text("noOrderYet")}>
+            <ReceiptText aria-hidden="true" size={18} />
+            {text("orders")}
+          </button>
         )}
         <button type="button" onClick={() => searchRef.current?.focus()}>
           <Search aria-hidden="true" size={18} />

@@ -499,13 +499,22 @@
   border: 1px solid var(--sd-line);
 }
 
+/* Minimal keeps a quiet look but the add action must still read as a button. */
 .minimal .add {
-  width: fit-content;
-  padding: 0 0 0.15rem;
-  border-radius: 0;
+  width: 100%;
+  min-height: 46px;
+  padding: 0 1rem;
+  border: 1.5px solid var(--sd-ink);
+  border-radius: 999px;
   background: transparent;
   color: var(--sd-ink);
-  border-bottom: 2px solid var(--sd-accent);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.minimal .add:hover,
+.minimal .add:focus-visible {
+  background: var(--sd-ink);
+  color: #fff;
 }
 
 .minimal .badge {
