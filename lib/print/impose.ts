@@ -17,18 +17,7 @@ export type ImposeResult = {
 const MARK_MM = 3;
 const MARK_GAP_MM = 1;
 
-function across(space: number, item: number, gutter: number) {
-  if (item <= 0 || space + 1e-6 < item) return 0;
-  return Math.floor((space + gutter + 1e-6) / (item + gutter));
-}
-
-function insideTrim(x: number, y: number, placements: Box[]) {
-  return placements.some(
-    (box) => x > box.x + 1e-6 && x < box.x + box.widthMm - 1e-6 && y > box.y + 1e-6 && y < box.y + box.heightMm - 1e-6
-  );
-}
-
-function cornerMarks(box: Box): Segment[] {
+export function cutMarksFor(box: Box, markMm = MARK_MM, gapMm = MARK_GAP_MM): Segment[] {
   const corners = [
     { x: box.x, y: box.y, sx: -1, sy: -1 },
     { x: box.x + box.widthMm, y: box.y, sx: 1, sy: -1 },
@@ -38,19 +27,30 @@ function cornerMarks(box: Box): Segment[] {
   const marks: Segment[] = [];
   for (const corner of corners) {
     marks.push({
-      x1: corner.x + corner.sx * MARK_GAP_MM,
+      x1: corner.x + corner.sx * gapMm,
       y1: corner.y,
-      x2: corner.x + corner.sx * (MARK_GAP_MM + MARK_MM),
+      x2: corner.x + corner.sx * (gapMm + markMm),
       y2: corner.y
     });
     marks.push({
       x1: corner.x,
-      y1: corner.y + corner.sy * MARK_GAP_MM,
+      y1: corner.y + corner.sy * gapMm,
       x2: corner.x,
-      y2: corner.y + corner.sy * (MARK_GAP_MM + MARK_MM)
+      y2: corner.y + corner.sy * (gapMm + markMm)
     });
   }
   return marks;
+}
+
+function across(space: number, item: number, gutter: number) {
+  if (item <= 0 || space + 1e-6 < item) return 0;
+  return Math.floor((space + gutter + 1e-6) / (item + gutter));
+}
+
+function insideTrim(x: number, y: number, placements: Box[]) {
+  return placements.some(
+    (box) => x > box.x + 1e-6 && x < box.x + box.widthMm - 1e-6 && y > box.y + 1e-6 && y < box.y + box.heightMm - 1e-6
+  );
 }
 
 export function impose(input: {
@@ -79,7 +79,7 @@ export function impose(input: {
     }
   }
   const cutMarks = placements
-    .flatMap((box) => cornerMarks(box))
+    .flatMap((box) => cutMarksFor(box))
     .filter((mark) => {
       const midX = (mark.x1 + mark.x2) / 2;
       const midY = (mark.y1 + mark.y2) / 2;
