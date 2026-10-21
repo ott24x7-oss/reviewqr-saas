@@ -17,7 +17,7 @@ export async function PublicMenu({ code, channel }: { code: string; channel: "q"
   if (record.status !== "active") {
     return <PublicTap code={code} channel={channel} countScan={false} />;
   }
-  const [categories, loose, extra, settings, qr] = await Promise.all([
+  const [categories, loose, extra, settings, qr, banners] = await Promise.all([
     prisma.menuCategory.findMany({
       where: { businessId: record.businessId },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
@@ -36,7 +36,12 @@ export async function PublicMenu({ code, channel }: { code: string; channel: "q"
     }),
     readAdminThemes().catch(() => []),
     prisma.storeSettings.findUnique({ where: { businessId: record.businessId } }),
-    prisma.qRCode.findUnique({ where: { shortCode: record.shortCode }, select: { label: true } })
+    prisma.qRCode.findUnique({ where: { shortCode: record.shortCode }, select: { label: true } }),
+    prisma.offerBanner.findMany({
+      where: { businessId: record.businessId, active: true },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+      select: { id: true, title: true, body: true }
+    })
   ]);
   const rules = rulesFromSettings(settings, hoursFromPublished(record.business.published));
   const items: StoreItem[] = [
@@ -74,6 +79,7 @@ export async function PublicMenu({ code, channel }: { code: string; channel: "q"
         rules={rules}
         closed={isOrderForLater(rules)}
         tableLabel={qr?.label || ""}
+        banners={banners}
         themeStyle={themeStyle as CSSProperties | undefined}
       />
     </div>

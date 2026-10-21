@@ -1600,6 +1600,35 @@
 }
 .store-sheet.store-pick { z-index: 40; }
 .store-backdrop.store-pick-back { z-index: 35; }
+.store-offers { display: grid; gap: 8px; margin: 4px 0 8px; }
+.store-offer {
+  border-radius: 16px;
+  background: var(--store-soft);
+  padding: 12px 14px;
+}
+.store-offer strong { display: block; font-size: 0.95rem; }
+.store-offer p { margin: 2px 0 0; color: var(--store-muted); font-size: 0.88rem; }
+.store-coupon { display: flex; gap: 8px; }
+.store-sheet .store-coupon input { width: auto; flex: 1; }
+.store-coupon button {
+  min-height: 44px;
+  min-width: 88px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--store-ink);
+  color: var(--store-bg);
+  font: inherit;
+  font-weight: 700;
+}
+.store-coupon-note button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  min-height: 44px;
+  text-decoration: underline;
+}
 .store-order {
   min-height: 56px;
   width: 100%;

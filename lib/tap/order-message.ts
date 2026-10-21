@@ -72,6 +72,7 @@ export function buildOrderText(input: OrderMessageInput, noteLimit = 80) {
   const moneyLines = charges
     ? [
         `${input.hindi ? "सामान" : "Subtotal"}: ${formatRupees(charges.subtotalPaise)}`,
+        charges.discountPaise ? `${input.hindi ? "छूट" : "Discount"}: ${formatRupees(charges.discountPaise)}` : "",
         charges.packingPaise ? `${input.hindi ? "पैकिंग" : "Packing"}: ${formatRupees(charges.packingPaise)}` : "",
         charges.deliveryPaise ? `${input.hindi ? "डिलीवरी" : "Delivery"}: ${formatRupees(charges.deliveryPaise)}` : "",
         charges.gstPaise

@@ -187,6 +187,8 @@ model Business {
   menuItems    MenuItem[]
   menuOrders   MenuOrder[]
   storeSettings StoreSettings?
+  coupons      Coupon[]
+  offerBanners OfferBanner[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -858,6 +860,7 @@ model MenuOrder {
   pricesIncludeGst Boolean         @default(true)
   orderForLater    Boolean         @default(false)
   prepMinutes      Int?
+  couponCode       String?
   totalPaise       Int
   items            Json
   source           String?
@@ -865,6 +868,45 @@ model MenuOrder {
   createdAt        DateTime        @default(now())
 
   @@index([businessId, createdAt])
+}
+
+enum CouponKind {
+  PERCENT
+  FLAT
+}
+
+model Coupon {
+  id               String     @id @default(cuid())
+  businessId       String
+  business         Business   @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  code             String
+  kind             CouponKind
+  /// Percent from 1 to 100, or a flat discount in paise.
+  amount           Int
+  minSubtotalPaise Int        @default(0)
+  expiresAt        DateTime?
+  usageLimit       Int?
+  usedCount        Int        @default(0)
+  active           Boolean    @default(true)
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  @@unique([businessId, code])
+  @@index([businessId])
+}
+
+model OfferBanner {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  title      String
+  body       String   @default("")
+  active     Boolean  @default(true)
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([businessId])
 }
 
 model IndustryPreset {

@@ -10,6 +10,7 @@ import { fitWhatsAppOrder, formatRupees } from "@/lib/tap/order-message";
 import { STORE_ORDER_LIMIT, storeOrderRateKeys } from "@/lib/store/limits";
 import { enabledOrderTypes, quoteOrder, rulesFromSettings, type OrderType } from "@/lib/store/pricing";
 import { optionLineName, resolveChoice } from "@/lib/store/variants";
+import { couponDiscount, normalizeCouponCode } from "@/lib/store/coupons";
 
 const schema = z.object({
   code: z.string().min(4).max(32),
@@ -19,6 +20,7 @@ const schema = z.object({
   tableOrAddress: z.string().max(160).optional(),
   pincode: z.string().max(12).optional(),
   note: z.string().max(400).optional(),
+  coupon: z.string().max(24).optional(),
   items: z.array(z.object({
     id: z.string().min(1).max(40),
     qty: z.number().int().min(1).max(20),
@@ -137,10 +139,23 @@ export async function POST(req: NextRequest) {
   if (!orderType) {
     return NextResponse.json({ error: explain(data.lang, "order_type") }, { status: 400 });
   }
+  const couponCode = normalizeCouponCode(data.coupon || "");
+  let discountPaise = 0;
+  if (couponCode) {
+    const coupon = await prisma.coupon.findUnique({
+      where: { businessId_code: { businessId: qr.business.id, code: couponCode } }
+    });
+    const decision = coupon ? couponDiscount(coupon, subtotalPaise) : { ok: false as const, code: "invalid" as const };
+    if (!decision.ok) {
+      return NextResponse.json({ error: explain(data.lang, decision.code) }, { status: 400 });
+    }
+    discountPaise = decision.discountPaise;
+  }
   const quote = quoteOrder({
     rules,
     orderType,
     subtotalPaise,
+    discountPaise,
     pincode: data.pincode
   });
   if (!quote.ok) {
@@ -151,35 +166,58 @@ export async function POST(req: NextRequest) {
   const tableOrAddress = (data.tableOrAddress || "").trim().slice(0, 160) || null;
   const note = (data.note || "").trim().slice(0, 400) || null;
   const pincode = orderType === "DELIVERY" ? (data.pincode || "").replace(/\D/g, "").slice(0, 6) : null;
+  const businessId = qr.business.id;
 
   let order = null;
   for (let attempt = 0; attempt < 3 && !order; attempt += 1) {
     try {
-      order = await prisma.menuOrder.create({
-        data: {
-          businessId: qr.business.id,
-          qrCodeId: qr.id,
-          number: `M${makeQrPublicId()}`,
-          customerName,
-          tableOrAddress,
-          note,
-          orderType,
-          pincode,
-          subtotalPaise: quote.subtotalPaise,
-          discountPaise: quote.discountPaise,
-          deliveryPaise: quote.deliveryPaise,
-          packingPaise: quote.packingPaise,
-          gstPaise: quote.gstPaise,
-          pricesIncludeGst: quote.pricesIncludeGst,
-          orderForLater: quote.orderForLater,
-          prepMinutes: quote.prepMinutes,
-          totalPaise: quote.totalPaise,
-          items: lines,
-          source: "qr",
-          status: "NEW"
+      order = await prisma.$transaction(async (tx) => {
+        if (couponCode) {
+          const coupon = await tx.coupon.findUnique({
+            where: { businessId_code: { businessId, code: couponCode } }
+          });
+          const decision = coupon ? couponDiscount(coupon, subtotalPaise) : { ok: false as const, code: "invalid" as const };
+          if (!coupon || !decision.ok) throw couponReject(decision.ok ? "invalid" : decision.code);
+          const saved = await tx.coupon.updateMany({
+            where: {
+              id: coupon.id,
+              active: true,
+              ...(coupon.usageLimit != null ? { usedCount: { lt: coupon.usageLimit } } : {})
+            },
+            data: { usedCount: { increment: 1 } }
+          });
+          if (saved.count !== 1) throw couponReject("used");
         }
+        return tx.menuOrder.create({
+          data: {
+            businessId,
+            qrCodeId: qr.id,
+            number: `M${makeQrPublicId()}`,
+            customerName,
+            tableOrAddress,
+            note,
+            orderType,
+            pincode,
+            subtotalPaise: quote.subtotalPaise,
+            discountPaise: quote.discountPaise,
+            deliveryPaise: quote.deliveryPaise,
+            packingPaise: quote.packingPaise,
+            gstPaise: quote.gstPaise,
+            pricesIncludeGst: quote.pricesIncludeGst,
+            orderForLater: quote.orderForLater,
+            prepMinutes: quote.prepMinutes,
+            couponCode: couponCode || null,
+            totalPaise: quote.totalPaise,
+            items: lines,
+            source: "qr",
+            status: "NEW"
+          }
+        });
       });
     } catch (err) {
+      if (err instanceof Error && err.name === "CouponReject") {
+        return NextResponse.json({ error: explain(data.lang, err.message) }, { status: 400 });
+      }
       if (attempt === 2 || !isUnique(err)) throw err;
     }
   }
@@ -199,6 +237,7 @@ export async function POST(req: NextRequest) {
           subtotalPaise: quote.subtotalPaise,
           deliveryPaise: quote.deliveryPaise,
           packingPaise: quote.packingPaise,
+          discountPaise: quote.discountPaise,
           gstPaise: quote.gstPaise,
           pricesIncludeGst: quote.pricesIncludeGst,
           totalPaise: quote.totalPaise,
@@ -229,7 +268,17 @@ function explain(lang: "en" | "hi" | undefined, code: string, shortfallPaise?: n
   if (code === "choose") return hi ? "साइज़ या विकल्प चुनें।" : "Choose a size or option.";
   if (code === "stock") return hi ? "वह विकल्प स्टॉक में नहीं है।" : "That option is out of stock.";
   if (code === "missing") return hi ? "कोई विकल्प अब उपलब्ध नहीं है।" : "An option is no longer available.";
+  if (code === "invalid") return hi ? "यह कूपन कोड मान्य नहीं है।" : "That coupon code is not valid.";
+  if (code === "expired") return hi ? "इस कूपन की समय-सीमा समाप्त हो गई है।" : "That coupon has expired.";
+  if (code === "minimum") return hi ? "इस कूपन के लिए ऑर्डर और बढ़ाएँ।" : "This coupon needs a higher order.";
+  if (code === "used") return hi ? "यह कूपन इस्तेमाल हो चुका है।" : "That coupon has been used up.";
   return hi ? "ऑर्डर नहीं बन सका।" : "Could not place the order";
+}
+
+function couponReject(code: string) {
+  const err = new Error(code);
+  err.name = "CouponReject";
+  return err;
 }
 
 function isUnique(err: unknown) {

@@ -8,6 +8,7 @@ import { formatRupees } from "@/lib/tap/order-message";
 import { safeImageSrc } from "@/lib/tap/links";
 import { enabledOrderTypes, quoteOrder, type OrderType, type StoreRules } from "@/lib/store/pricing";
 import { lineUnitPaise, matchVariant, resolveChoice, uniqueLabels, usesSizeColour } from "@/lib/store/variants";
+import { couponDiscount, type CouponFail, type CouponRule } from "@/lib/store/coupons";
 
 export type StoreVariant = {
   id: string;
@@ -107,6 +108,7 @@ export function StoreMenu({
   rules,
   closed,
   tableLabel,
+  banners,
   themeStyle
 }: {
   code: string;
@@ -117,6 +119,7 @@ export function StoreMenu({
   rules: StoreRules;
   closed: boolean;
   tableLabel: string;
+  banners: { id: string; title: string; body: string }[];
   themeStyle?: React.CSSProperties;
 }) {
   const [lang, setLang] = React.useState<TapLang>("en");
@@ -136,6 +139,10 @@ export function StoreMenu({
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState("");
   const [picking, setPicking] = React.useState<string | null>(null);
+  const [couponInput, setCouponInput] = React.useState("");
+  const [coupon, setCoupon] = React.useState<CouponRule & { code: string } | null>(null);
+  const [couponError, setCouponError] = React.useState("");
+  const [couponBusy, setCouponBusy] = React.useState(false);
   const storageKey = `rq-cart:${code}`;
 
   React.useEffect(() => {
@@ -173,10 +180,13 @@ export function StoreMenu({
     const item = items.find((row) => row.id === line.id);
     return sum + (item ? unitOf(item, line) * line.qty : 0);
   }, 0);
+  const decision = coupon ? couponDiscount(coupon, itemTotal) : null;
+  const discountPaise = decision?.ok ? decision.discountPaise : 0;
   const quote = quoteOrder({
     rules,
     orderType,
     subtotalPaise: itemTotal,
+    discountPaise,
     pincode,
     orderForLater: closed
   });
@@ -239,6 +249,7 @@ export function StoreMenu({
           tableOrAddress: orderType === "DELIVERY" ? address : orderType === "DINE_IN" ? table : "",
           pincode: orderType === "DELIVERY" ? pincode : "",
           note,
+          ...(decision?.ok && coupon ? { coupon: coupon.code } : {}),
           items: cart.map((line) => ({
             id: line.id,
             qty: line.qty,
@@ -257,6 +268,26 @@ export function StoreMenu({
       setError(err instanceof Error ? err.message : "Could not place the order");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function applyCoupon() {
+    setCouponBusy(true);
+    setCouponError("");
+    try {
+      const res = await fetch("/api/public/coupons", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ code, coupon: couponInput, subtotalPaise: itemTotal, lang })
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.coupon) throw new Error(json.error || text("couponInvalid"));
+      setCoupon(json.coupon);
+    } catch (err) {
+      setCoupon(null);
+      setCouponError(err instanceof Error ? err.message : text("couponInvalid"));
+    } finally {
+      setCouponBusy(false);
     }
   }
 
@@ -330,6 +361,17 @@ export function StoreMenu({
             </button>
           </div>
         </header>
+
+        {banners.length > 0 ? (
+          <div className="store-offers">
+            {banners.map((banner) => (
+              <div key={banner.id} className="store-offer">
+                <strong>{banner.title}</strong>
+                {banner.body ? <p>{banner.body}</p> : null}
+              </div>
+            ))}
+          </div>
+        ) : null}
 
         {items.length === 0 ? <p className="store-empty">{text("emptyMenu")}</p> : null}
         {items.length > 0 && sections.length === 0 ? <p className="store-empty">{text("noMatch")}</p> : null}
@@ -477,9 +519,29 @@ export function StoreMenu({
               </div>
             );
           })}
+          <div className="store-coupon">
+            <input
+              aria-label={text("coupon")}
+              value={couponInput}
+              placeholder={text("coupon")}
+              onChange={(event) => setCouponInput(event.target.value)}
+            />
+            <button type="button" disabled={couponBusy || couponInput.trim().length < 3} onClick={applyCoupon}>
+              {text("apply")}
+            </button>
+          </div>
+          {coupon && decision?.ok ? (
+            <p className="store-privacy store-coupon-note">
+              {coupon.code} · {formatRupees(discountPaise)}{" "}
+              <button type="button" onClick={() => { setCoupon(null); setCouponError(""); }}>{text("remove")}</button>
+            </p>
+          ) : null}
+          {couponError ? <p className="store-privacy">{couponError}</p> : null}
+          {decision && !decision.ok ? <p className="store-privacy">{couponText(lang, decision.code)}</p> : null}
           {quote.ok ? (
             <div className="store-break">
               <div><span>{text("subtotal")}</span><strong>{formatRupees(quote.subtotalPaise)}</strong></div>
+              {quote.discountPaise > 0 ? <div><span>{text("discount")}</span><strong>−{formatRupees(quote.discountPaise)}</strong></div> : null}
               {quote.packingPaise > 0 ? <div><span>{text("packing")}</span><strong>{formatRupees(quote.packingPaise)}</strong></div> : null}
               {orderType === "DELIVERY" ? <div><span>{text("deliveryCharge")}</span><strong>{formatRupees(quote.deliveryPaise)}</strong></div> : null}
               {quote.gstPaise > 0 ? (
@@ -647,6 +709,13 @@ function OptionSheet({
       </div>
     </>
   );
+}
+
+function couponText(lang: TapLang, code: CouponFail) {
+  if (code === "expired") return tapText(lang, "couponExpired");
+  if (code === "minimum") return tapText(lang, "couponMinimum");
+  if (code === "used") return tapText(lang, "couponUsed");
+  return tapText(lang, "couponInvalid");
 }
 
 function quoteMessage(lang: TapLang, code: "order_type" | "min_order" | "pincode", shortfallPaise?: number) {
