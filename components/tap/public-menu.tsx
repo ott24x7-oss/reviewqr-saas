@@ -50,7 +50,11 @@ export async function PublicMenu({
     prisma.storeSettings.findUnique({ where: { businessId: record.businessId } }),
     prisma.qRCode.findUnique({ where: { shortCode: record.shortCode }, select: { label: true } }),
     prisma.offerBanner.findMany({
-      where: { businessId: record.businessId, active: true },
+      where: {
+        businessId: record.businessId,
+        active: true,
+        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }]
+      },
       orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
       select: { id: true, title: true, body: true }
     }),

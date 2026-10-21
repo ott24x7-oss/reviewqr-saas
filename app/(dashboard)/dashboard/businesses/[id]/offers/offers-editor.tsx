@@ -23,6 +23,7 @@ export type OfferBannerRow = {
   id: string;
   title: string;
   body: string;
+  expiresOn: string;
   active: boolean;
 };
 
@@ -48,6 +49,7 @@ export function OffersEditor({
   const [usageLimit, setUsageLimit] = React.useState("");
   const [title, setTitle] = React.useState("");
   const [body, setBody] = React.useState("");
+  const [bannerExpires, setBannerExpires] = React.useState("");
   const [busy, setBusy] = React.useState(false);
 
   async function send(payload: Record<string, unknown>) {
@@ -155,16 +157,18 @@ export function OffersEditor({
             <p className="text-sm font-medium">Banner</p>
             <Input aria-label="Banner title" value={title} placeholder="Offer title" onChange={(event) => setTitle(event.target.value)} className="min-h-11" />
             <Input aria-label="Banner details" value={body} placeholder="Short details (optional)" onChange={(event) => setBody(event.target.value)} className="min-h-11" />
+            <Input aria-label="Banner expiry" type="date" value={bannerExpires} onChange={(event) => setBannerExpires(event.target.value)} className="min-h-11" />
             <Button
               type="button"
               variant="outline"
               disabled={busy}
               className="min-h-11"
               onClick={async () => {
-                const saved = await send({ action: "banner", title, body });
+                const saved = await send({ action: "banner", title, body, expiresOn: bannerExpires || null });
                 if (saved) {
                   setTitle("");
                   setBody("");
+                  setBannerExpires("");
                 }
               }}
             >
@@ -179,6 +183,7 @@ export function OffersEditor({
             <div className="text-sm">
               <div className="font-medium">{banner.title}{banner.active ? "" : " · Hidden"}</div>
               {banner.body ? <div className="text-muted-foreground">{banner.body}</div> : null}
+              {banner.expiresOn ? <div className="text-muted-foreground">Until {banner.expiresOn}</div> : null}
             </div>
             {canEdit ? (
               <div className="flex gap-2">

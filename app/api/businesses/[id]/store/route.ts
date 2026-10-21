@@ -29,7 +29,8 @@ const schema = z.object({
   pricesIncludeGst: z.boolean(),
   prepMinutes: z.number().int().min(1).max(240),
   upiId: z.string().max(80).optional(),
-  layout: z.enum(["AUTO", "FOOD", "SHOP", "SERVICES"])
+  layout: z.enum(["AUTO", "FOOD", "SHOP", "SERVICES"]),
+  design: z.enum(["CLASSIC", "PREMIUM", "MINIMAL", "BOLD"])
 });
 
 function paise(rupees: number) {
@@ -74,7 +75,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     pricesIncludeGst: data.pricesIncludeGst,
     prepMinutes: data.prepMinutes,
     upiId,
-    layout: data.layout
+    layout: data.layout,
+    design: data.design
   };
   await prisma.storeSettings.upsert({
     where: { businessId: business.id },

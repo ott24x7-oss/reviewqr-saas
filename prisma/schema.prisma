@@ -832,11 +832,20 @@ enum StoreLayout {
   SERVICES
 }
 
+enum StoreDesign {
+  CLASSIC
+  PREMIUM
+  MINIMAL
+  BOLD
+}
+
 model StoreSettings {
   id                     String      @id @default(cuid())
   businessId             String      @unique
   business               Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
   layout                 StoreLayout @default(AUTO)
+  /// Storefront look. Separate from the food, shop, or services layout.
+  design                 StoreDesign @default(CLASSIC)
   hours                  Json?
   holiday                Boolean     @default(false)
   dineIn                 Boolean     @default(true)
@@ -929,6 +938,8 @@ model OfferBanner {
   business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
   title      String
   body       String   @default("")
+  /// When set, the banner leaves the storefront after this moment.
+  expiresAt  DateTime?
   active     Boolean  @default(true)
   sortOrder  Int      @default(0)
   createdAt  DateTime @default(now())

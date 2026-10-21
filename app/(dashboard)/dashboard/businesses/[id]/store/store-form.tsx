@@ -37,6 +37,7 @@ export type StoreFormValues = {
   prepMinutes: number;
   upiId: string;
   layout: "AUTO" | "FOOD" | "SHOP" | "SERVICES";
+  design: "CLASSIC" | "PREMIUM" | "MINIMAL" | "BOLD";
 };
 
 function hoursState(hours: WeekHours | null): HoursState {
@@ -72,6 +73,7 @@ export function StoreForm({ businessId, initial }: { businessId: string; initial
   const [prep, setPrep] = React.useState(String(initial.prepMinutes));
   const [upiId, setUpiId] = React.useState(initial.upiId);
   const [layout, setLayout] = React.useState(initial.layout);
+  const [design, setDesign] = React.useState(initial.design);
   const [busy, setBusy] = React.useState(false);
 
   function setDay(day: WeekDay, key: "open" | "close", value: string) {
@@ -105,7 +107,8 @@ export function StoreForm({ businessId, initial }: { businessId: string; initial
           pricesIncludeGst,
           prepMinutes: Math.min(240, Math.max(1, Math.round(Number(prep) || 20))),
           upiId,
-          layout
+          layout,
+          design
         })
       });
       const json = await res.json().catch(() => ({}));
@@ -140,6 +143,19 @@ export function StoreForm({ businessId, initial }: { businessId: string; initial
       </Card>
       <Card>
         <CardContent className="space-y-3 p-4">
+          <h2 className="font-semibold">Design</h2>
+          <select
+            aria-label="Store design"
+            value={design}
+            onChange={(event) => setDesign(event.target.value as StoreFormValues["design"])}
+            className="flex h-11 min-h-11 w-full rounded-lg border bg-white px-3 text-sm"
+          >
+            <option value="CLASSIC">Classic</option>
+            <option value="PREMIUM">Premium Store</option>
+            <option value="MINIMAL">Minimal</option>
+            <option value="BOLD">Bold Dark</option>
+          </select>
+          <p className="text-sm text-muted-foreground">Classic keeps the current menu or product grid. The colour theme still sets the accent.</p>
           <h2 className="font-semibold">Layout</h2>
           <select
             aria-label="Store layout"
