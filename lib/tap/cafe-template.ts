@@ -3,6 +3,8 @@ export type CafeItem = {
   nameHi: string;
   pricePaise: number;
   veg: "VEG" | "NON_VEG" | "EGG" | "NONE";
+  description?: string;
+  bestseller?: boolean;
 };
 
 export type CafeGroup = {
@@ -16,14 +18,14 @@ export const CAFE_TEMPLATE: CafeGroup[] = [
     category: "Coffee",
     categoryHi: "कॉफ़ी",
     items: [
-      { name: "Cappuccino", nameHi: "कैपुचीनो", pricePaise: 12000, veg: "VEG" },
-      { name: "Filter Coffee", nameHi: "फ़िल्टर कॉफ़ी", pricePaise: 8000, veg: "VEG" }
+      { name: "Cappuccino", nameHi: "कैपुचीनो", pricePaise: 12000, veg: "VEG", bestseller: true, description: "Double shot espresso with silky steamed milk foam." },
+      { name: "Filter Coffee", nameHi: "फ़िल्टर कॉफ़ी", pricePaise: 8000, veg: "VEG", description: "South Indian decoction coffee, frothed the traditional way." }
     ]
   },
   {
     category: "Tea",
     categoryHi: "चाय",
-    items: [{ name: "Masala Chai", nameHi: "मसाला चाय", pricePaise: 4000, veg: "VEG" }]
+    items: [{ name: "Masala Chai", nameHi: "मसाला चाय", pricePaise: 4000, veg: "VEG", bestseller: true, description: "Strong tea brewed with ginger, cardamom and fresh milk." }]
   },
   {
     category: "Snacks",

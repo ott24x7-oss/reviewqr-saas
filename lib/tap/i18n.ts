@@ -29,6 +29,13 @@ const STRINGS = {
     bag: "Open bag",
     closeBag: "Close bag",
     emptyMenu: "The menu is not published yet.",
+    bestseller: "Bestseller",
+    vegOnly: "Veg only",
+    menu: "Menu",
+    itemsAdded: "added",
+    viewCart: "View cart",
+    noMatch: "No dishes match your search.",
+    recommended: "Recommended",
     hindi: "हिंदी",
     english: "English"
   },
@@ -60,6 +67,13 @@ const STRINGS = {
     bag: "बैग खोलें",
     closeBag: "बैग बंद करें",
     emptyMenu: "मेनू अभी प्रकाशित नहीं हुआ है।",
+    bestseller: "बेस्टसेलर",
+    vegOnly: "सिर्फ़ वेज",
+    menu: "मेनू",
+    itemsAdded: "जोड़े गए",
+    viewCart: "कार्ट देखें",
+    noMatch: "आपकी खोज से कोई डिश नहीं मिली।",
+    recommended: "सुझाए गए",
     hindi: "हिंदी",
     english: "English"
   }

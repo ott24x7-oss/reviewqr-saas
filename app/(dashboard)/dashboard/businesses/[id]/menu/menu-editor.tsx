@@ -13,6 +13,9 @@ type Item = {
   name: string;
   nameHi: string;
   priceRupees: number;
+  mrpRupees: number | null;
+  description: string;
+  bestseller: boolean;
   veg: "VEG" | "NON_VEG" | "EGG" | "NONE";
   available: boolean;
 };
@@ -36,6 +39,9 @@ export function MenuEditor({
   const [name, setName] = React.useState("");
   const [nameHi, setNameHi] = React.useState("");
   const [price, setPrice] = React.useState("");
+  const [mrp, setMrp] = React.useState("");
+  const [description, setDescription] = React.useState("");
+  const [bestseller, setBestseller] = React.useState(false);
   const [veg, setVeg] = React.useState<Item["veg"]>("VEG");
   const [categoryId, setCategoryId] = React.useState("");
   const [categoryName, setCategoryName] = React.useState("");
@@ -57,6 +63,9 @@ export function MenuEditor({
       setName("");
       setNameHi("");
       setPrice("");
+      setMrp("");
+      setDescription("");
+      setBestseller(false);
       setCategoryName("");
       router.refresh();
       return true;
@@ -79,7 +88,23 @@ export function MenuEditor({
           <CardContent className="p-4 space-y-3">
             <Input aria-label="Item name" value={name} placeholder="Item name" onChange={(event) => setName(event.target.value)} />
             <Input aria-label="Hindi name" value={nameHi} placeholder="Hindi name" onChange={(event) => setNameHi(event.target.value)} />
-            <Input aria-label="Price in rupees" value={price} inputMode="decimal" placeholder="Price in ₹" onChange={(event) => setPrice(event.target.value)} />
+            <div className="grid grid-cols-2 gap-2">
+              <Input aria-label="Price in rupees" value={price} inputMode="decimal" placeholder="Price in ₹" onChange={(event) => setPrice(event.target.value)} />
+              <Input aria-label="Original price (MRP) in rupees" value={mrp} inputMode="decimal" placeholder="MRP ₹ (optional)" onChange={(event) => setMrp(event.target.value)} />
+            </div>
+            <textarea
+              aria-label="Short description"
+              value={description}
+              maxLength={200}
+              rows={2}
+              placeholder="Short description (optional), e.g. Crispy dosa with potato masala"
+              onChange={(event) => setDescription(event.target.value)}
+              className="flex w-full rounded-lg border bg-white px-3 py-2 text-sm"
+            />
+            <label className="flex min-h-11 items-center gap-2 text-sm">
+              <input type="checkbox" checked={bestseller} onChange={(event) => setBestseller(event.target.checked)} className="h-5 w-5" />
+              Mark as bestseller
+            </label>
             <select aria-label="Veg mark" value={veg} onChange={(event) => setVeg(event.target.value as Item["veg"])} className="flex h-11 w-full rounded-lg border bg-white px-3 text-sm">
               <option value="VEG">Veg</option>
               <option value="NON_VEG">Non-veg</option>
@@ -92,7 +117,17 @@ export function MenuEditor({
                 <option key={category.id} value={category.id}>{category.name}</option>
               ))}
             </select>
-            <Button type="button" disabled={busy} onClick={() => send({ action: "item", name, nameHi, priceRupees: Number(price || 0), veg, categoryId: categoryId || null })}>
+            <Button type="button" disabled={busy} onClick={() => send({
+                  action: "item",
+                  name,
+                  nameHi,
+                  priceRupees: Number(price || 0),
+                  mrpRupees: mrp ? Number(mrp) : null,
+                  description,
+                  bestseller,
+                  veg,
+                  categoryId: categoryId || null
+                })}>
               Add item
             </Button>
             <Input aria-label="Category name" value={categoryName} placeholder="New category" onChange={(event) => setCategoryName(event.target.value)} />
@@ -191,12 +226,23 @@ export function MenuEditor({
           {group.items.map((item) => (
             <Card key={item.id}>
               <CardContent className="p-4 flex items-start justify-between gap-3">
-                <div>
-                  <div className="font-medium">{item.name}</div>
-                  <div className="text-sm text-muted-foreground">{item.nameHi} · {formatRupees(Math.round(item.priceRupees * 100))} · {item.veg}</div>
+                <div className="min-w-0">
+                  <div className="font-medium">
+                    {item.name}
+                    {item.bestseller ? <span className="ml-2 rounded-full bg-orange-50 px-2 py-0.5 text-xs font-semibold text-orange-700">Bestseller</span> : null}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {item.nameHi ? `${item.nameHi} · ` : ""}
+                    {formatRupees(Math.round(item.priceRupees * 100))}
+                    {item.mrpRupees ? <s className="ml-1">{formatRupees(Math.round(item.mrpRupees * 100))}</s> : null} · {item.veg}
+                  </div>
+                  {item.description ? <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{item.description}</p> : null}
                 </div>
                 {canEdit && (
                   <div className="flex flex-col gap-2">
+                    <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => send({ action: "update", id: item.id, bestseller: !item.bestseller })}>
+                      {item.bestseller ? "Unmark bestseller" : "Bestseller"}
+                    </Button>
                     <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => send({ action: "update", id: item.id, available: !item.available })}>
                       {item.available ? "Hide" : "Show"}
                     </Button>

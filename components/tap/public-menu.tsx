@@ -44,7 +44,11 @@ export async function PublicMenu({ code, channel }: { code: string; channel: "q"
         ...tokensToStyle(theme.tokens),
         "--store-bg": theme.tokens.bg,
         "--store-bg-2": theme.tokens.bg,
-        "--store-ink": theme.tokens.ink
+        "--store-card": theme.tokens.bg,
+        "--store-ink": theme.tokens.ink,
+        "--store-muted": theme.tokens.muted,
+        "--store-cta": theme.tokens.buttonBg,
+        "--store-cta-ink": theme.tokens.buttonInk
       }
     : undefined;
 
@@ -72,6 +76,9 @@ function toItem(item: {
   name: string;
   nameHi: string | null;
   pricePaise: number;
+  mrpPaise: number | null;
+  description: string | null;
+  bestseller: boolean;
   photo: string | null;
   veg: StoreItem["veg"];
 }): StoreItem {
@@ -81,6 +88,9 @@ function toItem(item: {
     name: item.name,
     nameHi: item.nameHi || "",
     pricePaise: item.pricePaise,
+    mrpPaise: item.mrpPaise,
+    description: item.description || "",
+    bestseller: item.bestseller,
     photo: item.photo,
     veg: item.veg
   };

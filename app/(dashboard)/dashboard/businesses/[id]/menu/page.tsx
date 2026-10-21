@@ -46,6 +46,9 @@ function serialize(item: {
   name: string;
   nameHi: string | null;
   pricePaise: number;
+  mrpPaise: number | null;
+  description: string | null;
+  bestseller: boolean;
   veg: "VEG" | "NON_VEG" | "EGG" | "NONE";
   available: boolean;
 }) {
@@ -54,6 +57,9 @@ function serialize(item: {
     name: item.name,
     nameHi: item.nameHi || "",
     priceRupees: item.pricePaise / 100,
+    mrpRupees: item.mrpPaise == null ? null : item.mrpPaise / 100,
+    description: item.description || "",
+    bestseller: item.bestseller,
     veg: item.veg,
     available: item.available
   };
