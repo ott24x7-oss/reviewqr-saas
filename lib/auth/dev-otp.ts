@@ -1,3 +1,6 @@
+
+/** Plain key/value env so callers (and tests) can pass a small object. */
+type EnvLike = Record<string, string | undefined>;
 /**
  * OTP_DEV_REVEAL is a local debugging aid. It is ignored whenever NODE_ENV
  * is production, even if the variable is present.
@@ -6,14 +9,14 @@ function flagSet(value: string | undefined) {
   return typeof value === "string" && value.length > 0;
 }
 
-export function devOtpCode(code: string, env: NodeJS.ProcessEnv = process.env): string | undefined {
+export function devOtpCode(code: string, env: EnvLike = process.env): string | undefined {
   if (env.NODE_ENV === "production") return undefined;
   if (!flagSet(env.OTP_DEV_REVEAL)) return undefined;
   return code;
 }
 
 export function warnDevOtpInProduction(
-  env: NodeJS.ProcessEnv = process.env,
+  env: EnvLike = process.env,
   warn: (message: string) => void = console.warn
 ) {
   if (env.NODE_ENV === "production" && flagSet(env.OTP_DEV_REVEAL)) {
@@ -21,7 +24,7 @@ export function warnDevOtpInProduction(
   }
 }
 
-export function otpRequestBody(issuedCode: string | null, env: NodeJS.ProcessEnv = process.env) {
+export function otpRequestBody(issuedCode: string | null, env: EnvLike = process.env) {
   const devCode = issuedCode ? devOtpCode(issuedCode, env) : undefined;
   if (!devCode) return { sent: true as const };
   return { sent: true as const, devCode };

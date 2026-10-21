@@ -1,5 +1,8 @@
 import crypto from "crypto";
 
+/** Plain key/value env so callers (and tests) can pass a small object. */
+type EnvLike = Record<string, string | undefined>;
+
 export const ACCESS_TTL_SEC = 15 * 60;
 
 export type AccessClaims = {
@@ -13,7 +16,7 @@ function b64url(input: string) {
   return Buffer.from(input).toString("base64url");
 }
 
-export function accessSecret(env: NodeJS.ProcessEnv = process.env): string | null {
+export function accessSecret(env: EnvLike = process.env): string | null {
   const secret = env.AUTH_TOKEN_SECRET || "";
   if (secret.length < 16) return null;
   return secret;
@@ -22,7 +25,7 @@ export function accessSecret(env: NodeJS.ProcessEnv = process.env): string | nul
 export function signAccessToken(
   claims: { sub: string; role: string },
   now = Math.floor(Date.now() / 1000),
-  env: NodeJS.ProcessEnv = process.env
+  env: EnvLike = process.env
 ) {
   const secret = accessSecret(env);
   if (!secret) throw new Error("AUTH_TOKEN_SECRET is not set");
@@ -43,7 +46,7 @@ export function signAccessToken(
 export function verifyAccessToken(
   token: string,
   now = Math.floor(Date.now() / 1000),
-  env: NodeJS.ProcessEnv = process.env
+  env: EnvLike = process.env
 ): AccessClaims | null {
   const secret = accessSecret(env);
   if (!secret) return null;

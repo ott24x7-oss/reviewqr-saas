@@ -6,6 +6,7 @@ import { deviceMeta, parseJson, v1Data, v1Error } from "@/lib/api/v1";
 import { issueTokenPair, tokenConfigError } from "@/lib/auth/sessions";
 import { prisma } from "@/lib/db";
 import { rateLimitDb } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,10 @@ async function postHandler(req: NextRequest) {
   if (!parsed.ok) return parsed.response;
 
   const email = parsed.data.email.toLowerCase().trim();
+  // Per account and per IP, so one client cannot try many accounts (credential stuffing).
+  const ip = getClientIp(req.headers);
+  const byIp = await rateLimitDb({ key: `login-ip:${ip}`, limit: 30, windowSeconds: 600 });
+  if (!byIp.ok) return v1Error(429, "RATE_LIMIT", "Too many attempts");
   const limit = await rateLimitDb({ key: `login:${email}`, limit: 10, windowSeconds: 600 });
   if (!limit.ok) return v1Error(429, "RATE_LIMIT", "Too many attempts");
 

@@ -33,20 +33,20 @@ describe("v1 observability", () => {
 
   it("does not call Sentry when the DSN is empty and swallows a failed post", async () => {
     const fetchImpl = vi.fn(async () => new Response("ok"));
-    await reportError(new Error("boom"), { requestId: "r", path: "/api/v1/me" }, { SENTRY_DSN: "" } as NodeJS.ProcessEnv, fetchImpl);
+    await reportError(new Error("boom"), { requestId: "r", path: "/api/v1/me" }, { SENTRY_DSN: "" }, fetchImpl);
     expect(fetchImpl).not.toHaveBeenCalled();
 
     await reportError(
       new Error("boom 123456"),
       { requestId: "r", path: "/api/v1/me" },
-      { SENTRY_DSN: "https://public-key@sentry.example/12" } as NodeJS.ProcessEnv,
+      { SENTRY_DSN: "https://public-key@sentry.example/12" },
       async () => {
         throw new Error("collector down");
       }
     );
 
     const calls: string[] = [];
-    await reportError(new Error("saved"), { requestId: "r", path: "/api/v1/me" }, { SENTRY_DSN: "https://public-key@sentry.example/12" } as NodeJS.ProcessEnv, async (_url, init) => {
+    await reportError(new Error("saved"), { requestId: "r", path: "/api/v1/me" }, { SENTRY_DSN: "https://public-key@sentry.example/12" }, async (_url, init) => {
       calls.push(String(init?.body));
       return new Response("ok");
     });
@@ -56,13 +56,13 @@ describe("v1 observability", () => {
   });
 
   it("returns the handler response and a 500 envelope when the handler throws", async () => {
-    const ok = observe(async () => NextResponse.json({ data: { ok: true } }));
+    const ok = observe(async (_req: NextRequest) => NextResponse.json({ data: { ok: true } }));
     const req = new NextRequest("http://127.0.0.1/api/v1/me", { headers: { "x-request-id": "trace-1" } });
     const res = await ok(req);
     expect(res.status).toBe(200);
     expect(res.headers.get("x-request-id")).toBe("trace-1");
 
-    const broken = observe(async () => {
+    const broken = observe(async (_req: NextRequest): Promise<NextResponse> => {
       throw new Error("db down");
     });
     const failed = await broken(req);

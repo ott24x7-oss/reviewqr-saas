@@ -1,3 +1,6 @@
+
+/** Plain key/value env so callers (and tests) can pass a small object. */
+type EnvLike = Record<string, string | undefined>;
 /**
  * Sends one error event to a Sentry DSN with fetch. No SDK.
  * Does nothing when SENTRY_DSN is empty, and never throws.
@@ -5,7 +8,7 @@
 export async function reportError(
   err: unknown,
   context: { requestId: string; path: string },
-  env: NodeJS.ProcessEnv = process.env,
+  env: EnvLike = process.env,
   fetchImpl: typeof fetch = fetch
 ) {
   const dsn = (env.SENTRY_DSN || "").trim();

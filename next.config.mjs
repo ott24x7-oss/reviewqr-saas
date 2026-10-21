@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Lets the e2e OTP dev server build into its own folder so it does not
+  // overwrite the production build that the owner smoke test runs against.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   reactStrictMode: true,
   transpilePackages: ["@reviewqr/shared"],
   images: {
