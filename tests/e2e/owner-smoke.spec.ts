@@ -14,6 +14,24 @@ test("owner registers, collects a private review, and sees UPI checkout", async 
 
   await page.goto("/dashboard/businesses");
   await page.getByRole("link", { name: "Manage" }).click();
+  await page.getByRole("link", { name: "Edit" }).click();
+  await page.getByLabel("Google review URL").fill("https://search.google.com/local/writereview?placeid=smoke");
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByText("Saved")).toBeVisible();
+  await page.goBack();
+  const reviewHref = await page.getByRole("link", { name: "View page" }).getAttribute("href");
+  const reviewPath = new URL(reviewHref || "http://localhost/r/missing").pathname;
+  await page.goto(reviewPath);
+  await page.getByRole("button", { name: "2 stars" }).click();
+  await expect(page.getByRole("heading", { name: "Leave a public review" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Tell the owner privately" })).toBeVisible();
+  const publicBox = await page.getByRole("heading", { name: "Leave a public review" }).boundingBox();
+  const privateBox = await page.getByRole("heading", { name: "Tell the owner privately" }).boundingBox();
+  expect(publicBox && privateBox && publicBox.y < privateBox.y).toBeTruthy();
+  await page.getByRole("button", { name: "5 stars" }).click();
+  await expect(page.getByRole("heading", { name: "Leave a public review" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Tell the owner privately" })).toBeVisible();
+  await page.goBack();
   await page.getByRole("main").getByRole("link", { name: /^QR codes/ }).click();
   await page.getByLabel("Label").fill("Front counter");
   await page.getByRole("button", { name: "Create QR code" }).click();
@@ -25,7 +43,9 @@ test("owner registers, collects a private review, and sees UPI checkout", async 
   await page.goto(`/q/${code}`);
   await expect(page.getByRole("heading", { name: "Smoke Cafe" })).toBeVisible();
   await page.getByRole("button", { name: "Give Feedback" }).click();
+  await expect(page.getByRole("link", { name: "Review on Google" }).first()).toBeVisible();
   await page.getByRole("button", { name: "2 stars" }).click();
+  await expect(page.getByRole("link", { name: "Review on Google" }).first()).toBeVisible();
   await page.getByLabel("What could we have done better?").fill(message);
   await page.getByRole("button", { name: "Send feedback" }).click();
   await expect(page.getByText("Thank you for your feedback")).toBeVisible();

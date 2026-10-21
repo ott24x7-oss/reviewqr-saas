@@ -9,6 +9,7 @@ import { remindExpiredOwner } from "@/lib/tap/expiry-notice";
 import { tapText } from "@/lib/tap/i18n";
 import { isLookupCode } from "@/lib/tap/ids";
 import { presentBusiness, type PublicLink } from "@/lib/tap/links";
+import { orderedReviewTargets } from "@/lib/review-policy";
 import { loadPublicTap, type TapRecord } from "@/lib/tap/resolve";
 import { scanSource } from "@/lib/tap/source";
 import { readAdminThemes } from "@/lib/tap/theme-store";
@@ -118,6 +119,9 @@ export async function PublicTap({
         locationSlug={record.locationSlug}
         staffSlug={record.staffSlug}
         turnstileSiteKey={turnstileSiteKey}
+        reviewLinks={orderedReviewTargets(record.business)}
+        reviewGating={record.business.reviewGating === true}
+        ratingThreshold={record.business.ratingThreshold || 4}
         {...themeProps}
       />
     </div>

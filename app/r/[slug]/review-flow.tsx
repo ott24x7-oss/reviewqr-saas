@@ -26,6 +26,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { orderedReviewTargets } from "@/lib/review-policy";
 
 type Business = {
   id: string;
@@ -37,7 +38,9 @@ type Business = {
   industry?: string | null;
   primaryColor: string;
   googleReviewUrl?: string | null;
+  trustpilotUrl?: string | null;
   reviewPlatform?: "google" | "trustpilot";
+  reviewGating?: boolean;
   ratingThreshold: number;
   customThankYou?: string | null;
   whatsappNumber?: string | null;
@@ -290,6 +293,7 @@ export function ReviewFlow(props: Props) {
   const [pickedId, setPickedId] = React.useState<string | null>(null);
   const [aiQuestions, setAiQuestions] = React.useState<AiQuestion[]>([]);
   const [aiPreparing, setAiPreparing] = React.useState(false);
+  const [lang, setLang] = React.useState<"en" | "hi">("en");
   // Holds the id of a Review row already captured for this visitor (e.g. the
   // bare low-rating tap). Used to avoid firing the on-tap capture twice.
   const submittedRef = React.useRef<string | null>(null);
@@ -297,6 +301,20 @@ export function ReviewFlow(props: Props) {
   const { business } = props;
   const accent = business.primaryColor || "#1a73e8";
   const platformLabel = business.reviewPlatform === "trustpilot" ? "Trustpilot" : "Google";
+  const reviewTargets = orderedReviewTargets(business);
+  const copy = lang === "hi"
+    ? { publicTitle: "सार्वजनिक रिव्यू लिखें", privateTitle: "मालिक को निजी में बताएं" }
+    : { publicTitle: "Leave a public review", privateTitle: "Tell the owner privately" };
+
+  React.useEffect(() => {
+    const stored = window.localStorage.getItem("rq-lang");
+    if (stored === "hi" || stored === "en") setLang(stored);
+  }, []);
+
+  function chooseLang(next: "en" | "hi") {
+    setLang(next);
+    window.localStorage.setItem("rq-lang", next);
+  }
 
   function pickRating(n: number) {
     if (props.turnstileSiteKey && !turnstileToken) {
@@ -304,9 +322,9 @@ export function ReviewFlow(props: Props) {
       return;
     }
     setRating(n);
-    if (n >= business.ratingThreshold && business.googleReviewUrl) {
-      // High rating + Google URL: try to fetch templates first.
-      // If stock is empty we redirect immediately like before.
+    if (business.reviewGating !== true) return;
+    if (n >= business.ratingThreshold && reviewTargets.length > 0) {
+      // Opt-in gating only: high ratings still leave for the public platform.
       setTimeout(() => onHighRating(n), 250);
     } else {
       // Low rating: capture it immediately (fire-and-forget) so it isn't lost
@@ -314,7 +332,7 @@ export function ReviewFlow(props: Props) {
       // feedback submit reuses this same Review row server-side (matched by
       // fingerprint + rating), so no duplicate Review is created.
       if (!submittedRef.current) {
-        submitReview({ rating: n, feedback: "", redirected: false })
+        submitReview({ rating: n, feedback: "", openedPublicReview: false })
           .then((res) => {
             if (res?.reviewId) submittedRef.current = res.reviewId;
           })
@@ -347,7 +365,7 @@ export function ReviewFlow(props: Props) {
           setTemplatesLoading(false);
           setAiPreparing(false);
           setStep("ai");
-          submitReview({ rating: stars, feedback: "", redirected: true }).catch(() => {});
+          submitReview({ rating: stars, feedback: "", openedPublicReview: true }).catch(() => {});
           return;
         }
       } catch {
@@ -369,7 +387,7 @@ export function ReviewFlow(props: Props) {
         setTemplates(items);
         setStep("pick-template");
         // Track the rating now (redirected = true) so analytics still capture it
-        submitReview({ rating: stars, feedback: "", redirected: true }).catch(() => {});
+        submitReview({ rating: stars, feedback: "", openedPublicReview: true }).catch(() => {});
         return;
       }
     } catch {
@@ -384,10 +402,11 @@ export function ReviewFlow(props: Props) {
     const tab = reserved ?? reserveExternalTab();
     setLoading(true);
     try {
-      await submitReview({ rating: stars, feedback: "", redirected: true });
+      await submitReview({ rating: stars, feedback: "", openedPublicReview: true });
     } catch {}
-    if (business.googleReviewUrl) {
-      navigateExternal(business.googleReviewUrl, tab);
+    const href = reviewTargets[0]?.href;
+    if (href) {
+      navigateExternal(href, tab);
     } else {
       tab?.close();
       setStep("thank-you-google");
@@ -449,8 +468,8 @@ export function ReviewFlow(props: Props) {
 
     // Brief pause so the toast registers, then redirect.
     setTimeout(() => {
-      if (business.googleReviewUrl) {
-        navigateExternal(business.googleReviewUrl, reserved);
+      if (reviewTargets[0]?.href) {
+        navigateExternal(reviewTargets[0].href, reserved);
       } else {
         reserved?.close();
         setStep("thank-you-google");
@@ -459,8 +478,14 @@ export function ReviewFlow(props: Props) {
     }, 900);
   }
 
-  async function submitReview(opts: { rating: number; feedback: string; redirected: boolean }) {
+  async function submitReview(opts: {
+    rating: number;
+    feedback: string;
+    openedPublicReview: boolean;
+    preserveToken?: boolean;
+  }) {
     if (props.turnstileSiteKey && !turnstileToken) {
+      if (opts.preserveToken) return { ok: false as const };
       throw new Error("Complete the security check, then try again");
     }
     const res = await fetch("/api/public/reviews", {
@@ -480,13 +505,16 @@ export function ReviewFlow(props: Props) {
         locationSlug: props.location?.slug,
         staffSlug: props.staff?.slug,
         qrCode: props.qrCode,
-        turnstileToken: turnstileToken || undefined
+        turnstileToken: turnstileToken || undefined,
+        openedPublicReview: opts.openedPublicReview
       })
     });
     const json = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(json.error || "Failed to submit");
-    setTurnstileToken("");
-    turnstileRef.current?.reset();
+    if (!opts.preserveToken) {
+      setTurnstileToken("");
+      turnstileRef.current?.reset();
+    }
     return json;
   }
 
@@ -498,7 +526,7 @@ export function ReviewFlow(props: Props) {
     }
     setLoading(true);
     try {
-      await submitReview({ rating, feedback, redirected: false });
+      await submitReview({ rating, feedback, openedPublicReview: false });
       setStep("thank-you-private");
     } catch (e: any) {
       toast.error(e.message || "Failed to submit");
@@ -669,6 +697,81 @@ export function ReviewFlow(props: Props) {
           pickRating={pickRating}
           loading={loading || templatesLoading}
         />
+      )}
+
+      {step === "rate" && rating > 0 && business.reviewGating !== true && (
+        <>
+          <div className="container max-w-2xl px-4 pt-4">
+            <div className="mb-3 flex justify-end gap-2" role="group" aria-label="Language">
+              <button
+                type="button"
+                className="min-h-11 rounded-full border px-3 text-sm font-semibold"
+                aria-pressed={lang === "en"}
+                onClick={() => chooseLang("en")}
+              >
+                EN
+              </button>
+              <button
+                type="button"
+                className="min-h-11 rounded-full border px-3 text-sm font-semibold"
+                aria-pressed={lang === "hi"}
+                lang="hi"
+                onClick={() => chooseLang("hi")}
+              >
+                हिं
+              </button>
+            </div>
+            {reviewTargets.length > 0 && (
+              <div className="rounded-3xl neu p-5 sm:p-6">
+                <h2 className="text-center text-lg font-semibold">{copy.publicTitle}</h2>
+                <div className="mt-4 grid gap-2">
+                  {reviewTargets.map((item) => (
+                    <Button key={item.href} asChild variant="skeuo" size="lg" className="min-h-11 w-full">
+                      <a
+                        href={item.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => {
+                          void submitReview({
+                            rating,
+                            feedback: "",
+                            openedPublicReview: true,
+                            preserveToken: true
+                          }).catch(() => {});
+                        }}
+                      >
+                        {lang === "hi" ? item.labelHi : item.labelEn}
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          <FeedbackStep
+            business={business}
+            rating={rating}
+            feedback={feedback}
+            setFeedback={setFeedback}
+            name={name}
+            setName={setName}
+            phone={phone}
+            setPhone={setPhone}
+            email={email}
+            setEmail={setEmail}
+            tags={tags}
+            toggleTag={toggleTag}
+            npsScore={npsScore}
+            setNpsScore={setNpsScore}
+            onSubmit={onSubmitFeedback}
+            loading={loading}
+            consent={consent}
+            setConsent={setConsent}
+            panel
+            title={copy.privateTitle}
+          />
+        </>
       )}
 
       {/* Action chips (secondary) */}
@@ -1545,31 +1648,37 @@ function FeedbackStep(props: {
   loading: boolean;
   consent: boolean;
   setConsent: (v: boolean) => void;
+  panel?: boolean;
+  title?: string;
 }) {
   return (
-    <div className="container max-w-2xl px-4 py-5">
+    <div className={cn("container max-w-2xl px-4", props.panel ? "pt-3 pb-5" : "py-5")}>
       <div className="rounded-3xl neu p-5 sm:p-6">
-        <div className="flex items-center justify-center gap-1 mb-3">
-          {[1, 2, 3, 4, 5].map((n) => (
-            <Star
-              key={n}
-              className={cn(
-                "h-6 w-6",
-                props.rating >= n
-                  ? "fill-amber-400 text-amber-400"
-                  : "fill-transparent rv-sub"
-              )}
-            />
-          ))}
-        </div>
-        <h2 className="text-xl sm:text-2xl font-bold text-center tracking-tight">
-          We'd love to hear more
-        </h2>
-        <p className="mt-1.5 text-sm rv-muted text-center">
-          This goes privately to the owner — never made public.
-        </p>
+        {props.panel ? (
+          <h2 className="text-center text-lg font-semibold">{props.title}</h2>
+        ) : (
+          <>
+            <div className="flex items-center justify-center gap-1 mb-3">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <Star
+                  key={n}
+                  className={cn(
+                    "h-6 w-6",
+                    props.rating >= n ? "fill-amber-400 text-amber-400" : "fill-transparent rv-sub"
+                  )}
+                />
+              ))}
+            </div>
+            <h2 className="text-xl sm:text-2xl font-bold text-center tracking-tight">
+              We'd love to hear more
+            </h2>
+            <p className="mt-1.5 text-sm rv-muted text-center">
+              This goes privately to the owner — never made public.
+            </p>
+          </>
+        )}
 
-        <form onSubmit={props.onSubmit} className="mt-5 space-y-4">
+        <form onSubmit={props.onSubmit} className="mt-4 space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="feedback">What could we have done better? *</Label>
             <Textarea

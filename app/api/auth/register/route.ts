@@ -73,6 +73,7 @@ export async function POST(req: NextRequest) {
         name: data.businessName,
         slug,
         ratingThreshold: 4,
+        reviewGating: false,
         primaryColor: "#1a73e8",
         whatsappNumber: data.phone || null,
         email

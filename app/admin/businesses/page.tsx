@@ -26,6 +26,10 @@ export default async function AdminBusinessesPage({
   }
   if (!showArchived) where.archived = false;
 
+  const gatingOn = await prisma.business.count({
+    where: { reviewGating: true, archived: false }
+  });
+
   const businesses = await prisma.business.findMany({
     where,
     orderBy: { createdAt: "desc" },
@@ -42,6 +46,13 @@ export default async function AdminBusinessesPage({
         <h1 className="text-2xl sm:text-3xl font-bold font-display">Businesses</h1>
         <p className="text-sm text-muted-foreground">{businesses.length} shown</p>
       </div>
+
+      {gatingOn > 0 && (
+        <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950" role="alert">
+          {gatingOn} {gatingOn === 1 ? "business hides" : "businesses hide"} the public review link
+          from lower ratings. That conflicts with Google’s review policy.
+        </p>
+      )}
 
       <Card>
         <CardContent className="p-4">
@@ -116,6 +127,11 @@ export default async function AdminBusinessesPage({
                         <Badge variant="success">active</Badge>
                       ) : (
                         <Badge variant="warning">inactive</Badge>
+                      )}
+                      {b.reviewGating && (
+                        <Badge variant="warning" className="ml-1">
+                          gating on
+                        </Badge>
                       )}
                     </td>
                     <td className="py-2.5 px-4 text-xs text-muted-foreground">

@@ -69,7 +69,10 @@ export async function POST(req: NextRequest) {
       state: data.state || null,
       pincode: data.pincode || null,
       googleReviewUrl: data.googleReviewUrl || null,
+      trustpilotUrl: data.trustpilotUrl || null,
+      reviewPlatform: data.reviewPlatform || "google",
       ratingThreshold: data.ratingThreshold,
+      reviewGating: data.reviewGating,
       primaryColor: data.primaryColor,
       logo: data.logo || null,
       coverImage: data.coverImage || null

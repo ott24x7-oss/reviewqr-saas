@@ -15,6 +15,8 @@ const STRINGS = {
     privacyFeedback:
       "Your rating is saved for the business owner. A name or phone number is saved only if you agree.",
     consent: "Save my phone number with this feedback",
+    publicReview: "Leave a public review",
+    privateReview: "Tell the owner privately",
     privacyLink: "How to ask for deletion",
     add: "Add",
     total: "Total",
@@ -43,6 +45,8 @@ const STRINGS = {
     privacyFeedback:
       "आपकी रेटिंग दुकान के मालिक के लिए सेव होती है। नाम या फोन तभी सेव होता है जब आप सहमति दें।",
     consent: "मेरा फोन नंबर इस प्रतिक्रिया के साथ सेव करें",
+    publicReview: "सार्वजनिक रिव्यू लिखें",
+    privateReview: "मालिक को निजी में बताएं",
     privacyLink: "डेटा मिटाने का तरीका",
     add: "जोड़ें",
     total: "कुल",

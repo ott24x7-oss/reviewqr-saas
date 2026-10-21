@@ -10,8 +10,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const existing = await prisma.business.findUnique({ where: { id: params.id } });
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const body = (await req.json().catch(() => ({}))) as { name?: string; isActive?: boolean };
-  const data: { name?: string; isActive?: boolean } = {};
+  const body = (await req.json().catch(() => ({}))) as {
+    name?: string;
+    isActive?: boolean;
+    reviewGating?: boolean;
+    ratingThreshold?: number;
+  };
+  const data: { name?: string; isActive?: boolean; reviewGating?: boolean; ratingThreshold?: number } = {};
   if (typeof body.name === "string") {
     const name = body.name.trim();
     if (name.length < 2 || name.length > 80) {
@@ -20,6 +25,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     data.name = name;
   }
   if (typeof body.isActive === "boolean") data.isActive = body.isActive;
+  if (typeof body.reviewGating === "boolean") data.reviewGating = body.reviewGating;
+  if (typeof body.ratingThreshold === "number" && body.ratingThreshold >= 1 && body.ratingThreshold <= 5) {
+    data.ratingThreshold = Math.trunc(body.ratingThreshold);
+  }
   if (!Object.keys(data).length) {
     return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
   }
