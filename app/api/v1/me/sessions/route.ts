@@ -1,3 +1,4 @@
+import { observe } from "@/lib/api/observe";
 import { NextRequest } from "next/server";
 import { requireV1User, v1Data } from "@/lib/api/v1";
 import { listActiveSessions, revokeAllSessions } from "@/lib/auth/sessions";
@@ -8,7 +9,7 @@ function iso(value: Date | null) {
   return value ? value.toISOString() : null;
 }
 
-export async function GET(req: NextRequest) {
+async function getHandler(req: NextRequest) {
   const auth = await requireV1User(req);
   if (!auth.ok) return auth.response;
   const rows = await listActiveSessions(auth.user.id);
@@ -25,9 +26,11 @@ export async function GET(req: NextRequest) {
   });
 }
 
-export async function DELETE(req: NextRequest) {
+async function deleteHandler(req: NextRequest) {
   const auth = await requireV1User(req);
   if (!auth.ok) return auth.response;
   await revokeAllSessions(auth.user.id);
   return v1Data({ ok: true as const });
 }
+export const GET = observe(getHandler);
+export const DELETE = observe(deleteHandler);

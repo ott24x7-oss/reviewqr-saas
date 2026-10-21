@@ -1,3 +1,4 @@
+import { observe } from "@/lib/api/observe";
 import { NextRequest } from "next/server";
 import { otpVerifySchema } from "@reviewqr/shared";
 import { deviceMeta, parseJson, v1Data, v1Error } from "@/lib/api/v1";
@@ -8,7 +9,7 @@ import { getClientIp } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(req: NextRequest) {
+async function postHandler(req: NextRequest) {
   const ip = getClientIp(req.headers);
   const ipLimit = await rateLimitDb({ key: `otp-verify:${ip}`, limit: 8, windowSeconds: 600 });
   if (!ipLimit.ok) return v1Error(429, "RATE_LIMIT", "Too many attempts");
@@ -35,3 +36,4 @@ export async function POST(req: NextRequest) {
   );
   return v1Data(tokens);
 }
+export const POST = observe(postHandler);

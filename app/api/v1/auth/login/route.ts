@@ -1,3 +1,4 @@
+import { observe } from "@/lib/api/observe";
 import { NextRequest } from "next/server";
 import { loginSchema } from "@reviewqr/shared";
 import { comparePassword } from "@/lib/auth";
@@ -8,7 +9,7 @@ import { rateLimitDb } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(req: NextRequest) {
+async function postHandler(req: NextRequest) {
   const parsed = await parseJson(req, loginSchema);
   if (!parsed.ok) return parsed.response;
 
@@ -29,3 +30,4 @@ export async function POST(req: NextRequest) {
   );
   return v1Data(tokens);
 }
+export const POST = observe(postHandler);

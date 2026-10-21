@@ -8,6 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { SubscriptionTier } from "@prisma/client";
+import { createApiClient } from "@reviewqr/shared";
+
+const api = createApiClient();
 
 type Props = {
   user: {
@@ -62,7 +65,7 @@ export function SettingsForm({ user }: Props) {
     setPushEnabled(checked);
     setPushSaving(true);
     try {
-      const res = await fetch("/api/settings", {
+      const res = await api.request("/api/v1/me", {
         method: "PATCH",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ pushEnabled: checked })

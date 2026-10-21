@@ -1,3 +1,4 @@
+import { observe } from "@/lib/api/observe";
 import { NextRequest } from "next/server";
 import { deleteAccountSchema, mePatchSchema } from "@reviewqr/shared";
 import { parseJson, requireV1User, v1Data, v1Error } from "@/lib/api/v1";
@@ -19,13 +20,13 @@ function meBody(user: { id: string; email: string; name: string | null; phone: s
   };
 }
 
-export async function GET(req: NextRequest) {
+async function getHandler(req: NextRequest) {
   const auth = await requireV1User(req);
   if (!auth.ok) return auth.response;
   return v1Data(meBody(auth.user));
 }
 
-export async function PATCH(req: NextRequest) {
+async function patchHandler(req: NextRequest) {
   const auth = await requireV1User(req);
   if (!auth.ok) return auth.response;
   const parsed = await parseJson(req, mePatchSchema);
@@ -41,7 +42,7 @@ export async function PATCH(req: NextRequest) {
   return v1Data(meBody(updated));
 }
 
-export async function DELETE(req: NextRequest) {
+async function deleteHandler(req: NextRequest) {
   const auth = await requireV1User(req);
   if (!auth.ok) return auth.response;
   if (auth.user.role === "ADMIN") {
@@ -59,3 +60,6 @@ export async function DELETE(req: NextRequest) {
   });
   return v1Data({ ok: true as const });
 }
+export const GET = observe(getHandler);
+export const PATCH = observe(patchHandler);
+export const DELETE = observe(deleteHandler);

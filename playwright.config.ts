@@ -17,6 +17,8 @@ function serverEnv() {
   env.PAYMENTS_RAZORPAY_ENABLED = "false";
   env.NEXT_PUBLIC_TURNSTILE_SITE_KEY = "";
   env.TURNSTILE_SECRET_KEY = "";
+  env.OTP_DEV_REVEAL = "1";
+  env.AUTH_TOKEN_SECRET = process.env.AUTH_TOKEN_SECRET || "e2e-auth-token-secret-16";
   return env;
 }
 
@@ -32,10 +34,10 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: `npx next start -p ${port}`,
+    command: `npx next dev -p ${port}`,
     url: baseURL,
     reuseExistingServer: false,
-    timeout: 120_000,
+    timeout: 180_000,
     env: serverEnv()
   }
 });

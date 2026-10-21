@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
+import { incomingRequestId } from "@/lib/api/request-id";
 import { canonicalRedirect } from "@/lib/http/canonical";
 import { canAccessAdmin } from "@/lib/roles";
 
@@ -21,7 +22,10 @@ export async function middleware(req: NextRequest) {
 
   const isDashboard = pathname === "/dashboard" || pathname.startsWith("/dashboard/");
   const isAdmin = pathname === "/admin" || pathname.startsWith("/admin/");
-  if (!isDashboard && !isAdmin) return NextResponse.next();
+  if (!isDashboard && !isAdmin) {
+    if (pathname.startsWith("/api/v1")) return continueWithRequestId(req);
+    return NextResponse.next();
+  }
 
   const token = await getToken({
     req,
@@ -43,6 +47,15 @@ export async function middleware(req: NextRequest) {
   }
 
   return NextResponse.next();
+}
+
+function continueWithRequestId(req: NextRequest) {
+  const requestId = incomingRequestId(req.headers.get("x-request-id"));
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set("x-request-id", requestId);
+  const res = NextResponse.next({ request: { headers: requestHeaders } });
+  res.headers.set("x-request-id", requestId);
+  return res;
 }
 
 export const config = {
