@@ -505,6 +505,8 @@ export function tokensToStyle(tokens: ThemeTokens): Record<string, string> {
     "--marketing-muted": tokens.muted,
     "--marketing-line": tokens.line,
     "--tap-button-bg": tokens.buttonFill || tokens.buttonBg,
+    // Solid accent for tints (color-mix cannot take a gradient).
+    "--tap-accent-solid": tokens.buttonBg,
     "--tap-button-ink": tokens.buttonInk,
     "--tap-radius": tokens.buttons === "pill" ? "999px" : tokens.radius,
     "--tap-font": fontFamily(tokens.font),

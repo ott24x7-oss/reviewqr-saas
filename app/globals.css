@@ -562,6 +562,14 @@
   padding: 6px;
   backdrop-filter: blur(12px);
 }
+.marketing-anchor {
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+.marketing-anchor[data-visible="false"] {
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 16px);
+}
 .marketing-anchor a {
   display: inline-flex;
   min-height: 44px;
@@ -598,9 +606,11 @@
   --tap-ink: var(--marketing-ink);
   --tap-muted: var(--marketing-muted);
   --tap-line: var(--marketing-line);
-  --tap-accent: var(--tap-button-bg, var(--marketing-ink));
+  --tap-accent: var(--tap-accent-solid, var(--marketing-ink));
+  --tap-accent-fill: var(--tap-button-bg, var(--tap-accent));
   --tap-accent-ink: var(--tap-button-ink, var(--marketing-bg));
-  --tap-surface: color-mix(in srgb, var(--marketing-bg) 55%, white);
+  /* Card surface derived from the theme's own bg/ink, so it reads on light and dark themes. */
+  --tap-surface: color-mix(in srgb, color-mix(in srgb, var(--marketing-ink) 7%, var(--marketing-bg)) 90%, transparent);
   position: relative;
   min-height: 100vh;
   background: var(--marketing-bg);
@@ -695,7 +705,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: var(--tap-accent);
+  background: var(--tap-accent-fill);
   color: var(--tap-accent-ink);
   font-family: var(--tap-font), var(--font-display), sans-serif;
   font-size: 1.9rem;
@@ -779,7 +789,7 @@
   width: 100%;
   border: 0;
   border-radius: var(--tap-radius, 999px);
-  background: var(--tap-accent);
+  background: var(--tap-accent-fill);
   padding: 0 14px 0 8px;
   color: var(--tap-accent-ink);
   font: inherit;
@@ -852,6 +862,14 @@
   margin: 18px 0 0;
   padding: 0;
   list-style: none;
+}
+.tap-row,
+.tap-note,
+.tap-offer,
+.tap-feedback,
+.tap-social a {
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
 }
 .tap-row,
 .tap-note {

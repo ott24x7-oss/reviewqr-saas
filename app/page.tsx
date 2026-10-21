@@ -3,6 +3,7 @@ import { DashboardPreview } from "@/components/marketing/dashboard-preview";
 import { Pricing } from "@/components/marketing/pricing";
 import { Footer } from "@/components/marketing/footer";
 import { HeroV2 } from "@/components/marketing/landing/hero-v2";
+import { AnchorPill } from "@/components/marketing/landing/anchor-pill";
 import {
   ProductSuite,
   HowItWorksV2,
@@ -48,12 +49,7 @@ export default async function HomePage() {
       <CtaV2 />
 
       <Footer brand={brand} />
-      <nav className="marketing-anchor" aria-label="On this page">
-        <a href="#features">Features</a>
-        <a href="#store">Store</a>
-        <a href="#products">QR+NFC</a>
-        <a href="#pricing">Pricing</a>
-      </nav>
+      <AnchorPill />
     </main>
   );
 }
