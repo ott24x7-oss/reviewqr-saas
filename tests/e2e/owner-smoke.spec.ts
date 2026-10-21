@@ -1,4 +1,27 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { PrismaClient } from "@prisma/client";
 import { expect, test } from "@playwright/test";
+
+function databaseUrl() {
+  if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
+  for (const file of [".env.local", ".env"]) {
+    try {
+      const text = readFileSync(path.join(process.cwd(), file), "utf8");
+      for (const row of text.split(/\r?\n/)) {
+        if (!row.startsWith("DATABASE_URL=")) continue;
+        let value = row.slice("DATABASE_URL=".length).trim();
+        if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+          value = value.slice(1, -1);
+        }
+        if (value) return value;
+      }
+    } catch {
+      /* The next file may hold the URL. */
+    }
+  }
+  throw new Error("DATABASE_URL is missing");
+}
 
 test("owner registers, collects a private review, and sees UPI checkout", async ({ page }) => {
   test.setTimeout(180_000);
@@ -140,4 +163,57 @@ test("owner registers, collects a private review, and sees UPI checkout", async 
   await page.goto("/dashboard/billing");
   await page.getByRole("button", { name: "Upgrade" }).first().click();
   await expect(page.getByText(/Pay with UPI|GPay, PhonePe/)).toBeVisible();
+
+  await page.goto("/dashboard/businesses");
+  const href = await page.getByRole("link", { name: "Manage", exact: true }).getAttribute("href");
+  const businessId = href?.match(/\/dashboard\/businesses\/([^/?#]+)/)?.[1];
+  expect(businessId).toBeTruthy();
+  const printed = await page.request.post(`/api/businesses/${businessId}/print`, {
+    data: {
+      templateId: "cr80",
+      preset: "exact",
+      format: "pdf",
+      name: "Smoke Cafe",
+      cta: "Scan or tap to order and review",
+      ctaHi: "",
+      background: "#fff7ed",
+      foreground: "#3a2016",
+      qrDark: "#111111",
+      qrLight: "#ffffff",
+      module: "rounded",
+      eye: "rounded",
+      showNfc: true,
+      showStars: true,
+      codes: [{ code, label: "Front counter" }]
+    }
+  });
+  if (!printed.ok()) {
+    const detail = await printed.text().catch(() => "");
+    throw new Error(`print failed ${printed.status()} ${detail.slice(0, 300)}`);
+  }
+  expect(printed.headers()["content-type"] || "").toContain("application/pdf");
+  expect((await printed.body()).length).toBeGreaterThan(1000);
+
+  const stock = `SMK${Date.now().toString(36).toUpperCase()}`;
+  const prisma = new PrismaClient({ datasources: { db: { url: databaseUrl() } } });
+  try {
+    await prisma.qRCode.create({
+      data: { shortCode: stock, label: "Stock", type: "CUSTOM", status: "UNASSIGNED", isActive: true }
+    });
+    await prisma.device.create({
+      data: { shortCode: stock, kind: "CARD", status: "IN_STOCK", tableLabel: "Stock" }
+    });
+    await page.goto("/dashboard/qr-codes");
+    await page.getByPlaceholder("Printed code or QR link").fill(stock);
+    await page.getByRole("button", { name: "Check code" }).click();
+    await page.getByRole("button", { name: "Activate", exact: true }).click();
+    await expect(page.getByText("QR activated")).toBeVisible();
+    const device = await prisma.device.findUnique({ where: { shortCode: stock } });
+    expect(device?.status).toBe("ACTIVE");
+    const row = await prisma.qRCode.findUnique({ where: { shortCode: stock } });
+    expect(row?.status).toBe("ACTIVE");
+    expect(row?.businessId).toBe(businessId);
+  } finally {
+    await prisma.$disconnect();
+  }
 });

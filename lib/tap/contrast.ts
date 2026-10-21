@@ -10,14 +10,19 @@ function channel(c: number) {
   return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
 }
 
+/** WCAG relative luminance for a #rrggbb colour. */
+export function relativeLuminance(hex: string): number | null {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return null;
+  return 0.2126 * channel(rgb[0]) + 0.7152 * channel(rgb[1]) + 0.0722 * channel(rgb[2]);
+}
+
 export function contrastRatio(foreground: string, background: string): number | null {
-  const fg = hexToRgb(foreground);
-  const bg = hexToRgb(background);
-  if (!fg || !bg) return null;
-  const L = (rgb: [number, number, number]) =>
-    0.2126 * channel(rgb[0]) + 0.7152 * channel(rgb[1]) + 0.0722 * channel(rgb[2]);
-  const lighter = Math.max(L(fg), L(bg));
-  const darker = Math.min(L(fg), L(bg));
+  const fg = relativeLuminance(foreground);
+  const bg = relativeLuminance(background);
+  if (fg == null || bg == null) return null;
+  const lighter = Math.max(fg, bg);
+  const darker = Math.min(fg, bg);
   return (lighter + 0.05) / (darker + 0.05);
 }
 

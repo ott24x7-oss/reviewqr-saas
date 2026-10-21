@@ -105,6 +105,30 @@ Dark glass cards and a neon accent taken from the colour theme. Light mode keeps
 
 The owner picker shows each design as live markup laid out at 360px and scaled into the thumbnail. The pressed thumbnail is the design that will be saved.
 
+## 7. Print studio and NFC tags
+
+Print studio makes the physical piece at its real size. The library is a CR80 card (85.6×54 mm, front and back), A6 and A5 table tents, 4×6 in and 5×7 in standees, 50 mm and 75 mm round stickers, 60 mm and 100 mm square stickers, A4 and A3 counter posters, an 80×140 mm bill strip, a 30×50 mm keychain, and a 120×180 mm door sticker.
+
+The editor shows the piece while it is edited: logo, business name, an English line and a Hindi line, an NFC mark, five stars, the 20 tap colour presets, a Devanagari font, and a background image. The QR is square, rounded, or dots, with a choice of eyes and a centre logo. It always uses error correction H, a four-module quiet zone, and dark modules on a light ground. A code that would print under 20 mm is allowed and warned. Inverted ink is refused. Hindi and any other complex script is drawn in the browser and placed in the PDF as an image. Latin text and the QR stay vector.
+
+A PDF can be one piece at exact size (front, then back, for a card printer), the same piece with 3 mm bleed and crop marks, or a sheet: 10 CR80 cards on A4, 4 A6 tents on A4, SRA3, or 12×18 in, with cut marks. PNG is 300 DPI. SVG is the vector drawing. Blank stock and Table 1..N each get their own code in one PDF or one ZIP. The browser print view uses `@page` at the piece size and tells the operator to print at 100% / actual size.
+
+Each printed code can have a device: card, standee, sticker, or keychain, with an NTAG213, 215, or 216 UID, a batch, and a status of in stock, assigned, active, disabled, or lost. Chrome on Android writes `https://<domain>/t/<code>?src=nfc`, reads it back, and stores the UID. The next tap can write the next code. iPhone and desktop show the NFC Tools fallback. The page cannot lock a tag. After the link checks out, NFC Tools → Other → Lock tag does that.
+
+An owner or agent opens Activate a tag, scans the QR or follows the tag, picks a business or creates one, and the code goes live. An admin can mark a live tag lost, or put a lost or disabled tag back on a business, without printing a new code. Those changes are in the audit log. `/q/<code>` and `/t/<code>` stay the customer pages.
+
+![Print studio at 360px](docs/print-nfc/editor-360.png)
+
+![Print studio at 1280px](docs/print-nfc/editor-1280.png)
+
+![NFC writer at 360px](docs/print-nfc/nfc-360.png)
+
+![NFC writer at 1280px](docs/print-nfc/nfc-1280.png)
+
+![Activate a tag at 360px](docs/print-nfc/activate-360.png)
+
+![Activate a tag at 1280px](docs/print-nfc/activate-1280.png)
+
 ## Done means
 
 - Every page in scope matches the direction above at 360, 390, 768 and 1280px with no horizontal scroll.

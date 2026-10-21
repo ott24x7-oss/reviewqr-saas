@@ -5,7 +5,7 @@ import { requireUser } from "@/lib/auth";
 import { qrCodeSchema } from "@/lib/validations";
 import { ownerLimitError } from "@/lib/entitlements";
 import { locationInBusiness, planOwner, requireBusinessRole, staffInBusiness } from "@/lib/tenant";
-import { logAudit, type AuditAction } from "@/lib/admin";
+import { logAudit, logDeviceAudit, type AuditAction } from "@/lib/admin";
 import { getClientIp } from "@/lib/utils";
 import { createAssignedCode, setManyEnabled, setQrLabel, setQrLocation, type QrChange } from "@/lib/tap/qr-mutate";
 import { isLookupCode } from "@/lib/tap/ids";
@@ -121,6 +121,18 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       fromStatus: row.status,
       toStatus: result.toStatus,
       label: row.label
+    });
+  }
+  for (const device of result.devices) {
+    await logDeviceAudit({
+      userId: user.id,
+      deviceId: device.id,
+      code: device.code,
+      from: device.from,
+      to: device.to,
+      businessChanged: device.businessChanged,
+      ip: getClientIp(req.headers),
+      userAgent: req.headers.get("user-agent") || undefined
     });
   }
   return NextResponse.json({ ok: true });

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { requireBusinessRole } from "@/lib/tenant";
 import { rateLimitDb } from "@/lib/rate-limit";
-import { logAudit } from "@/lib/admin";
+import { logAudit, logDeviceAudit } from "@/lib/admin";
 import { getClientIp } from "@/lib/utils";
 import { codeFromScan } from "@/lib/tap/qr-stock";
 import { assignQr } from "@/lib/tap/qr-mutate";
@@ -58,6 +58,18 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       ip: getClientIp(req.headers),
       userAgent: req.headers.get("user-agent") || undefined
     });
+    if (result.device) {
+      await logDeviceAudit({
+        userId: user.id,
+        deviceId: result.device.id,
+        code: result.device.code,
+        from: result.device.from,
+        to: result.device.to,
+        businessChanged: result.device.businessChanged,
+        ip: getClientIp(req.headers),
+        userAgent: req.headers.get("user-agent") || undefined
+      });
+    }
   }
   return NextResponse.json({ ok: true, already: result.already === true, code: result.change?.code || code });
 }

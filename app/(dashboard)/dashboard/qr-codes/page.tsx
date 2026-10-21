@@ -62,6 +62,9 @@ export default async function QrCodesPage({
           <h1 className="text-2xl font-bold font-display sm:text-3xl">QR codes</h1>
           <p className="text-sm text-muted-foreground">Activate, label, and download the codes for your businesses.</p>
         </div>
+        <Button asChild variant="outline" className="min-h-[44px]">
+          <Link href="/dashboard/activate">Activate a tag</Link>
+        </Button>
       </div>
 
       {rows.length === 0 ? (

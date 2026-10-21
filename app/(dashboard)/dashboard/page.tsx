@@ -67,7 +67,7 @@ export default async function DashboardOverview() {
     {
       label: "Activate a printed QR",
       done: !!printedQr,
-      href: "/dashboard/qr-codes"
+      href: "/dashboard/activate"
     }
   ];
 

@@ -122,7 +122,8 @@ const STRINGS = {
     noOrderYet: "No order yet",
     offSuffix: "off",
     hindi: "हिंदी",
-    english: "English"
+    english: "English",
+    printCta: "Scan or tap to order and review"
   },
   hi: {
     viewMenu: "मेनू देखें",
@@ -245,7 +246,8 @@ const STRINGS = {
     noOrderYet: "अभी कोई ऑर्डर नहीं",
     offSuffix: "छूट",
     hindi: "हिंदी",
-    english: "English"
+    english: "English",
+    printCta: "ऑर्डर और रिव्यू के लिए स्कैन या टैप करें"
   }
 } as const;
 
