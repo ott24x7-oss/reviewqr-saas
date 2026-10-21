@@ -1,15 +1,26 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Poppins } from "next/font/google";
+import localFont from "next/font/local";
 import { Providers } from "@/components/providers";
 import { Toaster } from "@/components/ui/toaster";
 import { ShapeGridGate } from "@/components/ui/shape-grid-gate";
 import { getBrand } from "@/lib/brand";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
-const poppins = Poppins({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+// Self-hosted (see scripts/build-fonts.py) so builds never depend on fonts.googleapis.com.
+const inter = localFont({
+  src: "../fonts/inter-latin-var.woff2",
+  weight: "100 900",
+  variable: "--font-inter",
+  display: "swap"
+});
+const poppins = localFont({
+  src: [
+    { path: "../fonts/poppins-latin-400.woff2", weight: "400" },
+    { path: "../fonts/poppins-latin-500.woff2", weight: "500" },
+    { path: "../fonts/poppins-latin-600.woff2", weight: "600" },
+    { path: "../fonts/poppins-latin-700.woff2", weight: "700" },
+    { path: "../fonts/poppins-latin-800.woff2", weight: "800" }
+  ],
   variable: "--font-display",
   display: "swap"
 });
