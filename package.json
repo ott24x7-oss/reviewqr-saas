@@ -2,6 +2,9 @@
   "name": "reviewqr-saas",
   "version": "1.0.0",
   "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "description": "ReviewQR - Turn happy customers into Google reviews. Indian SMB focused review management SaaS.",
   "scripts": {
     "dev": "next dev",
@@ -22,7 +25,9 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@asteasolutions/zod-to-openapi": "^7.3.4",
     "@auth/prisma-adapter": "^2.7.4",
+    "@reviewqr/shared": "*",
     "@aws-sdk/client-s3": "^3.1153.0",
     "@hookform/resolvers": "^3.9.1",
     "@prisma/client": "^5.22.0",

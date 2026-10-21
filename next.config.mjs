@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  transpilePackages: ["@reviewqr/shared"],
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
@@ -10,6 +11,7 @@ const nextConfig = {
     ]
   },
   experimental: {
+    instrumentationHook: true,
     serverActions: {
       allowedOrigins: ["localhost:3000", "*.up.railway.app", "*.railway.app"]
     },

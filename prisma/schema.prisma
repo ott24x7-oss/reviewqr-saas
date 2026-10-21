@@ -79,6 +79,7 @@ model User {
   supportMessages SupportMessage[] @relation("SupportMessageAuthor")
   onboardingMarks OnboardingMark[]
   printBatches    PrintBatch[]
+  refreshSessions RefreshSession[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -112,6 +113,25 @@ model Session {
   userId       String
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Mobile refresh tokens. Only the hash is stored. Rotation keeps the family id.
+model RefreshSession {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  familyId   String
+  tokenHash  String    @unique
+  usedAt     DateTime?
+  revokedAt  DateTime?
+  expiresAt  DateTime
+  deviceName String?
+  userAgent  String?
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+
+  @@index([userId])
+  @@index([familyId])
 }
 
 model VerificationToken {
