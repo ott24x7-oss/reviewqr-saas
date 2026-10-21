@@ -1,6 +1,14 @@
 export const STORE_DESIGNS = ["CLASSIC", "PREMIUM", "MINIMAL", "BOLD"] as const;
 export type StoreDesign = (typeof STORE_DESIGNS)[number];
 
+/** Owner picker. The first entry is the default. */
+export const DESIGN_PICKER: { id: StoreDesign; label: string }[] = [
+  { id: "CLASSIC", label: "Classic" },
+  { id: "PREMIUM", label: "Premium Store" },
+  { id: "MINIMAL", label: "Minimal" },
+  { id: "BOLD", label: "Bold Dark" }
+];
+
 /** Owner override. Anything else, including a missing row, stays on Classic. */
 export function resolveDesign(value: string | null | undefined): StoreDesign {
   if (value === "PREMIUM" || value === "MINIMAL" || value === "BOLD" || value === "CLASSIC") return value;

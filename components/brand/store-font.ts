@@ -7,7 +7,8 @@ const bricolage = localFont({
     { path: "../../fonts/bricolage-grotesque-latin-700.woff2", weight: "700" }
   ],
   variable: "--font-bricolage",
-  display: "swap"
+  display: "swap",
+  adjustFontFallback: "Arial"
 });
 
 const geist = localFont({
@@ -16,8 +17,9 @@ const geist = localFont({
     { path: "../../fonts/geist-latin-600.woff2", weight: "600" }
   ],
   variable: "--font-geist",
-  display: "swap"
+  display: "swap",
+  adjustFontFallback: "Arial"
 });
 
-/** Headings and body for the non-Classic storefronts. Hindi falls back to Mukta and Noto. */
+/** Headings and body for the non-Classic storefronts. */
 export const storeDesignFontClass = `${bricolage.variable} ${geist.variable}`;

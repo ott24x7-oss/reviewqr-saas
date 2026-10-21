@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { WEEK_DAYS, type WeekDay, type WeekHours } from "@/lib/tap/hours";
+import { DesignPicker } from "@/components/tap/design-picker";
 
 const DAY_LABEL: Record<WeekDay, string> = {
   sun: "Sunday",
@@ -53,7 +54,17 @@ function rupees(value: string) {
   return Number.isFinite(number) ? Math.max(0, number) : 0;
 }
 
-export function StoreForm({ businessId, initial }: { businessId: string; initial: StoreFormValues }) {
+export function StoreForm({
+  businessId,
+  initial,
+  accent,
+  accentInk
+}: {
+  businessId: string;
+  initial: StoreFormValues;
+  accent: string;
+  accentInk: string;
+}) {
   const router = useRouter();
   const [holiday, setHoliday] = React.useState(initial.holiday);
   const [hours, setHours] = React.useState(() => hoursState(initial.hours));
@@ -144,17 +155,7 @@ export function StoreForm({ businessId, initial }: { businessId: string; initial
       <Card>
         <CardContent className="space-y-3 p-4">
           <h2 className="font-semibold">Design</h2>
-          <select
-            aria-label="Store design"
-            value={design}
-            onChange={(event) => setDesign(event.target.value as StoreFormValues["design"])}
-            className="flex h-11 min-h-11 w-full rounded-lg border bg-white px-3 text-sm"
-          >
-            <option value="CLASSIC">Classic</option>
-            <option value="PREMIUM">Premium Store</option>
-            <option value="MINIMAL">Minimal</option>
-            <option value="BOLD">Bold Dark</option>
-          </select>
+          <DesignPicker value={design} onChange={setDesign} accent={accent} accentInk={accentInk} />
           <p className="text-sm text-muted-foreground">Classic keeps the current menu or product grid. The colour theme still sets the accent.</p>
           <h2 className="font-semibold">Layout</h2>
           <select

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  DESIGN_PICKER,
   bannerIsVisible,
   categoryInitials,
   dealClock,
@@ -12,6 +13,12 @@ import {
 const now = new Date("2026-10-21T12:00:00Z");
 
 describe("store design", () => {
+  it("lists Classic first in the owner picker", () => {
+    expect(DESIGN_PICKER.map((choice) => choice.id)).toEqual(["CLASSIC", "PREMIUM", "MINIMAL", "BOLD"]);
+    expect(DESIGN_PICKER.map((choice) => choice.label)).toEqual(["Classic", "Premium Store", "Minimal", "Bold Dark"]);
+    expect(resolveDesign(undefined)).toBe(DESIGN_PICKER[0].id);
+  });
+
   it("defaults a missing or unknown design to Classic", () => {
     expect(resolveDesign(undefined)).toBe("CLASSIC");
     expect(resolveDesign(null)).toBe("CLASSIC");

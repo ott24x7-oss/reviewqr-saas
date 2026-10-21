@@ -65,6 +65,46 @@ Services are rows: name, duration, price, then Book and Enquire. Book adds the s
 
 The words follow the layout: Menu and Order on WhatsApp, Products and Buy on WhatsApp, Services and Book on WhatsApp. The owner picks the layout in store settings, or leaves it automatic from the business type. `/<slug>/store` is the same storefront without a table label. The one-page poster QR encodes that link.
 
+## 6. Storefront designs
+
+The owner picks a design in store settings, separate from the food, shop, or services layout and from the 20 colour themes. The colour theme still paints the accent. The default is Classic. All four designs share the same menu, cart, coupons, charges, and WhatsApp order. Food keeps the veg mark and a Rows control inside the design. Services show the duration and Book.
+
+Screenshots of the demo café, at 360px and 1280px, live in `docs/storefront-designs/`.
+
+### Classic
+
+The current compact food list, and the current shop grid. At 360px the shop is two columns. From 1200px it is four. Services stay a row with duration, Book, and Enquire. This is the default, and existing stores stay here until the owner chooses another design.
+
+![Classic at 360px](docs/storefront-designs/classic-360.png)
+
+![Classic at 1280px](docs/storefront-designs/classic-1280.png)
+
+### Premium Store
+
+A warm off-white page. Headings use Bricolage Grotesque and body text uses Geist, loaded only on this design. The header sticks, with the logo, a large rounded search field, and a cart button. Categories are circles: a photo from the first item in that category, or initials when there is no photo. The first offer banner is the hero. The next two are promo cards on a tint of the theme accent. Deal of the day and the flash-sale row share a live countdown to the soonest coupon or banner expiry, and both hide when nothing expires. The flash row is discounted products only. Product cards use a large rounded image, a percent-off badge, the title, the price with a crossed MRP, and Add. Recently added sits under the catalogue. Food can switch to the compact rows. Services are a single column with the duration and Book. A Light / Dark control is saved in `rq-store-scheme` and follows the phone until the customer chooses. On phones, a floating pill has Home, Categories, a larger Cart with the count, Orders (the last `/o/` link saved for this store), and Search.
+
+![Premium Store at 360px](docs/storefront-designs/premium-360.png)
+
+![Premium Store at 1280px](docs/storefront-designs/premium-1280.png)
+
+### Minimal
+
+A white page with large type and one column of big photos, aimed at boutiques. It has the same catalogue, search, categories, banners, deal, and recently added block. It has no bottom pill and no dark mode.
+
+![Minimal at 360px](docs/storefront-designs/minimal-360.png)
+
+![Minimal at 1280px](docs/storefront-designs/minimal-1280.png)
+
+### Bold Dark
+
+Dark glass cards and a neon accent taken from the colour theme. Light mode keeps the same layout on a light glass surface. It includes the phone pill and the Light / Dark control.
+
+![Bold Dark at 360px](docs/storefront-designs/bold-360.png)
+
+![Bold Dark at 1280px](docs/storefront-designs/bold-1280.png)
+
+The owner picker shows each design as live markup laid out at 360px and scaled into the thumbnail. The pressed thumbnail is the design that will be saved.
+
 ## Done means
 
 - Every page in scope matches the direction above at 360, 390, 768 and 1280px with no horizontal scroll.

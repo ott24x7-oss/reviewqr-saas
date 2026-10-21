@@ -47,10 +47,11 @@ function Countdown({ endsAt, text }: { endsAt: string; text: (key: Parameters<ty
   );
 }
 
-function useScheme() {
+function useScheme(enabled: boolean) {
   const [choice, setChoice] = React.useState<"light" | "dark" | "system">("system");
   const [systemDark, setSystemDark] = React.useState(false);
   React.useEffect(() => {
+    if (!enabled) return;
     const media = window.matchMedia("(prefers-color-scheme: dark)");
     const saved = window.localStorage.getItem("rq-store-scheme");
     if (saved === "light" || saved === "dark") setChoice(saved);
@@ -58,7 +59,7 @@ function useScheme() {
     apply();
     media.addEventListener("change", apply);
     return () => media.removeEventListener("change", apply);
-  }, []);
+  }, [enabled]);
   const dark = choice === "dark" || (choice === "system" && systemDark);
   function toggle() {
     const next = dark ? "light" : "dark";
@@ -93,7 +94,9 @@ function StoreLook({
   qtyOf,
   onChange,
   onOpenCart,
-  askBase
+  askBase,
+  preview = false,
+  accentStyle
 }: {
   code: string;
   businessName: string;
@@ -118,11 +121,14 @@ function StoreLook({
   onOpenCart: () => void;
   askBase: string;
   look: Look;
+  preview?: boolean;
+  accentStyle?: React.CSSProperties;
 }) {
   const searchRef = React.useRef<HTMLInputElement>(null);
-  const { scheme, toggle, dark } = useScheme();
-  const schemeOn = look !== "minimal";
+  const schemeOn = look !== "minimal" && !preview;
+  const { scheme, toggle, dark } = useScheme(schemeOn);
   const root = look === "minimal" ? styles.minimal : look === "bold" ? styles.bold : styles.premium;
+  const shownScheme = preview ? (look === "bold" ? "dark" : look === "premium" ? "light" : undefined) : schemeOn ? scheme : undefined;
   const [rows, setRows] = React.useState(false);
   const [categoryId, setCategoryId] = React.useState("");
   const [lastOrder, setLastOrder] = React.useState("");
@@ -136,8 +142,9 @@ function StoreLook({
   const searchLabel = layout === "SHOP" ? text("searchProducts") : layout === "SERVICES" ? text("searchServices") : text("search");
 
   React.useEffect(() => {
+    if (preview) return;
     setLastOrder(window.localStorage.getItem(`rq-last-order:${code}`) || "");
-  }, [code]);
+  }, [code, preview]);
 
   function scrollTo(id: string) {
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -145,7 +152,8 @@ function StoreLook({
   }
 
   return (
-    <div className={`${root} ${storeDesignFontClass}`} data-scheme={schemeOn ? scheme : undefined}>
+    <div className={styles.frame} style={accentStyle}>
+    <div className={`${root} ${storeDesignFontClass}`} data-scheme={shownScheme} data-lang={lang}>
       <header className={styles.top}>
         {logo ? <img className={styles.logo} src={logo} alt="" /> : <span className={styles.initial}>{categoryInitials(businessName)}</span>}
         <label className={styles.search}>
@@ -277,6 +285,7 @@ function StoreLook({
         </button>
       </nav>
       )}
+    </div>
     </div>
   );
 }

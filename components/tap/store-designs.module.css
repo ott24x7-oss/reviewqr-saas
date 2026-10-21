@@ -8,7 +8,7 @@
   --sd-accent-ink: var(--store-cta-ink, #f6f3ee);
   background: var(--sd-paper);
   color: var(--sd-ink);
-  font-family: var(--font-geist), var(--font-mukta), var(--font-noto-deva), sans-serif;
+  font-family: var(--font-geist), "Nirmala UI", "Noto Sans Devanagari", sans-serif;
   min-height: 100dvh;
   padding-bottom: 6.75rem;
 }
@@ -16,7 +16,7 @@
 .premium h1,
 .premium h2,
 .premium h3 {
-  font-family: var(--font-bricolage), var(--font-mukta), var(--font-noto-deva), sans-serif;
+  font-family: var(--font-bricolage), var(--font-geist), "Nirmala UI", "Noto Sans Devanagari", sans-serif;
   letter-spacing: -0.03em;
 }
 
@@ -430,7 +430,7 @@
 .minimal,
 .bold {
   color: var(--sd-ink);
-  font-family: var(--font-geist), var(--font-mukta), var(--font-noto-deva), sans-serif;
+  font-family: var(--font-geist), "Nirmala UI", "Noto Sans Devanagari", sans-serif;
   min-height: 100dvh;
 }
 
@@ -443,8 +443,14 @@
 .premium h1,
 .premium h2,
 .premium h3 {
-  font-family: var(--font-bricolage), var(--font-mukta), var(--font-noto-deva), sans-serif;
+  font-family: var(--font-bricolage), var(--font-geist), "Nirmala UI", "Noto Sans Devanagari", sans-serif;
   letter-spacing: -0.03em;
+}
+
+.premium[data-lang="hi"],
+.minimal[data-lang="hi"],
+.bold[data-lang="hi"] {
+  font-family: var(--font-geist), var(--font-noto-deva), "Nirmala UI", sans-serif;
 }
 
 .minimal {
@@ -587,7 +593,12 @@
   }
 }
 
-@media (min-width: 768px) {
+.frame {
+  container-type: inline-size;
+  container-name: rq-storefront;
+}
+
+@container rq-storefront (min-width: 768px) {
   .premium,
   .bold {
     padding-bottom: 2rem;
@@ -606,7 +617,7 @@
   }
 }
 
-@media (min-width: 1200px) {
+@container rq-storefront (min-width: 1200px) {
   .grid {
     grid-template-columns: repeat(4, 1fr);
   }
