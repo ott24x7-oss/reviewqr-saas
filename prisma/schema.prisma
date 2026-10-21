@@ -453,7 +453,9 @@ model Contact {
   email      String?
   phone      String?
   notes      String? @db.Text
-  source     String? // manual / csv / pos / api
+  /// Short labels such as VIP or regular. The owner writes these.
+  tags       String[] @default([])
+  source     String? // manual / csv / pos / api / order / feedback
 
   campaigns  CampaignContact[]
 

@@ -241,6 +241,23 @@ export async function POST(req: NextRequest) {
   }
   if (!order) return NextResponse.json({ error: "Could not save the order" }, { status: 500 });
 
+  if (savedPhone.customerPhone && savedPhone.consentAt) {
+    try {
+      await prisma.contact.upsert({
+        where: { businessId_phone: { businessId, phone: savedPhone.customerPhone } },
+        create: {
+          businessId,
+          phone: savedPhone.customerPhone,
+          name: customerName,
+          source: "order"
+        },
+        update: customerName ? { name: customerName } : {}
+      });
+    } catch (err) {
+      console.error("[orders] contact failed", err);
+    }
+  }
+
   try {
     await notifyNewOrder({
       businessId,

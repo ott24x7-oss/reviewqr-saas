@@ -139,6 +139,8 @@ export function StoreMenu({
   const [address, setAddress] = React.useState("");
   const [pincode, setPincode] = React.useState("");
   const [note, setNote] = React.useState("");
+  const [phone, setPhone] = React.useState("");
+  const [consent, setConsent] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState("");
   const [picking, setPicking] = React.useState<string | null>(null);
@@ -254,6 +256,7 @@ export function StoreMenu({
           note,
           ...(decision?.ok && coupon ? { coupon: coupon.code } : {}),
           payment: upiId && payment === "UPI" ? "UPI" : "CASH",
+          ...(consent ? { customerPhone: phone, consent: true } : { consent: false }),
           items: cart.map((line) => ({
             id: line.id,
             qty: line.qty,
@@ -577,6 +580,18 @@ export function StoreMenu({
             </div>
           ) : null}
           <input aria-label={text("customerName")} value={name} placeholder={text("customerName")} onChange={(event) => setName(event.target.value)} />
+          <label className="store-consent">
+            <input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} />
+            <span>{text("consentOrder")}</span>
+          </label>
+          <input
+            aria-label={text("phone")}
+            inputMode="tel"
+            autoComplete="tel"
+            value={phone}
+            placeholder={text("phone")}
+            onChange={(event) => setPhone(event.target.value)}
+          />
           {orderType === "DINE_IN" ? (
             <input aria-label={text("tableNumber")} value={table} placeholder={text("tableNumber")} onChange={(event) => setTable(event.target.value)} />
           ) : null}
