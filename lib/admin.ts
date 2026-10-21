@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "./auth";
 import { prisma } from "./db";
 import { redirect } from "next/navigation";
+import { deviceAuditAction, type DeviceStatusName } from "./tap/device-status";
 
 /** Server-component guard: redirects non-admins to /dashboard or /login. */
 export async function requireAdminPage() {
@@ -61,7 +62,14 @@ export type AuditAction =
   | "qr.disable"
   | "qr.enable"
   | "qr.label"
-  | "qr.location";
+  | "qr.location"
+  | "device.assign"
+  | "device.activate"
+  | "device.reassign"
+  | "device.disable"
+  | "device.lost"
+  | "device.uid"
+  | "print.batch";
 
 export async function logAudit(opts: {
   userId?: string;
@@ -87,6 +95,33 @@ export async function logAudit(opts: {
   } catch (e) {
     console.warn("[audit] log failed:", e);
   }
+}
+
+export async function logDeviceAudit(opts: {
+  userId?: string;
+  deviceId: string;
+  code: string;
+  from: DeviceStatusName;
+  to: DeviceStatusName;
+  businessChanged: boolean;
+  ip?: string;
+  userAgent?: string;
+}) {
+  if (opts.from === opts.to && !opts.businessChanged) return;
+  await logAudit({
+    userId: opts.userId,
+    action: deviceAuditAction(opts.from, opts.to, opts.businessChanged),
+    entity: "Device",
+    entityId: opts.deviceId,
+    metadata: {
+      code: opts.code,
+      from: opts.from,
+      to: opts.to,
+      businessChanged: opts.businessChanged
+    },
+    ip: opts.ip,
+    userAgent: opts.userAgent
+  });
 }
 
 /** Mask secrets in API responses so the dashboard never round-trips them in cleartext. */

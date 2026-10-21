@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { requireAdminApi, logAudit, type AuditAction } from "@/lib/admin";
+import { requireAdminApi, logAudit, logDeviceAudit, type AuditAction } from "@/lib/admin";
 import { getClientIp } from "@/lib/utils";
 import { codeFromScan } from "@/lib/tap/qr-stock";
-import { assignQr, generateStock, setQrEnabled, unassignQr, type QrChange } from "@/lib/tap/qr-mutate";
+import { assignQr, generateStock, markQrLost, setQrEnabled, unassignQr, type DeviceFollow, type QrChange } from "@/lib/tap/qr-mutate";
 
 const generateSchema = z.object({
   count: z.number().int().min(1).max(100)
@@ -11,7 +11,7 @@ const generateSchema = z.object({
 
 const patchSchema = z.object({
   code: z.string().min(4).max(500),
-  action: z.enum(["assign", "reassign", "unassign", "disable", "enable"]),
+  action: z.enum(["assign", "reassign", "unassign", "disable", "enable", "lost"]),
   businessId: z.string().optional(),
   label: z.string().max(80).optional(),
   confirm: z.boolean().optional()
@@ -44,10 +44,18 @@ export async function PATCH(req: NextRequest) {
   if (!code) return NextResponse.json({ error: "Enter a valid QR code" }, { status: 400 });
   const confirm = parsed.data.confirm === true;
 
+  if (parsed.data.action === "lost") {
+    const result = await markQrLost(code, confirm);
+    if (!result.ok) return confirmResponse(result);
+    await writeAudit(req, admin.user.id, "qr.disable", result.change);
+    await writeDevice(req, admin.user.id, result.device);
+    return NextResponse.json({ ok: true, code: result.change.code });
+  }
   if (parsed.data.action === "unassign") {
     const result = await unassignQr(code, confirm);
     if (!result.ok) return confirmResponse(result);
     await writeAudit(req, admin.user.id, "qr.unassign", result.change);
+    if (result.device) await writeDevice(req, admin.user.id, result.device);
     return NextResponse.json({ ok: true, code: result.change.code });
   }
   if (parsed.data.action === "disable" || parsed.data.action === "enable") {
@@ -55,6 +63,7 @@ export async function PATCH(req: NextRequest) {
     if (!result.ok) return confirmResponse(result);
     const action: AuditAction = parsed.data.action === "enable" ? "qr.enable" : "qr.disable";
     await writeAudit(req, admin.user.id, action, result.change);
+    if (result.device) await writeDevice(req, admin.user.id, result.device);
     return NextResponse.json({ ok: true, code: result.change.code });
   }
 
@@ -70,6 +79,7 @@ export async function PATCH(req: NextRequest) {
   if (result.change) {
     const action: AuditAction = result.change.fromBusinessId ? "qr.reassign" : "qr.assign";
     await writeAudit(req, admin.user.id, action, result.change);
+    if (result.device) await writeDevice(req, admin.user.id, result.device);
   }
   return NextResponse.json({ ok: true, already: result.already === true, code: result.change?.code || code });
 }
@@ -96,6 +106,19 @@ async function writeAudit(req: NextRequest, userId: string, action: AuditAction,
       label: change.label,
       actor: userId
     },
+    ip: getClientIp(req.headers),
+    userAgent: req.headers.get("user-agent") || undefined
+  });
+}
+
+async function writeDevice(req: NextRequest, userId: string, device: DeviceFollow) {
+  await logDeviceAudit({
+    userId,
+    deviceId: device.id,
+    code: device.code,
+    from: device.from,
+    to: device.to,
+    businessChanged: device.businessChanged,
     ip: getClientIp(req.headers),
     userAgent: req.headers.get("user-agent") || undefined
   });

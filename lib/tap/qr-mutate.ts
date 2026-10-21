@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { ownerLimitError, type LimitUser } from "@/lib/entitlements";
 import { locationInBusiness } from "@/lib/tenant";
 import { makeQrPublicId } from "./ids";
+import { deviceFollowsQr, lostStatus, type DeviceStatusName } from "./device-status";
 import { claimDecision, plainLabel, storedStatus, type QrStatusName } from "./qr-stock";
 import { markOnboarding } from "./onboarding-mark";
 
@@ -24,6 +25,21 @@ export type QrChange = {
   toStatus: QrStatusName;
   label: string;
 };
+
+export type DeviceFollow = {
+  id: string;
+  code: string;
+  from: DeviceStatusName;
+  to: DeviceStatusName;
+  businessChanged: boolean;
+};
+
+class DeviceStatusError extends Error {
+  constructor() {
+    super("This tag cannot make that change");
+    this.name = "DeviceStatusError";
+  }
+}
 
 type Fail = { ok: false; status: number; error: string; support?: boolean; needsConfirm?: boolean; message?: string };
 type Ok<T> = { ok: true } & T;
@@ -55,6 +71,45 @@ function touch(code: string, businessIds: Array<string | null>) {
   for (const id of businessIds) {
     if (id) revalidateTag(`biz:${id}`);
   }
+}
+
+async function syncDevice(
+  tx: Prisma.TransactionClient,
+  shortCode: string,
+  qrStatus: QrStatusName,
+  link: {
+    businessId: string | null;
+    locationId?: string | null;
+    staffId?: string | null;
+    tableLabel?: string | null;
+  }
+): Promise<DeviceFollow | null> {
+  const device = await tx.device.findUnique({ where: { shortCode } });
+  if (!device) return null;
+  const next = deviceFollowsQr(device.status, qrStatus, link.businessId);
+  if (!next) throw new DeviceStatusError();
+  await tx.device.update({
+    where: { id: device.id },
+    data: {
+      status: next,
+      businessId: link.businessId,
+      ...(link.locationId !== undefined ? { locationId: link.locationId } : {}),
+      ...(link.staffId !== undefined ? { staffId: link.staffId } : {}),
+      ...(link.tableLabel !== undefined ? { tableLabel: link.tableLabel } : {})
+    }
+  });
+  return {
+    id: device.id,
+    code: shortCode,
+    from: device.status,
+    to: next,
+    businessChanged: device.businessId !== link.businessId
+  };
+}
+
+function statusFailure(error: unknown): Fail | null {
+  if (error instanceof DeviceStatusError) return fail(409, error.message);
+  return null;
 }
 
 export async function allocateQrId(tx: Prisma.TransactionClient | typeof prisma = prisma) {
@@ -125,7 +180,7 @@ export async function assignQr(input: {
   label?: string;
   confirm: boolean;
   allowReassign: boolean;
-}): Promise<Fail | Ok<{ change: QrChange | null; already?: boolean }>> {
+}): Promise<Fail | Ok<{ change: QrChange | null; already?: boolean; device?: DeviceFollow | null }>> {
   const qr = await findQr(input.code);
   if (!qr) return fail(404, "This QR was not found");
   const business = await prisma.business.findFirst({
@@ -155,21 +210,41 @@ export async function assignQr(input: {
   const label = input.label ? plainLabel(input.label) : qr.label;
   const moved = qr.businessId !== business.id;
   const flags = storedStatus("ACTIVE");
-  const updated = await prisma.qRCode.update({
-    where: { id: qr.id },
-    data: {
-      businessId: business.id,
-      label: label || qr.label,
-      assignedAt: new Date(),
-      locationId: moved ? null : qr.locationId,
-      staffId: moved ? null : qr.staffId,
-      ...flags
-    }
-  });
+  let updated;
+  let device: DeviceFollow | null = null;
+  try {
+    const saved = await prisma.$transaction(async (tx) => {
+      const row = await tx.qRCode.update({
+        where: { id: qr.id },
+        data: {
+          businessId: business.id,
+          label: label || qr.label,
+          assignedAt: new Date(),
+          locationId: moved ? null : qr.locationId,
+          staffId: moved ? null : qr.staffId,
+          ...flags
+        }
+      });
+      const followed = await syncDevice(tx, row.shortCode, "ACTIVE", {
+        businessId: business.id,
+        locationId: moved ? null : qr.locationId,
+        staffId: moved ? null : qr.staffId,
+        tableLabel: row.label
+      });
+      return { row, followed };
+    });
+    updated = saved.row;
+    device = saved.followed;
+  } catch (error) {
+    const blocked = statusFailure(error);
+    if (blocked) return blocked;
+    throw error;
+  }
   touch(updated.shortCode, [qr.businessId, business.id]);
   await markOnboarding(business.ownerId, "qr_activated");
   return {
     ok: true,
+    device,
     change: {
       id: updated.id,
       code: updated.shortCode,
@@ -182,18 +257,38 @@ export async function assignQr(input: {
   };
 }
 
-export async function unassignQr(code: string, confirm: boolean): Promise<Fail | Ok<{ change: QrChange }>> {
+export async function unassignQr(code: string, confirm: boolean): Promise<Fail | Ok<{ change: QrChange; device: DeviceFollow | null }>> {
   const qr = await findQr(code);
   if (!qr) return fail(404, "This QR was not found");
   if (!confirm) return fail(409, "Return this QR to stock?", { needsConfirm: true, message: "Return this QR to stock?" });
   const flags = storedStatus("UNASSIGNED");
-  const updated = await prisma.qRCode.update({
-    where: { id: qr.id },
-    data: { businessId: null, locationId: null, staffId: null, assignedAt: null, ...flags }
-  });
+  let updated;
+  let device: DeviceFollow | null = null;
+  try {
+    const saved = await prisma.$transaction(async (tx) => {
+      const row = await tx.qRCode.update({
+        where: { id: qr.id },
+        data: { businessId: null, locationId: null, staffId: null, assignedAt: null, ...flags }
+      });
+      const followed = await syncDevice(tx, row.shortCode, "UNASSIGNED", {
+        businessId: null,
+        locationId: null,
+        staffId: null,
+        tableLabel: null
+      });
+      return { row, followed };
+    });
+    updated = saved.row;
+    device = saved.followed;
+  } catch (error) {
+    const blocked = statusFailure(error);
+    if (blocked) return blocked;
+    throw error;
+  }
   touch(updated.shortCode, [qr.businessId]);
   return {
     ok: true,
+    device,
     change: {
       id: updated.id,
       code: updated.shortCode,
@@ -211,7 +306,7 @@ export async function setQrEnabled(
   enabled: boolean,
   confirm: boolean,
   scopeBusinessId?: string
-): Promise<Fail | Ok<{ change: QrChange }>> {
+): Promise<Fail | Ok<{ change: QrChange; device: DeviceFollow | null }>> {
   const qr = await findQr(code);
   if (!qr) return fail(404, "This QR was not found");
   if (scopeBusinessId && qr.businessId !== scopeBusinessId) return fail(404, "This QR was not found");
@@ -219,13 +314,25 @@ export async function setQrEnabled(
   if (!confirm) return fail(409, message, { needsConfirm: true, message });
   const next: QrStatusName = enabled ? (qr.businessId ? "ACTIVE" : "UNASSIGNED") : "DISABLED";
   const flags = storedStatus(next);
-  const updated = await prisma.qRCode.update({
-    where: { id: qr.id },
-    data: flags
-  });
+  let updated;
+  let device: DeviceFollow | null = null;
+  try {
+    const saved = await prisma.$transaction(async (tx) => {
+      const row = await tx.qRCode.update({ where: { id: qr.id }, data: flags });
+      const followed = await syncDevice(tx, row.shortCode, next, { businessId: qr.businessId });
+      return { row, followed };
+    });
+    updated = saved.row;
+    device = saved.followed;
+  } catch (error) {
+    const blocked = statusFailure(error);
+    if (blocked) return blocked;
+    throw error;
+  }
   touch(updated.shortCode, [qr.businessId]);
   return {
     ok: true,
+    device,
     change: {
       id: updated.id,
       code: updated.shortCode,
@@ -246,12 +353,22 @@ export async function setManyEnabled(codes: string[], businessId: string, enable
   });
   if (rows.length !== unique.length) return fail(404, "A code was not found");
   const next: QrStatusName = enabled ? "ACTIVE" : "DISABLED";
-  await prisma.qRCode.updateMany({
-    where: { id: { in: rows.map((row) => row.id) } },
-    data: storedStatus(next)
-  });
+  const devices: DeviceFollow[] = [];
+  try {
+    await prisma.$transaction(async (tx) => {
+      for (const row of rows) {
+        await tx.qRCode.update({ where: { id: row.id }, data: storedStatus(next) });
+        const followed = await syncDevice(tx, row.shortCode, next, { businessId: row.businessId });
+        if (followed) devices.push(followed);
+      }
+    });
+  } catch (error) {
+    const blocked = statusFailure(error);
+    if (blocked) return blocked;
+    throw error;
+  }
   for (const row of rows) touch(row.shortCode, [businessId]);
-  return { ok: true as const, rows, toStatus: next };
+  return { ok: true as const, rows, toStatus: next, devices };
 }
 
 export async function setQrLabel(code: string, label: string, scopeBusinessId: string) {
@@ -259,7 +376,11 @@ export async function setQrLabel(code: string, label: string, scopeBusinessId: s
   if (!qr || qr.businessId !== scopeBusinessId) return fail(404, "This QR was not found");
   const next = plainLabel(label);
   if (!next) return fail(400, "Enter a label");
-  const updated = await prisma.qRCode.update({ where: { id: qr.id }, data: { label: next } });
+  const updated = await prisma.$transaction(async (tx) => {
+    const row = await tx.qRCode.update({ where: { id: qr.id }, data: { label: next } });
+    await tx.device.updateMany({ where: { shortCode: row.shortCode }, data: { tableLabel: row.label } });
+    return row;
+  });
   touch(updated.shortCode, [qr.businessId]);
   return {
     ok: true as const,
@@ -280,9 +401,16 @@ export async function setQrLocation(code: string, locationId: string | null, sco
   if (!qr || qr.businessId !== scopeBusinessId) return fail(404, "This QR was not found");
   const location = await locationInBusiness(scopeBusinessId, locationId);
   if (!location.ok) return fail(400, location.error);
-  const updated = await prisma.qRCode.update({
-    where: { id: qr.id },
-    data: { locationId: locationId || null }
+  const updated = await prisma.$transaction(async (tx) => {
+    const row = await tx.qRCode.update({
+      where: { id: qr.id },
+      data: { locationId: locationId || null }
+    });
+    await tx.device.updateMany({
+      where: { shortCode: row.shortCode },
+      data: { locationId: locationId || null }
+    });
+    return row;
   });
   touch(updated.shortCode, [qr.businessId]);
   return {
@@ -296,5 +424,41 @@ export async function setQrLocation(code: string, locationId: string | null, sco
       toStatus: qr.status,
       label: updated.label
     } satisfies QrChange
+  };
+}
+
+export async function markQrLost(code: string, confirm: boolean): Promise<Fail | Ok<{ change: QrChange; device: DeviceFollow }>> {
+  const qr = await findQr(code);
+  if (!qr) return fail(404, "This QR was not found");
+  const device = await prisma.device.findUnique({ where: { shortCode: qr.shortCode } });
+  if (!device) return fail(404, "This tag was not found");
+  if (!confirm) return fail(409, "Mark this tag as lost?", { needsConfirm: true, message: "Mark this tag as lost?" });
+  const next = lostStatus(device.status);
+  if (!next) return fail(409, "This tag cannot be marked lost");
+  const flags = storedStatus("DISABLED");
+  const updated = await prisma.$transaction(async (tx) => {
+    const row = await tx.qRCode.update({ where: { id: qr.id }, data: flags });
+    await tx.device.update({ where: { id: device.id }, data: { status: "LOST" } });
+    return row;
+  });
+  touch(updated.shortCode, [qr.businessId]);
+  return {
+    ok: true,
+    device: {
+      id: device.id,
+      code: updated.shortCode,
+      from: device.status,
+      to: "LOST",
+      businessChanged: false
+    },
+    change: {
+      id: updated.id,
+      code: updated.shortCode,
+      fromBusinessId: qr.businessId,
+      toBusinessId: qr.businessId,
+      fromStatus: qr.status,
+      toStatus: "DISABLED",
+      label: updated.label
+    }
   };
 }
