@@ -1064,6 +1064,11 @@
   font-family: var(--font-inter), var(--font-mukta), var(--font-noto-deva), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
+.store-page[data-design="PREMIUM"],
+.store-page[data-design="MINIMAL"],
+.store-page[data-design="BOLD"] {
+  font-family: "Nirmala UI", "Noto Sans Devanagari", sans-serif;
+}
 .store-wrap {
   width: min(720px, 100%);
   margin: 0 auto;

@@ -35,6 +35,9 @@ export default async function OffersPage({ params }: { params: { id: string } })
     id: banner.id,
     title: banner.title,
     body: banner.body,
+    expiresOn: banner.expiresAt
+      ? new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(banner.expiresAt)
+      : "",
     active: banner.active
   }));
   return (

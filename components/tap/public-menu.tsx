@@ -8,6 +8,7 @@ import { loadPublicTap } from "@/lib/tap/resolve";
 import { isOrderForLater, rulesFromSettings } from "@/lib/store/pricing";
 import { normalizeUpiId } from "@/lib/store/upi";
 import { resolveLayout } from "@/lib/store/layout";
+import { resolveDesign } from "@/lib/store/design";
 import { readAdminThemes } from "@/lib/tap/theme-store";
 import { FREE_THEME_ID, THEME_PRESETS, resolveTheme, tokensToStyle } from "@/lib/tap/themes";
 import { PublicTap } from "./public-page";
@@ -29,7 +30,7 @@ export async function PublicMenu({
   if (record.status !== "active") {
     return <PublicTap code={code} channel={channel} countScan={false} />;
   }
-  const [categories, loose, extra, settings, qr, banners, profile] = await Promise.all([
+  const [categories, loose, extra, settings, qr, banners, coupons, profile] = await Promise.all([
     prisma.menuCategory.findMany({
       where: { businessId: record.businessId },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
@@ -50,11 +51,23 @@ export async function PublicMenu({
     prisma.storeSettings.findUnique({ where: { businessId: record.businessId } }),
     prisma.qRCode.findUnique({ where: { shortCode: record.shortCode }, select: { label: true } }),
     prisma.offerBanner.findMany({
-      where: { businessId: record.businessId, active: true },
+      where: {
+        businessId: record.businessId,
+        active: true,
+        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }]
+      },
       orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-      select: { id: true, title: true, body: true }
+      select: { id: true, title: true, body: true, expiresAt: true }
     }),
-    prisma.business.findUnique({ where: { id: record.businessId }, select: { industry: true } })
+    prisma.coupon.findMany({
+      where: {
+        businessId: record.businessId,
+        active: true,
+        expiresAt: { gt: new Date() }
+      },
+      select: { id: true, code: true, kind: true, amount: true, expiresAt: true, active: true }
+    }),
+    prisma.business.findUnique({ where: { id: record.businessId }, select: { industry: true, logo: true } })
   ]);
   const rules = rulesFromSettings(settings, hoursFromPublished(record.business.published));
   const items: StoreItem[] = [
@@ -92,10 +105,25 @@ export async function PublicMenu({
         rules={rules}
         closed={isOrderForLater(rules)}
         tableLabel={hideTable ? "" : qr?.label || ""}
-        banners={banners}
+        banners={banners.map((banner) => ({
+          id: banner.id,
+          title: banner.title,
+          body: banner.body,
+          expiresAt: banner.expiresAt ? banner.expiresAt.toISOString() : null
+        }))}
+        coupons={coupons.map((coupon) => ({
+          id: coupon.id,
+          code: coupon.code,
+          kind: coupon.kind,
+          amount: coupon.amount,
+          active: coupon.active,
+          expiresAt: coupon.expiresAt ? coupon.expiresAt.toISOString() : null
+        }))}
         upiId={normalizeUpiId(settings?.upiId || "") || ""}
         themeStyle={themeStyle as CSSProperties | undefined}
         layout={resolveLayout(settings?.layout, profile?.industry)}
+        design={resolveDesign(settings?.design)}
+        logoUrl={profile?.logo || ""}
         homeHref={homeHref}
         askBase={whatsAppNumberUrl(record.business.whatsappNumber) || ""}
       />

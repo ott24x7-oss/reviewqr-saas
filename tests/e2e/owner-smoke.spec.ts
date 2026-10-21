@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test("owner registers, collects a private review, and sees UPI checkout", async ({ page }) => {
-  test.setTimeout(150_000);
+  test.setTimeout(180_000);
   const email = `smoke-${Date.now()}@example.com`;
   const message = "The tea was cold and the wait was long";
 
@@ -94,6 +94,21 @@ test("owner registers, collects a private review, and sees UPI checkout", async 
   await page.waitForURL(/\/o\//);
   const shopNumber = (await page.getByRole("heading", { level: 1 }).innerText()).trim();
   expect(shopNumber).not.toBe(foodNumber);
+
+  await page.goto("/dashboard/businesses");
+  await page.getByRole("link", { name: "Manage", exact: true }).click();
+  await page.getByRole("link", { name: "Store settings" }).click();
+  await page.getByRole("button", { name: "Premium Store" }).click();
+  await page.getByRole("button", { name: "Save store settings" }).click();
+  await expect(page.getByText("Store settings saved")).toBeVisible();
+  await page.goto(`/q/${code}/menu`);
+  await page.getByRole("button", { name: "Add", exact: true }).first().click();
+  await page.getByRole("button", { name: "Cart" }).first().click();
+  await page.getByRole("button", { name: "Buy on WhatsApp" }).click();
+  await page.waitForURL(/\/o\//);
+  const premiumNumber = (await page.getByRole("heading", { level: 1 }).innerText()).trim();
+  expect(premiumNumber).toBeTruthy();
+  expect(premiumNumber).not.toBe(shopNumber);
 
   await page.goto("/dashboard/orders");
   await expect(page.getByText(foodNumber, { exact: true })).toBeVisible();

@@ -117,6 +117,8 @@ async function updateCoupon(businessId: string, data: z.infer<typeof schema>) {
 async function createBanner(businessId: string, data: z.infer<typeof schema>) {
   const title = (data.title || "").trim();
   if (!title) return NextResponse.json({ error: "Name the offer" }, { status: 400 });
+  const expiresAt = data.expiresOn ? endOfKolkataDay(data.expiresOn) : null;
+  if (data.expiresOn && !expiresAt) return NextResponse.json({ error: "Enter a valid expiry date" }, { status: 400 });
   const sortOrder = await prisma.offerBanner.count({ where: { businessId } });
   await prisma.offerBanner.create({
     data: {
@@ -124,6 +126,7 @@ async function createBanner(businessId: string, data: z.infer<typeof schema>) {
       title,
       body: (data.body || "").trim(),
       active: data.active !== false,
+      expiresAt,
       sortOrder
     }
   });
@@ -135,12 +138,15 @@ async function updateBanner(businessId: string, data: z.infer<typeof schema>) {
   if (!row) return NextResponse.json({ error: "Offer not found" }, { status: 400 });
   const title = data.title !== undefined ? data.title.trim() : row.title;
   if (!title) return NextResponse.json({ error: "Name the offer" }, { status: 400 });
+  const expiresAt = data.expiresOn === undefined ? row.expiresAt : data.expiresOn ? endOfKolkataDay(data.expiresOn) : null;
+  if (data.expiresOn && !expiresAt) return NextResponse.json({ error: "Enter a valid expiry date" }, { status: 400 });
   await prisma.offerBanner.update({
     where: { id: row.id },
     data: {
       title,
       ...(data.body !== undefined ? { body: data.body.trim() } : {}),
-      ...(data.active !== undefined ? { active: data.active } : {})
+      ...(data.active !== undefined ? { active: data.active } : {}),
+      ...(data.expiresOn !== undefined ? { expiresAt } : {})
     }
   });
   return null;

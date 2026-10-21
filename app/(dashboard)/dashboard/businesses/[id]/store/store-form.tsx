@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { WEEK_DAYS, type WeekDay, type WeekHours } from "@/lib/tap/hours";
+import { DesignPicker } from "@/components/tap/design-picker";
 
 const DAY_LABEL: Record<WeekDay, string> = {
   sun: "Sunday",
@@ -37,6 +38,7 @@ export type StoreFormValues = {
   prepMinutes: number;
   upiId: string;
   layout: "AUTO" | "FOOD" | "SHOP" | "SERVICES";
+  design: "CLASSIC" | "PREMIUM" | "MINIMAL" | "BOLD";
 };
 
 function hoursState(hours: WeekHours | null): HoursState {
@@ -52,7 +54,17 @@ function rupees(value: string) {
   return Number.isFinite(number) ? Math.max(0, number) : 0;
 }
 
-export function StoreForm({ businessId, initial }: { businessId: string; initial: StoreFormValues }) {
+export function StoreForm({
+  businessId,
+  initial,
+  accent,
+  accentInk
+}: {
+  businessId: string;
+  initial: StoreFormValues;
+  accent: string;
+  accentInk: string;
+}) {
   const router = useRouter();
   const [holiday, setHoliday] = React.useState(initial.holiday);
   const [hours, setHours] = React.useState(() => hoursState(initial.hours));
@@ -72,6 +84,7 @@ export function StoreForm({ businessId, initial }: { businessId: string; initial
   const [prep, setPrep] = React.useState(String(initial.prepMinutes));
   const [upiId, setUpiId] = React.useState(initial.upiId);
   const [layout, setLayout] = React.useState(initial.layout);
+  const [design, setDesign] = React.useState(initial.design);
   const [busy, setBusy] = React.useState(false);
 
   function setDay(day: WeekDay, key: "open" | "close", value: string) {
@@ -105,7 +118,8 @@ export function StoreForm({ businessId, initial }: { businessId: string; initial
           pricesIncludeGst,
           prepMinutes: Math.min(240, Math.max(1, Math.round(Number(prep) || 20))),
           upiId,
-          layout
+          layout,
+          design
         })
       });
       const json = await res.json().catch(() => ({}));
@@ -140,6 +154,9 @@ export function StoreForm({ businessId, initial }: { businessId: string; initial
       </Card>
       <Card>
         <CardContent className="space-y-3 p-4">
+          <h2 className="font-semibold">Design</h2>
+          <DesignPicker value={design} onChange={setDesign} accent={accent} accentInk={accentInk} />
+          <p className="text-sm text-muted-foreground">Classic keeps the current menu or product grid. The colour theme still sets the accent.</p>
           <h2 className="font-semibold">Layout</h2>
           <select
             aria-label="Store layout"
