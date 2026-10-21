@@ -17,6 +17,9 @@ export type ProductionCard = {
   status: ShopOrderStatusName;
   businessName: string;
   anyLineNeedsNfc: boolean;
+  ships: boolean;
+  awb: string | null;
+  lastError: string | null;
   lines: Array<{ id: string; name: string; hasProof: boolean }>;
 };
 
@@ -29,7 +32,7 @@ function adminTargets(from: ShopOrderStatusName, anyLineNeedsNfc: boolean) {
   });
 }
 
-export function ProductionBoard({ cards }: { cards: ProductionCard[] }) {
+export function ProductionBoard({ cards, carrierState }: { cards: ProductionCard[]; carrierState: string }) {
   const router = useRouter();
   const [selected, setSelected] = React.useState<string[]>([]);
   const [busy, setBusy] = React.useState(false);
@@ -70,6 +73,53 @@ export function ProductionBoard({ cards }: { cards: ProductionCard[] }) {
     }
   }
 
+  async function ship(id: string) {
+    setBusy(true);
+    try {
+      const response = await fetch(`/api/admin/shop/orders/${id}/ship`, { method: "POST" });
+      if (!response.ok) throw new Error(await readError(response, "Could not queue the shipment"));
+      toast.success("Shipment queued");
+      router.refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not queue the shipment");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function labels() {
+    if (!selected.length) {
+      toast.error("Choose an order");
+      return;
+    }
+    setBusy(true);
+    try {
+      const response = await fetch("/api/admin/shop/orders/labels", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ids: selected })
+      });
+      const type = response.headers.get("content-type") || "";
+      if (!response.ok) throw new Error(await readError(response, "Could not queue the labels"));
+      if (type.includes("text/plain")) {
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "labels.txt";
+        link.click();
+        URL.revokeObjectURL(url);
+        return;
+      }
+      const payload = (await response.json()) as { queued?: number };
+      toast.success(payload.queued ? "Labels queued" : "Labels are ready");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not queue the labels");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function printSelected() {
     if (!selected.length) {
       toast.error("Choose an order to print");
@@ -103,9 +153,13 @@ export function ProductionBoard({ cards }: { cards: ProductionCard[] }) {
         <Button type="button" className="rounded-full bg-ink text-white hover:bg-ink/90" onClick={printSelected} disabled={busy}>
           Print approved designs
         </Button>
+        <Button type="button" variant="outline" className="rounded-full" onClick={labels} disabled={busy}>
+          Labels for selected
+        </Button>
         <Button type="button" variant="outline" className="rounded-full" asChild>
           <Link href="/admin/production/nfc">NFC queue</Link>
         </Button>
+        {carrierState === "Not configured" && <p className="text-sm text-amber-800">Not configured</p>}
       </div>
       <div className="flex gap-3 overflow-x-auto pb-2">
         {COLUMNS.map((status) => {
@@ -130,6 +184,8 @@ export function ProductionBoard({ cards }: { cards: ProductionCard[] }) {
                     />
                     <span className="font-semibold">{card.businessName}</span>
                   </label>
+                  {card.awb && <p>AWB {card.awb}</p>}
+                  {card.lastError && <p className="text-amber-800">{card.lastError}</p>}
                   {card.lines.map((line) => (
                     <p key={line.id}>
                       {line.name}
@@ -143,6 +199,12 @@ export function ProductionBoard({ cards }: { cards: ProductionCard[] }) {
                       )}
                     </p>
                   ))}
+                  {card.status === "PACKED" && card.ships && carrierState === "Not configured" && <p>Not configured</p>}
+                  {card.status === "PACKED" && card.ships && carrierState !== "Not configured" && (
+                    <Button type="button" className="rounded-full bg-ink text-white hover:bg-ink/90" onClick={() => ship(card.id)} disabled={busy}>
+                      Create shipment
+                    </Button>
+                  )}
                   {(card.status === "PAID" || card.status === "CHANGES_REQUESTED") && (
                     <Button type="button" className="rounded-full bg-ink text-white hover:bg-ink/90" onClick={() => sendProof(card.id)} disabled={busy}>
                       Send proof

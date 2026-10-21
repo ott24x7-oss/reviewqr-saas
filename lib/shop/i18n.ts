@@ -35,6 +35,9 @@ const STRINGS = {
     proof: "View proof",
     changeNote: "What should change?",
     timeline: "Order timeline",
+    tracking: "Tracking",
+    awb: "AWB",
+    ndr: "Delivery attempt",
     mrp: "MRP",
     off: "off"
   },
@@ -72,6 +75,9 @@ const STRINGS = {
     proof: "प्रूफ देखें",
     changeNote: "क्या बदलना है?",
     timeline: "ऑर्डर की स्थिति",
+    tracking: "ट्रैकिंग",
+    awb: "एडब्ल्यूबी",
+    ndr: "डिलीवरी का प्रयास",
     mrp: "एमआरपी",
     off: "छूट"
   }

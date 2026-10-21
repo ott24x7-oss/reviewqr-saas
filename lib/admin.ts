@@ -74,7 +74,8 @@ export type AuditAction =
   | "settings.shipping.update"
   | "settings.shop.update"
   | "shop.order.pay"
-  | "shop.order.move";
+  | "shop.order.move"
+  | "shop.order.ndr";
 
 export async function logAudit(opts: {
   userId?: string;

@@ -6,7 +6,7 @@ import { prisma } from "@/lib/db";
 import { shopCopy } from "@/lib/shop/i18n";
 import { canManageShopOrder } from "@/lib/shop/order-access";
 import { isShopOrderStatus, shopStatusLabel } from "@/lib/shop/order-status";
-import { formatINR } from "@/lib/utils";
+import { absoluteUrl, formatINR } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +15,7 @@ export default async function ShopOrderPage({ params }: { params: { id: string }
   if (!user) notFound();
   const found = await prisma.shopOrder.findUnique({
     where: { id: params.id },
-    include: { lines: true }
+    include: { lines: true, shipment: true }
   });
   if (!found || !(await canManageShopOrder(user.id, found))) notFound();
   const order = found;
@@ -71,6 +71,15 @@ export default async function ShopOrderPage({ params }: { params: { id: string }
           ))}
         </ul>
       </section>
+      {order.shipment?.awb && (
+        <section className="space-y-1 rounded-[20px] bg-white p-4 text-sm shadow-sm">
+          <h2 className="font-semibold">{copy.tracking}</h2>
+          <p>{copy.awb} {order.shipment.awb}</p>
+          {order.shipment.courierName && <p>{order.shipment.courierName}</p>}
+          {order.shipment.ndrNote && <p>{copy.ndr}: {order.shipment.ndrNote}</p>}
+          <p>{absoluteUrl(`/dashboard/shop/orders/${order.id}`)}</p>
+        </section>
+      )}
       {printed && <p className="rounded-[20px] bg-white p-4 text-sm shadow-sm">{copy.policy}</p>}
     </div>
   );

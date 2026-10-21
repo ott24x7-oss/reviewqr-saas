@@ -1383,6 +1383,7 @@ model ShopOrder {
   fingerprint       String?         @db.Text
   lines             ShopOrderLine[]
   deliveries        ShopPaymentDelivery[]
+  shipment          ShopShipment?
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
@@ -1433,6 +1434,39 @@ model ShopPaymentDelivery {
   orderId    String
   order      ShopOrder @relation(fields: [orderId], references: [id], onDelete: Restrict)
   createdAt  DateTime  @default(now())
+}
+
+// One carrier booking for a shop order. The label is stored here so a later job
+// does not need the mock carrier's in-memory booking.
+model ShopShipment {
+  id          String    @id @default(cuid())
+  orderId     String    @unique
+  order       ShopOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  provider    String
+  shipmentId  String?
+  awb         String?
+  courierName String?
+  pickupId    String?
+  labelName   String?
+  labelBase64 String?   @db.Text
+  ndrNote     String?   @db.Text
+  lastError   String?   @db.Text
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([awb])
+}
+
+// One carrier webhook delivery. The key is event id + AWB + status.
+model ShopCarrierEvent {
+  id        String   @id @default(cuid())
+  eventKey  String   @unique
+  awb       String
+  status    String
+  orderId   String?
+  createdAt DateTime @default(now())
+
+  @@index([awb])
 }
 
 // Singleton: admin-overridable branding for the WatShop Review *platform*

@@ -5,6 +5,7 @@ import { deliverNegativeFeedback } from "../notify";
 import { sendPushToUsers, type PushPayload } from "../push";
 import { deliverNewOrder, deliverOrderStatus } from "../store/order-alert";
 import type { OrderStatus } from "../store/order-status";
+import { runShopJob } from "../shop/ship-order";
 import type { ClaimedJob } from "./store";
 
 function record(payload: Prisma.JsonValue) {
@@ -75,6 +76,11 @@ export async function handleJob(job: ClaimedJob) {
       return expireLapsedSubscriptions();
     case "billing.reminders":
       return sendRenewalReminders();
+    case "shop.ship":
+    case "shop.label":
+    case "shop.track":
+    case "shop.notify":
+      return runShopJob(job.type, payload);
     case "print.export":
       throw new Error("Print export must run in the download request");
     default:
