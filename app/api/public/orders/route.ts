@@ -11,6 +11,7 @@ import { STORE_ORDER_LIMIT, storeOrderRateKeys } from "@/lib/store/limits";
 import { enabledOrderTypes, quoteOrder, rulesFromSettings, type OrderType } from "@/lib/store/pricing";
 import { optionLineName, resolveChoice } from "@/lib/store/variants";
 import { couponDiscount, normalizeCouponCode } from "@/lib/store/coupons";
+import { normalizeUpiId, upiPayUrl } from "@/lib/store/upi";
 
 const schema = z.object({
   code: z.string().min(4).max(32),
@@ -21,6 +22,7 @@ const schema = z.object({
   pincode: z.string().max(12).optional(),
   note: z.string().max(400).optional(),
   coupon: z.string().max(24).optional(),
+  payment: z.enum(["CASH", "UPI"]).optional(),
   items: z.array(z.object({
     id: z.string().min(1).max(40),
     qty: z.number().int().min(1).max(20),
@@ -167,6 +169,11 @@ export async function POST(req: NextRequest) {
   const note = (data.note || "").trim().slice(0, 400) || null;
   const pincode = orderType === "DELIVERY" ? (data.pincode || "").replace(/\D/g, "").slice(0, 6) : null;
   const businessId = qr.business.id;
+  const upiId = normalizeUpiId(settings?.upiId || "") || "";
+  const payment = data.payment === "UPI" ? "UPI" : "CASH";
+  if (payment === "UPI" && !upiId) {
+    return NextResponse.json({ error: explain(data.lang, "payment") }, { status: 400 });
+  }
 
   let order = null;
   for (let attempt = 0; attempt < 3 && !order; attempt += 1) {
@@ -207,6 +214,7 @@ export async function POST(req: NextRequest) {
             orderForLater: quote.orderForLater,
             prepMinutes: quote.prepMinutes,
             couponCode: couponCode || null,
+            payment,
             totalPaise: quote.totalPaise,
             items: lines,
             source: "qr",
@@ -244,7 +252,8 @@ export async function POST(req: NextRequest) {
           orderForLater: quote.orderForLater,
           prepMinutes: quote.prepMinutes,
           orderType,
-          pincode: pincode || ""
+          pincode: pincode || "",
+          ...(payment === "UPI" ? { paymentUrl: upiPayUrl(upiId, qr.business.name, quote.totalPaise) } : {})
         }
       }).url
     : null;
@@ -272,6 +281,7 @@ function explain(lang: "en" | "hi" | undefined, code: string, shortfallPaise?: n
   if (code === "expired") return hi ? "इस कूपन की समय-सीमा समाप्त हो गई है।" : "That coupon has expired.";
   if (code === "minimum") return hi ? "इस कूपन के लिए ऑर्डर और बढ़ाएँ।" : "This coupon needs a higher order.";
   if (code === "used") return hi ? "यह कूपन इस्तेमाल हो चुका है।" : "That coupon has been used up.";
+  if (code === "payment") return hi ? "UPI अभी उपलब्ध नहीं है।" : "UPI isn't available right now.";
   return hi ? "ऑर्डर नहीं बन सका।" : "Could not place the order";
 }
 

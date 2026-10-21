@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { requireBusinessRole } from "@/lib/tenant";
 import { WEEK_DAYS, type WeekHours } from "@/lib/tap/hours";
+import { normalizeUpiId } from "@/lib/store/upi";
 
 const day = z.object({
   open: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
@@ -26,7 +27,8 @@ const schema = z.object({
   gstEnabled: z.boolean(),
   gstPercent: z.number().int().min(0).max(28),
   pricesIncludeGst: z.boolean(),
-  prepMinutes: z.number().int().min(1).max(240)
+  prepMinutes: z.number().int().min(1).max(240),
+  upiId: z.string().max(80).optional()
 });
 
 function paise(rupees: number) {
@@ -51,6 +53,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     const row = data.hours[key];
     if (row) hours[key] = row;
   }
+  const upiId = normalizeUpiId(data.upiId || "");
+  if (upiId == null) {
+    return NextResponse.json({ error: "Enter a UPI ID like name@bank" }, { status: 400 });
+  }
   const saved = {
     holiday: data.holiday,
     hours,
@@ -65,7 +71,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     gstEnabled: data.gstEnabled,
     gstPercent: data.gstPercent,
     pricesIncludeGst: data.pricesIncludeGst,
-    prepMinutes: data.prepMinutes
+    prepMinutes: data.prepMinutes,
+    upiId
   };
   await prisma.storeSettings.upsert({
     where: { businessId: business.id },

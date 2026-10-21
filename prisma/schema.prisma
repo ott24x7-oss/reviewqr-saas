@@ -861,6 +861,7 @@ model MenuOrder {
   orderForLater    Boolean         @default(false)
   prepMinutes      Int?
   couponCode       String?
+  payment          StorePayment?
   totalPaise       Int
   items            Json
   source           String?
@@ -873,6 +874,11 @@ model MenuOrder {
 enum CouponKind {
   PERCENT
   FLAT
+}
+
+enum StorePayment {
+  CASH
+  UPI
 }
 
 model Coupon {

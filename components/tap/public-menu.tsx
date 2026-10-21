@@ -6,6 +6,7 @@ import { isLookupCode } from "@/lib/tap/ids";
 import { hoursFromPublished } from "@/lib/tap/links";
 import { loadPublicTap } from "@/lib/tap/resolve";
 import { isOrderForLater, rulesFromSettings } from "@/lib/store/pricing";
+import { normalizeUpiId } from "@/lib/store/upi";
 import { readAdminThemes } from "@/lib/tap/theme-store";
 import { FREE_THEME_ID, THEME_PRESETS, resolveTheme, tokensToStyle } from "@/lib/tap/themes";
 import { PublicTap } from "./public-page";
@@ -80,6 +81,7 @@ export async function PublicMenu({ code, channel }: { code: string; channel: "q"
         closed={isOrderForLater(rules)}
         tableLabel={qr?.label || ""}
         banners={banners}
+        upiId={normalizeUpiId(settings?.upiId || "") || ""}
         themeStyle={themeStyle as CSSProperties | undefined}
       />
     </div>

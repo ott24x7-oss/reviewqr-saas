@@ -66,6 +66,9 @@ const STRINGS = {
     couponExpired: "That coupon has expired.",
     couponMinimum: "This coupon needs a higher order.",
     couponUsed: "That coupon has been used up.",
+    payment: "Payment",
+    payCash: "Cash",
+    payUpi: "UPI",
     hindi: "हिंदी",
     english: "English"
   },
@@ -134,6 +137,9 @@ const STRINGS = {
     couponExpired: "इस कूपन की समय-सीमा समाप्त हो गई है।",
     couponMinimum: "इस कूपन के लिए ऑर्डर और बढ़ाएँ।",
     couponUsed: "यह कूपन इस्तेमाल हो चुका है।",
+    payment: "भुगतान",
+    payCash: "नकद",
+    payUpi: "UPI",
     hindi: "हिंदी",
     english: "English"
   }

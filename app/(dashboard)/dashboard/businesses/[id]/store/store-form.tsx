@@ -35,6 +35,7 @@ export type StoreFormValues = {
   gstPercent: number;
   pricesIncludeGst: boolean;
   prepMinutes: number;
+  upiId: string;
 };
 
 function hoursState(hours: WeekHours | null): HoursState {
@@ -68,6 +69,7 @@ export function StoreForm({ businessId, initial }: { businessId: string; initial
   const [gstPercent, setGstPercent] = React.useState(String(initial.gstPercent));
   const [pricesIncludeGst, setPricesIncludeGst] = React.useState(initial.pricesIncludeGst);
   const [prep, setPrep] = React.useState(String(initial.prepMinutes));
+  const [upiId, setUpiId] = React.useState(initial.upiId);
   const [busy, setBusy] = React.useState(false);
 
   function setDay(day: WeekDay, key: "open" | "close", value: string) {
@@ -99,7 +101,8 @@ export function StoreForm({ businessId, initial }: { businessId: string; initial
           gstEnabled,
           gstPercent: Math.min(28, Math.max(0, Math.round(Number(gstPercent) || 0))),
           pricesIncludeGst,
-          prepMinutes: Math.min(240, Math.max(1, Math.round(Number(prep) || 20)))
+          prepMinutes: Math.min(240, Math.max(1, Math.round(Number(prep) || 20))),
+          upiId
         })
       });
       const json = await res.json().catch(() => ({}));
@@ -163,6 +166,8 @@ export function StoreForm({ businessId, initial }: { businessId: string; initial
           <Input className="min-h-11" aria-label="Minimum order in rupees" inputMode="decimal" placeholder="Minimum order ₹" value={minimum} onChange={(event) => setMinimum(event.target.value)} />
           <Input className="min-h-11" aria-label="Packing charge in rupees" inputMode="decimal" placeholder="Packing charge ₹" value={packing} onChange={(event) => setPacking(event.target.value)} />
           <Input className="min-h-11" aria-label="Preparation time in minutes" inputMode="numeric" placeholder="Preparation time in minutes" value={prep} onChange={(event) => setPrep(event.target.value)} />
+          <Input className="min-h-11" aria-label="UPI ID" placeholder="UPI ID, e.g. shop@okaxis" value={upiId} onChange={(event) => setUpiId(event.target.value)} />
+          <p className="text-sm text-muted-foreground">Leave the UPI ID blank to take cash only. The customer pays that ID directly. Review QR does not collect the money.</p>
         </CardContent>
       </Card>
       <Card>

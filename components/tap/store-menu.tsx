@@ -109,6 +109,7 @@ export function StoreMenu({
   closed,
   tableLabel,
   banners,
+  upiId,
   themeStyle
 }: {
   code: string;
@@ -120,6 +121,7 @@ export function StoreMenu({
   closed: boolean;
   tableLabel: string;
   banners: { id: string; title: string; body: string }[];
+  upiId: string;
   themeStyle?: React.CSSProperties;
 }) {
   const [lang, setLang] = React.useState<TapLang>("en");
@@ -131,6 +133,7 @@ export function StoreMenu({
   const [open, setOpen] = React.useState(false);
   const orderTypes = enabledOrderTypes(rules);
   const [orderType, setOrderType] = React.useState<OrderType>(orderTypes[0] || "DINE_IN");
+  const [payment, setPayment] = React.useState<"CASH" | "UPI">("CASH");
   const [name, setName] = React.useState("");
   const [table, setTable] = React.useState(tableLabel);
   const [address, setAddress] = React.useState("");
@@ -250,6 +253,7 @@ export function StoreMenu({
           pincode: orderType === "DELIVERY" ? pincode : "",
           note,
           ...(decision?.ok && coupon ? { coupon: coupon.code } : {}),
+          payment: upiId && payment === "UPI" ? "UPI" : "CASH",
           items: cart.map((line) => ({
             id: line.id,
             qty: line.qty,
@@ -556,6 +560,12 @@ export function StoreMenu({
             <span>{text("total")}</span>
             <strong>{formatRupees(total)}</strong>
           </div>
+          {upiId ? (
+            <div className="store-types" role="group" aria-label={text("payment")}>
+              <button type="button" aria-pressed={payment === "CASH"} onClick={() => setPayment("CASH")}>{text("payCash")}</button>
+              <button type="button" aria-pressed={payment === "UPI"} onClick={() => setPayment("UPI")}>{text("payUpi")}</button>
+            </div>
+          ) : null}
           {orderTypes.length > 0 ? (
             <div className="store-types" role="group" aria-label={text("orderType")}>
               {orderTypes.map((type) => (
