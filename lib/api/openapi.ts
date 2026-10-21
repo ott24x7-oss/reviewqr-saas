@@ -23,6 +23,7 @@ import {
   sessionSchema,
   tokenPairSchema
 } from "@reviewqr/shared";
+import { registerResourcePaths } from "./openapi-resources";
 
 extendZodWithOpenApi(z);
 
@@ -223,6 +224,8 @@ registry.registerPath({
     404: { description: "Session not found", content: { "application/json": { schema: errorRef } } }
   }
 });
+
+registerResourcePaths(registry, errorRef);
 
 let cached: ReturnType<OpenApiGeneratorV3["generateDocument"]> | null = null;
 

@@ -3,6 +3,8 @@ import type { ZodType } from "zod";
 import { getSessionUser } from "@/lib/auth";
 import { accessSecret, readBearer, verifyAccessToken } from "@/lib/auth/access-token";
 import { prisma } from "@/lib/db";
+import { isPageError, readPage } from "./cursor";
+import { codeForStatus, type ServiceResult } from "./result";
 
 export type V1User = {
   id: string;
@@ -19,6 +21,17 @@ export function v1Error(status: number, code: string, message: string) {
 
 export function v1Data<T>(data: T, status = 200) {
   return NextResponse.json({ data }, { status });
+}
+
+export function v1From<T>(result: ServiceResult<T>) {
+  if (!result.ok) return v1Error(result.status, codeForStatus(result.status), result.error);
+  return v1Data(result.data);
+}
+
+export function v1Page(req: NextRequest) {
+  const page = readPage(req.nextUrl.searchParams);
+  if (isPageError(page)) return { ok: false as const, response: v1Error(400, "VALIDATION", page.error) };
+  return { ok: true as const, page };
 }
 
 export async function resolveV1User(req: NextRequest): Promise<V1User | null | "bad-bearer"> {
