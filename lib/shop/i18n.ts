@@ -1,0 +1,68 @@
+export type ShopLang = "en" | "hi";
+
+const STRINGS = {
+  en: {
+    shop: "Shop",
+    cart: "Cart",
+    add: "Add to cart",
+    priceNote: "Price includes GST",
+    policy: "Custom-printed items cannot be returned, except for damage or a misprint, which is reprinted free.",
+    digital: "This is a digital plan. It is not printed or shipped.",
+    pincode: "Pincode",
+    check: "Check delivery",
+    estimate: "Delivery estimate",
+    notServiceable: "Not serviceable",
+    coupon: "Coupon",
+    referral: "Referral code",
+    gstin: "GSTIN",
+    businessName: "Business name on the invoice",
+    address: "Shipping address",
+    template: "Print template",
+    qr: "QR code",
+    nfc: "NFC tag",
+    business: "Business",
+    qty: "Quantity",
+    total: "Total",
+    empty: "Your cart is empty.",
+    hindi: "हिंदी",
+    english: "English",
+    save: "Save cart",
+    mrp: "MRP",
+    off: "off"
+  },
+  hi: {
+    shop: "दुकान",
+    cart: "कार्ट",
+    add: "कार्ट में जोड़ें",
+    priceNote: "कीमत में जीएसटी शामिल है",
+    policy: "कस्टम छपे सामान की वापसी नहीं होती, सिवाय नुकसान या गलत छपाई के। उस पर मुफ्त दोबारा छपाई मिलती है।",
+    digital: "यह डिजिटल प्लान है। यह छपता नहीं और भेजा नहीं जाता।",
+    pincode: "पिनकोड",
+    check: "डिलीवरी देखें",
+    estimate: "डिलीवरी का अनुमान",
+    notServiceable: "सेवा उपलब्ध नहीं",
+    coupon: "कूपन",
+    referral: "रेफ़रल कोड",
+    gstin: "जीएसटीआईएन",
+    businessName: "इनवॉइस पर व्यापार का नाम",
+    address: "शिपिंग पता",
+    template: "प्रिंट टेम्पलेट",
+    qr: "क्यूआर कोड",
+    nfc: "एनएफसी टैग",
+    business: "व्यापार",
+    qty: "मात्रा",
+    total: "कुल",
+    empty: "आपका कार्ट खाली है।",
+    hindi: "हिंदी",
+    english: "English",
+    save: "कार्ट सहेजें",
+    mrp: "एमआरपी",
+    off: "छूट"
+  }
+} as const;
+
+export function shopCopy(lang: ShopLang) {
+  return STRINGS[lang];
+}
+
+export const SHOP_LANGS = ["en", "hi"] as const;

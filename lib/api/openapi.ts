@@ -21,6 +21,8 @@ import {
   pushUnregisterSchema,
   refreshSchema,
   sessionSchema,
+  shopCartPutSchema,
+  shopEstimateSchema,
   tokenPairSchema
 } from "@reviewqr/shared";
 import { registerResourcePaths } from "./openapi-resources";
@@ -222,6 +224,56 @@ registry.registerPath({
     200: jsonResponse("Revoked", dataSchema(okSchema)),
     401: unauthorized,
     404: { description: "Session not found", content: { "application/json": { schema: errorRef } } }
+  }
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/api/v1/shop/catalog",
+  summary: "ReviewQR hardware catalogue",
+  security: [{ bearerAuth: [] }],
+  responses: {
+    200: { description: "Catalogue" },
+    401: unauthorized
+  }
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/api/v1/shop/cart",
+  summary: "The signed-in owner's shop cart",
+  security: [{ bearerAuth: [] }],
+  responses: {
+    200: { description: "Cart" },
+    401: unauthorized
+  }
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/api/v1/shop/cart",
+  summary: "Replace the shop cart",
+  security: [{ bearerAuth: [] }],
+  request: jsonBody(shopCartPutSchema),
+  responses: {
+    200: { description: "Cart" },
+    400: validation,
+    401: unauthorized,
+    403: { description: "Forbidden", content: { "application/json": { schema: errorRef } } }
+  }
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/v1/shop/estimate",
+  summary: "Pincode serviceability and the cheapest mock or live rate",
+  security: [{ bearerAuth: [] }],
+  request: jsonBody(shopEstimateSchema),
+  responses: {
+    200: { description: "Estimate" },
+    400: validation,
+    401: unauthorized,
+    429: rateLimit
   }
 });
 

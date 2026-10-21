@@ -92,6 +92,7 @@ model User {
   pushDevices     PushDevice[]
   shippingAddresses ShippingAddress[]
   referralCodes   ReferralCode[]
+  shopCart        ShopCart?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1230,11 +1231,43 @@ model CatalogVariant {
   includedLifetime Boolean          @default(false)
   // Digital SKUs (the Founder plan) do not ship and may use a zero box.
   ships      Boolean        @default(true)
+  cartLines  ShopCartLine[]
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
 
   @@index([productId])
   @@index([active, stock])
+}
+
+// One open ReviewQR shop cart per owner. Not a business's WhatsApp menu cart.
+model ShopCart {
+  id             String         @id @default(cuid())
+  userId         String         @unique
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessId     String?
+  couponCode     String?
+  referralCode   String?
+  buyerGstin     String?
+  buyerLegalName String?
+  addressId      String?
+  lines          ShopCartLine[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model ShopCartLine {
+  id        String         @id @default(cuid())
+  cartId    String
+  cart      ShopCart       @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  variantId String
+  variant   CatalogVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  qty       Int
+  design    Json?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@unique([cartId, variantId])
+  @@index([variantId])
 }
 
 // Platform coupons for the ReviewQR shop. Not a business's store Coupon.

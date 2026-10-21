@@ -24,5 +24,8 @@ describe("OpenAPI auth document", () => {
     expect(doc.paths?.["/api/v1/feedback/{id}"]?.patch).toBeTruthy();
     expect(doc.paths?.["/api/v1/notifications"]?.get).toBeTruthy();
     expect(doc.paths?.["/api/v1/uploads"]?.post).toBeTruthy();
+    expect(doc.paths?.["/api/v1/shop/catalog"]?.get).toBeTruthy();
+    expect(doc.paths?.["/api/v1/shop/cart"]?.put).toBeTruthy();
+    expect(doc.paths?.["/api/v1/shop/estimate"]?.post).toBeTruthy();
   });
 });
