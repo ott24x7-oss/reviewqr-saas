@@ -30,6 +30,11 @@ const STRINGS = {
     pay: "Pay now",
     orders: "Your orders",
     prepaid: "Prepaid. Cash on delivery stays off unless the shop allows an advance.",
+    approve: "Approve proof",
+    changes: "Request changes",
+    proof: "View proof",
+    changeNote: "What should change?",
+    timeline: "Order timeline",
     mrp: "MRP",
     off: "off"
   },
@@ -62,6 +67,11 @@ const STRINGS = {
     pay: "अभी भुगतान करें",
     orders: "आपके ऑर्डर",
     prepaid: "भुगतान पहले। कैश ऑन डिलीवरी तब तक बंद है जब तक दुकान अग्रिम की अनुमति न दे।",
+    approve: "प्रूफ मंजूर करें",
+    changes: "बदलाव माँगें",
+    proof: "प्रूफ देखें",
+    changeNote: "क्या बदलना है?",
+    timeline: "ऑर्डर की स्थिति",
     mrp: "एमआरपी",
     off: "छूट"
   }

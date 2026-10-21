@@ -278,6 +278,33 @@ registry.registerPath({
 
 registry.registerPath({
   method: "post",
+  path: "/api/v1/shop/orders/{id}/proof",
+  summary: "Approve a design proof or request changes",
+  security: [{ bearerAuth: [] }],
+  request: {
+    params: z.object({ id: z.string() }),
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            action: z.enum(["approve", "changes"]),
+            comment: z.string().max(500).optional()
+          })
+        }
+      }
+    }
+  },
+  responses: {
+    200: { description: "Updated status" },
+    400: validation,
+    401: unauthorized,
+    403: { description: "Forbidden", content: { "application/json": { schema: errorRef } } },
+    404: { description: "Order not found", content: { "application/json": { schema: errorRef } } }
+  }
+});
+
+registry.registerPath({
+  method: "post",
   path: "/api/v1/shop/estimate",
   summary: "Pincode serviceability and the cheapest mock or live rate",
   security: [{ bearerAuth: [] }],

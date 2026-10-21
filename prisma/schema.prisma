@@ -1418,6 +1418,8 @@ model ShopOrderLine {
   includedMonths   Int?
   includedLifetime Boolean           @default(false)
   design           Json?
+  proofUrl         String?           @db.Text
+  changeComment    String?           @db.Text
   createdAt        DateTime          @default(now())
 
   @@index([orderId])
