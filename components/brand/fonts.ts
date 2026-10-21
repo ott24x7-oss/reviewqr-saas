@@ -1,36 +1,54 @@
-import { Bricolage_Grotesque, Manrope, Mukta, Noto_Sans_Devanagari, Sora } from "next/font/google";
+import localFont from "next/font/local";
 
-const sora = Sora({
-  subsets: ["latin"],
-  weight: ["600", "700", "800"],
+// Self-hosted (see scripts/build-fonts.py) so builds never depend on fonts.googleapis.com.
+const sora = localFont({
+  src: [
+    { path: "../../fonts/sora-latin-600.woff2", weight: "600" },
+    { path: "../../fonts/sora-latin-700.woff2", weight: "700" },
+    { path: "../../fonts/sora-latin-800.woff2", weight: "800" }
+  ],
   variable: "--font-sora",
   display: "swap"
 });
 
-const manrope = Manrope({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+const manrope = localFont({
+  src: [
+    { path: "../../fonts/manrope-latin-400.woff2", weight: "400" },
+    { path: "../../fonts/manrope-latin-500.woff2", weight: "500" },
+    { path: "../../fonts/manrope-latin-600.woff2", weight: "600" },
+    { path: "../../fonts/manrope-latin-700.woff2", weight: "700" }
+  ],
   variable: "--font-manrope",
   display: "swap"
 });
 
-const mukta = Mukta({
-  subsets: ["latin", "devanagari"],
-  weight: ["400", "500", "600", "700"],
+const mukta = localFont({
+  src: [
+    { path: "../../fonts/mukta-latin-devanagari-400.woff2", weight: "400" },
+    { path: "../../fonts/mukta-latin-devanagari-500.woff2", weight: "500" },
+    { path: "../../fonts/mukta-latin-devanagari-600.woff2", weight: "600" },
+    { path: "../../fonts/mukta-latin-devanagari-700.woff2", weight: "700" }
+  ],
   variable: "--font-mukta",
   display: "swap"
 });
 
-const notoDeva = Noto_Sans_Devanagari({
-  subsets: ["devanagari"],
-  weight: ["400", "600", "700"],
+const notoDeva = localFont({
+  src: [
+    { path: "../../fonts/noto-sans-devanagari-latin-devanagari-400.woff2", weight: "400" },
+    { path: "../../fonts/noto-sans-devanagari-latin-devanagari-600.woff2", weight: "600" },
+    { path: "../../fonts/noto-sans-devanagari-latin-devanagari-700.woff2", weight: "700" }
+  ],
   variable: "--font-noto-deva",
   display: "swap"
 });
 
-const bricolage = Bricolage_Grotesque({
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
+const bricolage = localFont({
+  src: [
+    { path: "../../fonts/bricolage-grotesque-latin-500.woff2", weight: "500" },
+    { path: "../../fonts/bricolage-grotesque-latin-600.woff2", weight: "600" },
+    { path: "../../fonts/bricolage-grotesque-latin-700.woff2", weight: "700" }
+  ],
   variable: "--font-bricolage",
   display: "swap"
 });
