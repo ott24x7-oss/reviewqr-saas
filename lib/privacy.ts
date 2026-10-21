@@ -39,7 +39,8 @@ export function anonymizedUserPatch(userId: string, now = new Date()) {
     emailVerified: null,
     whiteLabelLogo: null,
     whiteLabelName: null,
-    whiteLabelDomain: null
+    whiteLabelDomain: null,
+    pushEnabled: false
   };
 }
 

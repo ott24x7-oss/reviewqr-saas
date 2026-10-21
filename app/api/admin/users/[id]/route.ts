@@ -8,7 +8,7 @@ import { getClientIp } from "@/lib/utils";
 const patchSchema = z.object({
   name: z.string().nullable().optional(),
   phone: z.string().nullable().optional(),
-  role: z.enum(["USER", "ADMIN", "AGENCY", "STAFF"]).optional(),
+  role: z.enum(["USER", "ADMIN", "AGENCY", "STAFF", "AGENT"]).optional(),
   subscriptionTier: z.enum(["FREE", "STARTER", "GROWTH", "AGENCY"]).optional(),
   subscriptionStatus: z
     .enum(["TRIALING", "ACTIVE", "PAST_DUE", "CANCELED", "EXPIRED"])

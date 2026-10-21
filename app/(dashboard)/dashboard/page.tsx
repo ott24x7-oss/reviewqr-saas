@@ -7,7 +7,7 @@ import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatNumber, timeAgo } from "@/lib/utils";
-import { readableBusinessWhere } from "@/lib/tenant";
+import { ownedOrAssignedWhere, readableBusinessWhere } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +21,7 @@ export default async function DashboardOverview() {
       select: { id: true }
     }),
     prisma.business.findFirst({
-      where: { ownerId: user.id, archived: false },
+      where: ownedOrAssignedWhere(user.id),
       select: {
         id: true,
         logo: true,

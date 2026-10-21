@@ -19,7 +19,7 @@ export default async function ActivatePage({
     orderBy: { name: "asc" }
   });
   const businesses = rows
-    .filter((row) => allows(accessRole(row.ownerId, user.id, row.members[0]?.role), "manage"))
+    .filter((row) => allows(accessRole(row.ownerId, user.id, row.members[0]?.role, row.agentId), "manage"))
     .map((row) => ({ id: row.id, name: row.name }));
   const raw = Array.isArray(searchParams.code) ? searchParams.code[0] : searchParams.code;
   return <ActivateForm businesses={businesses} initialCode={raw || ""} />;

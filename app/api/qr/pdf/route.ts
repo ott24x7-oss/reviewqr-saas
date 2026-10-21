@@ -26,6 +26,7 @@ export async function POST(req: NextRequest) {
       business: {
         select: {
           ownerId: true,
+          agentId: true,
           members: { where: { userId: user.id }, select: { role: true }, take: 1 }
         }
       }
@@ -36,7 +37,7 @@ export async function POST(req: NextRequest) {
   if (user.role !== "ADMIN") {
     for (const row of rows) {
       if (!row.business) return NextResponse.json({ error: "Not found" }, { status: 404 });
-      const role = accessRole(row.business.ownerId, user.id, row.business.members[0]?.role);
+      const role = accessRole(row.business.ownerId, user.id, row.business.members[0]?.role, row.business.agentId);
       if (!role) return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
   }

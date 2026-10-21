@@ -8,6 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { SubscriptionTier } from "@prisma/client";
+import { createApiClient } from "@reviewqr/shared";
+
+const api = createApiClient();
 
 type Props = {
   user: {
@@ -20,6 +23,7 @@ type Props = {
     whiteLabelDomain: string;
     whiteLabelColor: string;
     tier: SubscriptionTier;
+    pushEnabled: boolean;
   };
 };
 
@@ -33,6 +37,8 @@ export function SettingsForm({ user }: Props) {
     whiteLabelColor: user.whiteLabelColor
   });
   const [loading, setLoading] = React.useState(false);
+  const [pushEnabled, setPushEnabled] = React.useState(user.pushEnabled);
+  const [pushSaving, setPushSaving] = React.useState(false);
 
   function update<K extends keyof typeof form>(key: K, val: typeof form[K]) {
     setForm((s) => ({ ...s, [key]: val }));
@@ -51,6 +57,25 @@ export function SettingsForm({ user }: Props) {
       else toast.error("Failed to save");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function onPush(checked: boolean) {
+    const previous = pushEnabled;
+    setPushEnabled(checked);
+    setPushSaving(true);
+    try {
+      const res = await api.request("/api/v1/me", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ pushEnabled: checked })
+      });
+      if (!res.ok) {
+        setPushEnabled(previous);
+        toast.error("Could not update notifications");
+      }
+    } finally {
+      setPushSaving(false);
     }
   }
 
@@ -76,6 +101,18 @@ export function SettingsForm({ user }: Props) {
               <Label htmlFor="phone">Phone</Label>
               <Input id="phone" value={form.phone} onChange={(e) => update("phone", e.target.value)} />
             </div>
+          </div>
+          <div className="flex items-center gap-3 pt-1">
+            <input
+              type="checkbox"
+              role="switch"
+              id="pushEnabled"
+              checked={pushEnabled}
+              disabled={pushSaving}
+              onChange={(e) => onPush(e.target.checked)}
+              className="h-4 w-4"
+            />
+            <Label htmlFor="pushEnabled">Push notifications for orders, feedback, and plan reminders</Label>
           </div>
         </CardContent>
       </Card>

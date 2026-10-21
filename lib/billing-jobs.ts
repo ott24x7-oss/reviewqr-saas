@@ -7,6 +7,7 @@ import { prisma } from "./db";
 import { sendEmail } from "./email";
 import { sendWhatsAppCloud } from "./whatsapp";
 import { getWhatsAppConfig } from "./settings";
+import { sendPushToUsers } from "./push";
 import { absoluteUrl } from "./utils";
 
 const REMINDER_DAYS = [7, 3, 1, 0] as const;
@@ -62,6 +63,11 @@ export async function sendRenewalReminders(): Promise<number> {
     if (wa?.provider === "cloud-api" && user.phone) {
       await sendWhatsAppCloud({ to: user.phone, message: text }).catch(() => {});
     }
+    await sendPushToUsers([user.id], {
+      title: days === 0 ? "Your ReviewQR plan ends today" : `Your ReviewQR plan ends ${when}`,
+      body: text,
+      data: { type: "plan_reminder", kind }
+    });
     sent++;
   }
   return sent;

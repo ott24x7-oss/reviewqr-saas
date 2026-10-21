@@ -36,7 +36,7 @@ export default async function QrCodesPage({
   const businesses = rows.map((row) => ({
     id: row.id,
     name: row.name,
-    canManage: allows(accessRole(row.ownerId, user.id, row.members[0]?.role), "manage"),
+    canManage: allows(accessRole(row.ownerId, user.id, row.members[0]?.role, row.agentId), "manage"),
     locations: row.locations.map((location) => ({ id: location.id, name: location.name }))
   }));
   const items = rows.flatMap((row) => {

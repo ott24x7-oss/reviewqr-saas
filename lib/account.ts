@@ -29,6 +29,8 @@ export async function eraseAccount(userId: string) {
     }
     await tx.business.deleteMany({ where: { ownerId: userId } });
     await tx.session.deleteMany({ where: { userId } });
+    await tx.refreshSession.deleteMany({ where: { userId } });
+    await tx.pushDevice.deleteMany({ where: { userId } });
     await tx.account.deleteMany({ where: { userId } });
     await tx.apiKey.deleteMany({ where: { userId } });
     await tx.notification.deleteMany({ where: { userId } });

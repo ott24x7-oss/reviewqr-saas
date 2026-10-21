@@ -166,6 +166,7 @@ export function UserEditForm({ user }: Props) {
               <option value="ADMIN">ADMIN</option>
               <option value="AGENCY">AGENCY</option>
               <option value="STAFF">STAFF</option>
+              <option value="AGENT">AGENT</option>
             </select>
           </div>
           <div>

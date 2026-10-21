@@ -20,6 +20,12 @@ enum UserRole {
   ADMIN
   AGENCY
   STAFF
+  AGENT
+}
+
+enum PushPlatform {
+  IOS
+  ANDROID
 }
 
 enum SubscriptionTier {
@@ -45,6 +51,7 @@ model User {
   name           String?
   phone          String?
   image          String?
+  pushEnabled    Boolean   @default(true)
   // Set when the account is anonymized. The row stays so Payment records can.
   deletedAt      DateTime?
   role           UserRole  @default(USER)
@@ -67,7 +74,8 @@ model User {
   razorpayCustomerId String?
   stripeCustomerId   String?
 
-  businesses  Business[]
+  businesses      Business[]
+  agentBusinesses Business[] @relation("BusinessAgent")
   sessions    Session[]
   accounts    Account[]
   payments    Payment[]
@@ -79,6 +87,8 @@ model User {
   supportMessages SupportMessage[] @relation("SupportMessageAuthor")
   onboardingMarks OnboardingMark[]
   printBatches    PrintBatch[]
+  refreshSessions RefreshSession[]
+  pushDevices     PushDevice[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -114,6 +124,70 @@ model Session {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+// Mobile refresh tokens. Only the hash is stored. Rotation keeps the family id.
+model RefreshSession {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  familyId   String
+  tokenHash  String    @unique
+  usedAt     DateTime?
+  revokedAt  DateTime?
+  expiresAt  DateTime
+  deviceName String?
+  userAgent  String?
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+
+  @@index([userId])
+  @@index([familyId])
+}
+
+// Expo push tokens. This is not an NFC Device.
+model PushDevice {
+  id         String       @id @default(cuid())
+  userId     String
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token      String       @unique
+  platform   PushPlatform
+  lastSeenAt DateTime     @default(now())
+  createdAt  DateTime     @default(now())
+
+  @@index([userId])
+}
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  DONE
+  FAILED
+}
+
+// Background work. Claim with FOR UPDATE SKIP LOCKED.
+model Job {
+  id             String    @id @default(cuid())
+  type           String
+  payload        Json
+  status         JobStatus @default(PENDING)
+  runAt          DateTime  @default(now())
+  attempts       Int       @default(0)
+  maxAttempts    Int       @default(5)
+  lastError      String?   @db.Text
+  lockedBy       String?
+  lockedUntil    DateTime?
+  idempotencyKey String?   @unique
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  finishedAt     DateTime?
+
+  @@index([status, runAt])
+}
+
+model WorkerHeartbeat {
+  id     String   @id
+  seenAt DateTime
+}
+
 model VerificationToken {
   identifier String
   token      String   @unique
@@ -130,6 +204,8 @@ model Business {
   id              String  @id @default(cuid())
   ownerId         String
   owner           User    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  agentId         String?
+  agent           User?   @relation("BusinessAgent", fields: [agentId], references: [id], onDelete: SetNull)
   name            String
   slug            String  @unique
   industry        String?
@@ -196,6 +272,7 @@ model Business {
   updatedAt DateTime @updatedAt
 
   @@index([ownerId])
+  @@index([agentId])
   @@index([slug])
   @@index([customDomain])
 }

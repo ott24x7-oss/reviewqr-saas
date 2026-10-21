@@ -1,55 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { legacyJson } from "@/lib/api/legacy";
 import { requireUser } from "@/lib/auth";
-import { businessSchema } from "@/lib/validations";
-import { omitUnchangedImages } from "@/lib/images";
-import { requireBusinessRole } from "@/lib/tenant";
+import { archiveBusiness, getBusiness, updateBusiness } from "@/lib/business/api";
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const user = await requireUser().catch(() => null);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const business = await requireBusinessRole(user.id, params.id, "read");
-  if (!business) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json({ business });
+  return legacyJson(await getBusiness(user.id, params.id));
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await requireUser().catch(() => null);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const existing = await requireBusinessRole(user.id, params.id, "manage");
-  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
   const raw = await req.json().catch(() => ({}));
-  const body =
-    raw && typeof raw === "object" && !Array.isArray(raw)
-      ? omitUnchangedImages(raw as Record<string, unknown>, {
-          logo: existing.logo,
-          coverImage: existing.coverImage
-        }, ["logo", "coverImage"])
-      : {};
-  const parsed = businessSchema.partial().safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.issues[0]?.message }, { status: 400 });
-  }
-
-  const business = await prisma.business.update({
-    where: { id: existing.id },
-    data: parsed.data as any
-  });
-
-  return NextResponse.json({ business });
+  return legacyJson(await updateBusiness(user.id, params.id, raw));
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   const user = await requireUser().catch(() => null);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const existing = await requireBusinessRole(user.id, params.id, "manage");
-  if (!existing || existing.accessRole !== "OWNER") {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
-  await prisma.business.update({
-    where: { id: existing.id },
-    data: { archived: true, isActive: false }
-  });
-  return NextResponse.json({ ok: true });
+  return legacyJson(await archiveBusiness(user.id, params.id));
 }

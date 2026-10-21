@@ -1,22 +1,35 @@
 import { defineConfig, devices } from "@playwright/test";
 
+// Owner flows run against a production build (what Railway serves).
+// The OTP API spec needs OTP_DEV_REVEAL, which only works outside production,
+// so it gets its own dev server on a second port.
 const port = 3459;
+const devPort = 3460;
 const baseURL = `http://127.0.0.1:${port}`;
+const devURL = `http://127.0.0.1:${devPort}`;
 
-function serverEnv() {
+function serverEnv(url: string, portNumber: number, revealOtp: boolean) {
   const env: Record<string, string> = {};
   for (const [key, value] of Object.entries(process.env)) {
     if (typeof value === "string") env[key] = value;
   }
-  env.PORT = String(port);
-  env.NEXTAUTH_URL = baseURL;
-  env.NEXT_PUBLIC_APP_URL = baseURL;
+  env.PORT = String(portNumber);
+  env.NEXTAUTH_URL = url;
+  env.NEXT_PUBLIC_APP_URL = url;
   env.NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET || "e2e-secret-not-for-production";
   env.YOUPI_BASE_URL = process.env.YOUPI_BASE_URL || "https://pay.example.test";
   env.YOUPI_MERCHANT_ID = process.env.YOUPI_MERCHANT_ID || "merchant_test";
   env.PAYMENTS_RAZORPAY_ENABLED = "false";
   env.NEXT_PUBLIC_TURNSTILE_SITE_KEY = "";
   env.TURNSTILE_SECRET_KEY = "";
+  if (revealOtp) {
+    env.OTP_DEV_REVEAL = "1";
+    env.NEXT_DIST_DIR = ".next-e2e-dev";
+  } else {
+    delete env.OTP_DEV_REVEAL;
+    delete env.NEXT_DIST_DIR;
+  }
+  env.AUTH_TOKEN_SECRET = process.env.AUTH_TOKEN_SECRET || "e2e-auth-token-secret-16";
   return env;
 }
 
@@ -25,17 +38,36 @@ export default defineConfig({
   timeout: 90_000,
   expect: { timeout: 15_000 },
   fullyParallel: false,
+  // One worker: the dev server compiles pages on first hit and competes with the production server.
+  workers: 1,
   retries: 0,
-  use: {
-    baseURL,
-    trace: "on-first-retry"
-  },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
-  webServer: {
-    command: `npx next start -p ${port}`,
-    url: baseURL,
-    reuseExistingServer: false,
-    timeout: 120_000,
-    env: serverEnv()
-  }
+  use: { trace: "on-first-retry" },
+  projects: [
+    {
+      name: "app",
+      testMatch: /owner-smoke\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"], baseURL }
+    },
+    {
+      name: "otp-api",
+      testMatch: /otp-smoke\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"], baseURL: devURL }
+    }
+  ],
+  webServer: [
+    {
+      command: `npx next start -p ${port}`,
+      url: baseURL,
+      reuseExistingServer: false,
+      timeout: 180_000,
+      env: serverEnv(baseURL, port, false)
+    },
+    {
+      command: `npx next dev -p ${devPort}`,
+      url: devURL,
+      reuseExistingServer: false,
+      timeout: 180_000,
+      env: serverEnv(devURL, devPort, true)
+    }
+  ]
 });

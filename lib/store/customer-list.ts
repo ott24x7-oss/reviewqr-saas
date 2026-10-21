@@ -81,6 +81,7 @@ export async function loadCustomers(userId: string, now = new Date()): Promise<C
           select: {
             name: true,
             ownerId: true,
+            agentId: true,
             members: { where: { userId }, select: { role: true }, take: 1 }
           }
         }
@@ -109,7 +110,7 @@ export async function loadCustomers(userId: string, now = new Date()): Promise<C
   return contacts.flatMap((contact) => {
     if (!contact.phone) return [];
     const stat = stats.get(`${contact.businessId}:${contact.phone}`);
-    const role = accessRole(contact.business.ownerId, userId, contact.business.members[0]?.role);
+    const role = accessRole(contact.business.ownerId, userId, contact.business.members[0]?.role, contact.business.agentId);
     return [{
       id: contact.id,
       businessName: contact.business.name,

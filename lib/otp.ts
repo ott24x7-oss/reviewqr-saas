@@ -68,7 +68,7 @@ export async function requestLoginOtp(rawPhone: string) {
   if (!key) return { ok: false as const, error: "Enter a valid mobile number" };
 
   const user = await findUserByPhone(rawPhone);
-  if (!user || user.deletedAt) return { ok: true as const };
+  if (!user || user.deletedAt) return { ok: true as const, issuedCode: null as string | null };
 
   const code = randomOtpCode();
   const expires = new Date(Date.now() + OTP_TTL_MS);
@@ -84,7 +84,7 @@ export async function requestLoginOtp(rawPhone: string) {
     }
   });
   await deliverCode({ phone: rawPhone, email: user.email, code });
-  return { ok: true as const };
+  return { ok: true as const, issuedCode: code };
 }
 
 /** Returns a one-time session token the credentials provider can exchange. */
