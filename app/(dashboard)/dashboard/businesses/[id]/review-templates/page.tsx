@@ -34,11 +34,10 @@ export default async function ReviewTemplatesPage({
       </Link>
 
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold font-display">Review templates</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold font-display">Topic hints</h1>
         <p className="text-sm text-muted-foreground">
-          Pre-write positive review variants. After a happy customer rates 4–5 stars they'll see
-          4 options to copy &amp; paste on Google. Each one is shown to a single customer only —
-          so the reviews you actually receive on Google stay unique.
+          Short topics a customer can tap to add to their own words. These are not reviews to
+          copy. A hint of about 40 characters works best. Older notes stay saved and can still be tapped.
         </p>
       </div>
 

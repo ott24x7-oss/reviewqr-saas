@@ -3,10 +3,7 @@ import { prisma } from "@/lib/db";
 import { rateLimitDb } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/utils";
 
-/**
- * Public — fetch up to 4 random unused review templates for a business slug.
- * Used by the post-rating "pick a review" step on /r/[slug].
- */
+/** Public topic hints. Rows stay in the database and can be reused. */
 export async function GET(req: NextRequest) {
   const ip = getClientIp(req.headers);
   const rl = await rateLimitDb({ key: `tpl-pick:${ip}`, limit: 30, windowSeconds: 60 });
@@ -20,21 +17,17 @@ export async function GET(req: NextRequest) {
     select: { id: true, isActive: true, archived: true }
   });
   if (!business || !business.isActive || business.archived) {
-    return NextResponse.json({ items: [], stockEmpty: true });
+    return NextResponse.json({ hints: [] });
   }
 
-  // Postgres ORDER BY RANDOM() is fine for a small unused stock per business.
-  // Cast to any because Prisma's $queryRaw types don't narrow the result well here.
-  const items = (await prisma.$queryRaw<Array<{ id: string; content: string }>>`
-    SELECT "id", "content"
-    FROM "ReviewTemplate"
-    WHERE "businessId" = ${business.id} AND "used" = false
-    ORDER BY RANDOM()
-    LIMIT 3
-  `) as Array<{ id: string; content: string }>;
+  const rows = await prisma.reviewTemplate.findMany({
+    where: { businessId: business.id },
+    orderBy: { createdAt: "asc" },
+    take: 24,
+    select: { id: true, content: true }
+  });
 
   return NextResponse.json({
-    items,
-    stockEmpty: items.length === 0
+    hints: rows.map((row) => ({ id: row.id, label: row.content }))
   });
 }

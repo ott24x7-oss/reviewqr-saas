@@ -166,7 +166,7 @@ export function PricingForm({ initial }: { initial: PricingConfig }) {
                         ["reviews", "Reviews/mo"],
                         ["aiCallsPerMonth", "AI/mo"],
                         ["campaigns", "Campaigns"],
-                        ["reviewTemplates", "Templates"],
+                        ["reviewTemplates", "Topic hints"],
                         ["storeProducts", "Products"],
                         ["storeOrders", "Orders"]
                       ] as const

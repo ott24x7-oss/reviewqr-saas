@@ -4,9 +4,10 @@ import * as React from "react";
 import { Check, ChevronRight, Copy, Star } from "lucide-react";
 import { tapLang, tapText, type TapLang } from "@/lib/tap/i18n";
 import { splitLinks, type PublicLink } from "@/lib/tap/links";
-import { showPublicReviewLinks, type PublicReviewTarget } from "@/lib/review-policy";
+import { appendHint, showPublicReviewLinks, type PublicReviewTarget } from "@/lib/review-policy";
 import { scanSource, type ScanSource } from "@/lib/tap/source";
 import { TapIcon } from "./tap-icons";
+import { HintChips } from "@/components/review/hint-chips";
 
 export type TapExperienceProps = {
   code: string;
@@ -449,6 +450,7 @@ function FeedbackForm({
       ) : null}
       <div className="tap-choice">
       <p className="tap-choice-title">{tapText(lang, "privateReview")}</p>
+      <HintChips slug={slug} lang={lang} onInsert={(text) => setMessage((current) => appendHint(current, text))} />
       <label htmlFor="tap-feedback">What could we have done better?</label>
       <textarea id="tap-feedback" value={message} onChange={(e) => setMessage(e.target.value)} maxLength={2000} />
       <label htmlFor="tap-name">{lang === "hi" ? "नाम" : "Your name"}</label>

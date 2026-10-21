@@ -26,7 +26,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { orderedReviewTargets } from "@/lib/review-policy";
+import { appendHint, orderedReviewTargets } from "@/lib/review-policy";
+import { HintChips } from "@/components/review/hint-chips";
 
 type Business = {
   id: string;
@@ -374,27 +375,7 @@ export function ReviewFlow(props: Props) {
       setAiPreparing(false);
     }
 
-    try {
-      const res = await fetch(
-        `/api/public/review-templates/pick?slug=${encodeURIComponent(business.slug)}`,
-        { cache: "no-store" }
-      );
-      const j = await res.json().catch(() => ({}));
-      const items: TemplatePick[] = Array.isArray(j.items) ? j.items : [];
-      if (items.length > 0) {
-        // Showing the modal — we don't redirect, so close the reserved tab.
-        reserved?.close();
-        setTemplates(items);
-        setStep("pick-template");
-        // Track the rating now (redirected = true) so analytics still capture it
-        submitReview({ rating: stars, feedback: "", openedPublicReview: true }).catch(() => {});
-        return;
-      }
-    } catch {
-      // fall through to instant redirect
-    } finally {
-      setTemplatesLoading(false);
-    }
+    setTemplatesLoading(false);
     goToGoogleReview(stars, reserved);
   }
 
@@ -770,6 +751,7 @@ export function ReviewFlow(props: Props) {
             setConsent={setConsent}
             panel
             title={copy.privateTitle}
+            lang={lang}
           />
         </>
       )}
@@ -883,6 +865,7 @@ export function ReviewFlow(props: Props) {
             loading={loading}
             consent={consent}
             setConsent={setConsent}
+            lang={lang}
           />
         )}
         {step === "thank-you-google" && <ThankYouGoogle business={business} />}
@@ -1650,6 +1633,7 @@ function FeedbackStep(props: {
   setConsent: (v: boolean) => void;
   panel?: boolean;
   title?: string;
+  lang?: "en" | "hi";
 }) {
   return (
     <div className={cn("container max-w-2xl px-4", props.panel ? "pt-3 pb-5" : "py-5")}>
@@ -1679,6 +1663,11 @@ function FeedbackStep(props: {
         )}
 
         <form onSubmit={props.onSubmit} className="mt-4 space-y-4">
+          <HintChips
+            slug={props.business.slug}
+            lang={props.lang || "en"}
+            onInsert={(text) => props.setFeedback(appendHint(props.feedback, text))}
+          />
           <div className="space-y-1.5">
             <Label htmlFor="feedback">What could we have done better? *</Label>
             <Textarea

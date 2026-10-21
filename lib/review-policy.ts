@@ -54,6 +54,13 @@ export function showPublicReviewLinks(input: {
  * A review counts as redirected only when the customer opened a public link.
  * Gating-on keeps the old analytics rule: a high rating with no written feedback.
  */
+export function appendHint(current: string, hint: string) {
+  const next = hint.trim();
+  if (!next) return current;
+  const base = current.trim();
+  return base ? `${base} ${next}` : next;
+}
+
 export function reviewWasRedirected(input: {
   reviewGating: boolean;
   rating: number;
