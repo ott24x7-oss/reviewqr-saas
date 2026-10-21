@@ -7,7 +7,7 @@ import type { PrintDesign, PrintFormat, PrintPreset } from "./design";
 export async function sendPrintBatch(input: {
   userId: string;
   batchId: string;
-  mode: "blank" | "tables";
+  mode: "blank" | "tables" | "reprint";
   templateId: string;
   design: PrintDesign;
   preset: PrintPreset;

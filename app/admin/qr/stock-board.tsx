@@ -150,6 +150,7 @@ export function StockBoard({ codes, businesses }: { codes: CodeRow[]; businesses
             <Button type="button" variant="outline" className="min-h-[44px]" disabled={busy} onClick={() => act(code, "reassign", businessId)}>Reassign</Button>
             <Button type="button" variant="outline" className="min-h-[44px]" disabled={busy} onClick={() => act(code, "unassign")}>Unassign</Button>
             <Button type="button" variant="outline" className="min-h-[44px]" disabled={busy} onClick={() => act(code, "disable")}>Disable</Button>
+            <Button type="button" variant="outline" className="min-h-[44px]" disabled={busy} onClick={() => act(code, "lost")}>Mark lost</Button>
             <Button type="button" variant="outline" className="min-h-[44px]" disabled={busy} onClick={() => act(code, "enable")}>Enable</Button>
           </div>
           {pending ? (

@@ -77,6 +77,12 @@ Point an NFC tag at `https://<your-domain>/t/<code>?src=nfc`.
 The QR image itself encodes `https://<your-domain>/q/<code>?src=qr`.
 `/<slug>` opens that business page too, for example `/demo-cafe`. Slugs that match an app route, such as `demo` or `login`, are reserved.
 
+**Print at actual size.** Admin → Print studio, or Print tables on a business, downloads a PDF at the piece size (or a sheet such as 10 CR80 cards on A4). In the browser print view, choose 100% or Actual size and turn headers and footers off. The `@page` size is the physical size of one piece.
+
+**Write an NFC tag.** On Android, open Admin → NFC writer in Chrome. It writes `https://<your-domain>/t/<code>?src=nfc`, reads the tag back, and saves the chip UID. Leave “Write the next code on each tap” on for a batch. This page cannot lock a tag. After the link verifies, open NFC Tools, choose Other, then Lock tag. iPhone and desktop browsers cannot write tags. Use the NFC Tools app, add that URL as a URL record, then lock the tag if it should stay permanent.
+
+**Activate printed stock.** Scan the QR or tap the tag, sign in, and open Activate a tag. Pick a business or create one, check the code, and activate it. The same printed code goes live. An admin can mark a tag lost, or assign a lost tag to a business again, without a new print.
+
 ---
 
 ## 🚂 Deploy to Railway

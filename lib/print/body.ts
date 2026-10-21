@@ -44,9 +44,23 @@ export const printExportSchema = printDesignSchema.extend({
   codes: z.array(z.object({ code: z.string().min(4).max(32), label: z.string().max(80).default("") })).min(1).max(100)
 });
 
+const printedCode = z.object({
+  code: z.string().min(4).max(32),
+  label: z.string().max(80).default("")
+});
+
 export const printBatchSchema = printDesignSchema.extend({
   count: z.number().int().min(1).max(100)
 });
+
+export const ownerPrintSchema = printDesignSchema
+  .extend({
+    count: z.number().int().min(1).max(100).optional(),
+    codes: z.array(printedCode).max(100).optional()
+  })
+  .refine((data) => Boolean(data.count) || Boolean(data.codes && data.codes.length > 0), {
+    message: "Choose codes"
+  });
 
 export function imageBytes(value: string | undefined) {
   if (!value) return undefined;

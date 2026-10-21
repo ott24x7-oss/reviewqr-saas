@@ -188,9 +188,16 @@ export async function assignQr(input: {
     select: { id: true, name: true, ownerId: true }
   });
   if (!business) return fail(404, "Business was not found");
-  if (qr.status === "DISABLED") return fail(409, "This QR is disabled");
+  if (qr.status === "DISABLED" && !input.allowReassign) return fail(409, "This QR is disabled");
 
-  const decision = claimDecision(
+  const decision = qr.status === "DISABLED"
+    ? {
+        action: "reassign" as const,
+        message: qr.businessId === business.id
+          ? `Activate this QR for ${business.name}?`
+          : `Reassign this QR to ${business.name}?`
+      }
+    : claimDecision(
     { status: qr.status, businessId: qr.businessId, ownerId: qr.business?.ownerId || null },
     { businessId: business.id, businessName: business.name, ownerId: business.ownerId }
   );
@@ -200,7 +207,9 @@ export async function assignQr(input: {
   }
   if (decision.action === "disabled") return fail(409, decision.message);
 
-  const message = decision.action === "activate" ? decision.message : `Reassign this QR to ${business.name}?`;
+  const message = decision.action === "activate" || decision.action === "reassign"
+    ? decision.message
+    : `Reassign this QR to ${business.name}?`;
   if (!input.confirm) return fail(409, message, { needsConfirm: true, message });
 
   const sameOwner = qr.business?.ownerId === business.ownerId;

@@ -55,7 +55,7 @@ export async function PublicTap({
       <StatusCard
         title={tapText("en", "unassignedTitle")}
         detail={`Ask ${email} or sign in to activate this code.`}
-        action={{ href: "/login", label: "Sign in to activate" }}
+        action={{ href: `/dashboard/activate?code=${encodeURIComponent(code)}`, label: "Activate this code" }}
       />
     );
   }

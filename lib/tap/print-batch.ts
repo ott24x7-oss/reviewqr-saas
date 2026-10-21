@@ -20,6 +20,39 @@ function fail(status: number, error: string): Fail {
   return { ok: false, status, error };
 }
 
+export async function reprintOwned(input: {
+  templateId: string;
+  businessId: string;
+  userId: string;
+  codes: { code: string; label: string }[];
+}): Promise<Fail | Made> {
+  const template = templateById(input.templateId);
+  if (!template) return fail(400, "Choose a print template");
+  const sizeError = batchSizeError(input.codes.length);
+  if (sizeError) return fail(400, sizeError);
+  const wanted = input.codes.map((item) => item.code);
+  const rows = await prisma.qRCode.findMany({
+    where: { shortCode: { in: wanted }, businessId: input.businessId },
+    select: { shortCode: true, label: true }
+  });
+  if (rows.length !== wanted.length) return fail(404, "A code was not found");
+  const batch = await prisma.printBatch.create({
+    data: {
+      label: `${template.name} reprint`,
+      templateId: template.id,
+      kind: template.kind,
+      count: rows.length,
+      createdById: input.userId
+    }
+  });
+  const byCode = new Map(rows.map((row) => [row.shortCode, row.label]));
+  return {
+    ok: true,
+    batchId: batch.id,
+    codes: input.codes.map((item) => ({ code: item.code, label: item.label || byCode.get(item.code) || "QR" }))
+  };
+}
+
 export async function createBlankBatch(input: { count: number; templateId: string; userId: string }): Promise<Fail | Made> {
   const template = templateById(input.templateId);
   if (!template) return fail(400, "Choose a print template");
