@@ -664,7 +664,8 @@ export function MenuEditor({
                     <div className="text-sm text-muted-foreground">
                       {item.nameHi ? `${item.nameHi} · ` : ""}
                       {formatRupees(Math.round(item.priceRupees * 100))}
-                      {item.mrpRupees ? <s className="ml-1">{formatRupees(Math.round(item.mrpRupees * 100))}</s> : null} · {item.veg}
+                      {item.mrpRupees ? <s className="ml-1">{formatRupees(Math.round(item.mrpRupees * 100))}</s> : null}
+                      {layout === "FOOD" && item.veg !== "NONE" ? ` · ${item.veg === "NON_VEG" ? "Non-veg" : item.veg === "EGG" ? "Egg" : "Veg"}` : ""}
                     </div>
                     {item.description ? <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{item.description}</p> : null}
                   </div>
@@ -919,7 +920,7 @@ function ItemOptions({
           {canEdit ? (
             <div className="flex gap-2">
               <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => send({ action: "variant-update", id: variant.id, inStock: !variant.inStock }, true)}>
-                {variant.inStock ? "Out of stock" : "In stock"}
+                {variant.inStock ? "Mark out of stock" : "Mark in stock"}
               </Button>
               <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => send({ action: "variant-delete", id: variant.id }, true)}>
                 Delete
@@ -937,7 +938,7 @@ function ItemOptions({
           {canEdit ? (
             <div className="flex gap-2">
               <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => send({ action: "addon-update", id: addOn.id, inStock: !addOn.inStock }, true)}>
-                {addOn.inStock ? "Out of stock" : "In stock"}
+                {addOn.inStock ? "Mark out of stock" : "Mark in stock"}
               </Button>
               <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => send({ action: "addon-delete", id: addOn.id }, true)}>
                 Delete

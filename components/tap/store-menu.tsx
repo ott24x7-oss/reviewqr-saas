@@ -354,10 +354,12 @@ export function StoreMenu({
           <p className="store-sub">
             {layout === "SHOP" ? text("storeLeadShop") : layout === "SERVICES" ? text("storeLeadServices") : lang === "hi" ? "WhatsApp पर ऑर्डर करें · कोई कमीशन नहीं" : "Order on WhatsApp · 0% commission"}
           </p>
-          <p className="store-closed" data-closed={closed ? "true" : "false"}>
-            {closed ? `${text("closedLater")}. ` : ""}
-            {text("prepLead")} {rules.prepMinutes} {text("prepTail")}
-          </p>
+          {closed || layout === "FOOD" ? (
+            <p className="store-closed" data-closed={closed ? "true" : "false"}>
+              {closed ? `${text("closedLater")}. ` : ""}
+              {layout === "FOOD" ? `${text("prepLead")} ${rules.prepMinutes} ${text("prepTail")}` : ""}
+            </p>
+          ) : null}
           <div className="store-tools">
             <label className="store-search-wrap">
               <Search aria-hidden="true" />

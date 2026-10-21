@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Check, MessageCircle, Plus } from "lucide-react";
 import { tapText, type TapLang } from "@/lib/tap/i18n";
 import { formatRupees } from "@/lib/tap/order-message";
 import { safeImageSrc } from "@/lib/tap/links";
@@ -35,6 +36,7 @@ export function ShopCatalog({
   const [brand, setBrand] = React.useState("");
   const [maxPrice, setMaxPrice] = React.useState("");
   const [openId, setOpenId] = React.useState<string | null>(null);
+  const [addedId, setAddedId] = React.useState<string | null>(null);
   const brands = Array.from(new Set(items.map((item) => item.brand.trim()).filter(Boolean))).sort();
   const cap = Number(maxPrice);
   const shown = items
@@ -49,27 +51,33 @@ export function ShopCatalog({
 
   return (
     <div>
+      <div className="store-chips store-shop-cats" role="group" aria-label={text("filterCategory")}>
+        <button type="button" aria-pressed={categoryId === ""} onClick={() => setCategoryId("")}>
+          {text("allCategories")}
+        </button>
+        {categories.map((category) => (
+          <button key={category.id} type="button" aria-pressed={categoryId === category.id} onClick={() => setCategoryId(category.id)}>
+            {label(category)}
+          </button>
+        ))}
+      </div>
       <div className="store-shop-tools">
         <select aria-label={text("sort")} value={sort} onChange={(event) => setSort(event.target.value as "price" | "newest")}>
           <option value="price">{text("sortPrice")}</option>
           <option value="newest">{text("sortNewest")}</option>
         </select>
-        <select aria-label={text("filterCategory")} value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
-          <option value="">{text("allCategories")}</option>
-          {categories.map((category) => (
-            <option key={category.id} value={category.id}>{label(category)}</option>
-          ))}
-        </select>
-        <select aria-label={text("filterBrand")} value={brand} onChange={(event) => setBrand(event.target.value)}>
-          <option value="">{text("allBrands")}</option>
-          {brands.map((name) => (
-            <option key={name} value={name}>{name}</option>
-          ))}
-        </select>
+        {brands.length > 1 ? (
+          <select aria-label={text("filterBrand")} value={brand} onChange={(event) => setBrand(event.target.value)}>
+            <option value="">{text("allBrands")}</option>
+            {brands.map((name) => (
+              <option key={name} value={name}>{name}</option>
+            ))}
+          </select>
+        ) : null}
         <input
           aria-label={text("filterPrice")}
           inputMode="decimal"
-          placeholder={text("filterPrice")}
+          placeholder={`${text("filterPrice")} ₹`}
           value={maxPrice}
           onChange={(event) => setMaxPrice(event.target.value)}
         />
@@ -80,24 +88,55 @@ export function ShopCatalog({
           const src = safeImageSrc(item.photo);
           const off = percentOff(item.pricePaise, item.mrpPaise);
           return (
-            <button key={item.id} type="button" className="store-shop-card" onClick={() => setOpenId(item.id)}>
-              <span className="store-shop-photo">
-                {src ? <img src={src} alt="" /> : <span aria-hidden="true">{label(item).slice(0, 1)}</span>}
-              </span>
-              <span className="store-shop-body">
-                {item.brand.trim() ? <span className="store-shop-brand">{item.brand.trim()}</span> : null}
-                <h3>{label(item)}</h3>
-                <span className="store-price">
-                  {formatRupees(item.pricePaise)}
-                  {off > 0 && item.mrpPaise ? (
-                    <>
-                      <s>{formatRupees(item.mrpPaise)}</s>
-                      <span className="store-off">{off}% off</span>
-                    </>
-                  ) : null}
+            <article key={item.id} className="store-shop-card">
+              <button type="button" className="store-shop-open" onClick={() => setOpenId(item.id)} aria-label={label(item)}>
+                <span className="store-shop-photo">
+                  {src ? <img src={src} alt="" loading="lazy" /> : <span aria-hidden="true">{label(item).slice(0, 1)}</span>}
+                  {off > 0 ? <span className="store-shop-badge">{off}% off</span> : null}
                 </span>
-              </span>
-            </button>
+                <span className="store-shop-body">
+                  {item.brand.trim() ? <span className="store-shop-brand">{item.brand.trim()}</span> : null}
+                  <h3>{label(item)}</h3>
+                  <span className="store-price">
+                    {formatRupees(item.pricePaise)}
+                    {off > 0 && item.mrpPaise ? <s>{formatRupees(item.mrpPaise)}</s> : null}
+                  </span>
+                </span>
+              </button>
+              <div className="store-shop-cta">
+                {item.variants.length > 0 ? (
+                  <button type="button" className="store-shop-add" onClick={() => setOpenId(item.id)}>
+                    <Plus aria-hidden="true" />
+                    {lang === "hi" ? "विकल्प" : "Options"}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="store-shop-add"
+                    data-added={addedId === item.id ? "true" : "false"}
+                    onClick={() => {
+                      onAdd(item.id, "", []);
+                      setAddedId(item.id);
+                      window.setTimeout(() => setAddedId((current) => (current === item.id ? null : current)), 1400);
+                    }}
+                  >
+                    {addedId === item.id ? <Check aria-hidden="true" /> : <Plus aria-hidden="true" />}
+                    {addedId === item.id ? (lang === "hi" ? "जुड़ गया" : "Added") : text("add")}
+                  </button>
+                )}
+                {askBase ? (
+                  <a
+                    className="store-shop-wa"
+                    href={askOnWhatsApp(askBase, label(item)) || "#"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`${text("askWhatsApp")}: ${label(item)}`}
+                  >
+                    <MessageCircle aria-hidden="true" />
+                  </a>
+                ) : null}
+              </div>
+            </article>
           );
         })}
       </div>
@@ -133,7 +172,9 @@ function ProductSheet({
   onClose: () => void;
   onAdd: (id: string, variantId: string, addonIds: string[]) => void;
 }) {
-  const images = [item.photo, ...item.photos].map((src) => safeImageSrc(src)).filter((src): src is string => !!src);
+  const images = Array.from(
+    new Set([item.photo, ...item.photos].map((src) => safeImageSrc(src)).filter((src): src is string => !!src))
+  );
   const [image, setImage] = React.useState(0);
   const paired = usesSizeColour(item.variants);
   const stocked = item.variants.find((row) => row.inStock) || item.variants[0];
