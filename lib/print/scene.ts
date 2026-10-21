@@ -57,26 +57,30 @@ function addQr(shapes: Shape[], matrix: QrMatrix, design: PrintDesign, x: number
   const moduleMm = sizeMm / outer;
   shapes.push({ kind: "rect", x, y, w: sizeMm, h: sizeMm, fill: design.qrLight });
   const logo = Boolean(design.logo);
+  const solidEyes = design.eye !== "square" || design.module !== "square";
   for (let row = 0; row < matrix.size; row++) {
     for (let col = 0; col < matrix.size; col++) {
       const role = cellKind(row, col, matrix.size, logo);
       if (role === "logo") continue;
-      if (role === "eye" && design.eye !== "square") continue;
+      // Finder eyes are drawn as solid shapes below unless both styles are plain square,
+      // so scanners always see unbroken finder patterns.
+      if (role === "eye" && solidEyes) continue;
       if (!matrix.dark(row, col)) continue;
       const mx = x + (col + QUIET_MODULES) * moduleMm;
       const my = y + (row + QUIET_MODULES) * moduleMm;
       const t = (row + col) / (2 * Math.max(1, matrix.size - 1));
       const fill = design.qrDarkTo ? mixHex(design.qrDark, design.qrDarkTo, t) : design.qrDark;
       if (design.module === "dots") {
-        shapes.push({ kind: "circle", cx: mx + moduleMm / 2, cy: my + moduleMm / 2, r: moduleMm * 0.36, fill });
+        shapes.push({ kind: "circle", cx: mx + moduleMm / 2, cy: my + moduleMm / 2, r: moduleMm * 0.5, fill });
       } else if (design.module === "rounded") {
         shapes.push({ kind: "rect", x: mx, y: my, w: moduleMm, h: moduleMm, radius: moduleMm * 0.38, fill });
       } else {
-        shapes.push({ kind: "rect", x: mx, y: my, w: moduleMm, h: moduleMm, fill });
+        // A hair of overlap so neighbouring modules print as one solid area (no white seams).
+        shapes.push({ kind: "rect", x: mx, y: my, w: moduleMm + 0.02, h: moduleMm + 0.02, fill });
       }
     }
   }
-  if (design.eye !== "square") {
+  if (solidEyes) {
     const finders = [
       [0, 0],
       [0, matrix.size - 7],
@@ -91,10 +95,12 @@ function addQr(shapes: Shape[], matrix: QrMatrix, design: PrintDesign, x: number
         const cx = ex + side / 2;
         const cy = ey + side / 2;
         shapes.push({ kind: "circle", cx, cy, r: side / 2, fill: design.qrDark });
-        shapes.push({ kind: "circle", cx, cy, r: side * 0.34, fill: design.qrLight });
-        shapes.push({ kind: "circle", cx, cy, r: side * 0.2, fill: design.qrDark });
+        // Keep the 1:1:3:1:1 finder ratio: rings at 7, 5 and 3 modules.
+        shapes.push({ kind: "circle", cx, cy, r: side * (2.5 / 7), fill: design.qrLight });
+        shapes.push({ kind: "circle", cx, cy, r: side * (1.5 / 7), fill: design.qrDark });
       } else {
-        shapes.push({ kind: "rect", x: ex, y: ey, w: side, h: side, radius: side * 0.28, fill: design.qrDark });
+        const round = design.eye === "rounded" ? 1 : 0;
+        shapes.push({ kind: "rect", x: ex, y: ey, w: side, h: side, radius: side * 0.28 * round, fill: design.qrDark });
         const inset = moduleMm;
         shapes.push({
           kind: "rect",
@@ -102,7 +108,7 @@ function addQr(shapes: Shape[], matrix: QrMatrix, design: PrintDesign, x: number
           y: ey + inset,
           w: side - inset * 2,
           h: side - inset * 2,
-          radius: side * 0.18,
+          radius: side * 0.18 * round,
           fill: design.qrLight
         });
         const pupil = moduleMm * 2;
@@ -112,7 +118,7 @@ function addQr(shapes: Shape[], matrix: QrMatrix, design: PrintDesign, x: number
           y: ey + pupil,
           w: side - pupil * 2,
           h: side - pupil * 2,
-          radius: side * 0.12,
+          radius: side * 0.12 * round,
           fill: design.qrDark
         });
       }

@@ -75,10 +75,12 @@ async function drawShape(
     return;
   }
   if (shape.kind === "polygon") {
+    // drawSvgPath uses SVG space (y grows downward from the given origin),
+    // so pass top-down millimetre points and anchor the path at the page top.
     const d = shape.points
-      .map((point, index) => `${index === 0 ? "M" : "L"} ${mmToPt(point.x)} ${yOf(point.y)}`)
+      .map((point, index) => `${index === 0 ? "M" : "L"} ${mmToPt(point.x)} ${mmToPt(point.y)}`)
       .join(" ");
-    page.drawSvgPath(`${d} Z`, { color: paint(shape.fill) });
+    page.drawSvgPath(`${d} Z`, { x: 0, y: pageH, color: paint(shape.fill) });
     return;
   }
   if (shape.kind === "text") {
