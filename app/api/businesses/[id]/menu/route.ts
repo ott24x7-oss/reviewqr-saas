@@ -15,6 +15,9 @@ const schema = z.object({
   name: z.string().max(80).optional(),
   nameHi: z.string().max(80).optional(),
   priceRupees: z.number().min(0).max(100000).optional(),
+  mrpRupees: z.number().min(0).max(100000).nullable().optional(),
+  description: z.string().max(200).optional(),
+  bestseller: z.boolean().optional(),
   veg: veg.optional(),
   categoryId: z.string().nullable().optional(),
   available: z.boolean().optional(),
@@ -63,6 +66,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
             nameHi: item.nameHi,
             pricePaise: item.pricePaise,
             veg: item.veg,
+            description: item.description || null,
+            bestseller: item.bestseller === true,
             sortOrder: itemIndex
           }))
         });
@@ -89,6 +94,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         name,
         nameHi: (data.nameHi || "").trim() || null,
         pricePaise: Math.round((data.priceRupees || 0) * 100),
+        mrpPaise: mrpPaise(data.mrpRupees, data.priceRupees || 0),
+        description: (data.description || "").trim() || null,
+        bestseller: data.bestseller === true,
         veg: data.veg || "NONE",
         available: data.available !== false,
         photo: (data.photo || "").trim() || null
@@ -104,6 +112,11 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         ...(data.name ? { name: data.name.trim() } : {}),
         ...(data.nameHi !== undefined ? { nameHi: data.nameHi.trim() || null } : {}),
         ...(data.priceRupees !== undefined ? { pricePaise: Math.round(data.priceRupees * 100) } : {}),
+        ...(data.mrpRupees !== undefined
+          ? { mrpPaise: data.mrpRupees === null ? null : Math.round(data.mrpRupees * 100) }
+          : {}),
+        ...(data.description !== undefined ? { description: data.description.trim() || null } : {}),
+        ...(data.bestseller !== undefined ? { bestseller: data.bestseller } : {}),
         ...(data.veg ? { veg: data.veg } : {}),
         ...(data.available !== undefined ? { available: data.available } : {}),
         ...(data.categoryId !== undefined ? { categoryId: data.categoryId } : {}),
@@ -136,6 +149,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   await revalidateBusinessTap(business.id);
   return NextResponse.json({ ok: true });
+}
+
+/** A crossed-out price only makes sense above the selling price. */
+function mrpPaise(mrpRupees: number | null | undefined, priceRupees: number) {
+  if (mrpRupees == null || mrpRupees <= priceRupees) return null;
+  return Math.round(mrpRupees * 100);
 }
 
 async function categoryOwned(businessId: string, categoryId: string) {

@@ -748,6 +748,10 @@ model MenuItem {
   name       String
   nameHi     String?
   pricePaise Int
+  /// Optional crossed-out price shown next to the selling price.
+  mrpPaise   Int?
+  description String?
+  bestseller Boolean       @default(false)
   photo      String?
   veg        VegMark       @default(NONE)
   available  Boolean       @default(true)

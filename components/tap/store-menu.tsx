@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ShoppingBag, X } from "lucide-react";
+import { BookOpen, ChevronLeft, Minus, Plus, Search, ShoppingBag, Star, X } from "lucide-react";
 import Link from "next/link";
 import { tapText, type TapLang } from "@/lib/tap/i18n";
 import { formatRupees } from "@/lib/tap/order-message";
@@ -13,6 +13,9 @@ export type StoreItem = {
   name: string;
   nameHi: string;
   pricePaise: number;
+  mrpPaise: number | null;
+  description: string;
+  bestseller: boolean;
   photo: string | null;
   veg: "VEG" | "NON_VEG" | "EGG" | "NONE";
 };
@@ -38,7 +41,8 @@ export function StoreMenu({
 }) {
   const [lang, setLang] = React.useState<TapLang>("en");
   const [query, setQuery] = React.useState("");
-  const [categoryId, setCategoryId] = React.useState("all");
+  const [vegOnly, setVegOnly] = React.useState(false);
+  const [menuOpen, setMenuOpen] = React.useState(false);
   const [cart, setCart] = React.useState<Line[]>([]);
   const [ready, setReady] = React.useState(false);
   const [open, setOpen] = React.useState(false);
@@ -71,9 +75,9 @@ export function StoreMenu({
   const text = (key: Parameters<typeof tapText>[1]) => tapText(lang, key);
   const label = (item: { name: string; nameHi: string }) => (lang === "hi" && item.nameHi ? item.nameHi : item.name);
   const visible = items.filter((item) => {
-    if (categoryId !== "all" && item.categoryId !== categoryId) return false;
+    if (vegOnly && item.veg !== "VEG") return false;
     if (!query.trim()) return true;
-    const hay = `${item.name} ${item.nameHi}`.toLowerCase();
+    const hay = `${item.name} ${item.nameHi} ${item.description}`.toLowerCase();
     return hay.includes(query.trim().toLowerCase());
   });
   const count = cart.reduce((sum, line) => sum + line.qty, 0);
@@ -123,74 +127,168 @@ export function StoreMenu({
     }
   }
 
+  const sections = React.useMemo(() => {
+    const groups: Array<{ id: string; title: string; items: StoreItem[] }> = [];
+    const best = visible.filter((item) => item.bestseller);
+    if (best.length > 0 && !query.trim()) {
+      groups.push({ id: "recommended", title: text("recommended"), items: best });
+    }
+    for (const category of categories) {
+      const rows = visible.filter((item) => item.categoryId === category.id);
+      if (rows.length) groups.push({ id: category.id, title: label(category), items: rows });
+    }
+    const loose = visible.filter((item) => !item.categoryId || !categories.some((c) => c.id === item.categoryId));
+    if (loose.length) groups.push({ id: "more", title: lang === "hi" ? "और" : "More", items: loose });
+    return groups;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, categories, lang, query]);
+
+  function jumpTo(id: string) {
+    setMenuOpen(false);
+    document.getElementById(`sec-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   return (
     <div className="store-page" style={themeStyle}>
       <div className="store-wrap">
-        <div className="tap-lang">
-          <button type="button" aria-pressed={lang === "en"} onClick={() => setLang("en")}>
-            {text("english")}
-          </button>
-          <button type="button" aria-pressed={lang === "hi"} onClick={() => setLang("hi")}>
-            {text("hindi")}
-          </button>
-        </div>
-        <p className="store-kicker">
-          <Link href={`/${channel}/${code}`}>{businessName}</Link>
-        </p>
-        <h1>{lang === "hi" ? "आज का मेनू" : "Today's menu"}</h1>
-        <input className="store-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={text("search")} aria-label={text("search")} />
-        <div className="store-chips">
-          <button type="button" aria-pressed={categoryId === "all"} onClick={() => setCategoryId("all")}>
-            {lang === "hi" ? "सभी" : "All"}
-          </button>
-          {categories.map((category) => (
-            <button key={category.id} type="button" aria-pressed={categoryId === category.id} onClick={() => setCategoryId(category.id)}>
-              {label(category)}
+        <header className="store-head">
+          <div className="store-head-row">
+            <Link className="store-back" href={`/${channel}/${code}`} aria-label={businessName}>
+              <ChevronLeft aria-hidden="true" />
+            </Link>
+            <div className="tap-lang store-lang" role="group" aria-label="Language">
+              <button type="button" aria-pressed={lang === "en"} onClick={() => setLang("en")}>
+                EN
+              </button>
+              <button type="button" aria-pressed={lang === "hi"} onClick={() => setLang("hi")} lang="hi">
+                हिं
+              </button>
+            </div>
+          </div>
+          <h1>{businessName}</h1>
+          <p className="store-sub">{lang === "hi" ? "WhatsApp पर ऑर्डर करें · कोई कमीशन नहीं" : "Order on WhatsApp · 0% commission"}</p>
+          <div className="store-tools">
+            <label className="store-search-wrap">
+              <Search aria-hidden="true" />
+              <input
+                className="store-search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder={text("search")}
+                aria-label={text("search")}
+              />
+            </label>
+            <button
+              type="button"
+              className="store-veg"
+              aria-pressed={vegOnly}
+              onClick={() => setVegOnly((value) => !value)}
+            >
+              <span className="store-veg-track" aria-hidden="true">
+                <span className="store-veg-knob">
+                  <VegMark kind="VEG" />
+                </span>
+              </span>
+              {text("vegOnly")}
             </button>
-          ))}
-        </div>
-        {visible.length === 0 ? <p>{text("emptyMenu")}</p> : null}
-        <div className="store-grid">
-          {visible.map((item) => {
-            const qty = qtyOf(item.id);
-            const photo = safeImageSrc(item.photo);
-            return (
-              <article key={item.id} className="store-card">
-                <div className="store-photo">
-                  {photo ? <img src={photo} alt="" loading="lazy" /> : <span className="store-initial" aria-hidden="true">{item.name.slice(0, 1)}</span>}
-                  {item.veg !== "NONE" ? <span className="store-pill" data-veg={item.veg}>{item.veg === "NON_VEG" ? "Non-veg" : item.veg === "EGG" ? "Egg" : "Veg"}</span> : null}
-                </div>
-                <h2 className="store-name">{label(item)}</h2>
-                <div className="store-price">{formatRupees(item.pricePaise)}</div>
-                {qty === 0 ? (
-                  <button type="button" className="store-add" onClick={() => setQty(item.id, 1)}>
-                    {text("add")}
-                  </button>
-                ) : (
-                  <div className="store-step">
-                    <button type="button" aria-label="Decrease" onClick={() => setQty(item.id, qty - 1)}>−</button>
-                    <span style={{ alignSelf: "center", textAlign: "center" }}>{qty}</span>
-                    <button type="button" aria-label="Increase" onClick={() => setQty(item.id, qty + 1)}>+</button>
-                  </div>
-                )}
-              </article>
-            );
-          })}
-        </div>
+          </div>
+        </header>
+
+        {items.length === 0 ? <p className="store-empty">{text("emptyMenu")}</p> : null}
+        {items.length > 0 && sections.length === 0 ? <p className="store-empty">{text("noMatch")}</p> : null}
+
+        {sections.map((section) => (
+          <section key={section.id} id={`sec-${section.id}`} className="store-section">
+            <h2 className="store-section-title">
+              {section.title} <span>({section.items.length})</span>
+            </h2>
+            <ul className="store-list">
+              {section.items.map((item) => {
+                const qty = qtyOf(item.id);
+                const photo = safeImageSrc(item.photo);
+                return (
+                  <li key={`${section.id}-${item.id}`} className="store-item" data-photo={photo ? "true" : "false"}>
+                    <div className="store-item-info">
+                      <div className="store-item-marks">
+                        {item.veg !== "NONE" ? <VegMark kind={item.veg} /> : null}
+                        {item.bestseller ? (
+                          <span className="store-best">
+                            <Star aria-hidden="true" /> {text("bestseller")}
+                          </span>
+                        ) : null}
+                      </div>
+                      <h3 className="store-name">{label(item)}</h3>
+                      <p className="store-price">
+                        {formatRupees(item.pricePaise)}
+                        {item.mrpPaise && item.mrpPaise > item.pricePaise ? (
+                          <>
+                            <s>{formatRupees(item.mrpPaise)}</s>
+                            <span className="store-off">
+                              {Math.round(((item.mrpPaise - item.pricePaise) / item.mrpPaise) * 100)}% off
+                            </span>
+                          </>
+                        ) : null}
+                      </p>
+                      {item.description ? <p className="store-desc">{item.description}</p> : null}
+                    </div>
+                    <div className="store-item-side">
+                      {photo ? <img className="store-thumb" src={photo} alt="" loading="lazy" /> : null}
+                      {qty === 0 ? (
+                        <button type="button" className="store-add" onClick={() => setQty(item.id, 1)} aria-label={`${text("add")} ${label(item)}`}>
+                          {text("add").toUpperCase()}
+                          <Plus aria-hidden="true" />
+                        </button>
+                      ) : (
+                        <div className="store-step" role="group" aria-label={label(item)}>
+                          <button type="button" aria-label="Decrease" onClick={() => setQty(item.id, qty - 1)}>
+                            <Minus aria-hidden="true" />
+                          </button>
+                          <span aria-live="polite">{qty}</span>
+                          <button type="button" aria-label="Increase" onClick={() => setQty(item.id, qty + 1)}>
+                            <Plus aria-hidden="true" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ))}
       </div>
-      {count > 0 ? (
-        <button type="button" className="store-bag" aria-label={text("bag")} onClick={() => setOpen(true)}>
-          <ShoppingBag aria-hidden="true" />
-          <span className="store-bag-count">{count}</span>
+
+      {sections.length > 1 ? (
+        <button type="button" className="store-menu-fab" data-raised={count > 0 ? "true" : "false"} onClick={() => setMenuOpen(true)}>
+          <BookOpen aria-hidden="true" />
+          {text("menu").toUpperCase()}
         </button>
       ) : null}
+
+      {menuOpen ? (
+        <>
+          <div className="store-backdrop" aria-hidden="true" onClick={() => setMenuOpen(false)} />
+          <nav className="store-menu-sheet" aria-label={text("menu")}>
+            {sections.map((section) => (
+              <button key={section.id} type="button" onClick={() => jumpTo(section.id)}>
+                <span>{section.title}</span>
+                <span>{section.items.length}</span>
+              </button>
+            ))}
+          </nav>
+        </>
+      ) : null}
+
       {count > 0 ? (
         <button type="button" className="store-bar" onClick={() => setOpen(true)}>
           <span className="store-bar-count">
-            <ShoppingBag aria-hidden="true" /> {count}
+            {count} {count === 1 ? (lang === "hi" ? "आइटम" : "item") : lang === "hi" ? "आइटम" : "items"} {text("itemsAdded")}
+            <small>{formatRupees(total)}</small>
           </span>
-          <span className="store-bar-total">{formatRupees(total)}</span>
-          <span className="store-bar-cta">{text("yourOrder")} →</span>
+          <span className="store-bar-cta">
+            {text("viewCart")}
+            <ShoppingBag aria-hidden="true" />
+          </span>
         </button>
       ) : null}
       {open ? (
@@ -247,5 +345,16 @@ export function StoreMenu({
         </>
       ) : null}
     </div>
+  );
+}
+
+/** Indian food-label style mark: square outline with a dot (veg) or triangle (non-veg). */
+function VegMark({ kind }: { kind: StoreItem["veg"] }) {
+  const tone = kind === "VEG" ? "veg" : kind === "EGG" ? "egg" : "nonveg";
+  const name = kind === "VEG" ? "Veg" : kind === "EGG" ? "Egg" : "Non-veg";
+  return (
+    <span className="store-mark" data-tone={tone} role="img" aria-label={name}>
+      <span />
+    </span>
   );
 }
