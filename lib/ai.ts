@@ -13,6 +13,7 @@ import type { AiConfig } from "./settings";
 import { assertSafeOutboundUrl } from "./ssrf";
 import { consumeAiCall } from "./entitlements";
 import { parseMenuDraft, type MenuDraftItem } from "./tap/menu-draft";
+import { readItemCopy, type ItemCopyField } from "./store/item-copy";
 
 export type BusinessContext = {
   name: string;
@@ -220,6 +221,34 @@ export async function draftOwnerReplies(
   const whatsappReply = String(data?.whatsappReply || "").trim();
   if (publicReply.length < 5 || whatsappReply.length < 5) throw new Error("No usable reply");
   return { publicReply, whatsappReply };
+}
+
+/** One short description or Hindi name. Throws on failure. Does not save the item. */
+export async function suggestItemCopy(
+  cfg: AiConfig,
+  ctx: BusinessContext,
+  input: { field: ItemCopyField; name: string; nameHi?: string },
+  businessId: string
+): Promise<string> {
+  const name = input.name.trim().slice(0, 80);
+  if (name.length < 1) throw new Error("Name the item");
+  const description =
+    input.field === "description"
+      ? "You write one short menu line for a shop in India. One sentence, plain text, under 160 characters. Do not invent a price, a phone number, an offer, or a reward. Return ONLY JSON."
+      : "You write the Hindi name of one menu item in Devanagari. Return only that name. Do not add a price, English, or a reward. Return ONLY JSON.";
+  const ask =
+    input.field === "description"
+      ? `${contextBlock(ctx)}\n\nItem: ${name}\n${input.nameHi?.trim() ? `Hindi name: ${input.nameHi.trim().slice(0, 80)}\n` : ""}Return JSON: {"description":"..."}`
+      : `${contextBlock(ctx)}\n\nItem: ${name}\nReturn JSON: {"nameHi":"..."}`;
+  const raw = await chat(
+    cfg,
+    [
+      { role: "system", content: description },
+      { role: "user", content: ask }
+    ],
+    { maxTokens: 180, temperature: 0.3, businessId }
+  );
+  return readItemCopy(raw, input.field);
 }
 
 /** Reads a menu photo. Throws when AI is not configured. Does not save items. */

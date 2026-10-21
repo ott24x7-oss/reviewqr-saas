@@ -26,6 +26,8 @@ type AddOn = {
   inStock: boolean;
 };
 
+type CopyField = "description" | "nameHi";
+
 type Item = {
   id: string;
   name: string;
@@ -103,6 +105,38 @@ export function MenuEditor({
     }
   }
 
+  async function suggestCopy(
+    field: CopyField,
+    current: { name: string; nameHi: string },
+    apply: (text: string) => void
+  ) {
+    if (!current.name.trim()) {
+      toast.error("Name the item first");
+      return;
+    }
+    if (!aiReady) {
+      toast.error("A suggestion isn't available right now. You can type it yourself.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/businesses/${businessId}/menu/copy`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ field, name: current.name, nameHi: current.nameHi })
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || typeof json.text !== "string" || !json.text.trim()) {
+        throw new Error(json.error || "A suggestion isn't available right now. You can type it yourself.");
+      }
+      apply(json.text);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "A suggestion isn't available right now. You can type it yourself.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div>
@@ -127,6 +161,14 @@ export function MenuEditor({
               onChange={(event) => setDescription(event.target.value)}
               className="flex w-full rounded-lg border bg-white px-3 py-2 text-sm"
             />
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button type="button" variant="outline" className="h-11 min-h-11" disabled={busy} onClick={() => suggestCopy("description", { name, nameHi }, setDescription)}>
+                Write a short description
+              </Button>
+              <Button type="button" variant="outline" className="h-11 min-h-11" disabled={busy} onClick={() => suggestCopy("nameHi", { name, nameHi }, setNameHi)}>
+                Hindi name
+              </Button>
+            </div>
             <label className="flex min-h-11 items-center gap-2 text-sm">
               <input type="checkbox" checked={bestseller} onChange={(event) => setBestseller(event.target.checked)} className="h-5 w-5" />
               Mark as bestseller
@@ -333,12 +375,77 @@ export function MenuEditor({
                     </div>
                   )}
                 </div>
+                {canEdit ? (
+                  <ItemCopy
+                    item={item}
+                    busy={busy}
+                    onSuggest={suggestCopy}
+                    onSave={(nextHi, nextDescription) => send({ action: "update", id: item.id, nameHi: nextHi, description: nextDescription }, true)}
+                  />
+                ) : null}
                 <ItemOptions item={item} canEdit={canEdit} busy={busy} send={send} />
               </CardContent>
             </Card>
           ))}
         </section>
       ))}
+    </div>
+  );
+}
+
+function ItemCopy({
+  item,
+  busy,
+  onSuggest,
+  onSave
+}: {
+  item: Item;
+  busy: boolean;
+  onSuggest: (field: CopyField, current: { name: string; nameHi: string }, apply: (text: string) => void) => void;
+  onSave: (nameHi: string, description: string) => void;
+}) {
+  const [nameHi, setNameHi] = React.useState(item.nameHi);
+  const [description, setDescription] = React.useState(item.description);
+  React.useEffect(() => {
+    setNameHi(item.nameHi);
+    setDescription(item.description);
+  }, [item.id, item.nameHi, item.description]);
+
+  return (
+    <div className="space-y-2">
+      <Input aria-label={`Hindi name for ${item.name}`} value={nameHi} placeholder="Hindi name" onChange={(event) => setNameHi(event.target.value)} className="min-h-11" />
+      <textarea
+        aria-label={`Short description for ${item.name}`}
+        value={description}
+        maxLength={200}
+        rows={2}
+        placeholder="Short description"
+        onChange={(event) => setDescription(event.target.value)}
+        className="flex min-h-11 w-full rounded-lg border bg-white px-3 py-2 text-sm"
+      />
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <Button
+          type="button"
+          variant="outline"
+          className="h-11 min-h-11"
+          disabled={busy}
+          onClick={() => onSuggest("description", { name: item.name, nameHi }, setDescription)}
+        >
+          Write a short description
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          className="h-11 min-h-11"
+          disabled={busy}
+          onClick={() => onSuggest("nameHi", { name: item.name, nameHi }, setNameHi)}
+        >
+          Hindi name
+        </Button>
+        <Button type="button" className="h-11 min-h-11" disabled={busy} onClick={() => onSave(nameHi, description)}>
+          Save
+        </Button>
+      </div>
     </div>
   );
 }
