@@ -1,5 +1,11 @@
 import { prisma } from "@/lib/db";
-import { catalogProductError, catalogVariantError, type CatalogProductInput, type CatalogVariantInput } from "./catalog";
+import {
+  catalogProductError,
+  catalogVariantError,
+  type BundleTier,
+  type CatalogProductInput,
+  type CatalogVariantInput
+} from "./catalog";
 import { ensureCatalogWith } from "./catalog-ensure";
 
 export async function ensureCatalog() {
@@ -102,12 +108,21 @@ export async function updateCatalogVariant(id: string, patch: Partial<CatalogVar
     lowStockAt: patch.lowStockAt ?? current.lowStockAt,
     minQty: patch.minQty ?? current.minQty,
     imageUrl: patch.imageUrl === undefined ? current.imageUrl : patch.imageUrl,
-    active: patch.active ?? current.active
+    active: patch.active ?? current.active,
+    includedTier: patch.includedTier === undefined ? bundleTierOrNull(current.includedTier) : patch.includedTier,
+    includedMonths: patch.includedMonths === undefined ? current.includedMonths : patch.includedMonths,
+    includedLifetime: patch.includedLifetime ?? current.includedLifetime,
+    ships: patch.ships ?? current.ships
   };
   const error = catalogVariantError(next);
   if (error) return { ok: false as const, error };
   const saved = await prisma.catalogVariant.update({ where: { id }, data: cleanVariant(next) });
   return { ok: true as const, variant: saved };
+}
+
+function bundleTierOrNull(value: string | null): BundleTier | null {
+  if (value === "STARTER" || value === "GROWTH" || value === "AGENCY" || value === "FOUNDER") return value;
+  return null;
 }
 
 function cleanVariant(variant: CatalogVariantInput) {
@@ -128,6 +143,10 @@ function cleanVariant(variant: CatalogVariantInput) {
     lowStockAt: variant.lowStockAt,
     minQty: variant.minQty,
     imageUrl: variant.imageUrl || null,
-    active: variant.active ?? true
+    active: variant.active ?? true,
+    includedTier: variant.includedTier ?? null,
+    includedMonths: variant.includedMonths ?? null,
+    includedLifetime: variant.includedLifetime === true,
+    ships: variant.ships !== false
   };
 }

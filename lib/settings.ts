@@ -273,6 +273,35 @@ export const DEFAULT_PLANS: PricingConfig = {
       storeProducts: 100000,
       storeOrders: 100000
     }
+  },
+  // Sold only as the capped catalogue SKU. Hidden from the public pricing page.
+  FOUNDER: {
+    tier: "FOUNDER",
+    name: "Founder",
+    tagline: "Lifetime access, limited quantity",
+    monthly: 0,
+    yearly: 0,
+    features: [
+      "5 businesses, 25 locations",
+      "Staff-wise review tracking",
+      "Campaign tracking",
+      "PDF monthly reports",
+      "Custom branding",
+      "Does not lapse while active"
+    ],
+    visible: false,
+    limits: {
+      businesses: 5,
+      locations: 25,
+      staff: 100,
+      qrCodes: 500,
+      reviews: 10000,
+      aiCallsPerMonth: 2000,
+      campaigns: 50,
+      reviewTemplates: 1000,
+      storeProducts: 100000,
+      storeOrders: 100000
+    }
   }
 };
 
@@ -444,7 +473,8 @@ export async function getPricingConfig(): Promise<PricingConfig> {
     FREE: mergePlan(DEFAULT_PLANS.FREE, stored.FREE),
     STARTER: mergePlan(DEFAULT_PLANS.STARTER, stored.STARTER),
     GROWTH: mergePlan(DEFAULT_PLANS.GROWTH, stored.GROWTH),
-    AGENCY: mergePlan(DEFAULT_PLANS.AGENCY, stored.AGENCY)
+    AGENCY: mergePlan(DEFAULT_PLANS.AGENCY, stored.AGENCY),
+    FOUNDER: mergePlan(DEFAULT_PLANS.FOUNDER, stored.FOUNDER)
   };
 }
 export async function setPricingConfig(v: PricingConfig, by?: string) {

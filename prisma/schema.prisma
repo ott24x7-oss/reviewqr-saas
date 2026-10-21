@@ -33,6 +33,7 @@ enum SubscriptionTier {
   STARTER
   GROWTH
   AGENCY
+  FOUNDER
 }
 
 enum SubscriptionStatus {
@@ -89,6 +90,8 @@ model User {
   printBatches    PrintBatch[]
   refreshSessions RefreshSession[]
   pushDevices     PushDevice[]
+  shippingAddresses ShippingAddress[]
+  referralCodes   ReferralCode[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1221,11 +1224,65 @@ model CatalogVariant {
   minQty     Int            @default(1)
   imageUrl   String?        @db.Text
   active     Boolean        @default(true)
+  // Set together on a plan bundle. Lifetime is the Founder SKU only.
+  includedTier     SubscriptionTier?
+  includedMonths   Int?
+  includedLifetime Boolean          @default(false)
+  // Digital SKUs (the Founder plan) do not ship and may use a zero box.
+  ships      Boolean        @default(true)
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
 
   @@index([productId])
   @@index([active, stock])
+}
+
+// Platform coupons for the ReviewQR shop. Not a business's store Coupon.
+model ShopCoupon {
+  id         String    @id @default(cuid())
+  code       String    @unique
+  percentOff Int?
+  flatPaise  Int?
+  active     Boolean   @default(true)
+  expiresAt  DateTime?
+  maxUses    Int?
+  usedCount  Int       @default(0)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}
+
+model ReferralCode {
+  id         String    @id @default(cuid())
+  code       String    @unique
+  userId     String?
+  user       User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  percentOff Int?
+  flatPaise  Int?
+  active     Boolean   @default(true)
+  expiresAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model ShippingAddress {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label     String?
+  name      String
+  phone     String
+  line1     String
+  line2     String?
+  city      String
+  state     String
+  pincode   String
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }
 
 // Singleton: admin-overridable branding for the WatShop Review *platform*

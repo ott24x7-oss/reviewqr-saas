@@ -1,8 +1,8 @@
 import type { PrismaClient } from "@prisma/client";
-import { CATALOG_SEED } from "./catalog-seed";
+import { CATALOG_SEED, FOUNDER_SEED } from "./catalog-seed";
 
 export async function ensureCatalogWith(db: PrismaClient) {
-  for (const row of CATALOG_SEED) {
+  for (const row of [...CATALOG_SEED, FOUNDER_SEED]) {
     const product = await db.catalogProduct.upsert({
       where: { slug: row.product.slug },
       update: {},

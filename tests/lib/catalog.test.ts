@@ -26,4 +26,12 @@ describe("catalogue seed", () => {
     expect(isLowStock(10, 10)).toBe(true);
     expect(isLowStock(11, 10)).toBe(false);
   });
+
+  it("allows a zero box only when the variant does not ship", () => {
+    const sample = CATALOG_SEED[0].variants[0];
+    expect(catalogVariantError({ ...sample, weightGrams: 0 })).toMatch(/Weight/);
+    expect(
+      catalogVariantError({ ...sample, weightGrams: 0, lengthMm: 0, widthMm: 0, heightMm: 0, ships: false })
+    ).toBeNull();
+  });
 });

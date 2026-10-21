@@ -46,6 +46,11 @@ export function effectiveTier(u: {
     return "FREE";
   }
 
+  // Founder stays for as long as it is active. A date does not revoke it.
+  if (u.subscriptionTier === "FOUNDER" && u.subscriptionStatus === "ACTIVE") {
+    return "FOUNDER";
+  }
+
   // Paid period has lapsed.
   if (u.subscriptionEndsAt && u.subscriptionEndsAt.getTime() < now.getTime()) {
     return "FREE";

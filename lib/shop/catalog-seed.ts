@@ -139,3 +139,39 @@ export const CATALOG_SEED: CatalogSeed[] = [
 ];
 
 export const CATALOG_SKUS = ["STAND-QR", "COMBO-NFC-QR", "CARD-PVC-NFC", "STICK-5", "STICK-10", "KEY-NFC"];
+
+/** Lifetime plan. Stock is the cap. Seeded with Prisma, never by the enum migration. */
+export const FOUNDER_SKU = "FOUNDER-LIFE";
+export const FOUNDER_CAP = 100;
+export const FOUNDER_SALE_PAISE = 2499900;
+
+export const FOUNDER_SEED: CatalogSeed = {
+  product: {
+    slug: "founder-lifetime",
+    name: "Founder lifetime",
+    nameHi: "फाउंडर लाइफटाइम",
+    description: "A limited lifetime plan with Growth limits. It is not printed and it does not ship.",
+    descriptionHi: "ग्रोथ सीमाओं वाला सीमित लाइफटाइम प्लान। यह छपता नहीं और भेजा नहीं जाता।",
+    needsNfc: false,
+    needsDesign: false,
+    defaultTemplateId: null,
+    sortOrder: 90
+  },
+  variants: [
+    variant(
+      FOUNDER_SKU,
+      "Founder lifetime",
+      "फाउंडर लाइफटाइम",
+      { cost: 0, mrp: 2999900, sale: FOUNDER_SALE_PAISE },
+      { weightGrams: 0, ...box(0, 0, 0) },
+      {
+        hsn: "998313",
+        ships: false,
+        stock: FOUNDER_CAP,
+        includedTier: "FOUNDER",
+        includedLifetime: true,
+        includedMonths: null
+      }
+    )
+  ]
+};
