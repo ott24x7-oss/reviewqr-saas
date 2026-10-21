@@ -63,10 +63,19 @@ async function paintLine(text: string, fontCss: string, color: string, widthMm: 
   return canvas.toDataURL("image/png");
 }
 
-export function PrintEditor() {
+export function PrintEditor({
+  mode = "proof",
+  businessId,
+  businessName
+}: {
+  mode?: "proof" | "tables";
+  businessId?: string;
+  businessName?: string;
+}) {
   const rootRef = React.useRef<HTMLDivElement>(null);
   const previewRef = React.useRef<HTMLDivElement>(null);
-  const [job, setJob] = React.useState<PrintJob>(startJob);
+  const [job, setJob] = React.useState<PrintJob>(() => ({ ...startJob(), name: businessName || "Spice Junction" }));
+  const [copies, setCopies] = React.useState(mode === "tables" ? 4 : 10);
   const [face, setFace] = React.useState<"front" | "back">("front");
   const [preset, setPreset] = React.useState<"exact" | "bleed" | "sheet">("exact");
   const [sheetId, setSheetId] = React.useState("a4");
@@ -204,15 +213,20 @@ export function PrintEditor() {
     };
   }
 
-  async function download(format: "pdf" | "svg" | "zip") {
+  async function download(format: "pdf" | "svg" | "zip", bulk = false) {
     setBusy(true);
     setMessage("");
     try {
       const rasters = await rastersFor();
-      const res = await fetch("/api/admin/print", {
+      const endpoint = bulk
+        ? mode === "tables"
+          ? `/api/businesses/${businessId}/print`
+          : "/api/admin/print/batch"
+        : "/api/admin/print";
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ ...payload(rasters), format })
+        body: JSON.stringify(bulk ? { ...payload(rasters), format, count: copies } : { ...payload(rasters), format })
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -272,7 +286,7 @@ export function PrintEditor() {
   function openPrint() {
     try {
       sessionStorage.setItem(PRINT_JOB_KEY, JSON.stringify(job));
-      window.open("/admin/print/paper", "_blank", "noopener");
+      window.open(mode === "tables" ? "/dashboard/print/paper" : "/admin/print/paper", "_blank", "noopener");
     } catch {
       setMessage("Could not open the print view");
     }
@@ -310,8 +324,12 @@ export function PrintEditor() {
   return (
     <div ref={rootRef} className={`${tapFontClass} space-y-4`}>
       <div>
-        <h1 className="font-display text-2xl font-bold sm:text-3xl">Print studio</h1>
-        <p className="text-sm text-muted-foreground">Exact size, 3 mm bleed, or a cut sheet. Latin text and the QR stay vector.</p>
+        <h1 className="font-display text-2xl font-bold sm:text-3xl">{mode === "tables" ? "Print tables" : "Print studio"}</h1>
+        <p className="text-sm text-muted-foreground">
+          {mode === "tables"
+            ? "One design for every table. Each card gets its own code."
+            : "Exact size, 3 mm bleed, or a cut sheet. Latin text and the QR stay vector."}
+        </p>
       </div>
       <div className="flex gap-2 overflow-x-auto pb-1">
         {PRINT_TEMPLATES.map((item) => (
@@ -415,9 +433,11 @@ export function PrintEditor() {
           <label className="block text-sm font-medium">Background image
             <input className="mt-1 block w-full text-sm" type="file" accept="image/png,image/jpeg" onChange={(event) => onFile("backgroundImage", event.target.files?.[0])} />
           </label>
-          <label className="block text-sm font-medium">Proof code
-            <input className="input mt-1 min-h-11 w-full" value={job.code} onChange={(event) => patch({ code: event.target.value.trim() })} />
-          </label>
+          {mode === "proof" ? (
+            <label className="block text-sm font-medium">Proof code
+              <input className="input mt-1 min-h-11 w-full" value={job.code} onChange={(event) => patch({ code: event.target.value.trim() })} />
+            </label>
+          ) : null}
           <label className="block text-sm font-medium">Label
             <input className="input mt-1 min-h-11 w-full" value={job.label} onChange={(event) => patch({ label: event.target.value })} />
           </label>
@@ -441,10 +461,28 @@ export function PrintEditor() {
               </select>
             </label>
           ) : null}
+          <label className="block text-sm font-medium">{mode === "tables" ? "Tables" : "Blank stock"}
+            <input className="input mt-1 min-h-11 w-full" type="number" min={1} max={100} value={copies} onChange={(event) => setCopies(Number(event.target.value))} />
+          </label>
+          {mode === "tables" ? (
+            <p className="text-xs text-muted-foreground">Labels run from Table 1. Nothing is saved if this would pass the plan limit.</p>
+          ) : (
+            <p className="text-xs text-muted-foreground">Blank stock stays unassigned until someone activates it.</p>
+          )}
           <div className="flex flex-wrap gap-2">
-            <Button type="button" className="min-h-11" disabled={!canExport || busy} onClick={() => download("pdf")}>PDF</Button>
-            <Button type="button" variant="outline" className="min-h-11" disabled={!canExport || busy} onClick={() => download("svg")}>SVG</Button>
-            <Button type="button" variant="outline" className="min-h-11" disabled={!canExport || busy} onClick={() => download("zip")}>ZIP</Button>
+            {mode === "proof" ? (
+              <>
+                <Button type="button" className="min-h-11" disabled={!canExport || busy} onClick={() => download("pdf")}>PDF</Button>
+                <Button type="button" variant="outline" className="min-h-11" disabled={!canExport || busy} onClick={() => download("svg")}>SVG</Button>
+                <Button type="button" variant="outline" className="min-h-11" disabled={!canExport || busy} onClick={() => download("zip")}>ZIP</Button>
+              </>
+            ) : null}
+            <Button type="button" className="min-h-11" disabled={!canExport || busy || !Number.isInteger(copies) || copies < 1 || copies > 100} onClick={() => download("pdf", true)}>
+              {mode === "tables" ? "Tables PDF" : "Stock PDF"}
+            </Button>
+            <Button type="button" variant="outline" className="min-h-11" disabled={!canExport || busy || !Number.isInteger(copies) || copies < 1 || copies > 100} onClick={() => download("zip", true)}>
+              {mode === "tables" ? "Tables ZIP" : "Stock ZIP"}
+            </Button>
             <Button type="button" variant="outline" className="min-h-11" disabled={!scene || busy} onClick={downloadPng}>PNG 300 DPI</Button>
             <Button type="button" variant="outline" className="min-h-11" onClick={openPrint}>Browser print</Button>
           </div>

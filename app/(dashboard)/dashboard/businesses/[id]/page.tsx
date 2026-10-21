@@ -7,7 +7,7 @@ import { TeamPanel } from "@/components/dashboard/team-panel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { absoluteUrl } from "@/lib/utils";
-import { ExternalLink, QrCode, MapPin, Users, Edit3, Star, FileText, Sparkles, Quote, Palette, ShoppingBag, Ticket } from "lucide-react";
+import { ExternalLink, QrCode, MapPin, Users, Edit3, Star, FileText, Sparkles, Quote, Palette, ShoppingBag, Ticket, Printer } from "lucide-react";
 import { getReviewUrl } from "@/lib/qr";
 import { BusinessActions } from "./business-actions";
 
@@ -152,6 +152,19 @@ export default async function BusinessDetailPage({ params }: { params: { id: str
               <div>
                 <div className="font-semibold">QR codes</div>
                 <div className="text-xs text-muted-foreground">{business._count.qrCodes} active</div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href={`/dashboard/businesses/${business.id}/print`}>
+          <Card className="hover:shadow-card transition cursor-pointer">
+            <CardContent className="p-5 flex items-start gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50 text-amber-700">
+                <Printer className="h-5 w-5" />
+              </span>
+              <div>
+                <div className="font-semibold">Print tables</div>
+                <div className="text-xs text-muted-foreground">One design, one code per table</div>
               </div>
             </CardContent>
           </Card>
