@@ -1219,6 +1219,32 @@
   background: var(--store-ink);
   color: var(--store-bg);
 }
+.store-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.store-chips button {
+  min-height: 44px;
+  border: 1px solid var(--store-line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--store-ink);
+  padding: 0 14px;
+}
+.store-chips button[aria-pressed="true"] {
+  background: var(--store-ink);
+  color: var(--store-bg);
+}
+.store-chips button:disabled { opacity: 0.45; }
+.store-option-label { margin: 4px 0 0; font-size: 0.85rem; font-weight: 700; }
+.store-addon {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.95rem;
+}
+.store-pick { z-index: 40; }
+.store-pick-back { z-index: 35; }
+.store-line-meta { color: var(--store-muted); font-size: 0.85rem; font-weight: 600; }
+.store-add:disabled { font-size: 0.72rem; letter-spacing: 0; opacity: 0.7; cursor: default; }
 .store-break { display: grid; gap: 4px; margin-top: 8px; font-size: 0.92rem; }
 .store-break div { display: flex; justify-content: space-between; gap: 12px; }
 .store-section-title span { color: var(--store-muted); font-weight: 600; }
@@ -1566,6 +1592,14 @@
   font-size: 0.9rem;
 }
 .store-sheet textarea { min-height: 72px; }
+.store-sheet .store-addon input {
+  width: 22px;
+  height: 22px;
+  min-height: 22px;
+  padding: 0;
+}
+.store-sheet.store-pick { z-index: 40; }
+.store-backdrop.store-pick-back { z-index: 35; }
 .store-order {
   min-height: 56px;
   width: 100%;

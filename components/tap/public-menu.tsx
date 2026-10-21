@@ -24,13 +24,15 @@ export async function PublicMenu({ code, channel }: { code: string; channel: "q"
       include: {
         items: {
           where: { available: true },
-          orderBy: [{ sortOrder: "asc" }, { name: "asc" }]
+          orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+          include: optionInclude
         }
       }
     }),
     prisma.menuItem.findMany({
       where: { businessId: record.businessId, available: true, categoryId: null },
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }]
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      include: optionInclude
     }),
     readAdminThemes().catch(() => []),
     prisma.storeSettings.findUnique({ where: { businessId: record.businessId } }),
@@ -78,6 +80,11 @@ export async function PublicMenu({ code, channel }: { code: string; channel: "q"
   );
 }
 
+const optionInclude = {
+  variants: { orderBy: [{ sortOrder: "asc" as const }, { label: "asc" as const }] },
+  addOns: { orderBy: [{ sortOrder: "asc" as const }, { name: "asc" as const }] }
+};
+
 function toItem(item: {
   id: string;
   categoryId: string | null;
@@ -89,6 +96,22 @@ function toItem(item: {
   bestseller: boolean;
   photo: string | null;
   veg: StoreItem["veg"];
+  variants: {
+    id: string;
+    label: string;
+    labelHi: string | null;
+    size: string;
+    colour: string;
+    pricePaise: number;
+    inStock: boolean;
+  }[];
+  addOns: {
+    id: string;
+    name: string;
+    nameHi: string | null;
+    pricePaise: number;
+    inStock: boolean;
+  }[];
 }): StoreItem {
   return {
     id: item.id,
@@ -100,6 +123,22 @@ function toItem(item: {
     description: item.description || "",
     bestseller: item.bestseller,
     photo: item.photo,
-    veg: item.veg
+    veg: item.veg,
+    variants: item.variants.map((variant) => ({
+      id: variant.id,
+      label: variant.label,
+      labelHi: variant.labelHi || "",
+      size: variant.size,
+      colour: variant.colour,
+      pricePaise: variant.pricePaise,
+      inStock: variant.inStock
+    })),
+    addOns: item.addOns.map((addOn) => ({
+      id: addOn.id,
+      name: addOn.name,
+      nameHi: addOn.nameHi || "",
+      pricePaise: addOn.pricePaise,
+      inStock: addOn.inStock
+    }))
   };
 }

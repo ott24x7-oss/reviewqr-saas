@@ -9,6 +9,7 @@ import { hoursFromPublished, whatsAppNumberUrl } from "@/lib/tap/links";
 import { fitWhatsAppOrder, formatRupees } from "@/lib/tap/order-message";
 import { STORE_ORDER_LIMIT, storeOrderRateKeys } from "@/lib/store/limits";
 import { enabledOrderTypes, quoteOrder, rulesFromSettings, type OrderType } from "@/lib/store/pricing";
+import { optionLineName, resolveChoice } from "@/lib/store/variants";
 
 const schema = z.object({
   code: z.string().min(4).max(32),
@@ -21,7 +22,9 @@ const schema = z.object({
   items: z.array(z.object({
     id: z.string().min(1).max(40),
     qty: z.number().int().min(1).max(20),
-    note: z.string().max(80).optional()
+    note: z.string().max(80).optional(),
+    variantId: z.string().max(40).optional(),
+    addonIds: z.array(z.string().max(40)).max(12).optional()
   })).min(1).max(40)
 });
 
@@ -75,7 +78,8 @@ export async function POST(req: NextRequest) {
 
   const [rows, settings, tap] = await Promise.all([
     prisma.menuItem.findMany({
-      where: { businessId: qr.business.id, available: true, id: { in: data.items.map((item) => item.id) } }
+      where: { businessId: qr.business.id, available: true, id: { in: data.items.map((item) => item.id) } },
+      include: { variants: true, addOns: true }
     }),
     prisma.storeSettings.findUnique({ where: { businessId: qr.business.id } }),
     prisma.tapPage.findUnique({ where: { businessId: qr.business.id }, select: { published: true } })
@@ -84,17 +88,47 @@ export async function POST(req: NextRequest) {
   if (data.items.some((item) => !byId.has(item.id))) {
     return NextResponse.json({ error: data.lang === "hi" ? "कोई आइटम अब उपलब्ध नहीं है" : "An item is no longer available" }, { status: 400 });
   }
-  const lines = data.items.map((item) => {
+  const lines: {
+    id: string;
+    name: string;
+    qty: number;
+    unitPaise: number;
+    note: string;
+    variantId: string | null;
+    addonIds: string[];
+  }[] = [];
+  for (const item of data.items) {
     const row = byId.get(item.id)!;
-    const hindi = data.lang === "hi" && row.nameHi;
-    return {
+    const choice = resolveChoice({
+      itemPricePaise: row.pricePaise,
+      variants: row.variants,
+      addOns: row.addOns,
+      variantId: item.variantId,
+      addonIds: item.addonIds
+    });
+    if (!choice.ok) {
+      return NextResponse.json({ error: explain(data.lang, choice.code) }, { status: 400 });
+    }
+    const hindi = data.lang === "hi";
+    const variantLabel = choice.variant
+      ? hindi && choice.variant.labelHi
+        ? choice.variant.labelHi
+        : choice.variant.label
+      : "";
+    lines.push({
       id: row.id,
-      name: hindi ? row.nameHi! : row.name,
+      name: optionLineName(
+        hindi && row.nameHi ? row.nameHi : row.name,
+        variantLabel,
+        choice.addOns.map((addOn) => (hindi && addOn.nameHi ? addOn.nameHi : addOn.name))
+      ),
       qty: item.qty,
-      unitPaise: row.pricePaise,
-      note: (item.note || "").trim()
-    };
-  });
+      unitPaise: choice.unitPaise,
+      note: (item.note || "").trim(),
+      variantId: choice.variant?.id || null,
+      addonIds: choice.addOns.map((addOn) => addOn.id)
+    });
+  }
   const subtotalPaise = lines.reduce((sum, line) => sum + line.unitPaise * line.qty, 0);
   const rules = rulesFromSettings(settings, hoursFromPublished(tap?.published));
   const orderType = (data.orderType && enabledOrderTypes(rules).includes(data.orderType)
@@ -192,6 +226,9 @@ function explain(lang: "en" | "hi" | undefined, code: string, shortfallPaise?: n
   }
   if (code === "pincode") return hi ? "हम इस पिनकोड पर डिलीवरी नहीं करते।" : "We don't deliver to that pincode.";
   if (code === "order_type") return hi ? "यह ऑर्डर प्रकार उपलब्ध नहीं है।" : "That order type isn't available.";
+  if (code === "choose") return hi ? "साइज़ या विकल्प चुनें।" : "Choose a size or option.";
+  if (code === "stock") return hi ? "वह विकल्प स्टॉक में नहीं है।" : "That option is out of stock.";
+  if (code === "missing") return hi ? "कोई विकल्प अब उपलब्ध नहीं है।" : "An option is no longer available.";
   return hi ? "ऑर्डर नहीं बन सका।" : "Could not place the order";
 }
 

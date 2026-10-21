@@ -15,12 +15,24 @@ export default async function BusinessMenuPage({ params }: { params: { id: strin
   const categories = await prisma.menuCategory.findMany({
     where: { businessId: access.id },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    include: { items: { orderBy: [{ sortOrder: "asc" }, { name: "asc" }] } }
+    include: {
+      items: {
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+        include: {
+          variants: { orderBy: [{ sortOrder: "asc" }, { label: "asc" }] },
+          addOns: { orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }
+        }
+      }
+    }
   });
   const [loose, ai] = await Promise.all([
     prisma.menuItem.findMany({
       where: { businessId: access.id, categoryId: null },
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }]
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      include: {
+        variants: { orderBy: [{ sortOrder: "asc" }, { label: "asc" }] },
+        addOns: { orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }
+      }
     }),
     getAiConfig().catch(() => null)
   ]);
@@ -51,6 +63,22 @@ function serialize(item: {
   bestseller: boolean;
   veg: "VEG" | "NON_VEG" | "EGG" | "NONE";
   available: boolean;
+  variants: {
+    id: string;
+    label: string;
+    labelHi: string | null;
+    size: string;
+    colour: string;
+    pricePaise: number;
+    inStock: boolean;
+  }[];
+  addOns: {
+    id: string;
+    name: string;
+    nameHi: string | null;
+    pricePaise: number;
+    inStock: boolean;
+  }[];
 }) {
   return {
     id: item.id,
@@ -61,6 +89,22 @@ function serialize(item: {
     description: item.description || "",
     bestseller: item.bestseller,
     veg: item.veg,
-    available: item.available
+    available: item.available,
+    variants: item.variants.map((variant) => ({
+      id: variant.id,
+      label: variant.label,
+      labelHi: variant.labelHi || "",
+      size: variant.size,
+      colour: variant.colour,
+      priceRupees: variant.pricePaise / 100,
+      inStock: variant.inStock
+    })),
+    addOns: item.addOns.map((addOn) => ({
+      id: addOn.id,
+      name: addOn.name,
+      nameHi: addOn.nameHi || "",
+      priceRupees: addOn.pricePaise / 100,
+      inStock: addOn.inStock
+    }))
   };
 }

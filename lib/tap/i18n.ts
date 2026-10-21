@@ -51,6 +51,13 @@ const STRINGS = {
     deliveryCharge: "Delivery",
     gstIncluded: "GST included",
     gstExtra: "GST",
+    chooseOption: "Choose one",
+    addOns: "Add-ons",
+    addToOrder: "Add to order",
+    outOfStock: "Sold out",
+    size: "Size",
+    colour: "Colour",
+    priceFrom: "From",
     hindi: "हिंदी",
     english: "English"
   },
@@ -104,6 +111,13 @@ const STRINGS = {
     deliveryCharge: "डिलीवरी",
     gstIncluded: "GST शामिल",
     gstExtra: "GST",
+    chooseOption: "एक चुनें",
+    addOns: "ऐड-ऑन",
+    addToOrder: "ऑर्डर में जोड़ें",
+    outOfStock: "स्टॉक खत्म",
+    size: "साइज़",
+    colour: "रंग",
+    priceFrom: "शुरू",
     hindi: "हिंदी",
     english: "English"
   }

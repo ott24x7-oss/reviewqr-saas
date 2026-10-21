@@ -8,6 +8,24 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { formatRupees } from "@/lib/tap/order-message";
 
+type Option = {
+  id: string;
+  label: string;
+  labelHi: string;
+  size: string;
+  colour: string;
+  priceRupees: number;
+  inStock: boolean;
+};
+
+type AddOn = {
+  id: string;
+  name: string;
+  nameHi: string;
+  priceRupees: number;
+  inStock: boolean;
+};
+
 type Item = {
   id: string;
   name: string;
@@ -18,6 +36,8 @@ type Item = {
   bestseller: boolean;
   veg: "VEG" | "NON_VEG" | "EGG" | "NONE";
   available: boolean;
+  variants: Option[];
+  addOns: AddOn[];
 };
 
 export function MenuEditor({
@@ -47,9 +67,13 @@ export function MenuEditor({
   const [categoryName, setCategoryName] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [draftItems, setDraftItems] = React.useState<Array<{ name: string; priceRupees: number; veg: Item["veg"] }>>([]);
+  const [bulkCategory, setBulkCategory] = React.useState("");
+  const [bulkMode, setBulkMode] = React.useState<"percent" | "rupees">("percent");
+  const [bulkAmount, setBulkAmount] = React.useState("");
   const fileRef = React.useRef<HTMLInputElement>(null);
+  const hasItems = categories.some((category) => category.items.length > 0) || loose.length > 0;
 
-  async function send(body: Record<string, unknown>) {
+  async function send(body: Record<string, unknown>, keepForm = false) {
     setBusy(true);
     try {
       const res = await fetch(`/api/businesses/${businessId}/menu`, {
@@ -60,13 +84,15 @@ export function MenuEditor({
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error || "Could not save the menu");
       toast.success("Menu saved");
-      setName("");
-      setNameHi("");
-      setPrice("");
-      setMrp("");
-      setDescription("");
-      setBestseller(false);
-      setCategoryName("");
+      if (!keepForm) {
+        setName("");
+        setNameHi("");
+        setPrice("");
+        setMrp("");
+        setDescription("");
+        setBestseller(false);
+        setCategoryName("");
+      }
       router.refresh();
       return true;
     } catch (err) {
@@ -211,6 +237,59 @@ export function MenuEditor({
           </CardContent>
         </Card>
       )}
+      {canEdit && hasItems ? (
+        <Card>
+          <CardContent className="space-y-3 p-4">
+            <p className="text-sm font-medium">Change prices</p>
+            <select
+              aria-label="Items to reprice"
+              value={bulkCategory}
+              onChange={(event) => setBulkCategory(event.target.value)}
+              className="flex h-11 w-full rounded-lg border bg-white px-3 text-sm"
+            >
+              <option value="">All items</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>{category.name}</option>
+              ))}
+            </select>
+            <div className="grid grid-cols-2 gap-2">
+              <select
+                aria-label="Price change"
+                value={bulkMode}
+                onChange={(event) => setBulkMode(event.target.value as "percent" | "rupees")}
+                className="flex h-11 w-full rounded-lg border bg-white px-3 text-sm"
+              >
+                <option value="percent">Percent</option>
+                <option value="rupees">Rupees</option>
+              </select>
+              <Input
+                aria-label="Price change amount"
+                value={bulkAmount}
+                inputMode="decimal"
+                placeholder={bulkMode === "percent" ? "10 or -10" : "20 or -20"}
+                onChange={(event) => setBulkAmount(event.target.value)}
+                className="min-h-11"
+              />
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={busy}
+              className="min-h-11"
+              onClick={() => {
+                const amount = Number(bulkAmount);
+                if (!Number.isFinite(amount)) {
+                  toast.error("Enter a price change");
+                  return;
+                }
+                void send({ action: "bulk-price", categoryId: bulkCategory || null, mode: bulkMode, amount }, true);
+              }}
+            >
+              Apply to item and option prices
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
       {[...categories.map((category) => ({ ...category, loose: false })), { id: "loose", name: "No category", nameHi: "", items: loose, loose: true }]
         .filter((group) => !group.loose || group.items.length > 0)
         .map((group) => (
@@ -225,37 +304,163 @@ export function MenuEditor({
           </div>
           {group.items.map((item) => (
             <Card key={item.id}>
-              <CardContent className="p-4 flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="font-medium">
-                    {item.name}
-                    {item.bestseller ? <span className="ml-2 rounded-full bg-orange-50 px-2 py-0.5 text-xs font-semibold text-orange-700">Bestseller</span> : null}
+              <CardContent className="space-y-3 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-medium">
+                      {item.name}
+                      {item.bestseller ? <span className="ml-2 rounded-full bg-orange-50 px-2 py-0.5 text-xs font-semibold text-orange-700">Bestseller</span> : null}
+                      {item.available ? null : <span className="ml-2 text-xs font-semibold text-muted-foreground">Hidden</span>}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {item.nameHi ? `${item.nameHi} · ` : ""}
+                      {formatRupees(Math.round(item.priceRupees * 100))}
+                      {item.mrpRupees ? <s className="ml-1">{formatRupees(Math.round(item.mrpRupees * 100))}</s> : null} · {item.veg}
+                    </div>
+                    {item.description ? <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{item.description}</p> : null}
                   </div>
-                  <div className="text-sm text-muted-foreground">
-                    {item.nameHi ? `${item.nameHi} · ` : ""}
-                    {formatRupees(Math.round(item.priceRupees * 100))}
-                    {item.mrpRupees ? <s className="ml-1">{formatRupees(Math.round(item.mrpRupees * 100))}</s> : null} · {item.veg}
-                  </div>
-                  {item.description ? <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{item.description}</p> : null}
+                  {canEdit && (
+                    <div className="flex flex-col gap-2">
+                      <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => send({ action: "update", id: item.id, bestseller: !item.bestseller }, true)}>
+                        {item.bestseller ? "Unmark bestseller" : "Bestseller"}
+                      </Button>
+                      <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => send({ action: "update", id: item.id, available: !item.available }, true)}>
+                        {item.available ? "Hide" : "Show"}
+                      </Button>
+                      <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => send({ action: "delete", kind: "item", id: item.id }, true)}>
+                        Delete
+                      </Button>
+                    </div>
+                  )}
                 </div>
-                {canEdit && (
-                  <div className="flex flex-col gap-2">
-                    <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => send({ action: "update", id: item.id, bestseller: !item.bestseller })}>
-                      {item.bestseller ? "Unmark bestseller" : "Bestseller"}
-                    </Button>
-                    <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => send({ action: "update", id: item.id, available: !item.available })}>
-                      {item.available ? "Hide" : "Show"}
-                    </Button>
-                    <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => send({ action: "delete", kind: "item", id: item.id })}>
-                      Delete
-                    </Button>
-                  </div>
-                )}
+                <ItemOptions item={item} canEdit={canEdit} busy={busy} send={send} />
               </CardContent>
             </Card>
           ))}
         </section>
       ))}
+    </div>
+  );
+}
+
+function ItemOptions({
+  item,
+  canEdit,
+  busy,
+  send
+}: {
+  item: Item;
+  canEdit: boolean;
+  busy: boolean;
+  send: (body: Record<string, unknown>, keepForm?: boolean) => Promise<boolean>;
+}) {
+  const [label, setLabel] = React.useState("");
+  const [size, setSize] = React.useState("");
+  const [colour, setColour] = React.useState("");
+  const [price, setPrice] = React.useState("");
+  const [addOnName, setAddOnName] = React.useState("");
+  const [addOnPrice, setAddOnPrice] = React.useState("");
+  if (!canEdit && item.variants.length === 0 && item.addOns.length === 0) return null;
+
+  return (
+    <div className="space-y-3 border-t pt-3">
+      {item.variants.map((variant) => (
+        <div key={variant.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+          <span>
+            {variant.label}
+            {variant.size || variant.colour ? ` · ${[variant.size, variant.colour].filter(Boolean).join(" / ")}` : ""}
+            {" · "}
+            {formatRupees(Math.round(variant.priceRupees * 100))}
+            {variant.inStock ? "" : " · Out of stock"}
+          </span>
+          {canEdit ? (
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => send({ action: "variant-update", id: variant.id, inStock: !variant.inStock }, true)}>
+                {variant.inStock ? "Out of stock" : "In stock"}
+              </Button>
+              <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => send({ action: "variant-delete", id: variant.id }, true)}>
+                Delete
+              </Button>
+            </div>
+          ) : null}
+        </div>
+      ))}
+      {item.addOns.map((addOn) => (
+        <div key={addOn.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+          <span>
+            Add-on: {addOn.name} · {formatRupees(Math.round(addOn.priceRupees * 100))}
+            {addOn.inStock ? "" : " · Out of stock"}
+          </span>
+          {canEdit ? (
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => send({ action: "addon-update", id: addOn.id, inStock: !addOn.inStock }, true)}>
+                {addOn.inStock ? "Out of stock" : "In stock"}
+              </Button>
+              <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => send({ action: "addon-delete", id: addOn.id }, true)}>
+                Delete
+              </Button>
+            </div>
+          ) : null}
+        </div>
+      ))}
+      {canEdit ? (
+        <>
+          <div className="grid grid-cols-2 gap-2">
+            <Input aria-label={`Option name for ${item.name}`} value={label} placeholder="Option, e.g. Half" onChange={(event) => setLabel(event.target.value)} className="min-h-11" />
+            <Input aria-label={`Option price for ${item.name}`} value={price} inputMode="decimal" placeholder="Option price ₹" onChange={(event) => setPrice(event.target.value)} className="min-h-11" />
+            <Input aria-label={`Size for ${item.name}`} value={size} placeholder="Size (optional)" onChange={(event) => setSize(event.target.value)} className="min-h-11" />
+            <Input aria-label={`Colour for ${item.name}`} value={colour} placeholder="Colour (optional)" onChange={(event) => setColour(event.target.value)} className="min-h-11" />
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={busy}
+            className="min-h-11"
+            onClick={async () => {
+              const saved = await send({
+                action: "variant",
+                id: item.id,
+                name: label,
+                size,
+                colour,
+                priceRupees: Number(price || 0)
+              }, true);
+              if (saved) {
+                setLabel("");
+                setSize("");
+                setColour("");
+                setPrice("");
+              }
+            }}
+          >
+            Add option
+          </Button>
+          <div className="grid grid-cols-2 gap-2">
+            <Input aria-label={`Add-on name for ${item.name}`} value={addOnName} placeholder="Add-on name" onChange={(event) => setAddOnName(event.target.value)} className="min-h-11" />
+            <Input aria-label={`Add-on price for ${item.name}`} value={addOnPrice} inputMode="decimal" placeholder="Add-on price ₹" onChange={(event) => setAddOnPrice(event.target.value)} className="min-h-11" />
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={busy}
+            className="min-h-11"
+            onClick={async () => {
+              const saved = await send({
+                action: "addon",
+                id: item.id,
+                name: addOnName,
+                priceRupees: Number(addOnPrice || 0)
+              }, true);
+              if (saved) {
+                setAddOnName("");
+                setAddOnPrice("");
+              }
+            }}
+          >
+            Add add-on
+          </Button>
+        </>
+      ) : null}
     </div>
   );
 }
