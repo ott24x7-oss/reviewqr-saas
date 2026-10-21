@@ -10,7 +10,8 @@ const schema = z.object({
   whiteLabelEnabled: z.boolean().optional(),
   whiteLabelName: z.string().max(80).optional().or(z.literal("")),
   whiteLabelDomain: z.string().max(120).optional().or(z.literal("")),
-  whiteLabelColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional()
+  whiteLabelColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+  pushEnabled: z.boolean().optional()
 });
 
 export async function PATCH(req: NextRequest) {

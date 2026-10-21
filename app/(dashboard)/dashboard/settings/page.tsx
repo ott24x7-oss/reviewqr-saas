@@ -38,7 +38,8 @@ export default async function SettingsPage() {
           whiteLabelName: user.whiteLabelName || "",
           whiteLabelDomain: user.whiteLabelDomain || "",
           whiteLabelColor: user.whiteLabelColor || "#1a73e8",
-          tier: user.subscriptionTier
+          tier: user.subscriptionTier,
+          pushEnabled: user.pushEnabled
         }}
       />
       <AccountPrivacy />

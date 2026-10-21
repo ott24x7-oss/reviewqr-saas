@@ -42,7 +42,33 @@ export const meSchema = z.object({
   email: z.string(),
   name: z.string().nullable(),
   phone: z.string().nullable(),
-  role: z.string()
+  role: z.string(),
+  pushEnabled: z.boolean()
+});
+
+export const mePatchSchema = z
+  .object({
+    name: z.string().min(1).max(80).optional(),
+    pushEnabled: z.boolean().optional()
+  })
+  .refine((value) => value.name !== undefined || value.pushEnabled !== undefined, {
+    message: "Nothing to update"
+  });
+
+export const deleteAccountSchema = z.object({
+  confirm: z.literal("DELETE", { errorMap: () => ({ message: "Type DELETE to confirm." }) })
+});
+
+export const pushRegisterSchema = z.object({
+  token: z
+    .string()
+    .regex(/^(ExponentPushToken|ExpoPushToken)\[[A-Za-z0-9_-]+\]$/, "Enter an Expo push token")
+    .max(240),
+  platform: z.enum(["IOS", "ANDROID"])
+});
+
+export const pushUnregisterSchema = z.object({
+  token: z.string().min(1).max(240)
 });
 
 export const sessionSchema = z.object({
@@ -63,4 +89,5 @@ export type RefreshInput = z.infer<typeof refreshSchema>;
 export type LogoutInput = z.infer<typeof logoutSchema>;
 export type TokenPair = z.infer<typeof tokenPairSchema>;
 export type Me = z.infer<typeof meSchema>;
+export type MePatch = z.infer<typeof mePatchSchema>;
 export type DeviceSession = z.infer<typeof sessionSchema>;

@@ -22,6 +22,11 @@ enum UserRole {
   STAFF
 }
 
+enum PushPlatform {
+  IOS
+  ANDROID
+}
+
 enum SubscriptionTier {
   FREE
   STARTER
@@ -45,6 +50,7 @@ model User {
   name           String?
   phone          String?
   image          String?
+  pushEnabled    Boolean   @default(true)
   // Set when the account is anonymized. The row stays so Payment records can.
   deletedAt      DateTime?
   role           UserRole  @default(USER)
@@ -80,6 +86,7 @@ model User {
   onboardingMarks OnboardingMark[]
   printBatches    PrintBatch[]
   refreshSessions RefreshSession[]
+  pushDevices     PushDevice[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -132,6 +139,19 @@ model RefreshSession {
 
   @@index([userId])
   @@index([familyId])
+}
+
+// Expo push tokens. This is not an NFC Device.
+model PushDevice {
+  id         String       @id @default(cuid())
+  userId     String
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token      String       @unique
+  platform   PushPlatform
+  lastSeenAt DateTime     @default(now())
+  createdAt  DateTime     @default(now())
+
+  @@index([userId])
 }
 
 model VerificationToken {

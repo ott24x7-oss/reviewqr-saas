@@ -8,13 +8,17 @@ import {
   apiErrorSchema,
   dataSchema,
   listSchema,
+  deleteAccountSchema,
   loginSchema,
   logoutSchema,
+  mePatchSchema,
   meSchema,
   okSchema,
   otpRequestSchema,
   otpSentSchema,
   otpVerifySchema,
+  pushRegisterSchema,
+  pushUnregisterSchema,
   refreshSchema,
   sessionSchema,
   tokenPairSchema
@@ -127,6 +131,60 @@ registry.registerPath({
   security: [{ bearerAuth: [] }],
   responses: {
     200: jsonResponse("Current user", dataSchema(meRef)),
+    401: unauthorized
+  }
+});
+
+registry.registerPath({
+  method: "patch",
+  path: "/api/v1/me",
+  summary: "Update name or push preference",
+  security: [{ bearerAuth: [] }],
+  request: jsonBody(mePatchSchema),
+  responses: {
+    200: jsonResponse("Updated user", dataSchema(meRef)),
+    400: validation,
+    401: unauthorized
+  }
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/api/v1/me",
+  summary: "Anonymize the account and keep invoices",
+  security: [{ bearerAuth: [] }],
+  request: jsonBody(deleteAccountSchema),
+  responses: {
+    200: jsonResponse("Account anonymized", dataSchema(okSchema)),
+    400: validation,
+    401: unauthorized,
+    403: { description: "Admin accounts cannot be deleted here", content: { "application/json": { schema: errorRef } } }
+  }
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/v1/push-devices",
+  summary: "Register an Expo push token",
+  security: [{ bearerAuth: [] }],
+  request: jsonBody(pushRegisterSchema),
+  responses: {
+    200: jsonResponse("Registered", dataSchema(z.object({ id: z.string(), platform: z.enum(["IOS", "ANDROID"]), token: z.string() }))),
+    400: validation,
+    401: unauthorized,
+    429: rateLimit
+  }
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/api/v1/push-devices",
+  summary: "Unregister an Expo push token",
+  security: [{ bearerAuth: [] }],
+  request: jsonBody(pushUnregisterSchema),
+  responses: {
+    200: jsonResponse("Unregistered", dataSchema(okSchema)),
+    400: validation,
     401: unauthorized
   }
 });

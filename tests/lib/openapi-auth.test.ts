@@ -9,6 +9,8 @@ describe("OpenAPI auth document", () => {
     expect(doc.paths?.["/api/v1/auth/login"]?.post).toBeTruthy();
     expect(doc.paths?.["/api/v1/auth/refresh"]?.post).toBeTruthy();
     expect(doc.paths?.["/api/v1/me"]?.get).toBeTruthy();
+    expect(doc.paths?.["/api/v1/me"]?.delete).toBeTruthy();
+    expect(doc.paths?.["/api/v1/push-devices"]?.post).toBeTruthy();
     expect(doc.paths?.["/api/v1/me/sessions/{id}"]?.delete).toBeTruthy();
   });
 });

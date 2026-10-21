@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { requireBusinessRole } from "@/lib/tenant";
 import { loadOrderCards } from "@/lib/store/order-feed";
+import { notifyOrderStatus } from "@/lib/store/order-alert";
 import { ORDER_STATUSES, canSetStatus, nextStatusEvents } from "@/lib/store/order-status";
 
 const schema = z.object({
@@ -20,7 +21,15 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   const order = await prisma.menuOrder.findUnique({
     where: { id: params.id },
-    select: { id: true, businessId: true, status: true, events: true, createdAt: true }
+    select: {
+      id: true,
+      businessId: true,
+      number: true,
+      status: true,
+      events: true,
+      createdAt: true,
+      business: { select: { name: true, ownerId: true } }
+    }
   });
   if (!order) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
@@ -47,6 +56,14 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         status: next,
         events: nextStatusEvents(order.events, order.status, next, order.createdAt) as Prisma.InputJsonValue
       }
+    });
+    await notifyOrderStatus({
+      businessId: order.businessId,
+      ownerId: order.business.ownerId,
+      number: order.number,
+      businessName: order.business.name,
+      status: next,
+      orderId: order.id
     });
   }
 

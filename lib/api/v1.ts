@@ -10,6 +10,7 @@ export type V1User = {
   name: string | null;
   phone: string | null;
   role: string;
+  pushEnabled: boolean;
 };
 
 export function v1Error(status: number, code: string, message: string) {
@@ -29,10 +30,17 @@ export async function resolveV1User(req: NextRequest): Promise<V1User | null | "
     if (!claims) return "bad-bearer";
     const user = await prisma.user.findUnique({
       where: { id: claims.sub },
-      select: { id: true, email: true, name: true, phone: true, role: true, deletedAt: true }
+      select: { id: true, email: true, name: true, phone: true, role: true, pushEnabled: true, deletedAt: true }
     });
     if (!user || user.deletedAt) return null;
-    return { id: user.id, email: user.email, name: user.name, phone: user.phone, role: user.role };
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      phone: user.phone,
+      role: user.role,
+      pushEnabled: user.pushEnabled
+    };
   }
 
   const sessionUser = await getSessionUser();
@@ -42,7 +50,8 @@ export async function resolveV1User(req: NextRequest): Promise<V1User | null | "
     email: sessionUser.email,
     name: sessionUser.name,
     phone: sessionUser.phone,
-    role: sessionUser.role
+    role: sessionUser.role,
+    pushEnabled: sessionUser.pushEnabled
   };
 }
 
