@@ -62,8 +62,8 @@ export function AiReviewsClient({
         <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-500/15 p-3 text-sm text-amber-800 dark:text-amber-300">
           <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
           <span>
-            Add your <span className="font-medium">Google review link</span> in the business settings
-            — the customer is sent there to paste the review after copying.
+            Add your <span className="font-medium">Google review link</span> in the business settings.
+            Customers who want to post publicly open that link themselves.
           </span>
         </div>
       )}
@@ -81,10 +81,10 @@ export function AiReviewsClient({
               onChange={(e) => setEnabled(e.target.checked)}
             />
             <span>
-              <span className="font-medium">Enable AI-assisted reviews for this business</span>
+              <span className="font-medium">Let AI clean up this business&apos;s customer text</span>
               <span className="block text-xs text-muted-foreground">
-                4–5★ customers get quick questions + AI-written review options to copy before Google.
-                When off, the standard review-template flow is used.
+                The customer writes at least a few words, or taps a topic hint. AI suggests one
+                version they can edit and copy. Nothing is posted for them.
               </span>
             </span>
           </label>
@@ -104,13 +104,13 @@ export function AiReviewsClient({
               className="min-h-[120px] mt-1"
             />
             <p className="text-[11px] text-muted-foreground mt-1">
-              List your key services, specialities, and what customers love. The more specific, the
-              better the AI's questions and review suggestions.
+              List what you offer. AI uses this only to keep a cleanup in the customer&apos;s own
+              meaning. It must not add praise they did not write.
             </p>
           </div>
 
           <div className="pt-2 border-t text-xs text-muted-foreground space-y-1">
-            <div className="font-medium text-foreground">Also used for training:</div>
+            <div className="font-medium text-foreground">Also used as context:</div>
             <div>• About: {business.description ? "✓ set" : "— add a description in business settings"}</div>
             <div>• Category: {business.industry || "—"}</div>
             <div>• Website: {business.website || "—"}</div>

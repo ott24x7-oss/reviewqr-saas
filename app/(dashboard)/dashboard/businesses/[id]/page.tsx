@@ -194,9 +194,9 @@ export default async function BusinessDetailPage({ params }: { params: { id: str
                 <FileText className="h-5 w-5" />
               </span>
               <div>
-                <div className="font-semibold">Review templates</div>
+                <div className="font-semibold">Topic hints</div>
                 <div className="text-xs text-muted-foreground">
-                  {business._count.reviewTemplates} in stock
+                  {business._count.reviewTemplates} hints
                 </div>
               </div>
             </CardContent>

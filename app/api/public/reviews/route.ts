@@ -7,6 +7,7 @@ import { fingerprint, getClientIp } from "@/lib/utils";
 import { notifyNegativeFeedback } from "@/lib/notify";
 import { monthlyReviewCount, ownerLimitError } from "@/lib/entitlements";
 import { reviewContact } from "@/lib/privacy";
+import { reviewWasRedirected } from "@/lib/review-policy";
 import type { ReviewSentiment } from "@prisma/client";
 
 export async function POST(req: NextRequest) {
@@ -92,35 +93,50 @@ export async function POST(req: NextRequest) {
   const customerPhone = contact.customerPhone;
   const consentAt = contact.consented ? new Date() : null;
 
-  const redirected = data.rating >= business.ratingThreshold && !cleanFeedback;
+  const openedPublicReview = data.openedPublicReview === true;
+  const redirectedNow = reviewWasRedirected({
+    reviewGating: business.reviewGating,
+    rating: data.rating,
+    ratingThreshold: business.ratingThreshold,
+    hasFeedback: !!cleanFeedback,
+    openedPublicReview
+  });
 
-  // Fix #8: when written feedback arrives, reuse the bare Review row that was
-  // captured the moment the customer tapped their (low) rating — same visitor
-  // (fingerprint), same rating, still without feedback, and recent. This keeps
-  // exactly one Review row per customer instead of creating a second one.
-  const existingBare = cleanFeedback
-    ? await prisma.review.findFirst({
-        where: {
-          businessId: business.id,
-          fingerprint: fp,
-          rating: data.rating,
-          feedback: { is: null },
-          createdAt: { gte: new Date(Date.now() - 15 * 60 * 1000) }
-        },
-        orderBy: { createdAt: "desc" }
-      })
-    : null;
+  // Reuse the recent row for this visitor and star rating. A later public-link
+  // click marks it redirected. Written feedback attaches to the same row.
+  const recent = await prisma.review.findFirst({
+    where: {
+      businessId: business.id,
+      fingerprint: fp,
+      rating: data.rating,
+      createdAt: { gte: new Date(Date.now() - 15 * 60 * 1000) }
+    },
+    include: { feedback: true },
+    orderBy: { createdAt: "desc" }
+  });
+
+  if (recent && !cleanFeedback) {
+    if (redirectedNow && !recent.redirected) {
+      await prisma.review.update({
+        where: { id: recent.id },
+        data: { redirected: true }
+      });
+    }
+    return NextResponse.json({ ok: true, reviewId: recent.id });
+  }
+
+  const redirected = !!(recent?.redirected || redirectedNow);
 
   let review;
-  if (existingBare) {
+  if (recent && !recent.feedback) {
     review = await prisma.review.update({
-      where: { id: existingBare.id },
+      where: { id: recent.id },
       data: {
-        locationId: location?.id ?? existingBare.locationId,
-        staffId: staff?.id ?? existingBare.staffId,
+        locationId: location?.id ?? recent.locationId,
+        staffId: staff?.id ?? recent.staffId,
         sentiment,
         redirected,
-        source: data.source || existingBare.source,
+        source: data.source || recent.source,
         customerName,
         customerEmail,
         customerPhone,
@@ -193,7 +209,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Notify owner on negative feedback (rating < threshold or any 1-3 stars)
+    // Notify the owner when the rating is not positive (1–3 stars).
     if (sentiment !== "POSITIVE") {
       notifyNegativeFeedback({
         businessId: business.id,

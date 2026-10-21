@@ -25,6 +25,8 @@ export default async function AdminBusinessPage({ params }: { params: { id: stri
         name={business.name}
         ownerEmail={business.owner.email}
         isActive={business.isActive}
+        reviewGating={business.reviewGating}
+        ratingThreshold={business.ratingThreshold}
       />
     </div>
   );

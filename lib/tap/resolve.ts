@@ -73,6 +73,11 @@ async function queryTap(code: string): Promise<TapRecord> {
     state: qr.business.state,
     pincode: qr.business.pincode,
     googleReviewUrl: qr.business.googleReviewUrl,
+    trustpilotUrl: qr.business.trustpilotUrl,
+    reviewPlatform: qr.business.reviewPlatform,
+    reviewGating: qr.business.reviewGating,
+    ratingThreshold: qr.business.ratingThreshold,
+    aiReviewsEnabled: qr.business.aiReviewsEnabled,
     whatsappNumber: qr.business.whatsappNumber,
     menuCount,
     published: tapPage?.published ?? null
@@ -158,6 +163,11 @@ async function queryBusinessPage(businessId: string): Promise<TapRecord> {
     state: business.state,
     pincode: business.pincode,
     googleReviewUrl: business.googleReviewUrl,
+    trustpilotUrl: business.trustpilotUrl,
+    reviewPlatform: business.reviewPlatform,
+    reviewGating: business.reviewGating,
+    ratingThreshold: business.ratingThreshold,
+    aiReviewsEnabled: business.aiReviewsEnabled,
     whatsappNumber: business.whatsappNumber,
     menuCount,
     published: tapPage?.published ?? null

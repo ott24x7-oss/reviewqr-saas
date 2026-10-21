@@ -1,25 +1,22 @@
 import { Star, ArrowRight, ShieldCheck, Globe, Lock, BellRing } from "lucide-react";
 
 /**
- * Flagship highlight: smart routing. Happy → public Google review,
- * unhappy → private feedback in your own dashboard. Pure CSS branching
- * diagram; drop in a real render later if desired.
+ * Both choices stay on one screen for every star.
  */
 export function RoutingHighlight() {
   return (
     <section className="px-5 sm:px-10 py-16 sm:py-24">
       <div className="text-center max-w-2xl mx-auto">
         <div className="inline-flex items-center gap-2 rounded-full bg-brand/10 border border-brand/20 px-3 py-1 text-xs font-semibold text-brand">
-          <ShieldCheck className="h-3.5 w-3.5" /> Smart routing
+          <ShieldCheck className="h-3.5 w-3.5" /> Same screen
         </div>
         <h2 className="mt-4 font-display text-3xl sm:text-4xl font-bold tracking-tight text-ink leading-tight">
-          Happy customers go <span className="text-gradient">public.</span>
-          <br className="hidden sm:block" /> Unhappy ones come to you — <span className="text-accent">privately.</span>
+          Every customer can post <span className="text-gradient">publicly.</span>
+          <br className="hidden sm:block" /> Anyone can also tell you — <span className="text-accent">privately.</span>
         </h2>
         <p className="mt-4 text-base sm:text-lg text-muted-ink">
-          One smart QR reads the rating and sends each customer down the right path — so you grow your
-          <b className="text-ink"> Google &amp; Trustpilot</b> score <b className="text-ink">and</b> catch
-          problems before they go public.
+          The public <b className="text-ink">Google or Trustpilot</b> link and the private note stay in
+          the same order for 1 to 5 stars. A low rating with a message still alerts you.
         </p>
       </div>
 
@@ -55,12 +52,12 @@ export function RoutingHighlight() {
               </span>
               <div>
                 <div className="flex flex-wrap items-center gap-1.5 font-semibold text-ink">
-                  4–5★ <ArrowRight className="h-3.5 w-3.5 text-muted-ink" />{" "}
+                  Public link <ArrowRight className="h-3.5 w-3.5 text-muted-ink" />{" "}
                   <span className="gradient-text-google font-bold">Google</span>
                   <span className="text-muted-ink font-normal">or</span>
                   <span className="text-[#00b67a] font-bold">Trustpilot</span>
                 </div>
-                <div className="text-sm text-muted-ink">Public 5-star review, written by AI</div>
+                <div className="text-sm text-muted-ink">Visible for every star. They open it themselves.</div>
               </div>
             </div>
           </div>
@@ -73,12 +70,12 @@ export function RoutingHighlight() {
               </span>
               <div>
                 <div className="flex items-center gap-1.5 font-semibold text-ink">
-                  1–3★ <ArrowRight className="h-3.5 w-3.5 text-muted-ink" />{" "}
-                  <span className="text-ink">Your private inbox</span>
+                  Private note <ArrowRight className="h-3.5 w-3.5 text-muted-ink" />{" "}
+                  <span className="text-ink">Your inbox</span>
                 </div>
                 <div className="text-sm text-muted-ink flex items-center gap-1">
-                  <BellRing className="h-3.5 w-3.5 text-amber-500" /> Instant WhatsApp + email alert —
-                  never public
+                  <BellRing className="h-3.5 w-3.5 text-amber-500" /> A low rating with a message alerts
+                  you on WhatsApp and email
                 </div>
               </div>
             </div>

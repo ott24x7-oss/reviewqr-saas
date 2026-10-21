@@ -150,8 +150,9 @@ model Business {
   googleReviewUrl   String?  @db.Text
   googlePlaceId     String?
   trustpilotUrl     String?  @db.Text
-  reviewPlatform    String   @default("google") // google | trustpilot — where happy reviews go
-  ratingThreshold   Int      @default(4) // >= goes to the platform, < captures private
+  reviewPlatform    String   @default("google") // google | trustpilot — preferred public link order
+  ratingThreshold   Int      @default(4) // used only when reviewGating is on
+  reviewGating      Boolean  @default(false) // true hides the public link below ratingThreshold
   enableWhatsApp    Boolean  @default(true)
   enableEmail       Boolean  @default(true)
   customThankYou    String?  @db.Text

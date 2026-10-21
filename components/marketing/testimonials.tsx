@@ -18,7 +18,7 @@ const testimonials = [
     location: "Chennai",
     rating: 5,
     quote:
-      "We catch unhappy customers before they post a 1-star review. Saved my reputation more than once. Best ₹499 I spend every month.",
+      "Customers can still post on Google, and they can tell me privately on the same screen. I hear about a rough visit the same day.",
     image:
       "https://api.dicebear.com/7.x/initials/svg?seed=Priya%20Iyer&backgroundColor=34a853&fontFamily=Poppins"
   },

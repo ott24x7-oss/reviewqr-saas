@@ -4,8 +4,12 @@ import * as React from "react";
 import { Check, ChevronRight, Copy, Star } from "lucide-react";
 import { tapLang, tapText, type TapLang } from "@/lib/tap/i18n";
 import { splitLinks, type PublicLink } from "@/lib/tap/links";
+import { appendHint, showPublicReviewLinks, type PublicReviewTarget } from "@/lib/review-policy";
+import { PolishDraft } from "@/components/review/polish-draft";
 import { scanSource, type ScanSource } from "@/lib/tap/source";
 import { TapIcon } from "./tap-icons";
+import { HintChips } from "@/components/review/hint-chips";
+import { NpsPicker } from "@/components/review/nps-picker";
 
 export type TapExperienceProps = {
   code: string;
@@ -24,6 +28,10 @@ export type TapExperienceProps = {
   locationSlug: string;
   staffSlug: string;
   turnstileSiteKey: string;
+  reviewLinks?: PublicReviewTarget[];
+  reviewGating?: boolean;
+  ratingThreshold?: number;
+  aiEnabled?: boolean;
   themeStyle?: Record<string, string>;
   buttons?: string;
   avatar?: string;
@@ -180,6 +188,10 @@ export function TapExperience(props: TapExperienceProps) {
             locationSlug={props.locationSlug}
             staffSlug={props.staffSlug}
             turnstileSiteKey={props.turnstileSiteKey}
+            reviewLinks={props.reviewLinks || []}
+            reviewGating={props.reviewGating === true}
+            ratingThreshold={props.ratingThreshold || 4}
+            aiEnabled={props.aiEnabled === true}
           />
         ) : null}
 
@@ -314,7 +326,11 @@ function FeedbackForm({
   slug,
   locationSlug,
   staffSlug,
-  turnstileSiteKey
+  turnstileSiteKey,
+  reviewLinks,
+  reviewGating,
+  ratingThreshold,
+  aiEnabled
 }: {
   lang: TapLang;
   code: string;
@@ -323,12 +339,17 @@ function FeedbackForm({
   locationSlug: string;
   staffSlug: string;
   turnstileSiteKey: string;
+  reviewLinks: PublicReviewTarget[];
+  reviewGating: boolean;
+  ratingThreshold: number;
+  aiEnabled: boolean;
 }) {
   const [rating, setRating] = React.useState(0);
   const [message, setMessage] = React.useState("");
   const [name, setName] = React.useState("");
   const [phone, setPhone] = React.useState("");
   const [consent, setConsent] = React.useState(false);
+  const [npsScore, setNpsScore] = React.useState<number | null>(null);
   const [token, setToken] = React.useState("");
   const [error, setError] = React.useState("");
   const [done, setDone] = React.useState(false);
@@ -361,6 +382,7 @@ function FeedbackForm({
           customerName: name,
           customerPhone: phone,
           consent: phone.trim() ? consent : false,
+          npsScore,
           source,
           qrCode: code,
           locationSlug,
@@ -395,8 +417,52 @@ function FeedbackForm({
           </button>
         ))}
       </div>
+      {showPublicReviewLinks({
+        reviewGating,
+        rating,
+        ratingThreshold,
+        hasPublicUrl: reviewLinks.length > 0
+      }) ? (
+        <div className="tap-choice">
+          <p className="tap-choice-title">{tapText(lang, "publicReview")}</p>
+          {reviewLinks.map((item) => (
+            <a
+              key={item.href}
+              className="tap-primary"
+              href={item.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => {
+                if (!rating) return;
+                void fetch("/api/public/reviews", {
+                  method: "POST",
+                  headers: { "content-type": "application/json" },
+                  body: JSON.stringify({
+                    businessSlug: slug,
+                    rating,
+                    feedback: "",
+                    source,
+                    qrCode: code,
+                    locationSlug,
+                    staffSlug,
+                    turnstileToken: token,
+                    openedPublicReview: true
+                  })
+                }).catch(() => {});
+              }}
+            >
+              {lang === "hi" ? item.labelHi : item.labelEn}
+            </a>
+          ))}
+        </div>
+      ) : null}
+      <div className="tap-choice">
+      <p className="tap-choice-title">{tapText(lang, "privateReview")}</p>
+      <HintChips slug={slug} lang={lang} onInsert={(text) => setMessage((current) => appendHint(current, text))} />
       <label htmlFor="tap-feedback">What could we have done better?</label>
       <textarea id="tap-feedback" value={message} onChange={(e) => setMessage(e.target.value)} maxLength={2000} />
+      {aiEnabled ? <PolishDraft slug={slug} text={message} lang={lang} /> : null}
+      <NpsPicker value={npsScore} onChange={setNpsScore} lang={lang} />
       <label htmlFor="tap-name">{lang === "hi" ? "नाम" : "Your name"}</label>
       <input id="tap-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} autoComplete="name" />
       <label htmlFor="tap-phone">{lang === "hi" ? "फोन" : "Phone"}</label>
@@ -413,6 +479,7 @@ function FeedbackForm({
       <button type="submit" className="tap-primary" disabled={busy}>
         {busy ? "…" : "Send feedback"}
       </button>
+      </div>
     </form>
   );
 }

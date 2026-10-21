@@ -29,6 +29,7 @@ type Init = {
   reviewPlatform: "google" | "trustpilot";
   trustpilotUrl: string;
   ratingThreshold: number;
+  reviewGating: boolean;
   primaryColor: string;
   customThankYou: string;
 };
@@ -218,7 +219,7 @@ export function EditBusinessForm({ initial }: { initial: Init }) {
               <option value="trustpilot">Trustpilot</option>
             </select>
             <p className="text-xs text-muted-foreground">
-              Where happy customers are sent to leave a public review.
+              The preferred link is listed first. Every saved link stays on the customer page.
             </p>
           </div>
           <div className="space-y-1.5">
@@ -230,34 +231,55 @@ export function EditBusinessForm({ initial }: { initial: Init }) {
               placeholder="https://g.page/r/…/review"
             />
           </div>
-          {form.reviewPlatform === "trustpilot" && (
-            <div className="space-y-1.5">
-              <Label htmlFor="trustpilotUrl">Trustpilot review URL</Label>
-              <Input
-                id="trustpilotUrl"
-                value={form.trustpilotUrl}
-                onChange={(e) => update("trustpilotUrl", e.target.value)}
-                placeholder="https://www.trustpilot.com/evaluate/yourdomain.com"
-              />
-              <p className="text-xs text-muted-foreground">
-                Your Trustpilot review-collection link, e.g.
-                https://www.trustpilot.com/evaluate/yourdomain.com
-              </p>
-            </div>
-          )}
           <div className="space-y-1.5">
-            <Label htmlFor="threshold">Rating threshold</Label>
-            <select
-              id="threshold"
-              className="w-full h-10 rounded-lg border bg-white dark:bg-slate-900 px-3 text-sm"
-              value={form.ratingThreshold}
-              onChange={(e) => update("ratingThreshold", Number(e.target.value))}
-            >
-              <option value={3}>3★+</option>
-              <option value={4}>4★+ (recommended)</option>
-              <option value={5}>5★ only</option>
-            </select>
+            <Label htmlFor="trustpilotUrl">Trustpilot review URL</Label>
+            <Input
+              id="trustpilotUrl"
+              value={form.trustpilotUrl}
+              onChange={(e) => update("trustpilotUrl", e.target.value)}
+              placeholder="https://www.trustpilot.com/evaluate/yourdomain.com"
+            />
           </div>
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              id="reviewGating"
+              type="checkbox"
+              className="mt-1"
+              checked={form.reviewGating}
+              onChange={(e) => update("reviewGating", e.target.checked)}
+            />
+            <span>
+              <span className="font-medium">Hide the public review link below a rating</span>
+              <span className="block text-xs text-muted-foreground">
+                Leave this off. Every customer then sees the public link and the private form.
+              </span>
+            </span>
+          </label>
+          {form.reviewGating && (
+            <>
+              <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950" role="alert">
+                Review gating is on. Customers below this rating will not see the public review link.
+                Google’s review policy does not allow asking only some customers for a public review.
+              </p>
+              <div className="space-y-1.5">
+                <Label htmlFor="threshold">Hide the public link below</Label>
+                <select
+                  id="threshold"
+                  className="w-full h-10 rounded-lg border bg-white dark:bg-slate-900 px-3 text-sm"
+                  value={form.ratingThreshold}
+                  onChange={(e) => update("ratingThreshold", Number(e.target.value))}
+                >
+                  <option value={3}>3 stars</option>
+                  <option value={4}>4 stars</option>
+                  <option value={5}>5 stars</option>
+                </select>
+              </div>
+            </>
+          )}
+          <p className="text-sm text-muted-foreground">
+            Rewards, coupons, and loyalty stamps may be tied only to private feedback or a visit.
+            Never offer them in exchange for a public review.
+          </p>
           <div className="space-y-1.5">
             <Label htmlFor="whatsappNumber">WhatsApp alert number</Label>
             <Input

@@ -56,8 +56,8 @@ export function HowItWorks() {
         <Step
           n={2}
           icon={Sparkles}
-          title="Taps a rating — AI drafts it"
-          desc="They tap a star and 3 quick buttons. Our AI instantly writes a genuine review in their words — ready to copy."
+          title="They write a few words"
+          desc="A topic hint can be tapped into their own text. AI may suggest a cleanup they edit and copy."
         >
           <div className="neu-inset rounded-2xl p-3.5">
             <div className="flex justify-center gap-1 mb-2">
@@ -66,14 +66,14 @@ export function HowItWorks() {
               ))}
             </div>
             <div className="flex flex-wrap justify-center gap-1 mb-2">
-              {["Great food", "Quick"].map((c) => (
+              {["hot dosa", "quick service"].map((c) => (
                 <span key={c} className="skeuo-accent text-white text-[9px] rounded-full px-2 py-0.5">
                   {c}
                 </span>
               ))}
             </div>
             <div className="rounded-lg bg-white p-2 text-[10px] leading-snug text-ink/80">
-              "Amazing dosa and super quick service — highly recommend!"
+              "The dosa was hot and the service was quick."
             </div>
           </div>
         </Step>
@@ -81,8 +81,8 @@ export function HowItWorks() {
         <Step
           n={3}
           icon={Send}
-          title="Google & Trustpilot grow — or you're alerted"
-          desc="Happy reviews land on Google or Trustpilot in one paste. Unhappy ones hit your private inbox with an instant alert."
+          title="Public link, and a private note"
+          desc="Both stay on the screen for every star. A low rating with a message alerts you. They post the public review themselves."
         >
           <div className="space-y-2">
             <div className="neu-inset rounded-xl p-2.5 flex items-center gap-2">
@@ -91,7 +91,7 @@ export function HowItWorks() {
               </span>
               <div className="text-[10px]">
                 <span className="font-bold"><span className="gradient-text-google">Google</span> <span className="text-muted-ink font-normal">/</span> <span className="text-[#00b67a]">Trustpilot</span></span>
-                <div className="text-muted-ink">Public 5★ review</div>
+                <div className="text-muted-ink">Public review link</div>
               </div>
             </div>
             <div className="neu-inset rounded-xl p-2.5 flex items-center gap-2">

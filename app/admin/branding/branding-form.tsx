@@ -143,7 +143,7 @@ export function BrandingForm({ initial }: { initial: Branding }) {
               rows={2}
               value={b.tagline}
               onChange={(e) => setB({ ...b, tagline: e.target.value })}
-              placeholder="Turn happy customers into Google reviews"
+              placeholder="Every customer can leave a public review"
               maxLength={300}
             />
           </div>

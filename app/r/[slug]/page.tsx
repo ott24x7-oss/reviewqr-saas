@@ -96,12 +96,7 @@ export default async function ReviewPage({
   const [aiCfg, turnstile] = await Promise.all([getAiConfig(), getTurnstileConfig()]);
   const aiEnabled = aiCfg.enabled && !!aiCfg.apiKey && !!business.aiReviewsEnabled;
 
-  // Where do happy reviews go — Google or Trustpilot?
   const reviewPlatform = business.reviewPlatform === "trustpilot" ? "trustpilot" : "google";
-  const platformUrl =
-    reviewPlatform === "trustpilot"
-      ? business.trustpilotUrl
-      : location?.googleReviewUrl || business.googleReviewUrl;
 
   const reviews = [
     ...testimonialRows.map((t) => ({
@@ -153,8 +148,10 @@ export default async function ReviewPage({
         description: business.description,
         industry: business.industry,
         primaryColor: business.primaryColor,
-        googleReviewUrl: platformUrl,
+        googleReviewUrl: location?.googleReviewUrl || business.googleReviewUrl,
+        trustpilotUrl: business.trustpilotUrl,
         reviewPlatform,
+        reviewGating: business.reviewGating,
         ratingThreshold: business.ratingThreshold,
         customThankYou: business.customThankYou,
         whatsappNumber: business.whatsappNumber,

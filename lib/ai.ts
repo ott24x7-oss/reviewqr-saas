@@ -3,12 +3,11 @@
  * chat-completions endpoint (OpenAI, OpenRouter, Groq, Together, local, …)
  * configured by the admin in Admin → AI.
  *
- * Two capabilities:
- *   generateQuestions() — 3–4 quick tap-to-answer questions tailored to the biz
- *   generateReviews()   — 4–5 ready-to-paste Google reviews from the answers
+ * polishReviewDraft() cleans up words the customer already wrote.
+ * draftOwnerReplies() suggests replies the owner copies. Nothing is posted.
+ * generateMenuFromPhoto() reads a menu photo.
  *
- * All functions THROW on failure; callers decide the fallback (e.g. static
- * review templates) so the customer flow never dead-ends.
+ * All functions THROW on failure. Callers keep the customer's own text.
  */
 import type { AiConfig } from "./settings";
 import { assertSafeOutboundUrl } from "./ssrf";
@@ -23,8 +22,6 @@ export type BusinessContext = {
   city?: string | null;
   website?: string | null;
 };
-
-export type AiQuestion = { id: string; question: string; options: string[] };
 
 function contextBlock(ctx: BusinessContext): string {
   const lines = [
@@ -161,81 +158,68 @@ function parseJson(content: string): any {
   }
 }
 
-export async function generateQuestions(
+/** Light cleanup of a draft the customer already wrote. Does not post anything. */
+export async function polishReviewDraft(
   cfg: AiConfig,
   ctx: BusinessContext,
+  draft: string,
   businessId?: string
-): Promise<AiQuestion[]> {
+): Promise<string> {
   const system =
-    "You help a happy customer quickly describe their positive experience so a great Google review can be drafted. " +
-    "Return ONLY JSON. Keep it warm, simple, and specific to the business.";
+    "You clean up a review the customer already wrote. Keep their meaning, facts, and voice. " +
+    "Do not add praise, places, staff names, or details they did not write. " +
+    "Do not mention a reward, coupon, or star rating. No emojis, hashtags, or markdown. Return ONLY JSON.";
   const user =
     `${contextBlock(ctx)}\n\n` +
-    "Generate exactly 3 quick multiple-choice questions a satisfied customer can tap through in seconds. " +
-    "Each question must be specific to THIS business's services and have 3 short, positive answer options " +
-    "(single words or very short phrases). " +
-    'Respond as JSON: {"questions":[{"question":"...","options":["...","..."]}]}';
+    `The customer's own words:\n"""${draft.slice(0, 2000)}"""\n\n` +
+    'Return a lightly edited version as JSON: {"suggestion":"..."}';
 
-  const raw = await chat(cfg, [
-    { role: "system", content: system },
-    { role: "user", content: user }
-  ], { maxTokens: 350, temperature: 0.6, businessId });
-
+  const raw = await chat(
+    cfg,
+    [
+      { role: "system", content: system },
+      { role: "user", content: user }
+    ],
+    { maxTokens: 350, temperature: 0.3, businessId }
+  );
   const data = parseJson(raw);
-  const arr = Array.isArray(data) ? data : data.questions;
-  if (!Array.isArray(arr)) throw new Error("Bad questions shape");
-  const questions: AiQuestion[] = arr
-    .slice(0, 3)
-    .map((q: any, i: number) => ({
-      id: `q${i}`,
-      question: String(q.question || q.q || "").trim(),
-      options: (Array.isArray(q.options) ? q.options : [])
-        .map((o: any) => String(o).trim())
-        .filter(Boolean)
-        .slice(0, 4)
-    }))
-    .filter((q: AiQuestion) => q.question && q.options.length >= 2);
-  if (questions.length === 0) throw new Error("No usable questions");
-  return questions;
+  const suggestion = String(data?.suggestion || data?.text || "").trim();
+  if (suggestion.length < 5) throw new Error("No usable suggestion");
+  return suggestion;
 }
 
-export async function generateReviews(
+/** Two drafts the owner edits and copies. The public one must not quote the private note. */
+export async function draftOwnerReplies(
   cfg: AiConfig,
   ctx: BusinessContext,
-  rating: number,
-  answers: Array<{ question: string; answer: string }>,
+  input: { rating: number; message: string; tags: string[] },
   businessId?: string
-): Promise<string[]> {
-  const answerBlock = answers.length
-    ? answers.map((a) => `- ${a.question} → ${a.answer}`).join("\n")
-    : "(no specific answers given)";
-
+): Promise<{ publicReply: string; whatsappReply: string }> {
   const system =
-    "You write authentic, natural-sounding Google reviews in the customer's voice. " +
-    "First person, warm, believable, no emojis, no hashtags, no markdown. " +
-    "Each review 2-4 sentences. Vary length and wording. Return ONLY JSON.";
+    "You draft two replies for a business owner. Return ONLY JSON. " +
+    "publicReply may be pasted on Google. It must not quote, paraphrase, or repeat the private note, " +
+    "the customer's name, phone, or email, and it must not mention a reward, coupon, or star rating. " +
+    "whatsappReply is a private message. It may respond to the note. It must not include a phone number " +
+    "or offer a reward for a public review. No emojis, hashtags, or markdown.";
   const user =
     `${contextBlock(ctx)}\n\n` +
-    `The customer gave ${rating} out of 5 stars. What they highlighted:\n${answerBlock}\n\n` +
-    "Write 2 distinct, ready-to-post Google review options this happy customer could use. " +
-    "Mention the business by name naturally, reference the services/answers, " +
-    "and keep each one genuine, concise and easy to relate to (2-3 sentences). " +
-    'Respond as JSON: {"reviews":["...","..."]}';
-
-  const raw = await chat(cfg, [
-    { role: "system", content: system },
-    { role: "user", content: user }
-  ], { maxTokens: 350, temperature: 0.85, businessId });
-
+    `Star rating (context only, do not mention it): ${input.rating}\n` +
+    `Topics: ${input.tags.join(", ") || "none"}\n` +
+    `Private note, for the WhatsApp reply only:\n"""${input.message.slice(0, 1500)}"""\n\n` +
+    'Return JSON: {"publicReply":"...","whatsappReply":"..."}';
+  const raw = await chat(
+    cfg,
+    [
+      { role: "system", content: system },
+      { role: "user", content: user }
+    ],
+    { maxTokens: 400, temperature: 0.3, businessId }
+  );
   const data = parseJson(raw);
-  const arr = Array.isArray(data) ? data : data.reviews;
-  if (!Array.isArray(arr)) throw new Error("Bad reviews shape");
-  const reviews = arr
-    .map((r: any) => String(r).trim())
-    .filter((r: string) => r.length > 10)
-    .slice(0, 2);
-  if (reviews.length === 0) throw new Error("No usable reviews");
-  return reviews;
+  const publicReply = String(data?.publicReply || "").trim();
+  const whatsappReply = String(data?.whatsappReply || "").trim();
+  if (publicReply.length < 5 || whatsappReply.length < 5) throw new Error("No usable reply");
+  return { publicReply, whatsappReply };
 }
 
 /** Reads a menu photo. Throws when AI is not configured. Does not save items. */

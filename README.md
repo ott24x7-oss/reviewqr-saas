@@ -1,6 +1,6 @@
 # ReviewQR
 
-> Turn happy customers into Google reviews — and fix bad experiences privately.
+> Every customer can leave a public review, and can also tell the owner privately.
 > A production-ready review-management SaaS built for Indian SMBs.
 
 ![tech](https://img.shields.io/badge/Next.js-14-black) ![tech](https://img.shields.io/badge/TypeScript-5-blue) ![tech](https://img.shields.io/badge/Prisma-5-2D3748) ![tech](https://img.shields.io/badge/PostgreSQL-15-336791)
@@ -10,14 +10,14 @@
 ## ✨ What's inside
 
 **Customer-facing flow**
-- Mobile-first review page (`/r/[slug]`) with smart star → Google redirect
-- 4★+ ratings auto-redirect to Google review URL
-- 1–3★ ratings flow into a private feedback form (with tags + NPS)
+- Mobile-first review page (`/r/[slug]`). Every star shows the public review link, then the private form
+- AI can tidy words the customer already wrote. They edit and copy it. Nothing is posted for them
+- Private feedback keeps tags, a skippable NPS score, and an owner alert on a low rating
 - Per-location and per-staff review URLs (`?l=branch&s=arjun`)
 - Short QR codes (`/q/[code]`) open the customer tap page. The same page is at `/t/[code]` and at `/<business-slug>`.
 
 **Business dashboard** (mobile responsive, bottom-nav on mobile)
-- Real-time analytics (avg rating, distribution, redirect rate)
+- Real-time analytics (avg rating, distribution, public review link opens)
 - Feedback inbox with status workflow (new / in progress / resolved)
 - Negative-feedback alerts via email **and** WhatsApp
 - QR code generator with print-ready posters

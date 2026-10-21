@@ -73,6 +73,7 @@ export const businessSchema = z.object({
   trustpilotUrl: httpUrl.optional().or(z.literal("")),
   reviewPlatform: z.enum(["google", "trustpilot"]).optional(),
   ratingThreshold: z.number().int().min(1).max(5).default(4),
+  reviewGating: z.boolean().default(false),
   primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#1a73e8"),
   customThankYou: z.string().max(500).optional().or(z.literal("")),
   aiReviewsEnabled: z.boolean().optional(),
@@ -111,7 +112,8 @@ export const reviewSubmitSchema = z.object({
   staffSlug: z.string().max(100).optional().or(z.literal("")),
   qrCode: z.string().max(32).optional().or(z.literal("")),
   turnstileToken: z.string().optional().or(z.literal("")),
-  consent: z.boolean().optional()
+  consent: z.boolean().optional(),
+  openedPublicReview: z.boolean().optional()
 });
 
 export const qrCodeSchema = z.object({

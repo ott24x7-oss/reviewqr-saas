@@ -12,8 +12,8 @@ export default async function AdminAiPage() {
         <h1 className="text-2xl sm:text-3xl font-bold font-display">AI Reviews</h1>
         <p className="text-sm text-muted-foreground">
           Connect any OpenAI-compatible API (OpenAI, OpenRouter, Groq, Together, or your own
-          endpoint). When enabled, happy customers who tap 4–5★ get a few quick questions and
-          AI-written review suggestions to copy before heading to Google. Turn it on per business
+          endpoint). When enabled, AI can clean up words a customer already wrote. The customer
+          edits and copies that suggestion. Nothing is posted for them. Turn it on per business
           in <span className="font-medium text-foreground">Dashboard → Business → AI Reviews</span>.
         </p>
       </div>

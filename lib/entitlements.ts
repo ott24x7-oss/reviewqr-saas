@@ -58,7 +58,7 @@ const LABELS: Record<keyof PlanInfo["limits"], string> = {
   reviews: "reviews this month",
   aiCallsPerMonth: "AI calls this month",
   campaigns: "campaigns",
-  reviewTemplates: "review templates",
+  reviewTemplates: "topic hints",
   storeProducts: "products",
   storeOrders: "orders"
 };

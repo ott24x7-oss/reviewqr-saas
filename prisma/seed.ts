@@ -130,6 +130,7 @@ async function main() {
       description: "Authentic South Indian cuisine, since 1998",
       googleReviewUrl: "https://www.google.com/search?q=spice+junction+cafe",
       ratingThreshold: 4,
+      reviewGating: false,
       primaryColor: "#1a73e8",
       whatsappNumber: "9876543210",
       email: DEMO_EMAIL,
@@ -141,7 +142,7 @@ async function main() {
       customThankYou:
         "We're sorry your experience wasn't up to mark. The owner will personally call you within 24 hours."
     },
-    update: {}
+    update: { reviewGating: false }
   });
   console.log(`  ✓ Demo business: ${demoCafe.slug}`);
 

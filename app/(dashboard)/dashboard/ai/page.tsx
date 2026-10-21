@@ -38,9 +38,9 @@ export default async function DashboardAiPage() {
           <Sparkles className="h-6 w-6 text-violet-600" /> AI Reviews
         </h1>
         <p className="text-sm text-muted-foreground">
-          When a customer taps 4–5★, AI asks a couple of quick questions and drafts ready-to-post
-          Google reviews tailored to each business — with a Copy button. Turn it on and add training
-          details per business below.
+          A customer writes their own words first. AI can suggest a cleaner version they edit and
+          copy. Nothing is posted for them. Turn it on and add a short description of the business
+          below.
         </p>
       </div>
 

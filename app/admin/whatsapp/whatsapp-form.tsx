@@ -119,22 +119,6 @@ export function WhatsAppConfigForm({ initial }: { initial: WhatsAppConfig }) {
               );
             })}
           </div>
-
-          <label className="flex items-start gap-2 text-sm pt-2 border-t">
-            <input
-              type="checkbox"
-              className="mt-0.5"
-              checked={cfg.notifyPositiveCopy}
-              onChange={(e) => update("notifyPositiveCopy", e.target.checked)}
-            />
-            <span>
-              <span className="font-medium">Notify owner when a customer copies a 4–5★ review</span>
-              <span className="block text-xs text-muted-foreground">
-                Sends a WhatsApp to the business owner's number with the exact text the customer
-                took to Google.
-              </span>
-            </span>
-          </label>
         </CardContent>
       </Card>
 

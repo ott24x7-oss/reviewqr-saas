@@ -43,6 +43,7 @@ export default async function EditBusinessPage({ params }: { params: { id: strin
             business.reviewPlatform === "trustpilot" ? "trustpilot" : "google",
           trustpilotUrl: business.trustpilotUrl || "",
           ratingThreshold: business.ratingThreshold,
+          reviewGating: business.reviewGating,
           primaryColor: business.primaryColor,
           customThankYou: business.customThankYou || ""
         }}

@@ -1,5 +1,6 @@
 import { inClockWindow, isOpenAt, WEEK_DAYS, type WeekHours } from "./hours";
 import { isLookupCode } from "./ids";
+import { orderedReviewTargets } from "../review-policy";
 import { safeTapUrl } from "./urls";
 import { youtubeThumb } from "./youtube";
 
@@ -28,6 +29,11 @@ export type TapBusinessFields = {
   state: string | null;
   pincode: string | null;
   googleReviewUrl: string | null;
+  trustpilotUrl?: string | null;
+  reviewPlatform?: string | null;
+  reviewGating?: boolean;
+  ratingThreshold?: number;
+  aiReviewsEnabled?: boolean;
   whatsappNumber: string | null;
   menuCount: number;
   published: unknown;
@@ -95,7 +101,9 @@ export function synthesizeLinks(input: TapBusinessFields & { channel: "q" | "t";
   if (maps) links.push(link("directions", "directions", "Directions", "दिशा", maps, false, 50));
 
   const google = input.googleReviewUrl ? safeTapUrl(input.googleReviewUrl, "https") : null;
-  if (google) links.push(link("google", "google", "Review on Google", "Google पर रिव्यू", google, false, 60));
+  if (google && !input.reviewGating) {
+    links.push(link("google", "google", "Review on Google", "Google पर रिव्यू", google, false, 60));
+  }
 
   const chat = whatsAppNumberUrl(input.whatsappNumber);
   if (chat) links.push(link("whatsapp", "whatsapp_chat", "WhatsApp", "WhatsApp", chat, false, 70));
@@ -253,6 +261,19 @@ export type PresentedTap = {
   directions: string | null;
 };
 
+/** When gating is on, a published Google or Trustpilot button cannot bypass the rating check. */
+export function hideGatedReviewLinks(links: PublicLink[], fields: TapBusinessFields): PublicLink[] {
+  if (!fields.reviewGating) return links;
+  const blocked = new Set(
+    orderedReviewTargets(fields).map((item) => item.href)
+  );
+  return links.filter((item) => {
+    if (item.type === "google") return false;
+    if (item.href && blocked.has(item.href)) return false;
+    return true;
+  });
+}
+
 export function presentBusiness(fields: TapBusinessFields, channel: "q" | "t", code: string, now = new Date()): PresentedTap {
   const published = fields.published;
   const bioPublished = published && typeof published === "object" ? plain((published as { bio?: unknown }).bio, 400) : "";
@@ -266,7 +287,10 @@ export function presentBusiness(fields: TapBusinessFields, channel: "q" | "t", c
     bio: bioPublished || plain(fields.description, 400),
     bioHi,
     open: isOpenAt(hours, now),
-    links: resolveLinks(published, synthesizeLinks({ ...fields, channel, code }), channel, code, now, fields.slug),
+    links: hideGatedReviewLinks(
+      resolveLinks(published, synthesizeLinks({ ...fields, channel, code }), channel, code, now, fields.slug),
+      fields
+    ),
     gallery: galleryFromPublished(published),
     call: telUrl(fields.phone),
     directions: directionsUrl([fields.address, fields.city, fields.state, fields.pincode])

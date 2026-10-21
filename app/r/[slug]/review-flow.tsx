@@ -14,11 +14,7 @@ import {
   Share2,
   Navigation,
   BadgeCheck,
-  ChevronLeft,
-  Copy,
-  Check,
-  Pencil,
-  Sparkles
+  ChevronLeft
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +22,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { appendHint, orderedReviewTargets } from "@/lib/review-policy";
+import { HintChips } from "@/components/review/hint-chips";
+import { NpsPicker } from "@/components/review/nps-picker";
+import { PolishDraft } from "@/components/review/polish-draft";
 
 type Business = {
   id: string;
@@ -37,7 +37,9 @@ type Business = {
   industry?: string | null;
   primaryColor: string;
   googleReviewUrl?: string | null;
+  trustpilotUrl?: string | null;
   reviewPlatform?: "google" | "trustpilot";
+  reviewGating?: boolean;
   ratingThreshold: number;
   customThankYou?: string | null;
   whatsappNumber?: string | null;
@@ -74,8 +76,6 @@ type Props = {
   turnstileSiteKey?: string | null;
 };
 
-type AiQuestion = { id: string; question: string; options: string[] };
-
 const TAGS = [
   { id: "service", label: "Service" },
   { id: "quality", label: "Quality" },
@@ -86,13 +86,7 @@ const TAGS = [
   { id: "cleanliness", label: "Cleanliness" }
 ];
 
-type Step =
-  | "rate"
-  | "pick-template"
-  | "ai"
-  | "feedback"
-  | "thank-you-google"
-  | "thank-you-private";
+type Step = "rate" | "feedback" | "thank-you-google" | "thank-you-private";
 type Tab = "reviews" | "info";
 
 /**
@@ -168,31 +162,6 @@ function navigateExternal(url: string, reserved?: Window | null) {
   window.location.href = url;
 }
 
-async function safeClipboard(text: string): Promise<boolean> {
-  if (typeof navigator === "undefined") return false;
-  try {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text);
-      return true;
-    }
-  } catch {}
-  // Legacy fallback for older Safari / non-secure contexts.
-  try {
-    const ta = document.createElement("textarea");
-    ta.value = text;
-    ta.style.position = "fixed";
-    ta.style.opacity = "0";
-    document.body.appendChild(ta);
-    ta.focus();
-    ta.select();
-    const ok = document.execCommand("copy");
-    document.body.removeChild(ta);
-    return ok;
-  } catch {
-    return false;
-  }
-}
-
 function timeAgoShort(iso: string) {
   const d = new Date(iso);
   const days = Math.floor((Date.now() - d.getTime()) / 86400_000);
@@ -206,8 +175,6 @@ function timeAgoShort(iso: string) {
 function fullAddress(b: Business) {
   return [b.address, b.city, b.state, b.pincode].filter(Boolean).join(", ");
 }
-
-type TemplatePick = { id: string; content: string };
 
 type TurnstileHandle = { reset: () => void };
 
@@ -285,18 +252,27 @@ export function ReviewFlow(props: Props) {
   const [turnstileToken, setTurnstileToken] = React.useState("");
   const turnstileRef = React.useRef<TurnstileHandle>(null);
   const [loading, setLoading] = React.useState(false);
-  const [templates, setTemplates] = React.useState<TemplatePick[]>([]);
-  const [templatesLoading, setTemplatesLoading] = React.useState(false);
-  const [pickedId, setPickedId] = React.useState<string | null>(null);
-  const [aiQuestions, setAiQuestions] = React.useState<AiQuestion[]>([]);
-  const [aiPreparing, setAiPreparing] = React.useState(false);
+  const [lang, setLang] = React.useState<"en" | "hi">("en");
   // Holds the id of a Review row already captured for this visitor (e.g. the
   // bare low-rating tap). Used to avoid firing the on-tap capture twice.
   const submittedRef = React.useRef<string | null>(null);
 
   const { business } = props;
   const accent = business.primaryColor || "#1a73e8";
-  const platformLabel = business.reviewPlatform === "trustpilot" ? "Trustpilot" : "Google";
+  const reviewTargets = orderedReviewTargets(business);
+  const copy = lang === "hi"
+    ? { publicTitle: "सार्वजनिक रिव्यू लिखें", privateTitle: "मालिक को निजी में बताएं" }
+    : { publicTitle: "Leave a public review", privateTitle: "Tell the owner privately" };
+
+  React.useEffect(() => {
+    const stored = window.localStorage.getItem("rq-lang");
+    if (stored === "hi" || stored === "en") setLang(stored);
+  }, []);
+
+  function chooseLang(next: "en" | "hi") {
+    setLang(next);
+    window.localStorage.setItem("rq-lang", next);
+  }
 
   function pickRating(n: number) {
     if (props.turnstileSiteKey && !turnstileToken) {
@@ -304,9 +280,9 @@ export function ReviewFlow(props: Props) {
       return;
     }
     setRating(n);
-    if (n >= business.ratingThreshold && business.googleReviewUrl) {
-      // High rating + Google URL: try to fetch templates first.
-      // If stock is empty we redirect immediately like before.
+    if (business.reviewGating !== true) return;
+    if (n >= business.ratingThreshold && reviewTargets.length > 0) {
+      // Opt-in gating only: high ratings still leave for the public platform.
       setTimeout(() => onHighRating(n), 250);
     } else {
       // Low rating: capture it immediately (fire-and-forget) so it isn't lost
@@ -314,7 +290,7 @@ export function ReviewFlow(props: Props) {
       // feedback submit reuses this same Review row server-side (matched by
       // fingerprint + rating), so no duplicate Review is created.
       if (!submittedRef.current) {
-        submitReview({ rating: n, feedback: "", redirected: false })
+        submitReview({ rating: n, feedback: "", openedPublicReview: false })
           .then((res) => {
             if (res?.reviewId) submittedRef.current = res.reviewId;
           })
@@ -325,58 +301,7 @@ export function ReviewFlow(props: Props) {
   }
 
   async function onHighRating(stars: number) {
-    // Reserve a tab while the user-gesture is still fresh so the popup
-    // blocker doesn't kick in if we end up redirecting after the fetch.
     const reserved = reserveExternalTab();
-    setTemplatesLoading(true);
-
-    // Prefer the AI assistant when it's enabled for this business.
-    if (props.aiEnabled) {
-      setAiPreparing(true);
-      try {
-        const res = await fetch("/api/public/ai/questions", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ slug: business.slug }),
-          cache: "no-store"
-        });
-        const j = await res.json().catch(() => ({}));
-        if (j.available && Array.isArray(j.questions) && j.questions.length > 0) {
-          reserved?.close();
-          setAiQuestions(j.questions);
-          setTemplatesLoading(false);
-          setAiPreparing(false);
-          setStep("ai");
-          submitReview({ rating: stars, feedback: "", redirected: true }).catch(() => {});
-          return;
-        }
-      } catch {
-        // fall through to templates / instant redirect
-      }
-      setAiPreparing(false);
-    }
-
-    try {
-      const res = await fetch(
-        `/api/public/review-templates/pick?slug=${encodeURIComponent(business.slug)}`,
-        { cache: "no-store" }
-      );
-      const j = await res.json().catch(() => ({}));
-      const items: TemplatePick[] = Array.isArray(j.items) ? j.items : [];
-      if (items.length > 0) {
-        // Showing the modal — we don't redirect, so close the reserved tab.
-        reserved?.close();
-        setTemplates(items);
-        setStep("pick-template");
-        // Track the rating now (redirected = true) so analytics still capture it
-        submitReview({ rating: stars, feedback: "", redirected: true }).catch(() => {});
-        return;
-      }
-    } catch {
-      // fall through to instant redirect
-    } finally {
-      setTemplatesLoading(false);
-    }
     goToGoogleReview(stars, reserved);
   }
 
@@ -384,83 +309,26 @@ export function ReviewFlow(props: Props) {
     const tab = reserved ?? reserveExternalTab();
     setLoading(true);
     try {
-      await submitReview({ rating: stars, feedback: "", redirected: true });
+      await submitReview({ rating: stars, feedback: "", openedPublicReview: true });
     } catch {}
-    if (business.googleReviewUrl) {
-      navigateExternal(business.googleReviewUrl, tab);
+    const href = reviewTargets[0]?.href;
+    if (href) {
+      navigateExternal(href, tab);
     } else {
       tab?.close();
       setStep("thank-you-google");
     }
   }
 
-  async function onPickTemplate(t: TemplatePick) {
-    // Reserve a new tab synchronously inside the click handler so iframe
-    // popup-blockers honour the user gesture even after the async fetch.
-    const reserved = reserveExternalTab();
 
-    setPickedId(t.id);
-    setLoading(true);
-    let textToCopy = t.content;
-    try {
-      const res = await fetch("/api/public/review-templates/consume", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ slug: business.slug, templateId: t.id })
-      });
-      if (res.status === 409) {
-        // Race — someone else just took this one. Refetch and let the user pick again.
-        reserved?.close();
-        toast.message("Just taken — pick another");
-        const fresh = await fetch(
-          `/api/public/review-templates/pick?slug=${encodeURIComponent(business.slug)}`,
-          { cache: "no-store" }
-        );
-        const j = await fresh.json().catch(() => ({}));
-        if (Array.isArray(j.items) && j.items.length > 0) {
-          setTemplates(j.items);
-          setPickedId(null);
-          setLoading(false);
-          return;
-        }
-        // nothing left — go to Google with no copy
-      } else if (!res.ok) {
-        throw new Error("Couldn't claim review");
-      } else {
-        const j = await res.json();
-        if (j.content) textToCopy = j.content;
-      }
-    } catch (e: any) {
-      reserved?.close();
-      toast.error(e.message || "Something went wrong");
-      setPickedId(null);
-      setLoading(false);
-      return;
-    }
-
-    // Copy to clipboard. Need a user gesture to satisfy mobile browsers — this
-    // function runs from a button onClick so we're inside one.
-    const copied = await safeClipboard(textToCopy);
-    if (copied) {
-      toast.success(`Copied! Paste it on ${platformLabel}'s review form.`);
-    } else {
-      toast.message("Long-press the highlighted text to copy.");
-    }
-
-    // Brief pause so the toast registers, then redirect.
-    setTimeout(() => {
-      if (business.googleReviewUrl) {
-        navigateExternal(business.googleReviewUrl, reserved);
-      } else {
-        reserved?.close();
-        setStep("thank-you-google");
-        setLoading(false);
-      }
-    }, 900);
-  }
-
-  async function submitReview(opts: { rating: number; feedback: string; redirected: boolean }) {
+  async function submitReview(opts: {
+    rating: number;
+    feedback: string;
+    openedPublicReview: boolean;
+    preserveToken?: boolean;
+  }) {
     if (props.turnstileSiteKey && !turnstileToken) {
+      if (opts.preserveToken) return { ok: false as const };
       throw new Error("Complete the security check, then try again");
     }
     const res = await fetch("/api/public/reviews", {
@@ -480,13 +348,16 @@ export function ReviewFlow(props: Props) {
         locationSlug: props.location?.slug,
         staffSlug: props.staff?.slug,
         qrCode: props.qrCode,
-        turnstileToken: turnstileToken || undefined
+        turnstileToken: turnstileToken || undefined,
+        openedPublicReview: opts.openedPublicReview
       })
     });
     const json = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(json.error || "Failed to submit");
-    setTurnstileToken("");
-    turnstileRef.current?.reset();
+    if (!opts.preserveToken) {
+      setTurnstileToken("");
+      turnstileRef.current?.reset();
+    }
     return json;
   }
 
@@ -498,7 +369,7 @@ export function ReviewFlow(props: Props) {
     }
     setLoading(true);
     try {
-      await submitReview({ rating, feedback, redirected: false });
+      await submitReview({ rating, feedback, openedPublicReview: false });
       setStep("thank-you-private");
     } catch (e: any) {
       toast.error(e.message || "Failed to submit");
@@ -531,8 +402,6 @@ export function ReviewFlow(props: Props) {
   // mid-step screens (post-rating). We hide the tab UI on these.
   const inSubFlow =
     step === "feedback" ||
-    step === "pick-template" ||
-    step === "ai" ||
     step === "thank-you-google" ||
     step === "thank-you-private";
 
@@ -667,8 +536,85 @@ export function ReviewFlow(props: Props) {
           hoverRating={hoverRating}
           setHoverRating={setHoverRating}
           pickRating={pickRating}
-          loading={loading || templatesLoading}
+          loading={loading}
         />
+      )}
+
+      {step === "rate" && rating > 0 && business.reviewGating !== true && (
+        <>
+          <div className="container max-w-2xl px-4 pt-4">
+            <div className="mb-3 flex justify-end gap-2" role="group" aria-label="Language">
+              <button
+                type="button"
+                className="min-h-11 rounded-full border px-3 text-sm font-semibold"
+                aria-pressed={lang === "en"}
+                onClick={() => chooseLang("en")}
+              >
+                EN
+              </button>
+              <button
+                type="button"
+                className="min-h-11 rounded-full border px-3 text-sm font-semibold"
+                aria-pressed={lang === "hi"}
+                lang="hi"
+                onClick={() => chooseLang("hi")}
+              >
+                हिं
+              </button>
+            </div>
+            {reviewTargets.length > 0 && (
+              <div className="rounded-3xl neu p-5 sm:p-6">
+                <h2 className="text-center text-lg font-semibold">{copy.publicTitle}</h2>
+                <div className="mt-4 grid gap-2">
+                  {reviewTargets.map((item) => (
+                    <Button key={item.href} asChild variant="skeuo" size="lg" className="min-h-11 w-full">
+                      <a
+                        href={item.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => {
+                          void submitReview({
+                            rating,
+                            feedback: "",
+                            openedPublicReview: true,
+                            preserveToken: true
+                          }).catch(() => {});
+                        }}
+                      >
+                        {lang === "hi" ? item.labelHi : item.labelEn}
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          <FeedbackStep
+            business={business}
+            rating={rating}
+            feedback={feedback}
+            setFeedback={setFeedback}
+            name={name}
+            setName={setName}
+            phone={phone}
+            setPhone={setPhone}
+            email={email}
+            setEmail={setEmail}
+            tags={tags}
+            toggleTag={toggleTag}
+            npsScore={npsScore}
+            setNpsScore={setNpsScore}
+            onSubmit={onSubmitFeedback}
+            loading={loading}
+            consent={consent}
+            setConsent={setConsent}
+            panel
+            title={copy.privateTitle}
+            lang={lang}
+            aiEnabled={props.aiEnabled === true}
+          />
+        </>
       )}
 
       {/* Action chips (secondary) */}
@@ -780,6 +726,8 @@ export function ReviewFlow(props: Props) {
             loading={loading}
             consent={consent}
             setConsent={setConsent}
+            lang={lang}
+            aiEnabled={props.aiEnabled === true}
           />
         )}
         {step === "thank-you-google" && <ThankYouGoogle business={business} />}
@@ -801,319 +749,10 @@ export function ReviewFlow(props: Props) {
         </a>
       </footer>
 
-      {/* Full-screen template picker — covers everything else when active */}
-      {step === "pick-template" && (
-        <PickTemplateModal
-          templates={templates}
-          pickedId={pickedId}
-          loading={loading}
-          accent={accent}
-          onPick={onPickTemplate}
-          onSkip={() => goToGoogleReview(rating)}
-        />
-      )}
-
-      {/* Full-screen AI assistant — questions → suggested reviews → Google */}
-      {step === "ai" && (
-        <AiReviewModal
-          business={business}
-          rating={rating}
-          questions={aiQuestions}
-          accent={accent}
-          onSkip={() => goToGoogleReview(rating)}
-        />
-      )}
-
-      {/* Loading popup while AI prepares the quick questions */}
-      {aiPreparing && (
-        <AiLoadingOverlay
-          accent={accent}
-          title="Preparing your quick review"
-          sub="Our AI is getting a couple of questions ready — just a moment."
-        />
-      )}
     </div>
   );
 }
 
-function AiLoadingOverlay({
-  accent,
-  title,
-  sub
-}: {
-  accent: string;
-  title: string;
-  sub: string;
-}) {
-  React.useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, []);
-  return (
-    <div className="fixed inset-0 z-[70] grid place-items-center glass-strong p-4">
-      <div className="w-full max-w-sm rounded-3xl neu p-8 text-center">
-        <div className="relative mx-auto h-16 w-16">
-          <span
-            className="absolute inset-0 rounded-full animate-ping"
-            style={{ background: accent, opacity: 0.25 }}
-          />
-          <span
-            className="absolute inset-2 rounded-full"
-            style={{ background: `${accent}22` }}
-          />
-          <span
-            className="absolute inset-0 rounded-full border-[3px] border-transparent animate-spin"
-            style={{ borderTopColor: accent }}
-          />
-          <span className="absolute inset-0 grid place-items-center">
-            <Sparkles className="h-6 w-6" style={{ color: accent }} />
-          </span>
-        </div>
-        <h3 className="mt-5 text-lg font-bold rv-ink">{title}</h3>
-        <p className="mt-1.5 text-sm rv-muted">{sub}</p>
-        <div className="mt-6 space-y-2.5">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="h-3 rounded-full neu-inset overflow-hidden">
-              <div
-                className="h-full w-1/2 rounded-full animate-pulse"
-                style={{ background: `${accent}55`, animationDelay: `${i * 180}ms` }}
-              />
-            </div>
-          ))}
-        </div>
-        <p className="mt-5 text-[11px] rv-sub">This only takes a few seconds — hang tight ✨</p>
-      </div>
-    </div>
-  );
-}
-
-function AiReviewModal({
-  business,
-  rating,
-  questions,
-  accent,
-  onSkip
-}: {
-  business: Business;
-  rating: number;
-  questions: AiQuestion[];
-  accent: string;
-  onSkip: () => void;
-}) {
-  const [phase, setPhase] = React.useState<"questions" | "reviews">("questions");
-  const [answers, setAnswers] = React.useState<Record<string, string>>({});
-  const [reviews, setReviews] = React.useState<string[]>([]);
-  const [loading, setLoading] = React.useState(false);
-  const [copiedIdx, setCopiedIdx] = React.useState<number | null>(null);
-  const platformLabel = business.reviewPlatform === "trustpilot" ? "Trustpilot" : "Google";
-
-  React.useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, []);
-
-  const allAnswered = questions.every((q) => answers[q.id]);
-
-  async function getReviews() {
-    setLoading(true);
-    try {
-      const payload = questions
-        .map((q) => ({ question: q.question, answer: answers[q.id] || "" }))
-        .filter((a) => a.answer);
-      const res = await fetch("/api/public/ai/reviews", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ slug: business.slug, rating, answers: payload })
-      });
-      const j = await res.json().catch(() => ({}));
-      const items: string[] = Array.isArray(j.reviews) ? j.reviews : [];
-      if (items.length === 0) {
-        toast.message(`Couldn't draft reviews — you can write your own on ${platformLabel}.`);
-        onSkip();
-        return;
-      }
-      setReviews(items);
-      setPhase("reviews");
-    } catch {
-      toast.error("Something went wrong");
-      onSkip();
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function copyAndGo(text: string, idx: number) {
-    // Reserve a tab inside this click so iframe popup-blockers honour the gesture.
-    const reserved = reserveExternalTab();
-    setCopiedIdx(idx);
-    const copied = await safeClipboard(text);
-    if (copied) toast.success(`Copied! Paste it on ${platformLabel}'s review form.`);
-    else toast.message("Long-press the text to copy.");
-    setTimeout(() => {
-      if (business.googleReviewUrl) navigateExternal(business.googleReviewUrl, reserved);
-      else reserved?.close();
-    }, 900);
-  }
-
-  return (
-    <div
-      className="fixed inset-0 z-50 glass-strong overflow-y-auto"
-      role="dialog"
-      aria-modal="true"
-    >
-      <div className="min-h-full container max-w-2xl px-4 py-6 sm:py-10 flex flex-col">
-        <div className="flex justify-center gap-1 mb-4">
-          {[1, 2, 3, 4, 5].map((n) => (
-            <Star key={n} className="h-7 w-7 fill-amber-400 text-amber-400 drop-shadow-sm" />
-          ))}
-        </div>
-
-        {phase === "questions" ? (
-          <>
-            <div className="flex items-center justify-center gap-2">
-              <Sparkles className="h-5 w-5" style={{ color: accent }} />
-              <h2 className="text-2xl sm:text-3xl font-bold text-center tracking-tight">
-                A few quick taps
-              </h2>
-            </div>
-            <p className="mt-3 text-sm rv-body text-center max-w-md mx-auto">
-              Tell us what stood out — we'll turn it into a great review you can post in one tap.
-            </p>
-
-            <div className="mt-6 space-y-5">
-              {questions.map((q) => (
-                <div key={q.id}>
-                  <div className="text-[15px] font-semibold rv-ink mb-2">{q.question}</div>
-                  <div className="flex flex-wrap gap-2">
-                    {q.options.map((opt) => {
-                      const active = answers[q.id] === opt;
-                      return (
-                        <button
-                          key={opt}
-                          type="button"
-                          onClick={() => setAnswers((a) => ({ ...a, [q.id]: opt }))}
-                          className={cn(
-                            "px-3.5 py-2 rounded-full text-sm font-medium border transition",
-                            active
-                              ? "text-white"
-                              : "skeuo rv-body"
-                          )}
-                          style={active ? { background: accent, borderColor: accent } : undefined}
-                        >
-                          {opt}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-7">
-              <Button
-                type="button"
-                size="lg"
-                className="w-full"
-                disabled={!allAnswered || loading}
-                variant="skeuo"
-                onClick={getReviews}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" /> Writing your review…
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-4 w-4" /> Get my review
-                  </>
-                )}
-              </Button>
-              {!allAnswered && (
-                <p className="mt-2 text-[11px] rv-sub text-center">
-                  Pick one option for each question.
-                </p>
-              )}
-            </div>
-          </>
-        ) : (
-          <>
-            <h2 className="text-2xl sm:text-3xl font-bold text-center tracking-tight">
-              <span
-                className="px-3 py-1 rounded-lg"
-                style={{ background: `${accent}1a`, color: accent }}
-              >
-                Pick your review
-              </span>
-            </h2>
-            <p className="mt-3 text-sm rv-body text-center max-w-md mx-auto">
-              Tap <b>Copy</b> on the one you like — we'll copy it and open {platformLabel} so you can paste.
-            </p>
-
-            <div className="mt-6 space-y-3">
-              {reviews.map((r, idx) => {
-                const isCopied = copiedIdx === idx;
-                return (
-                  <div
-                    key={idx}
-                    className={cn(
-                      "rounded-2xl border p-4 sm:p-5 transition",
-                      isCopied ? "border-emerald-400 bg-emerald-50/40" : "neu"
-                    )}
-                    style={isCopied ? { borderColor: accent, background: `${accent}0d` } : undefined}
-                  >
-                    <p className="text-[15px] leading-relaxed rv-ink whitespace-pre-line">
-                      {r}
-                    </p>
-                    <div className="mt-3 flex justify-end">
-                      <Button
-                        type="button"
-                        onClick={() => copyAndGo(r, idx)}
-                        size="sm"
-                        className="min-w-[110px]"
-                        variant="skeuo"
-                      >
-                        {isCopied ? (
-                          <>
-                            <Check className="h-4 w-4" /> Copied
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="h-4 w-4" /> Copy
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        )}
-
-        <div className="mt-6 pt-5 border-t border-slate-200">
-          <Button type="button" variant="outline" size="lg" className="w-full" onClick={onSkip}>
-            <Pencil className="h-4 w-4" /> I'll write my own
-          </Button>
-        </div>
-      </div>
-
-      {/* Loading popup while the AI writes the review options */}
-      {loading && phase === "questions" && (
-        <AiLoadingOverlay
-          accent={accent}
-          title="Writing your review"
-          sub="Crafting ready-to-post options from your answers."
-        />
-      )}
-    </div>
-  );
-}
 
 function ActionChip({
   icon,
@@ -1263,135 +902,6 @@ function RateStep({
   );
 }
 
-function PickTemplateModal({
-  templates,
-  pickedId,
-  loading,
-  accent,
-  onPick,
-  onSkip
-}: {
-  templates: TemplatePick[];
-  pickedId: string | null;
-  loading: boolean;
-  accent: string;
-  onPick: (t: TemplatePick) => void;
-  onSkip: () => void;
-}) {
-  // Lock body scroll while the modal is open.
-  React.useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, []);
-
-  // Show only 3 templates per the requested UX.
-  const visible = templates.slice(0, 3);
-
-  return (
-    <div
-      className="fixed inset-0 z-50 glass-strong overflow-y-auto"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="pick-template-heading"
-    >
-      <div className="min-h-full container max-w-2xl px-4 py-6 sm:py-10 flex flex-col">
-        <div className="flex justify-center gap-1 mb-4">
-          {[1, 2, 3, 4, 5].map((n) => (
-            <Star
-              key={n}
-              className="h-7 w-7 fill-amber-400 text-amber-400 drop-shadow-sm"
-            />
-          ))}
-        </div>
-
-        <h2
-          id="pick-template-heading"
-          className="text-2xl sm:text-3xl font-bold text-center tracking-tight"
-        >
-          <span
-            className="px-3 py-1 rounded-lg"
-            style={{ background: `${accent}1a`, color: accent }}
-          >
-            Select your content
-          </span>
-        </h2>
-        <p className="mt-3 text-sm rv-body text-center max-w-md mx-auto">
-          Tap <b>Copy</b> on the review you'd like to leave. We'll copy it to your clipboard —
-          just paste it on the review form.
-        </p>
-
-        <div className="mt-6 space-y-3">
-          {visible.map((t) => {
-            const isPicked = pickedId === t.id;
-            return (
-              <div
-                key={t.id}
-                className={cn(
-                  "rounded-2xl border p-4 sm:p-5 transition",
-                  isPicked ? "border-emerald-400 bg-emerald-50/40" : "neu"
-                )}
-                style={
-                  isPicked ? { borderColor: accent, background: `${accent}0d` } : undefined
-                }
-              >
-                <p className="text-[15px] leading-relaxed rv-ink whitespace-pre-line">
-                  {t.content}
-                </p>
-                <div className="mt-3 flex justify-end">
-                  <Button
-                    type="button"
-                    onClick={() => onPick(t)}
-                    disabled={loading}
-                    size="sm"
-                    className="min-w-[110px]"
-                    variant={isPicked ? "outline" : "skeuo"}
-                  >
-                    {isPicked ? (
-                      loading ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" /> Copying…
-                        </>
-                      ) : (
-                        <>
-                          <Check className="h-4 w-4" /> Copied
-                        </>
-                      )
-                    ) : (
-                      <>
-                        <Copy className="h-4 w-4" /> Copy
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* "I'll write my own" — below the 3 prefilled options */}
-        <div className="mt-6 pt-5 border-t border-slate-200">
-          <Button
-            type="button"
-            variant="outline"
-            size="lg"
-            className="w-full"
-            onClick={onSkip}
-            disabled={loading}
-          >
-            <Pencil className="h-4 w-4" /> I'll write my own
-          </Button>
-        </div>
-
-        <p className="mt-4 text-[11px] rv-sub text-center">
-          Each review is shown to a single customer only — the next person sees fresh options.
-        </p>
-      </div>
-    </div>
-  );
-}
 
 function ReviewsTab({ reviews }: { reviews: PublicReview[] }) {
   if (reviews.length === 0) {
@@ -1540,36 +1050,49 @@ function FeedbackStep(props: {
   tags: string[];
   toggleTag: (t: string) => void;
   npsScore: number | null;
-  setNpsScore: (n: number) => void;
+  setNpsScore: (n: number | null) => void;
   onSubmit: (e: React.FormEvent) => void;
   loading: boolean;
   consent: boolean;
   setConsent: (v: boolean) => void;
+  panel?: boolean;
+  title?: string;
+  lang?: "en" | "hi";
+  aiEnabled?: boolean;
 }) {
   return (
-    <div className="container max-w-2xl px-4 py-5">
+    <div className={cn("container max-w-2xl px-4", props.panel ? "pt-3 pb-5" : "py-5")}>
       <div className="rounded-3xl neu p-5 sm:p-6">
-        <div className="flex items-center justify-center gap-1 mb-3">
-          {[1, 2, 3, 4, 5].map((n) => (
-            <Star
-              key={n}
-              className={cn(
-                "h-6 w-6",
-                props.rating >= n
-                  ? "fill-amber-400 text-amber-400"
-                  : "fill-transparent rv-sub"
-              )}
-            />
-          ))}
-        </div>
-        <h2 className="text-xl sm:text-2xl font-bold text-center tracking-tight">
-          We'd love to hear more
-        </h2>
-        <p className="mt-1.5 text-sm rv-muted text-center">
-          This goes privately to the owner — never made public.
-        </p>
+        {props.panel ? (
+          <h2 className="text-center text-lg font-semibold">{props.title}</h2>
+        ) : (
+          <>
+            <div className="flex items-center justify-center gap-1 mb-3">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <Star
+                  key={n}
+                  className={cn(
+                    "h-6 w-6",
+                    props.rating >= n ? "fill-amber-400 text-amber-400" : "fill-transparent rv-sub"
+                  )}
+                />
+              ))}
+            </div>
+            <h2 className="text-xl sm:text-2xl font-bold text-center tracking-tight">
+              We'd love to hear more
+            </h2>
+            <p className="mt-1.5 text-sm rv-muted text-center">
+              This goes privately to the owner — never made public.
+            </p>
+          </>
+        )}
 
-        <form onSubmit={props.onSubmit} className="mt-5 space-y-4">
+        <form onSubmit={props.onSubmit} className="mt-4 space-y-4">
+          <HintChips
+            slug={props.business.slug}
+            lang={props.lang || "en"}
+            onInsert={(text) => props.setFeedback(appendHint(props.feedback, text))}
+          />
           <div className="space-y-1.5">
             <Label htmlFor="feedback">What could we have done better? *</Label>
             <Textarea
@@ -1583,6 +1106,9 @@ function FeedbackStep(props: {
               className="min-h-[110px] neu-inset border-0"
             />
           </div>
+          {props.aiEnabled ? (
+            <PolishDraft slug={props.business.slug} text={props.feedback} lang={props.lang || "en"} />
+          ) : null}
 
           <div className="space-y-2">
             <Label className="text-sm">What was the issue about?</Label>
@@ -1604,6 +1130,8 @@ function FeedbackStep(props: {
               ))}
             </div>
           </div>
+
+          <NpsPicker value={props.npsScore} onChange={props.setNpsScore} lang={props.lang || "en"} />
 
           <div className="grid sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
