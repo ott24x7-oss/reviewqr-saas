@@ -758,6 +758,12 @@ model MenuItem {
   description String?
   bestseller Boolean       @default(false)
   photo      String?
+  /// Extra gallery images. `photo` stays the cover. At most five, so six with the cover.
+  photos     String[]      @default([])
+  /// Shop brand. Empty on food and services.
+  brand      String        @default("")
+  /// Service length. Hidden on food and shop.
+  durationMinutes Int?
   veg        VegMark       @default(NONE)
   available  Boolean       @default(true)
   sortOrder  Int           @default(0)

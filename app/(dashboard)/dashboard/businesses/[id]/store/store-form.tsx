@@ -36,6 +36,7 @@ export type StoreFormValues = {
   pricesIncludeGst: boolean;
   prepMinutes: number;
   upiId: string;
+  layout: "AUTO" | "FOOD" | "SHOP" | "SERVICES";
 };
 
 function hoursState(hours: WeekHours | null): HoursState {
@@ -70,6 +71,7 @@ export function StoreForm({ businessId, initial }: { businessId: string; initial
   const [pricesIncludeGst, setPricesIncludeGst] = React.useState(initial.pricesIncludeGst);
   const [prep, setPrep] = React.useState(String(initial.prepMinutes));
   const [upiId, setUpiId] = React.useState(initial.upiId);
+  const [layout, setLayout] = React.useState(initial.layout);
   const [busy, setBusy] = React.useState(false);
 
   function setDay(day: WeekDay, key: "open" | "close", value: string) {
@@ -102,7 +104,8 @@ export function StoreForm({ businessId, initial }: { businessId: string; initial
           gstPercent: Math.min(28, Math.max(0, Math.round(Number(gstPercent) || 0))),
           pricesIncludeGst,
           prepMinutes: Math.min(240, Math.max(1, Math.round(Number(prep) || 20))),
-          upiId
+          upiId,
+          layout
         })
       });
       const json = await res.json().catch(() => ({}));
@@ -133,6 +136,23 @@ export function StoreForm({ businessId, initial }: { businessId: string; initial
             </div>
           ))}
           <p className="text-sm text-muted-foreground">Leave a day blank to mark it closed. If every day is blank, the store uses the hours on the customer page.</p>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent className="space-y-3 p-4">
+          <h2 className="font-semibold">Layout</h2>
+          <select
+            aria-label="Store layout"
+            value={layout}
+            onChange={(event) => setLayout(event.target.value as StoreFormValues["layout"])}
+            className="flex h-11 min-h-11 w-full rounded-lg border bg-white px-3 text-sm"
+          >
+            <option value="AUTO">Automatic — from the business type</option>
+            <option value="FOOD">Food — menu and order</option>
+            <option value="SHOP">Shop — products and buy</option>
+            <option value="SERVICES">Services — book and enquire</option>
+          </select>
+          <p className="text-sm text-muted-foreground">Automatic uses food for cafés and restaurants, services for salons and clinics, and a shop for everything else.</p>
         </CardContent>
       </Card>
       <Card>

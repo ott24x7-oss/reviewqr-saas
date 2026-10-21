@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { requireBusinessRole } from "@/lib/tenant";
 import { getAiConfig } from "@/lib/settings";
+import { resolveLayout, type StoreView } from "@/lib/store/layout";
 import { MenuEditor } from "./menu-editor";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +26,7 @@ export default async function BusinessMenuPage({ params }: { params: { id: strin
       }
     }
   });
-  const [loose, ai] = await Promise.all([
+  const [loose, ai, settings] = await Promise.all([
     prisma.menuItem.findMany({
       where: { businessId: access.id, categoryId: null },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
@@ -34,12 +35,15 @@ export default async function BusinessMenuPage({ params }: { params: { id: strin
         addOns: { orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }
       }
     }),
-    getAiConfig().catch(() => null)
+    getAiConfig().catch(() => null),
+    prisma.storeSettings.findUnique({ where: { businessId: access.id }, select: { layout: true } })
   ]);
+  const layout: StoreView = resolveLayout(settings?.layout, access.industry);
   return (
     <MenuEditor
       businessId={access.id}
       businessName={access.name}
+      layout={layout}
       aiReady={!!(ai?.enabled && ai.apiKey)}
       canEdit={access.accessRole !== "STAFF"}
       categories={categories.map((category) => ({
@@ -61,6 +65,10 @@ function serialize(item: {
   mrpPaise: number | null;
   description: string | null;
   bestseller: boolean;
+  photo: string | null;
+  photos: string[];
+  brand: string;
+  durationMinutes: number | null;
   veg: "VEG" | "NON_VEG" | "EGG" | "NONE";
   available: boolean;
   variants: {
@@ -88,6 +96,10 @@ function serialize(item: {
     mrpRupees: item.mrpPaise == null ? null : item.mrpPaise / 100,
     description: item.description || "",
     bestseller: item.bestseller,
+    photo: item.photo,
+    photos: item.photos || [],
+    brand: item.brand || "",
+    durationMinutes: item.durationMinutes,
     veg: item.veg,
     available: item.available,
     variants: item.variants.map((variant) => ({

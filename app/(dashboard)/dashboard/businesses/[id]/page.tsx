@@ -64,6 +64,14 @@ export default async function BusinessDetailPage({ params }: { params: { id: str
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <Button asChild variant="outline" className="h-11 min-h-11">
+            <a href={absoluteUrl(`/${business.slug}/store`)} target="_blank" rel="noopener noreferrer">
+              <ShoppingBag className="h-3.5 w-3.5" /> Open store
+            </a>
+          </Button>
+          <Button asChild variant="outline" className="h-11 min-h-11">
+            <a href={`/api/businesses/${business.id}/store/poster`}>Store poster</a>
+          </Button>
           <Button asChild variant="outline" size="sm">
             <a href={absoluteUrl(`/r/${business.slug}`)} target="_blank" rel="noopener noreferrer">
               <ExternalLink className="h-3.5 w-3.5" /> View page

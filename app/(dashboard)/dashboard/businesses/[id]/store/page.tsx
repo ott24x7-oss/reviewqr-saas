@@ -28,7 +28,8 @@ export default async function StoreSettingsPage({ params }: { params: { id: stri
     gstPercent: settings?.gstPercent ?? 5,
     pricesIncludeGst: settings?.pricesIncludeGst ?? true,
     prepMinutes: settings?.prepMinutes ?? 20,
-    upiId: settings?.upiId ?? ""
+    upiId: settings?.upiId ?? "",
+    layout: settings?.layout ?? "AUTO"
   };
   return (
     <div className="space-y-4">

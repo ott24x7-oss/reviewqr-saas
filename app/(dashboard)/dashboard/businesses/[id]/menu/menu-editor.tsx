@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { formatRupees } from "@/lib/tap/order-message";
+import type { StoreView } from "@/lib/store/layout";
 
 type Option = {
   id: string;
@@ -28,6 +29,13 @@ type AddOn = {
 
 type CopyField = "description" | "nameHi";
 
+function minutesOf(value: string) {
+  if (!value.trim()) return null;
+  const minutes = Math.round(Number(value));
+  if (!Number.isFinite(minutes) || minutes < 1) return null;
+  return Math.min(480, minutes);
+}
+
 type Item = {
   id: string;
   name: string;
@@ -36,6 +44,10 @@ type Item = {
   mrpRupees: number | null;
   description: string;
   bestseller: boolean;
+  photo: string | null;
+  photos: string[];
+  brand: string;
+  durationMinutes: number | null;
   veg: "VEG" | "NON_VEG" | "EGG" | "NONE";
   available: boolean;
   variants: Option[];
@@ -45,6 +57,7 @@ type Item = {
 export function MenuEditor({
   businessId,
   businessName,
+  layout,
   aiReady,
   canEdit,
   categories,
@@ -52,6 +65,7 @@ export function MenuEditor({
 }: {
   businessId: string;
   businessName: string;
+  layout: StoreView;
   aiReady: boolean;
   canEdit: boolean;
   categories: { id: string; name: string; nameHi: string; items: Item[] }[];
@@ -65,6 +79,11 @@ export function MenuEditor({
   const [description, setDescription] = React.useState("");
   const [bestseller, setBestseller] = React.useState(false);
   const [veg, setVeg] = React.useState<Item["veg"]>("VEG");
+  const [inStock, setInStock] = React.useState(true);
+  const [brand, setBrand] = React.useState("");
+  const [photo, setPhoto] = React.useState("");
+  const [photos, setPhotos] = React.useState<string[]>([]);
+  const [duration, setDuration] = React.useState("");
   const [categoryId, setCategoryId] = React.useState("");
   const [categoryName, setCategoryName] = React.useState("");
   const [busy, setBusy] = React.useState(false);
@@ -93,6 +112,10 @@ export function MenuEditor({
         setMrp("");
         setDescription("");
         setBestseller(false);
+        setBrand("");
+        setPhoto("");
+        setPhotos([]);
+        setDuration("");
         setCategoryName("");
       }
       router.refresh();
@@ -137,6 +160,23 @@ export function MenuEditor({
     }
   }
 
+  async function uploadPhoto(file: File) {
+    if (file.size > 8_000_000) {
+      toast.error("Choose a photo under 8 MB");
+      return "";
+    }
+    const body = new FormData();
+    body.set("file", file);
+    body.set("variant", "cover");
+    const res = await fetch("/api/uploads", { method: "POST", body });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || typeof json.url !== "string") {
+      toast.error(json.error || "Could not upload the photo");
+      return "";
+    }
+    return json.url as string;
+  }
+
   return (
     <div className="space-y-4">
       <div>
@@ -170,15 +210,39 @@ export function MenuEditor({
               </Button>
             </div>
             <label className="flex min-h-11 items-center gap-2 text-sm">
-              <input type="checkbox" checked={bestseller} onChange={(event) => setBestseller(event.target.checked)} className="h-5 w-5" />
-              Mark as bestseller
+              <input type="checkbox" checked={inStock} onChange={(event) => setInStock(event.target.checked)} className="h-5 w-5" />
+              In stock
             </label>
-            <select aria-label="Veg mark" value={veg} onChange={(event) => setVeg(event.target.value as Item["veg"])} className="flex h-11 w-full rounded-lg border bg-white px-3 text-sm">
-              <option value="VEG">Veg</option>
-              <option value="NON_VEG">Non-veg</option>
-              <option value="EGG">Egg</option>
-              <option value="NONE">No mark</option>
-            </select>
+            {layout === "FOOD" ? (
+              <label className="flex min-h-11 items-center gap-2 text-sm">
+                <input type="checkbox" checked={bestseller} onChange={(event) => setBestseller(event.target.checked)} className="h-5 w-5" />
+                Mark as bestseller
+              </label>
+            ) : null}
+            {layout === "FOOD" ? (
+              <select aria-label="Veg mark" value={veg} onChange={(event) => setVeg(event.target.value as Item["veg"])} className="flex h-11 w-full rounded-lg border bg-white px-3 text-sm">
+                <option value="VEG">Veg</option>
+                <option value="NON_VEG">Non-veg</option>
+                <option value="EGG">Egg</option>
+                <option value="NONE">No mark</option>
+              </select>
+            ) : null}
+            {layout === "SHOP" ? (
+              <>
+                <Input aria-label="Brand" value={brand} placeholder="Brand (optional)" onChange={(event) => setBrand(event.target.value)} className="min-h-11" />
+                <PhotoFields
+                  photo={photo}
+                  photos={photos}
+                  busy={busy}
+                  onCover={(url) => setPhoto(url)}
+                  onPhotos={setPhotos}
+                  upload={uploadPhoto}
+                />
+              </>
+            ) : null}
+            {layout === "SERVICES" ? (
+              <Input aria-label="Duration in minutes" inputMode="numeric" value={duration} placeholder="Duration in minutes" onChange={(event) => setDuration(event.target.value)} className="min-h-11" />
+            ) : null}
             <select aria-label="Category" value={categoryId} onChange={(event) => setCategoryId(event.target.value)} className="flex h-11 w-full rounded-lg border bg-white px-3 text-sm">
               <option value="">No category</option>
               {categories.map((category) => (
@@ -192,9 +256,12 @@ export function MenuEditor({
                   priceRupees: Number(price || 0),
                   mrpRupees: mrp ? Number(mrp) : null,
                   description,
-                  bestseller,
-                  veg,
-                  categoryId: categoryId || null
+                  bestseller: layout === "FOOD" && bestseller,
+                  veg: layout === "FOOD" ? veg : "NONE",
+                  available: inStock,
+                  categoryId: categoryId || null,
+                  ...(layout === "SHOP" ? { brand, photo, photos } : {}),
+                  ...(layout === "SERVICES" ? { durationMinutes: minutesOf(duration) } : {})
                 })}>
               Add item
             </Button>
@@ -378,12 +445,14 @@ export function MenuEditor({
                 {canEdit ? (
                   <ItemCopy
                     item={item}
+                    layout={layout}
                     busy={busy}
                     onSuggest={suggestCopy}
-                    onSave={(nextHi, nextDescription) => send({ action: "update", id: item.id, nameHi: nextHi, description: nextDescription }, true)}
+                    upload={uploadPhoto}
+                    onSave={(patch) => send({ action: "update", id: item.id, ...patch }, true)}
                   />
                 ) : null}
-                <ItemOptions item={item} canEdit={canEdit} busy={busy} send={send} />
+                {layout === "SERVICES" ? null : <ItemOptions item={item} layout={layout} canEdit={canEdit} busy={busy} send={send} />}
               </CardContent>
             </Card>
           ))}
@@ -395,21 +464,33 @@ export function MenuEditor({
 
 function ItemCopy({
   item,
+  layout,
   busy,
   onSuggest,
+  upload,
   onSave
 }: {
   item: Item;
+  layout: StoreView;
   busy: boolean;
   onSuggest: (field: CopyField, current: { name: string; nameHi: string }, apply: (text: string) => void) => void;
-  onSave: (nameHi: string, description: string) => void;
+  upload: (file: File) => Promise<string>;
+  onSave: (patch: Record<string, unknown>) => void;
 }) {
   const [nameHi, setNameHi] = React.useState(item.nameHi);
   const [description, setDescription] = React.useState(item.description);
+  const [brand, setBrand] = React.useState(item.brand);
+  const [photo, setPhoto] = React.useState(item.photo || "");
+  const [photos, setPhotos] = React.useState(item.photos);
+  const [duration, setDuration] = React.useState(item.durationMinutes ? String(item.durationMinutes) : "");
   React.useEffect(() => {
     setNameHi(item.nameHi);
     setDescription(item.description);
-  }, [item.id, item.nameHi, item.description]);
+    setBrand(item.brand);
+    setPhoto(item.photo || "");
+    setPhotos(item.photos);
+    setDuration(item.durationMinutes ? String(item.durationMinutes) : "");
+  }, [item.id, item.nameHi, item.description, item.brand, item.photo, item.photos, item.durationMinutes]);
 
   return (
     <div className="space-y-2">
@@ -423,6 +504,15 @@ function ItemCopy({
         onChange={(event) => setDescription(event.target.value)}
         className="flex min-h-11 w-full rounded-lg border bg-white px-3 py-2 text-sm"
       />
+      {layout === "SHOP" ? (
+        <>
+          <Input aria-label={`Brand for ${item.name}`} value={brand} placeholder="Brand (optional)" onChange={(event) => setBrand(event.target.value)} className="min-h-11" />
+          <PhotoFields photo={photo} photos={photos} busy={busy} onCover={setPhoto} onPhotos={setPhotos} upload={upload} />
+        </>
+      ) : null}
+      {layout === "SERVICES" ? (
+        <Input aria-label={`Duration for ${item.name}`} inputMode="numeric" value={duration} placeholder="Duration in minutes" onChange={(event) => setDuration(event.target.value)} className="min-h-11" />
+      ) : null}
       <div className="flex flex-col gap-2 sm:flex-row">
         <Button
           type="button"
@@ -442,7 +532,17 @@ function ItemCopy({
         >
           Hindi name
         </Button>
-        <Button type="button" className="h-11 min-h-11" disabled={busy} onClick={() => onSave(nameHi, description)}>
+        <Button
+          type="button"
+          className="h-11 min-h-11"
+          disabled={busy}
+          onClick={() => onSave({
+            nameHi,
+            description,
+            ...(layout === "SHOP" ? { brand, photo, photos } : {}),
+            ...(layout === "SERVICES" ? { durationMinutes: minutesOf(duration) } : {})
+          })}
+        >
           Save
         </Button>
       </div>
@@ -450,13 +550,56 @@ function ItemCopy({
   );
 }
 
+function PhotoFields({
+  photo,
+  photos,
+  busy,
+  onCover,
+  onPhotos,
+  upload
+}: {
+  photo: string;
+  photos: string[];
+  busy: boolean;
+  onCover: (url: string) => void;
+  onPhotos: (urls: string[]) => void;
+  upload: (file: File) => Promise<string>;
+}) {
+  const total = (photo ? 1 : 0) + photos.length;
+  return (
+    <div className="space-y-2">
+      <label className="flex h-11 min-h-11 items-center">
+        <input
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          aria-label="Product photo"
+          disabled={busy || total >= 6}
+          onChange={async (event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            if (!file) return;
+            const url = await upload(file);
+            if (!url) return;
+            if (!photo) onCover(url);
+            else onPhotos([...photos, url].slice(0, 5));
+          }}
+        />
+      </label>
+      <p className="text-xs text-muted-foreground">{total}/6 photos. The first one is the cover.</p>
+      {photo ? <p className="text-xs">Cover added</p> : null}
+    </div>
+  );
+}
+
 function ItemOptions({
   item,
+  layout,
   canEdit,
   busy,
   send
 }: {
   item: Item;
+  layout: StoreView;
   canEdit: boolean;
   busy: boolean;
   send: (body: Record<string, unknown>, keepForm?: boolean) => Promise<boolean>;
@@ -515,8 +658,12 @@ function ItemOptions({
           <div className="grid grid-cols-2 gap-2">
             <Input aria-label={`Option name for ${item.name}`} value={label} placeholder="Option, e.g. Half" onChange={(event) => setLabel(event.target.value)} className="min-h-11" />
             <Input aria-label={`Option price for ${item.name}`} value={price} inputMode="decimal" placeholder="Option price ₹" onChange={(event) => setPrice(event.target.value)} className="min-h-11" />
-            <Input aria-label={`Size for ${item.name}`} value={size} placeholder="Size (optional)" onChange={(event) => setSize(event.target.value)} className="min-h-11" />
-            <Input aria-label={`Colour for ${item.name}`} value={colour} placeholder="Colour (optional)" onChange={(event) => setColour(event.target.value)} className="min-h-11" />
+            {layout === "SHOP" ? (
+              <>
+                <Input aria-label={`Size for ${item.name}`} value={size} placeholder="Size (optional)" onChange={(event) => setSize(event.target.value)} className="min-h-11" />
+                <Input aria-label={`Colour for ${item.name}`} value={colour} placeholder="Colour (optional)" onChange={(event) => setColour(event.target.value)} className="min-h-11" />
+              </>
+            ) : null}
           </div>
           <Button
             type="button"

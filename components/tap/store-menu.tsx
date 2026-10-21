@@ -9,6 +9,9 @@ import { safeImageSrc } from "@/lib/tap/links";
 import { enabledOrderTypes, quoteOrder, type OrderType, type StoreRules } from "@/lib/store/pricing";
 import { lineUnitPaise, matchVariant, resolveChoice, uniqueLabels, usesSizeColour } from "@/lib/store/variants";
 import { couponDiscount, type CouponFail, type CouponRule } from "@/lib/store/coupons";
+import type { StoreView } from "@/lib/store/layout";
+import { ShopCatalog } from "./store-shop";
+import { ServicesCatalog } from "./store-services";
 
 export type StoreVariant = {
   id: string;
@@ -38,6 +41,10 @@ export type StoreItem = {
   description: string;
   bestseller: boolean;
   photo: string | null;
+  photos: string[];
+  brand: string;
+  durationMinutes: number | null;
+  createdAt: string;
   veg: "VEG" | "NON_VEG" | "EGG" | "NONE";
   variants: StoreVariant[];
   addOns: StoreAddOn[];
@@ -110,7 +117,10 @@ export function StoreMenu({
   tableLabel,
   banners,
   upiId,
-  themeStyle
+  themeStyle,
+  layout,
+  homeHref,
+  askBase
 }: {
   code: string;
   channel: "q" | "t";
@@ -123,6 +133,9 @@ export function StoreMenu({
   banners: { id: string; title: string; body: string }[];
   upiId: string;
   themeStyle?: React.CSSProperties;
+  layout: StoreView;
+  homeHref?: string;
+  askBase?: string;
 }) {
   const [lang, setLang] = React.useState<TapLang>("en");
   const [query, setQuery] = React.useState("");
@@ -175,9 +188,9 @@ export function StoreMenu({
   const pickingItem = items.find((item) => item.id === picking) || null;
   const label = (item: { name: string; nameHi: string }) => (lang === "hi" && item.nameHi ? item.nameHi : item.name);
   const visible = items.filter((item) => {
-    if (vegOnly && item.veg !== "VEG") return false;
+    if (layout === "FOOD" && vegOnly && item.veg !== "VEG") return false;
     if (!query.trim()) return true;
-    const hay = `${item.name} ${item.nameHi} ${item.description}`.toLowerCase();
+    const hay = `${item.name} ${item.nameHi} ${item.description} ${item.brand || ""}`.toLowerCase();
     return hay.includes(query.trim().toLowerCase());
   });
   const count = cart.reduce((sum, line) => sum + line.qty, 0);
@@ -325,7 +338,7 @@ export function StoreMenu({
       <div className="store-wrap">
         <header className="store-head">
           <div className="store-head-row">
-            <Link className="store-back" href={`/${channel}/${code}`} aria-label={businessName}>
+            <Link className="store-back" href={homeHref || `/${channel}/${code}`} aria-label={businessName}>
               <ChevronLeft aria-hidden="true" />
             </Link>
             <div className="tap-lang store-lang" role="group" aria-label="Language">
@@ -338,7 +351,9 @@ export function StoreMenu({
             </div>
           </div>
           <h1>{businessName}</h1>
-          <p className="store-sub">{lang === "hi" ? "WhatsApp पर ऑर्डर करें · कोई कमीशन नहीं" : "Order on WhatsApp · 0% commission"}</p>
+          <p className="store-sub">
+            {layout === "SHOP" ? text("storeLeadShop") : layout === "SERVICES" ? text("storeLeadServices") : lang === "hi" ? "WhatsApp पर ऑर्डर करें · कोई कमीशन नहीं" : "Order on WhatsApp · 0% commission"}
+          </p>
           <p className="store-closed" data-closed={closed ? "true" : "false"}>
             {closed ? `${text("closedLater")}. ` : ""}
             {text("prepLead")} {rules.prepMinutes} {text("prepTail")}
@@ -350,11 +365,11 @@ export function StoreMenu({
                 className="store-search"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder={text("search")}
-                aria-label={text("search")}
+                placeholder={layout === "SHOP" ? text("searchProducts") : layout === "SERVICES" ? text("searchServices") : text("search")}
+                aria-label={layout === "SHOP" ? text("searchProducts") : layout === "SERVICES" ? text("searchServices") : text("search")}
               />
             </label>
-            <button
+            {layout === "FOOD" ? <button
               type="button"
               className="store-veg"
               aria-pressed={vegOnly}
@@ -366,7 +381,7 @@ export function StoreMenu({
                 </span>
               </span>
               {text("vegOnly")}
-            </button>
+            </button> : null}
           </div>
         </header>
 
@@ -381,6 +396,26 @@ export function StoreMenu({
           </div>
         ) : null}
 
+        {layout === "SHOP" ? (
+          <ShopCatalog
+            items={visible}
+            categories={categories}
+            lang={lang}
+            label={label}
+            text={text}
+            askBase={askBase || ""}
+            onAdd={addConfigured}
+          />
+        ) : layout === "SERVICES" ? (
+          <ServicesCatalog
+            items={visible}
+            label={label}
+            text={text}
+            askBase={askBase || ""}
+            onBook={(item) => changeItem(item, 1)}
+          />
+        ) : (
+          <>
         {items.length === 0 ? <p className="store-empty">{text("emptyMenu")}</p> : null}
         {items.length > 0 && sections.length === 0 ? <p className="store-empty">{text("noMatch")}</p> : null}
 
@@ -450,9 +485,11 @@ export function StoreMenu({
             </ul>
           </section>
         ))}
+          </>
+        )}
       </div>
 
-      {sections.length > 1 ? (
+      {layout === "FOOD" && sections.length > 1 ? (
         <button type="button" className="store-menu-fab" data-raised={count > 0 ? "true" : "false"} onClick={() => setMenuOpen(true)}>
           <BookOpen aria-hidden="true" />
           {text("menu").toUpperCase()}
@@ -608,7 +645,7 @@ export function StoreMenu({
           {!quote.ok ? <p className="store-privacy">{quoteMessage(lang, quote.code, quote.shortfallPaise)}</p> : null}
           {error ? <p className="store-privacy">{error}</p> : null}
           <button type="button" className="store-order" disabled={busy || count === 0 || !quote.ok} onClick={placeOrder}>
-            {text("orderWhatsApp")} · {formatRupees(total)}
+            {(layout === "SHOP" ? text("buyWhatsApp") : layout === "SERVICES" ? text("bookWhatsApp") : text("orderWhatsApp"))} · {formatRupees(total)}
           </button>
         </div>
         </>

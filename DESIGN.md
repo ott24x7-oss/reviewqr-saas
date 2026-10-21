@@ -55,6 +55,16 @@ The live implementation is `components/tap/store-menu.tsx` + the `.store-*` styl
 
 Not in the references. Keep them consistent with the landing palette: warm off-white background, white cards (radius 20px), ink text, dark pill primary buttons, brand green for success/positive states. Bottom navigation on mobile, tables become card lists under 768px. Optional dark mode can reuse the auth palette.
 
+## 5. Shop products and services
+
+Food stays the compact list in section 2. Shop and services are separate screens on the same cart, coupons, charges, and order API.
+
+Shop, at 360px, is two columns. At 1280px it is four. Each product is a large image, the title, the price, a crossed-out MRP and “% off” when the MRP is higher, and the brand when the owner set one. Sort by price or newest. Filter by category, a highest price, and brand. Opening a product shows the gallery (the cover plus up to five more photos), size and colour chips when those exist, Add to cart, and Ask on WhatsApp. There is no veg mark.
+
+Services are rows: name, duration, price, then Book and Enquire. Book adds the service to the order. Enquire opens WhatsApp when the business has a number.
+
+The words follow the layout: Menu and Order on WhatsApp, Products and Buy on WhatsApp, Services and Book on WhatsApp. The owner picks the layout in store settings, or leaves it automatic from the business type. `/<slug>/store` is the same storefront without a table label. The one-page poster QR encodes that link.
+
 ## Done means
 
 - Every page in scope matches the direction above at 360, 390, 768 and 1280px with no horizontal scroll.

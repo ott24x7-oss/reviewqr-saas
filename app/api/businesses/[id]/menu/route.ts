@@ -36,7 +36,10 @@ const schema = z.object({
   veg: veg.optional(),
   categoryId: z.string().nullable().optional(),
   available: z.boolean().optional(),
-  photo: z.string().max(400).optional(),
+  photo: z.string().max(1_500_000).optional(),
+  photos: z.array(z.string().max(1_500_000)).max(5).optional(),
+  brand: z.string().max(40).optional(),
+  durationMinutes: z.number().int().min(1).max(480).nullable().optional(),
   size: z.string().max(40).optional(),
   colour: z.string().max(40).optional(),
   inStock: z.boolean().optional(),
@@ -119,7 +122,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         bestseller: data.bestseller === true,
         veg: data.veg || "NONE",
         available: data.available !== false,
-        photo: (data.photo || "").trim() || null
+        photo: (data.photo || "").trim() || null,
+        photos: (data.photos || []).map((src) => src.trim()).filter(Boolean).slice(0, 5),
+        brand: (data.brand || "").trim().slice(0, 40),
+        durationMinutes: data.durationMinutes ?? null
       }
     });
   } else if (data.action === "update" && data.id) {
@@ -140,7 +146,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         ...(data.veg ? { veg: data.veg } : {}),
         ...(data.available !== undefined ? { available: data.available } : {}),
         ...(data.categoryId !== undefined ? { categoryId: data.categoryId } : {}),
-        ...(data.photo !== undefined ? { photo: data.photo.trim() || null } : {})
+        ...(data.photo !== undefined ? { photo: data.photo.trim() || null } : {}),
+        ...(data.photos !== undefined ? { photos: data.photos.map((src) => src.trim()).filter(Boolean).slice(0, 5) } : {}),
+        ...(data.brand !== undefined ? { brand: data.brand.trim().slice(0, 40) } : {}),
+        ...(data.durationMinutes !== undefined ? { durationMinutes: data.durationMinutes } : {})
       }
     });
   } else if (data.action === "items") {
