@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ProofReply } from "@/components/shop/proof-reply";
+import { ReprintRequest } from "@/components/shop/reprint-request";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { shopCopy } from "@/lib/shop/i18n";
@@ -15,10 +16,14 @@ export default async function ShopOrderPage({ params }: { params: { id: string }
   if (!user) notFound();
   const found = await prisma.shopOrder.findUnique({
     where: { id: params.id },
-    include: { lines: true, shipment: true }
+    include: { lines: true, shipment: true, creditNotes: { orderBy: { createdAt: "desc" } } }
   });
   if (!found || !(await canManageShopOrder(user.id, found))) notFound();
   const order = found;
+  const pendingReprint = await prisma.shopReprintRequest.findFirst({
+    where: { orderId: order.id, status: "PENDING" },
+    select: { id: true }
+  });
   const copy = shopCopy("en");
   const events = await prisma.auditLog.findMany({
     where: { entity: "ShopOrder", entityId: order.id },
@@ -56,7 +61,15 @@ export default async function ShopOrderPage({ params }: { params: { id: string }
         <p className="text-sm">CGST {formatINR(order.cgstPaise)} · SGST {formatINR(order.sgstPaise)} · IGST {formatINR(order.igstPaise)}</p>
         <p className="text-lg font-semibold">{copy.total} {formatINR(order.totalPaise)}</p>
         {order.balancePaise > 0 && <p className="text-sm">Paid now {formatINR(order.advancePaise)} · Balance {formatINR(order.balancePaise)}</p>}
+        {order.creditNotes.length > 0 && (
+          <ul className="space-y-1 pt-2">
+            {order.creditNotes.map((note) => (
+              <li key={note.id}>Credit note {note.number} · {formatINR(note.amountPaise)} · {note.reason}</li>
+            ))}
+          </ul>
+        )}
       </section>
+      {order.status === "DELIVERED" && <ReprintRequest orderId={order.id} pending={Boolean(pendingReprint)} />}
       {order.status === "PROOF_SENT" && (
         <section className="space-y-3 rounded-[20px] bg-white p-4 shadow-sm">
           <ProofReply orderId={order.id} />

@@ -32,6 +32,11 @@ export default async function ProductionPage() {
     select: { orderId: true, awb: true, lastError: true }
   });
   const shipmentByOrder = new Map(shipments.map((row) => [row.orderId, row]));
+  const pendingReprints = await prisma.shopReprintRequest.findMany({
+    where: { orderId: { in: orders.map((order) => order.id) }, status: "PENDING" },
+    select: { orderId: true }
+  });
+  const pendingReprintIds = new Set(pendingReprints.map((row) => row.orderId));
   const cards: ProductionCard[] = [];
   for (const order of orders) {
     if (!isShopOrderStatus(order.status) || order.status === "PENDING_PAYMENT") continue;
@@ -44,6 +49,7 @@ export default async function ProductionPage() {
       ships: order.lines.some((line) => line.ships),
       awb: shipment?.awb ?? null,
       lastError: shipment?.lastError ?? null,
+      pendingReprint: pendingReprintIds.has(order.id),
       lines: order.lines.map((line) => ({ id: line.id, name: line.name, hasProof: provedIds.has(line.id) }))
     });
   }

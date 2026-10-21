@@ -20,6 +20,7 @@ export type ProductionCard = {
   ships: boolean;
   awb: string | null;
   lastError: string | null;
+  pendingReprint: boolean;
   lines: Array<{ id: string; name: string; hasProof: boolean }>;
 };
 
@@ -68,6 +69,23 @@ export function ProductionBoard({ cards, carrierState }: { cards: ProductionCard
       router.refresh();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not send the proof");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function reprint(id: string, action: "approve" | "reject") {
+    setBusy(true);
+    try {
+      const response = await fetch(`/api/admin/shop/orders/${id}/reprint`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action })
+      });
+      if (!response.ok) throw new Error(await readError(response, "Could not update the reprint"));
+      router.refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not update the reprint");
     } finally {
       setBusy(false);
     }
@@ -209,6 +227,16 @@ export function ProductionBoard({ cards, carrierState }: { cards: ProductionCard
                     <Button type="button" className="rounded-full bg-ink text-white hover:bg-ink/90" onClick={() => sendProof(card.id)} disabled={busy}>
                       Send proof
                     </Button>
+                  )}
+                  {card.status === "DELIVERED" && card.pendingReprint && (
+                    <div className="flex flex-wrap gap-2">
+                      <Button type="button" className="rounded-full bg-ink text-white hover:bg-ink/90" onClick={() => reprint(card.id, "approve")} disabled={busy}>
+                        Approve reprint
+                      </Button>
+                      <Button type="button" variant="outline" className="rounded-full" onClick={() => reprint(card.id, "reject")} disabled={busy}>
+                        Reject reprint
+                      </Button>
+                    </div>
                   )}
                   {adminTargets(card.status, card.anyLineNeedsNfc).map((to) => (
                     <Button key={to} type="button" variant="outline" className="rounded-full" onClick={() => move(card.id, to)} disabled={busy}>

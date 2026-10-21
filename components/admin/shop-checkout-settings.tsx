@@ -8,13 +8,16 @@ import { Label } from "@/components/ui/label";
 
 export function ShopCheckoutSettings({
   codEnabled,
-  codAdvancePercent
+  codAdvancePercent,
+  commissionPercent
 }: {
   codEnabled: boolean;
   codAdvancePercent: number;
+  commissionPercent: number;
 }) {
   const [enabled, setEnabled] = React.useState(codEnabled);
   const [percent, setPercent] = React.useState(String(codAdvancePercent));
+  const [commission, setCommission] = React.useState(String(commissionPercent));
   const [saving, setSaving] = React.useState(false);
 
   async function save() {
@@ -23,7 +26,11 @@ export function ShopCheckoutSettings({
       const response = await fetch("/api/admin/shop/settings", {
         method: "PUT",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ codEnabled: enabled, codAdvancePercent: Number(percent) })
+        body: JSON.stringify({
+          codEnabled: enabled,
+          codAdvancePercent: Number(percent),
+          commissionPercent: Number(commission)
+        })
       });
       const payload = (await response.json()) as { error?: string };
       if (!response.ok) throw new Error(payload.error || "Could not save");
@@ -48,6 +55,13 @@ export function ShopCheckoutSettings({
       <div className="space-y-1">
         <Label htmlFor="cod-advance">Advance percent</Label>
         <Input id="cod-advance" inputMode="numeric" value={percent} onChange={(event) => setPercent(event.target.value)} />
+      </div>
+      <div className="space-y-1">
+        <Label htmlFor="commission-percent">Agent commission percent</Label>
+        <Input id="commission-percent" inputMode="numeric" value={commission} onChange={(event) => setCommission(event.target.value)} />
+        <p className="text-sm text-muted-foreground">
+          Default 10. A shop order snapshots the selected business&apos;s agent. A plan renewal pays the owner&apos;s only agent.
+        </p>
       </div>
       <Button type="button" className="rounded-full" onClick={save} disabled={saving}>Save checkout</Button>
     </section>

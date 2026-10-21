@@ -21,7 +21,11 @@ export default async function AdminShopPage() {
           Hardware owners buy from ReviewQR. Prices are GST-inclusive. {low.length} variant{low.length === 1 ? "" : "s"} at or below the low-stock level.
         </p>
       </div>
-      <ShopCheckoutSettings codEnabled={checkout.codEnabled} codAdvancePercent={checkout.codAdvancePercent} />
+      <ShopCheckoutSettings
+        codEnabled={checkout.codEnabled}
+        codAdvancePercent={checkout.codAdvancePercent}
+        commissionPercent={checkout.commissionPercent}
+      />
       <CatalogBoard
         products={products.map((product) => ({
           id: product.id,

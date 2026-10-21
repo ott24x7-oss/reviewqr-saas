@@ -490,10 +490,10 @@ export async function getShippingConfig(): Promise<ShippingConfig> {
     : DEFAULT_SHIPPING.provider;
   return {
     provider,
-    shiprocketEmail: stored.shiprocketEmail || "",
-    shiprocketPassword: stored.shiprocketPassword || "",
-    delhiveryToken: stored.delhiveryToken || "",
-    webhookSecret: stored.webhookSecret || "",
+    shiprocketEmail: stored.shiprocketEmail || process.env.SHIPROCKET_EMAIL || "",
+    shiprocketPassword: stored.shiprocketPassword || process.env.SHIPROCKET_PASSWORD || "",
+    delhiveryToken: stored.delhiveryToken || process.env.DELHIVERY_TOKEN || "",
+    webhookSecret: stored.webhookSecret || process.env.SHIPPING_WEBHOOK_SECRET || "",
     pickup: {
       name: pickup.name || "",
       phone: pickup.phone || "",

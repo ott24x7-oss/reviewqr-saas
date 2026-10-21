@@ -32,7 +32,9 @@ describe("job claim", () => {
         await tx.job.create({
           data: { type: "test.later", payload: {}, runAt: new Date(Date.now() + 60_000) }
         });
-        const other = await tx.job.create({ data: { type: "test.ready", payload: {} } });
+        const other = await tx.job.create({
+          data: { type: "test.ready", payload: {}, runAt: new Date(0) }
+        });
         const next = await claimNext("test-worker", tx);
         expect(next?.id).toBe(other.id);
 

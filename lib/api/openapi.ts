@@ -305,6 +305,33 @@ registry.registerPath({
 
 registry.registerPath({
   method: "post",
+  path: "/api/v1/shop/orders/{id}/reprint",
+  summary: "Request a free reprint for damage or a misprint after delivery",
+  security: [{ bearerAuth: [] }],
+  request: {
+    params: z.object({ id: z.string() }),
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            reason: z.enum(["damage", "misprint"]),
+            note: z.string().max(500).optional()
+          })
+        }
+      }
+    }
+  },
+  responses: {
+    200: { description: "Reprint request" },
+    400: validation,
+    401: unauthorized,
+    403: { description: "Forbidden", content: { "application/json": { schema: errorRef } } },
+    404: { description: "Order not found", content: { "application/json": { schema: errorRef } } }
+  }
+});
+
+registry.registerPath({
+  method: "post",
   path: "/api/v1/shop/estimate",
   summary: "Pincode serviceability and the cheapest mock or live rate",
   security: [{ bearerAuth: [] }],

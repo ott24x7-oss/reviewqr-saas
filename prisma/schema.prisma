@@ -93,7 +93,9 @@ model User {
   shippingAddresses ShippingAddress[]
   referralCodes   ReferralCode[]
   shopCart        ShopCart?
-  shopOrders      ShopOrder[]
+  shopOrders      ShopOrder[] @relation("ShopOrderBuyer")
+  agentShopOrders ShopOrder[] @relation("ShopOrderAgent")
+  shopCommissions ShopCommission[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1349,7 +1351,11 @@ enum ShopPayStatus {
 model ShopOrder {
   id                String          @id @default(cuid())
   userId            String
-  user              User            @relation(fields: [userId], references: [id], onDelete: Restrict)
+  user              User            @relation("ShopOrderBuyer", fields: [userId], references: [id], onDelete: Restrict)
+  agentId           String?
+  agent             User?           @relation("ShopOrderAgent", fields: [agentId], references: [id], onDelete: SetNull)
+  commissionPercent Int?
+  commissionPaise   Int             @default(0)
   businessId        String?
   business          Business?       @relation(fields: [businessId], references: [id], onDelete: SetNull)
   status            ShopOrderStatus @default(PENDING_PAYMENT)
@@ -1384,6 +1390,9 @@ model ShopOrder {
   lines             ShopOrderLine[]
   deliveries        ShopPaymentDelivery[]
   shipment          ShopShipment?
+  commissions       ShopCommission[]
+  reprintRequests   ShopReprintRequest[]
+  creditNotes       ShopCreditNote[]
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
@@ -1391,6 +1400,7 @@ model ShopOrder {
   @@index([status])
   @@index([paymentStatus])
   @@index([businessId])
+  @@index([agentId])
 }
 
 model ShopOrderLine {
@@ -1467,6 +1477,60 @@ model ShopCarrierEvent {
   createdAt DateTime @default(now())
 
   @@index([awb])
+}
+
+enum ShopCommissionKind {
+  ORDER
+  RENEWAL
+}
+
+// One credit per agent, kind, and source. An order and a renewal never share a source.
+model ShopCommission {
+  id          String             @id @default(cuid())
+  agentId     String
+  agent       User               @relation(fields: [agentId], references: [id], onDelete: Restrict)
+  kind        ShopCommissionKind
+  sourceId    String
+  orderId     String?
+  order       ShopOrder?         @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  amountPaise Int
+  percent     Int
+  createdAt   DateTime           @default(now())
+
+  @@unique([agentId, kind, sourceId])
+  @@index([agentId, createdAt])
+  @@index([orderId])
+}
+
+// Damage or misprint after delivery. Approval is what allows Delivered → Reprint.
+model ShopReprintRequest {
+  id        String    @id @default(cuid())
+  orderId   String
+  order     ShopOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  userId    String
+  reason    String
+  note      String?   @db.Text
+  status    String    @default("PENDING")
+  createdAt DateTime  @default(now())
+
+  @@index([orderId])
+}
+
+// A refund document. The number uses the invoice counter with a CN- prefix.
+model ShopCreditNote {
+  id           String    @id @default(cuid())
+  orderId      String
+  order        ShopOrder @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  number       String    @unique
+  reason       String
+  amountPaise  Int
+  taxablePaise Int
+  cgstPaise    Int
+  sgstPaise    Int
+  igstPaise    Int
+  createdAt    DateTime  @default(now())
+
+  @@index([orderId])
 }
 
 // Singleton: admin-overridable branding for the WatShop Review *platform*

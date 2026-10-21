@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { activateCompletedPayment } from "@/lib/subscription";
+import { creditRenewalCommission } from "@/lib/shop/renewal-commission";
 import { settleShopYoupiWebhook } from "@/lib/shop/youpi-settle";
 import {
   getYoupiConfig,
@@ -100,6 +101,13 @@ export async function POST(req: NextRequest) {
       expectedOrderId: payment.id
     });
     if (!result.ok) return NextResponse.json({ error: result.error }, { status: 409 });
+    if (!result.already) {
+      try {
+        await creditRenewalCommission(payment.userId, payment.id, payment.amount);
+      } catch (error) {
+        console.warn("[shop] could not record renewal commission", error);
+      }
+    }
     return NextResponse.json({ ok: true, already: result.already });
   }
 

@@ -35,9 +35,12 @@ export async function fulfillPaidShopOrder(input: FulfillInput): Promise<Fulfill
         businessId: string | null;
         couponCode: string | null;
         providerPaymentId: string | null;
+        agentId: string | null;
+        commissionPercent: number | null;
+        commissionPaise: number;
       }>
     >`
-      SELECT "id", "status", "paymentStatus", "advancePaise", "invoiceNumber", "userId", "businessId", "couponCode", "providerPaymentId"
+      SELECT "id", "status", "paymentStatus", "advancePaise", "invoiceNumber", "userId", "businessId", "couponCode", "providerPaymentId", "agentId", "commissionPercent", "commissionPaise"
       FROM "ShopOrder"
       WHERE "id" = ${input.orderId}
       FOR UPDATE
@@ -154,6 +157,26 @@ export async function fulfillPaidShopOrder(input: FulfillInput): Promise<Fulfill
       where: { userId: row.userId },
       data: { couponCode: null, referralCode: null }
     });
+    // Find-then-create. A caught unique violation inside this transaction would abort it.
+    if (row.agentId && row.commissionPaise > 0) {
+      const existing = await tx.shopCommission.findUnique({
+        where: {
+          agentId_kind_sourceId: { agentId: row.agentId, kind: "ORDER", sourceId: row.id }
+        }
+      });
+      if (!existing) {
+        await tx.shopCommission.create({
+          data: {
+            agentId: row.agentId,
+            kind: "ORDER",
+            sourceId: row.id,
+            orderId: row.id,
+            amountPaise: row.commissionPaise,
+            percent: row.commissionPercent ?? 0
+          }
+        });
+      }
+    }
     return { ok: true as const, already: false, invoiceNumber, userId: row.userId };
   });
 

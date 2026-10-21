@@ -21,6 +21,7 @@ export function ShopGrid({ products }: { products: ShopProduct[] }) {
         </div>
         <div className="flex items-center gap-3">
           <Link href="/dashboard/shop/orders" className="text-sm font-semibold text-ink">{copy.orders}</Link>
+          <Link href="/dashboard/shop/commission" className="text-sm font-semibold text-ink">{copy.commission}</Link>
           <Link href="/dashboard/shop/cart" className="text-sm font-semibold text-ink">{copy.cart}</Link>
           <ShopLangToggle lang={lang} choose={choose} />
         </div>

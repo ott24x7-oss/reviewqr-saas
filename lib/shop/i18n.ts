@@ -39,7 +39,14 @@ const STRINGS = {
     awb: "AWB",
     ndr: "Delivery attempt",
     mrp: "MRP",
-    off: "off"
+    off: "off",
+    commission: "Commission",
+    reprint: "Request a reprint",
+    reprintReason: "Reason",
+    damage: "Damage",
+    misprint: "Misprint",
+    reprintNote: "What happened?",
+    reprintPending: "Reprint requested"
   },
   hi: {
     shop: "दुकान",
@@ -79,7 +86,14 @@ const STRINGS = {
     awb: "एडब्ल्यूबी",
     ndr: "डिलीवरी का प्रयास",
     mrp: "एमआरपी",
-    off: "छूट"
+    off: "छूट",
+    commission: "कमीशन",
+    reprint: "दोबारा छपाई माँगें",
+    reprintReason: "कारण",
+    damage: "नुकसान",
+    misprint: "गलत छपाई",
+    reprintNote: "क्या हुआ?",
+    reprintPending: "दोबारा छपाई माँगी गई"
   }
 } as const;
 
