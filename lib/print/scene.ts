@@ -1,7 +1,7 @@
 import { mixHex } from "./color";
 import type { PrintDesign } from "./design";
 import { cutMarksFor, impose, type Box } from "./impose";
-import { faceLayout } from "./layout";
+import { backLayout, faceLayout } from "./layout";
 import { cellKind, createQrMatrix, isFinder, logoBox, QUIET_MODULES, type QrMatrix } from "./qr-check";
 import type { PrintTemplate, SheetSize } from "./templates";
 import { latinText } from "./text";
@@ -218,21 +218,9 @@ function frontShapes(template: PrintTemplate, design: PrintDesign, qrMm: number,
 
 function backShapes(template: PrintTemplate, design: PrintDesign) {
   const shapes: Shape[] = [];
-  const pad = template.safeMm;
-  const name = {
-    x: pad,
-    y: template.heightMm / 2 - 8,
-    size: Math.min(5, template.heightMm * 0.1),
-    maxWidth: template.widthMm - pad * 2
-  };
-  addRasterOrText(shapes, design, "back-name", design.name, name, true);
-  addRasterOrText(
-    shapes,
-    design,
-    "back-line",
-    design.backLine,
-    { x: pad, y: name.y + name.size + 2, size: 3.2, maxWidth: name.maxWidth }
-  );
+  const back = backLayout(template);
+  addRasterOrText(shapes, design, "back-name", design.name, back.name, true);
+  addRasterOrText(shapes, design, "back-line", design.backLine, back.line);
   return shapes;
 }
 

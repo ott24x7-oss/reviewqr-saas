@@ -49,11 +49,26 @@ export function faceLayout(template: PrintTemplate, qrMm: number): FaceLayout {
   y += ctaSize + 1.4;
   const stars = { x: pad, y, size: Math.min(3.4, ctaSize + 0.4) };
   const nfc = { x: pad, y: template.heightMm - pad - 5.2, size: 5 };
+  const labelSize = 2.6;
   const label = {
-    x: landscape ? pad : pad + 6,
-    y: template.heightMm - pad - 3.2,
-    size: 2.6,
-    maxWidth: landscape ? textW : textW - 6
+    x: pad + nfc.size + 1.4,
+    y: nfc.y + (nfc.size - labelSize) / 2,
+    size: labelSize,
+    maxWidth: Math.max(8, (landscape ? textW : template.widthMm - pad * 2) - nfc.size - 1.4)
   };
   return { landscape, qr, name, cta, ctaHi, stars, nfc, label };
+}
+
+export function backLayout(template: PrintTemplate) {
+  const pad = template.safeMm;
+  const name = {
+    x: pad,
+    y: template.heightMm / 2 - 8,
+    size: Math.min(5, template.heightMm * 0.1),
+    maxWidth: template.widthMm - pad * 2
+  };
+  return {
+    name,
+    line: { x: pad, y: name.y + name.size + 2, size: 3.2, maxWidth: name.maxWidth }
+  };
 }
