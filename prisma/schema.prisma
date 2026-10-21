@@ -1182,6 +1182,52 @@ model AppSetting {
   updatedBy String?
 }
 
+// ReviewQR's own hardware catalogue. This is not a business's WhatsApp store.
+model CatalogProduct {
+  id                String           @id @default(cuid())
+  slug              String           @unique
+  name              String
+  nameHi            String?
+  description       String           @db.Text
+  descriptionHi     String?          @db.Text
+  needsNfc          Boolean          @default(false)
+  needsDesign       Boolean          @default(true)
+  defaultTemplateId String?
+  active            Boolean          @default(true)
+  sortOrder         Int              @default(0)
+  variants          CatalogVariant[]
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+}
+
+model CatalogVariant {
+  id         String         @id @default(cuid())
+  productId  String
+  product    CatalogProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sku        String         @unique
+  name       String
+  nameHi     String?
+  costPaise  Int
+  mrpPaise   Int
+  salePaise  Int
+  hsn        String
+  gstPercent Int
+  weightGrams Int
+  lengthMm   Int
+  widthMm    Int
+  heightMm   Int
+  stock      Int            @default(0)
+  lowStockAt Int            @default(10)
+  minQty     Int            @default(1)
+  imageUrl   String?        @db.Text
+  active     Boolean        @default(true)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  @@index([productId])
+  @@index([active, stock])
+}
+
 // Singleton: admin-overridable branding for the WatShop Review *platform*
 // marketing site (review.watshop.in). Per-tenant business branding lives on
 // the Business model — do not conflate the two.
