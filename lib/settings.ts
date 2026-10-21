@@ -6,6 +6,7 @@
 import { prisma } from "./db";
 import type { SubscriptionTier } from "@prisma/client";
 import { encryptSecret, decryptSecret } from "./crypto";
+import { DEFAULT_SHIPPING, pickupError, presetError, type ShippingConfig } from "./shop/shipping";
 
 const TTL_MS = 30_000;
 const cache = new Map<string, { value: any; expiresAt: number }>();
@@ -17,7 +18,8 @@ export const SETTING_KEYS = {
   whatsapp: "whatsapp",
   site: "site",
   turnstile: "turnstile",
-  ai: "ai"
+  ai: "ai",
+  shipping: "shipping"
 } as const;
 
 // Which fields inside each settings blob are secrets encrypted at rest.
@@ -33,7 +35,8 @@ const SECRET_FIELDS: Record<string, string[]> = {
   [SETTING_KEYS.email]: ["relaySecret", "smtpPass"],
   [SETTING_KEYS.whatsapp]: ["apiToken"],
   [SETTING_KEYS.turnstile]: ["secretKey"],
-  [SETTING_KEYS.ai]: ["apiKey"]
+  [SETTING_KEYS.ai]: ["apiKey"],
+  [SETTING_KEYS.shipping]: ["shiprocketPassword", "delhiveryToken", "webhookSecret"]
 };
 
 function transformSecrets(
@@ -455,6 +458,56 @@ export async function getPaymentsConfig(): Promise<PaymentsConfig> {
 }
 export async function setPaymentsConfig(v: PaymentsConfig, by?: string) {
   await writeKey(SETTING_KEYS.payments, v, by);
+}
+
+function cleanPresets(value: unknown): ShippingConfig["presets"] {
+  if (!Array.isArray(value)) return DEFAULT_SHIPPING.presets.map((preset) => ({ ...preset }));
+  const presets = value
+    .map((row) => {
+      const preset = row && typeof row === "object" ? (row as ShippingConfig["presets"][number]) : null;
+      if (!preset) return null;
+      const next = {
+        id: String(preset.id || ""),
+        name: String(preset.name || ""),
+        lengthMm: Math.floor(Number(preset.lengthMm)),
+        widthMm: Math.floor(Number(preset.widthMm)),
+        heightMm: Math.floor(Number(preset.heightMm)),
+        weightGrams: Math.floor(Number(preset.weightGrams))
+      };
+      return presetError(next) ? null : next;
+    })
+    .filter((preset): preset is ShippingConfig["presets"][number] => preset != null);
+  return presets.length ? presets : DEFAULT_SHIPPING.presets.map((preset) => ({ ...preset }));
+}
+
+export async function getShippingConfig(): Promise<ShippingConfig> {
+  const stored = await readKey<Partial<ShippingConfig>>(SETTING_KEYS.shipping, {});
+  const pickup = { ...DEFAULT_SHIPPING.pickup, ...(stored.pickup || {}) };
+  const provider = stored.provider === "shiprocket" || stored.provider === "delhivery" || stored.provider === "mock"
+    ? stored.provider
+    : DEFAULT_SHIPPING.provider;
+  return {
+    provider,
+    shiprocketEmail: stored.shiprocketEmail || "",
+    shiprocketPassword: stored.shiprocketPassword || "",
+    delhiveryToken: stored.delhiveryToken || "",
+    webhookSecret: stored.webhookSecret || "",
+    pickup: {
+      name: pickup.name || "",
+      phone: pickup.phone || "",
+      line1: pickup.line1 || "",
+      city: pickup.city || "",
+      state: pickup.state || "",
+      pincode: pickup.pincode || ""
+    },
+    presets: cleanPresets(stored.presets)
+  };
+}
+
+export async function setShippingConfig(value: ShippingConfig, by?: string) {
+  const pickupProblem = pickupError(value.pickup);
+  if (pickupProblem) throw new Error(pickupProblem);
+  await writeKey(SETTING_KEYS.shipping, value, by);
 }
 
 /* ============== Pricing ============== */
