@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatRupees } from "@/lib/tap/order-message";
+import type { DaySummary } from "@/lib/store/day";
 import {
   ORDER_STATUSES,
   STATUS_LABEL,
@@ -78,8 +79,9 @@ function beep() {
   }
 }
 
-export function OrdersBoard({ initial }: { initial: OrderCard[] }) {
+export function OrdersBoard({ initial, summary }: { initial: OrderCard[]; summary: DaySummary }) {
   const [orders, setOrders] = React.useState(initial);
+  const [totals, setTotals] = React.useState(summary);
   const [banner, setBanner] = React.useState("");
   const [pendingId, setPendingId] = React.useState<string | null>(null);
   const seen = React.useRef<Set<string> | null>(null);
@@ -118,7 +120,12 @@ export function OrdersBoard({ initial }: { initial: OrderCard[] }) {
         if (fresh.length === 1) setBanner(`New order ${fresh[0].number}`);
         else if (fresh.length > 1) setBanner(`${fresh.length} new orders`);
         if (fresh.length > 0 && armed.current) beep();
-        if (active) setOrders(next);
+        if (active) {
+          setOrders(next);
+          if (data.summary && typeof data.summary.count === "number" && typeof data.summary.totalPaise === "number") {
+            setTotals(data.summary);
+          }
+        }
       } catch {
         // Keep the list already on screen.
       } finally {
@@ -153,10 +160,25 @@ export function OrdersBoard({ initial }: { initial: OrderCard[] }) {
     }
   }
 
-  if (orders.length === 0) return <p className="text-sm text-muted-foreground">No orders yet.</p>;
+  const summaryLine = (
+    <p className="text-sm">
+      Today {formatRupees(totals.totalPaise)} · {totals.count} {totals.count === 1 ? "order" : "orders"}
+      <span className="text-muted-foreground"> · Asia/Kolkata, excluding rejected</span>
+    </p>
+  );
+
+  if (orders.length === 0) {
+    return (
+      <div className="space-y-3">
+        {summaryLine}
+        <p className="text-sm text-muted-foreground">No orders yet.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 gap-3">
+      {summaryLine}
       {banner ? (
         <p role="status" className="rounded-lg border border-primary/30 bg-primary-100 px-3 py-2 text-sm text-primary-800">
           {banner}
@@ -211,17 +233,31 @@ export function OrdersBoard({ initial }: { initial: OrderCard[] }) {
                   ))}
                 </div>
               ) : null}
-              {order.whatsAppUrl ? (
-                <a
-                  className="inline-flex h-11 min-h-11 items-center justify-center rounded-lg border border-border bg-background px-4 text-sm font-medium"
-                  href={order.whatsAppUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  aria-label={`WhatsApp this status for ${order.number}`}
-                >
-                  WhatsApp this status
+              <div className="flex flex-wrap gap-2">
+                {order.whatsAppUrl ? (
+                  <a
+                    className="inline-flex h-11 min-h-11 items-center justify-center rounded-lg border border-border bg-background px-4 text-sm font-medium"
+                    href={order.whatsAppUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label={`WhatsApp this status for ${order.number}`}
+                  >
+                    WhatsApp this status
+                  </a>
+                ) : null}
+                <a className="inline-flex h-11 min-h-11 items-center justify-center rounded-lg border border-border bg-background px-3 text-sm font-medium" href={`/orders/${order.id}?doc=kot&mm=58`} target="_blank" rel="noreferrer">
+                  KOT 58mm
                 </a>
-              ) : null}
+                <a className="inline-flex h-11 min-h-11 items-center justify-center rounded-lg border border-border bg-background px-3 text-sm font-medium" href={`/orders/${order.id}?doc=kot&mm=80`} target="_blank" rel="noreferrer">
+                  KOT 80mm
+                </a>
+                <a className="inline-flex h-11 min-h-11 items-center justify-center rounded-lg border border-border bg-background px-3 text-sm font-medium" href={`/orders/${order.id}?doc=bill&mm=58`} target="_blank" rel="noreferrer">
+                  Bill 58mm
+                </a>
+                <a className="inline-flex h-11 min-h-11 items-center justify-center rounded-lg border border-border bg-background px-3 text-sm font-medium" href={`/orders/${order.id}?doc=bill&mm=80`} target="_blank" rel="noreferrer">
+                  Bill 80mm
+                </a>
+              </div>
             </CardContent>
           </Card>
         );

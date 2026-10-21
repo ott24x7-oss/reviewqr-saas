@@ -1,6 +1,24 @@
 import { prisma } from "../db";
 import { accessRole, allows, readableBusinessWhere } from "../tenant";
+import { kolkataDayWindow, type DaySummary } from "./day";
 import { toOrderCard, type OrderCard } from "./order-status";
+
+export type { DaySummary };
+
+/** Today's paid-or-open orders in Asia/Kolkata. Rejected orders are left out. */
+export async function loadDaySummary(userId: string, now = new Date()): Promise<DaySummary> {
+  const { start, end } = kolkataDayWindow(now);
+  const totals = await prisma.menuOrder.aggregate({
+    where: {
+      business: readableBusinessWhere(userId),
+      status: { not: "REJECTED" },
+      createdAt: { gte: start, lt: end }
+    },
+    _sum: { totalPaise: true },
+    _count: { id: true }
+  });
+  return { count: totals._count.id, totalPaise: totals._sum.totalPaise || 0 };
+}
 
 /** Latest orders this user can read. Pass an id to load one card after a status change. */
 export async function loadOrderCards(userId: string, orderId?: string): Promise<OrderCard[]> {

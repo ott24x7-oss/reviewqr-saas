@@ -268,6 +268,7 @@ export function StoreMenu({
       setCart([]);
       setOpen(false);
       if (json.url) window.location.href = json.url;
+      else if (typeof json.track === "string") window.location.href = json.track;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not place the order");
     } finally {

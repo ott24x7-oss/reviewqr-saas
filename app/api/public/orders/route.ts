@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { ownerLimitError, calendarMonthStart } from "@/lib/entitlements";
 import { rateLimitDb } from "@/lib/rate-limit";
-import { getClientIp } from "@/lib/utils";
+import { absoluteUrl, getClientIp } from "@/lib/utils";
 import { makeQrPublicId } from "@/lib/tap/ids";
 import { hoursFromPublished, whatsAppNumberUrl } from "@/lib/tap/links";
 import { fitWhatsAppOrder, formatRupees } from "@/lib/tap/order-message";
@@ -276,11 +276,18 @@ export async function POST(req: NextRequest) {
           prepMinutes: quote.prepMinutes,
           orderType,
           pincode: pincode || "",
-          ...(payment === "UPI" ? { paymentUrl: upiPayUrl(upiId, qr.business.name, quote.totalPaise) } : {})
+          ...(payment === "UPI" ? { paymentUrl: upiPayUrl(upiId, qr.business.name, quote.totalPaise) } : {}),
+          trackUrl: absoluteUrl(`/o/${order.id}`)
         }
       }).url
     : null;
-  return NextResponse.json({ ok: true, number: order.number, url, totalPaise: quote.totalPaise });
+  return NextResponse.json({
+    ok: true,
+    number: order.number,
+    url,
+    totalPaise: quote.totalPaise,
+    track: `/o/${order.id}`
+  });
 }
 
 function tooMany(lang?: "en" | "hi") {

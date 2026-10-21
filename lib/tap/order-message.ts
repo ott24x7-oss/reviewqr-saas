@@ -18,6 +18,7 @@ export type OrderCharges = {
   orderType?: "DINE_IN" | "TAKEAWAY" | "DELIVERY";
   pincode?: string;
   paymentUrl?: string;
+  trackUrl?: string;
 };
 
 export type OrderMessageInput = {
@@ -83,7 +84,8 @@ export function buildOrderText(input: OrderMessageInput, noteLimit = 80) {
         charges.orderForLater ? (input.hindi ? "बाद के लिए ऑर्डर" : "Order for later") : "",
         charges.prepMinutes ? (input.hindi ? `लगभग ${charges.prepMinutes} मिनट में तैयार` : `Ready in about ${charges.prepMinutes} min`) : "",
         charges.pincode ? `${input.hindi ? "पिनकोड" : "Pincode"}: ${charges.pincode}` : "",
-        charges.paymentUrl ? `${input.hindi ? "भुगतान" : "Pay"}: ${charges.paymentUrl}` : ""
+        charges.paymentUrl ? `${input.hindi ? "भुगतान" : "Pay"}: ${charges.paymentUrl}` : "",
+        charges.trackUrl ? `${input.hindi ? "स्थिति" : "Track"}: ${charges.trackUrl}` : ""
       ]
     : [`${input.hindi ? "कुल" : "Total"}: ${formatRupees(total)}`];
   const lines = [
