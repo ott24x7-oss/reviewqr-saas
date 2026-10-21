@@ -6,6 +6,7 @@ import Link from "next/link";
 import { tapText, type TapLang } from "@/lib/tap/i18n";
 import { formatRupees } from "@/lib/tap/order-message";
 import { safeImageSrc } from "@/lib/tap/links";
+import { enabledOrderTypes, quoteOrder, type OrderType, type StoreRules } from "@/lib/store/pricing";
 
 export type StoreItem = {
   id: string;
@@ -30,6 +31,9 @@ export function StoreMenu({
   businessName,
   items,
   categories,
+  rules,
+  closed,
+  tableLabel,
   themeStyle
 }: {
   code: string;
@@ -37,6 +41,9 @@ export function StoreMenu({
   businessName: string;
   items: StoreItem[];
   categories: StoreCategory[];
+  rules: StoreRules;
+  closed: boolean;
+  tableLabel: string;
   themeStyle?: React.CSSProperties;
 }) {
   const [lang, setLang] = React.useState<TapLang>("en");
@@ -46,8 +53,12 @@ export function StoreMenu({
   const [cart, setCart] = React.useState<Line[]>([]);
   const [ready, setReady] = React.useState(false);
   const [open, setOpen] = React.useState(false);
+  const orderTypes = enabledOrderTypes(rules);
+  const [orderType, setOrderType] = React.useState<OrderType>(orderTypes[0] || "DINE_IN");
   const [name, setName] = React.useState("");
-  const [table, setTable] = React.useState("");
+  const [table, setTable] = React.useState(tableLabel);
+  const [address, setAddress] = React.useState("");
+  const [pincode, setPincode] = React.useState("");
   const [note, setNote] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState("");
@@ -81,10 +92,18 @@ export function StoreMenu({
     return hay.includes(query.trim().toLowerCase());
   });
   const count = cart.reduce((sum, line) => sum + line.qty, 0);
-  const total = cart.reduce((sum, line) => {
+  const itemTotal = cart.reduce((sum, line) => {
     const item = items.find((row) => row.id === line.id);
     return sum + (item ? item.pricePaise * line.qty : 0);
   }, 0);
+  const quote = quoteOrder({
+    rules,
+    orderType,
+    subtotalPaise: itemTotal,
+    pincode,
+    orderForLater: closed
+  });
+  const total = quote.ok ? quote.totalPaise : itemTotal;
 
   function qtyOf(id: string) {
     return cart.find((line) => line.id === id)?.qty || 0;
@@ -109,8 +128,10 @@ export function StoreMenu({
         body: JSON.stringify({
           code,
           lang,
+          orderType,
           customerName: name,
-          tableOrAddress: table,
+          tableOrAddress: orderType === "DELIVERY" ? address : orderType === "DINE_IN" ? table : "",
+          pincode: orderType === "DELIVERY" ? pincode : "",
           note,
           items: cart.map((line) => ({ id: line.id, qty: line.qty, note: line.note }))
         })
@@ -167,6 +188,10 @@ export function StoreMenu({
           </div>
           <h1>{businessName}</h1>
           <p className="store-sub">{lang === "hi" ? "WhatsApp पर ऑर्डर करें · कोई कमीशन नहीं" : "Order on WhatsApp · 0% commission"}</p>
+          <p className="store-closed" data-closed={closed ? "true" : "false"}>
+            {closed ? `${text("closedLater")}. ` : ""}
+            {text("prepLead")} {rules.prepMinutes} {text("prepTail")}
+          </p>
           <div className="store-tools">
             <label className="store-search-wrap">
               <Search aria-hidden="true" />
@@ -327,18 +352,49 @@ export function StoreMenu({
               </div>
             );
           })}
+          {quote.ok ? (
+            <div className="store-break">
+              <div><span>{text("subtotal")}</span><strong>{formatRupees(quote.subtotalPaise)}</strong></div>
+              {quote.packingPaise > 0 ? <div><span>{text("packing")}</span><strong>{formatRupees(quote.packingPaise)}</strong></div> : null}
+              {orderType === "DELIVERY" ? <div><span>{text("deliveryCharge")}</span><strong>{formatRupees(quote.deliveryPaise)}</strong></div> : null}
+              {quote.gstPaise > 0 ? (
+                <div>
+                  <span>{quote.pricesIncludeGst ? text("gstIncluded") : text("gstExtra")}</span>
+                  <strong>{formatRupees(quote.gstPaise)}</strong>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
           <div className="store-total">
             <span>{text("total")}</span>
             <strong>{formatRupees(total)}</strong>
           </div>
+          {orderTypes.length > 0 ? (
+            <div className="store-types" role="group" aria-label={text("orderType")}>
+              {orderTypes.map((type) => (
+                <button key={type} type="button" aria-pressed={orderType === type} onClick={() => setOrderType(type)}>
+                  {type === "DINE_IN" ? text("dineIn") : type === "TAKEAWAY" ? text("takeaway") : text("homeDelivery")}
+                </button>
+              ))}
+            </div>
+          ) : null}
           <input aria-label={text("customerName")} value={name} placeholder={text("customerName")} onChange={(event) => setName(event.target.value)} />
-          <input aria-label={text("table")} value={table} placeholder={text("table")} onChange={(event) => setTable(event.target.value)} />
+          {orderType === "DINE_IN" ? (
+            <input aria-label={text("tableNumber")} value={table} placeholder={text("tableNumber")} onChange={(event) => setTable(event.target.value)} />
+          ) : null}
+          {orderType === "DELIVERY" ? (
+            <>
+              <input aria-label={text("deliveryAddress")} value={address} placeholder={text("deliveryAddress")} onChange={(event) => setAddress(event.target.value)} />
+              <input aria-label={text("pincode")} inputMode="numeric" value={pincode} placeholder={text("pincode")} onChange={(event) => setPincode(event.target.value)} />
+            </>
+          ) : null}
           <textarea aria-label={text("note")} value={note} placeholder={text("note")} onChange={(event) => setNote(event.target.value)} />
           <p className="store-privacy">
             {text("privacyOrder")} <Link href="/privacy">{text("privacyLink")}</Link>
           </p>
+          {!quote.ok ? <p className="store-privacy">{quoteMessage(lang, quote.code, quote.shortfallPaise)}</p> : null}
           {error ? <p className="store-privacy">{error}</p> : null}
-          <button type="button" className="store-order" disabled={busy || count === 0} onClick={placeOrder}>
+          <button type="button" className="store-order" disabled={busy || count === 0 || !quote.ok} onClick={placeOrder}>
             {text("orderWhatsApp")} · {formatRupees(total)}
           </button>
         </div>
@@ -346,6 +402,15 @@ export function StoreMenu({
       ) : null}
     </div>
   );
+}
+
+function quoteMessage(lang: TapLang, code: "order_type" | "min_order" | "pincode", shortfallPaise?: number) {
+  if (code === "min_order") {
+    const more = formatRupees(shortfallPaise || 0);
+    return lang === "hi" ? `न्यूनतम ऑर्डर के लिए ${more} और जोड़ें।` : `Add ${more} more to reach the minimum order.`;
+  }
+  if (code === "pincode") return lang === "hi" ? "हम इस पिनकोड पर डिलीवरी नहीं करते।" : "We don't deliver to that pincode.";
+  return lang === "hi" ? "यह ऑर्डर प्रकार उपलब्ध नहीं है।" : "That order type isn't available.";
 }
 
 /** Indian food-label style mark: square outline with a dot (veg) or triangle (non-veg). */

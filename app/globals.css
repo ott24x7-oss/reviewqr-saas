@@ -1197,6 +1197,30 @@
   font-weight: 800;
   letter-spacing: -0.01em;
 }
+.store-closed {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--store-line);
+  border-radius: 14px;
+  background: var(--store-card);
+  font-size: 0.92rem;
+}
+.store-closed[data-closed="true"] { font-weight: 700; }
+.store-types { display: flex; flex-wrap: wrap; gap: 8px; }
+.store-types button {
+  min-height: 44px;
+  border: 1px solid var(--store-line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--store-ink);
+  padding: 0 14px;
+}
+.store-types button[aria-pressed="true"] {
+  background: var(--store-ink);
+  color: var(--store-bg);
+}
+.store-break { display: grid; gap: 4px; margin-top: 8px; font-size: 0.92rem; }
+.store-break div { display: flex; justify-content: space-between; gap: 12px; }
 .store-section-title span { color: var(--store-muted); font-weight: 600; }
 .store-list { margin: 0; padding: 0; list-style: none; }
 .store-item {

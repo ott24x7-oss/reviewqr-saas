@@ -3,7 +3,9 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { tapFontClass } from "@/components/brand/tap-font";
 import { isLookupCode } from "@/lib/tap/ids";
+import { hoursFromPublished } from "@/lib/tap/links";
 import { loadPublicTap } from "@/lib/tap/resolve";
+import { isOrderForLater, rulesFromSettings } from "@/lib/store/pricing";
 import { readAdminThemes } from "@/lib/tap/theme-store";
 import { FREE_THEME_ID, THEME_PRESETS, resolveTheme, tokensToStyle } from "@/lib/tap/themes";
 import { PublicTap } from "./public-page";
@@ -15,7 +17,7 @@ export async function PublicMenu({ code, channel }: { code: string; channel: "q"
   if (record.status !== "active") {
     return <PublicTap code={code} channel={channel} countScan={false} />;
   }
-  const [categories, loose, extra] = await Promise.all([
+  const [categories, loose, extra, settings, qr] = await Promise.all([
     prisma.menuCategory.findMany({
       where: { businessId: record.businessId },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
@@ -30,8 +32,11 @@ export async function PublicMenu({ code, channel }: { code: string; channel: "q"
       where: { businessId: record.businessId, available: true, categoryId: null },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }]
     }),
-    readAdminThemes().catch(() => [])
+    readAdminThemes().catch(() => []),
+    prisma.storeSettings.findUnique({ where: { businessId: record.businessId } }),
+    prisma.qRCode.findUnique({ where: { shortCode: record.shortCode }, select: { label: true } })
   ]);
+  const rules = rulesFromSettings(settings, hoursFromPublished(record.business.published));
   const items: StoreItem[] = [
     ...categories.flatMap((category) => category.items.map(toItem)),
     ...loose.map(toItem)
@@ -64,6 +69,9 @@ export async function PublicMenu({ code, channel }: { code: string; channel: "q"
           nameHi: category.nameHi || ""
         }))}
         items={items}
+        rules={rules}
+        closed={isOrderForLater(rules)}
+        tableLabel={qr?.label || ""}
         themeStyle={themeStyle as CSSProperties | undefined}
       />
     </div>
