@@ -30,15 +30,16 @@ All three are fully responsive. Design mobile-first at 360px, then 390, 768, 128
 - Footer link: "New here? Create account" in cyan.
 - On mobile the card fills the width with 16px gutters; glows scale down.
 
-## 2. Customer store, menu and cart (Sola-inspired)
+## 2. Customer store, menu and cart (compact Swiggy-style list)
 
-- Page background: warm cream / beige gradient (`#F4EFE6 → #EAE3D7`), ink text (`#1C1813`).
-- Header: business name in small uppercase letter-spaced caps + a short tagline; big **Fraunces** heading for the current category (e.g. "Today's menu").
-- Product cards: white, radius ~24px, soft large shadow, generous padding. Inside: an image well with a tinted pastel background and the photo centered; a small uppercase pill tag on the image (e.g. BESTSELLER, VEG); name in Fraunces; price right-aligned and bold; one muted detail line; rating stars or veg/non-veg mark; variant dots (size/half-full) as small colour or text chips; black pill **Add** button that turns into a −/qty/+ stepper.
-- Grid: 2 columns on phones (cards compress: smaller image, name, price, Add), 3–4 on desktop.
-- Cart: a floating "bag" button bottom-right with a count badge (sticky bottom bar with item count, total and "Order on WhatsApp" on mobile). Adding an item gives a quick fly-to-bag / bounce animation. The cart opens as a bottom sheet on mobile and a side drawer on desktop.
-- Category chips scroll horizontally at the top; active chip is a black pill.
-- The business theme (Phase 1) can swap the cream palette, accent and fonts, but the layout and card anatomy stay the same.
+The live implementation is `components/tap/store-menu.tsx` + the `.store-*` styles in `app/globals.css`. Keep this anatomy; extend it, do not replace it. (The earlier Sola-style card grid is retired.)
+
+- Sticky header: back to the tap page, EN/हिं toggle, business name, one-line subtitle, search field and a "Veg only" switch.
+- Sections: "Recommended" (bestsellers) first, then one section per category with an item count; a floating MENU button opens a category list that scrolls to the section.
+- Item row (list, not cards): left column has the veg/egg/non-veg food mark, an optional ★ Bestseller tag, the name, price with optional crossed-out MRP and "% off", and a two-line description; right column has a ~124px rounded thumbnail with the ADD button overlapping its bottom edge (ADD becomes a − qty + stepper). Rows without a photo show only the ADD button. Dashed dividers between rows.
+- Full-width sticky cart bar at the bottom: "N items added · ₹total" and "View cart". The cart opens as a bottom sheet on phones and a right drawer on desktop, with per-line steppers and notes, total, privacy notice and the Order on WhatsApp button.
+- Colours come from the business theme (`--store-*` tokens, CTA = theme button colour); unthemed menus use a green CTA. Food marks stay green / amber / red regardless of theme.
+- New store features (variants, add-ons, coupons, delivery options, order status) must fit into this row + sheet pattern: variants/add-ons open a small bottom sheet from ADD, coupons and delivery live in the cart sheet.
 
 ## 3. Landing page and public marketing pages (Kvist-inspired)
 
