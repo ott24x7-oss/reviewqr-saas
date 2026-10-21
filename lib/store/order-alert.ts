@@ -3,8 +3,21 @@ import { sendPushToUsers } from "../push";
 import { STATUS_LABEL, type OrderStatus } from "./order-status";
 import { formatRupees } from "../tap/order-message";
 
+import { dispatchJob } from "../jobs/dispatch";
+
 /** In-app alert for the owner and every staff member. The caller ignores failures so the customer's order still succeeds. */
 export async function notifyNewOrder(input: {
+  businessId: string;
+  ownerId: string;
+  number: string;
+  businessName: string;
+  totalPaise: number;
+  orderId: string;
+}) {
+  await dispatchJob("notify.order", input, `notify.order:${input.orderId}`);
+}
+
+export async function deliverNewOrder(input: {
   businessId: string;
   ownerId: string;
   number: string;
@@ -36,6 +49,17 @@ export async function notifyNewOrder(input: {
 }
 
 export async function notifyOrderStatus(input: {
+  businessId: string;
+  ownerId: string;
+  number: string;
+  businessName: string;
+  status: OrderStatus;
+  orderId: string;
+}) {
+  await dispatchJob("notify.orderStatus", input, `notify.orderStatus:${input.orderId}:${input.status}`);
+}
+
+export async function deliverOrderStatus(input: {
   businessId: string;
   ownerId: string;
   number: string;

@@ -154,6 +154,38 @@ model PushDevice {
   @@index([userId])
 }
 
+enum JobStatus {
+  PENDING
+  RUNNING
+  DONE
+  FAILED
+}
+
+// Background work. Claim with FOR UPDATE SKIP LOCKED.
+model Job {
+  id             String    @id @default(cuid())
+  type           String
+  payload        Json
+  status         JobStatus @default(PENDING)
+  runAt          DateTime  @default(now())
+  attempts       Int       @default(0)
+  maxAttempts    Int       @default(5)
+  lastError      String?   @db.Text
+  lockedBy       String?
+  lockedUntil    DateTime?
+  idempotencyKey String?   @unique
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  finishedAt     DateTime?
+
+  @@index([status, runAt])
+}
+
+model WorkerHeartbeat {
+  id     String   @id
+  seenAt DateTime
+}
+
 model VerificationToken {
   identifier String
   token      String   @unique

@@ -58,6 +58,8 @@ npm run db:seed       # demo café. Set ADMIN_EMAIL and ADMIN_PASSWORD first.
 npm run dev
 ```
 
+Background work (notifications, WhatsApp, push, renewal reminders, print files) is stored in the `Job` table. The web process runs a due job itself when no worker heartbeat is newer than 30 seconds. On Railway, keep the web start command as `npm run start` and add a second service from this repo with start command `npm run worker`. `tsx` is a devDependency, so that service needs dev dependencies installed. Set `WORKER_ID` when more than one worker is running. Print and ZIP downloads still return the file in the same request: the row is claimed before the file is built, so the worker cannot take it.
+
 Open <http://localhost:3000>
 
 **Demo accounts** (after seed):

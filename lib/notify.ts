@@ -6,10 +6,23 @@
 import { prisma } from "./db";
 import { sendEmail, negativeFeedbackEmail } from "./email";
 import { sendWhatsApp, renderTemplate } from "./whatsapp";
+import { dispatchJob } from "./jobs/dispatch";
 import { sendPushToUsers } from "./push";
 import { absoluteUrl } from "./utils";
 
 export async function notifyNegativeFeedback(opts: {
+  businessId: string;
+  reviewId: string;
+  rating: number;
+  message: string;
+  customerName?: string;
+  customerPhone?: string;
+  customerEmail?: string;
+}) {
+  await dispatchJob("notify.feedback", { ...opts }, `notify.feedback:${opts.reviewId}`);
+}
+
+export async function deliverNegativeFeedback(opts: {
   businessId: string;
   reviewId: string;
   rating: number;

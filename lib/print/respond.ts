@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { logAudit } from "@/lib/admin";
 import { PrintInputError } from "./design";
+import { runInlineJob } from "@/lib/jobs/dispatch";
 import { exportPrint } from "./export";
 import type { PrintDesign, PrintFormat, PrintPreset } from "./design";
 
@@ -32,13 +33,24 @@ export async function sendPrintBatch(input: {
     userAgent: input.userAgent
   });
   try {
-    const file = await exportPrint({
-      design: input.design,
-      preset: input.preset,
-      sheetId: input.sheetId,
-      format: input.format,
-      codes: input.codes
-    });
+    const file = await runInlineJob(
+      "print.export",
+      {
+        batchId: input.batchId,
+        templateId: input.templateId,
+        format: input.format,
+        count: input.codes.length
+      },
+      () =>
+        exportPrint({
+          design: input.design,
+          preset: input.preset,
+          sheetId: input.sheetId,
+          format: input.format,
+          codes: input.codes
+        }),
+      { maxAttempts: 1 }
+    );
     const headers = new Headers({
       "content-type": file.contentType,
       "content-disposition": `attachment; filename="${file.filename}"`,
