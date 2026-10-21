@@ -807,6 +807,12 @@ model MenuAddOn {
 
 enum MenuOrderStatus {
   NEW
+  ACCEPTED
+  REJECTED
+  PREPARING
+  READY
+  OUT_FOR_DELIVERY
+  COMPLETED
 }
 
 enum StoreLayout {
@@ -848,6 +854,10 @@ model MenuOrder {
   qrCode           QRCode?         @relation(fields: [qrCodeId], references: [id], onDelete: SetNull)
   number           String          @unique
   customerName     String?
+  customerPhone    String?
+  /// Set only when the customer agreed to save their phone with this order.
+  consentAt        DateTime?
+  lang             String?
   tableOrAddress   String?
   note             String?         @db.Text
   orderType        String?
@@ -866,6 +876,8 @@ model MenuOrder {
   items            Json
   source           String?
   status           MenuOrderStatus @default(NEW)
+  /// Status changes in order, each { status, at }.
+  events           Json?
   createdAt        DateTime        @default(now())
 
   @@index([businessId, createdAt])

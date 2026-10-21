@@ -12,6 +12,8 @@ import { enabledOrderTypes, quoteOrder, rulesFromSettings, type OrderType } from
 import { optionLineName, resolveChoice } from "@/lib/store/variants";
 import { couponDiscount, normalizeCouponCode } from "@/lib/store/coupons";
 import { normalizeUpiId, upiPayUrl } from "@/lib/store/upi";
+import { appendStatusEvent, consentedPhone } from "@/lib/store/order-status";
+import { notifyNewOrder } from "@/lib/store/order-alert";
 
 const schema = z.object({
   code: z.string().min(4).max(32),
@@ -23,6 +25,8 @@ const schema = z.object({
   note: z.string().max(400).optional(),
   coupon: z.string().max(24).optional(),
   payment: z.enum(["CASH", "UPI"]).optional(),
+  customerPhone: z.string().max(20).optional(),
+  consent: z.boolean().optional(),
   items: z.array(z.object({
     id: z.string().min(1).max(40),
     qty: z.number().int().min(1).max(20),
@@ -174,6 +178,8 @@ export async function POST(req: NextRequest) {
   if (payment === "UPI" && !upiId) {
     return NextResponse.json({ error: explain(data.lang, "payment") }, { status: 400 });
   }
+  const savedPhone = consentedPhone(data.customerPhone, data.consent);
+  const events = appendStatusEvent([], "NEW");
 
   let order = null;
   for (let attempt = 0; attempt < 3 && !order; attempt += 1) {
@@ -201,6 +207,9 @@ export async function POST(req: NextRequest) {
             qrCodeId: qr.id,
             number: `M${makeQrPublicId()}`,
             customerName,
+            customerPhone: savedPhone.customerPhone,
+            consentAt: savedPhone.consentAt,
+            lang: data.lang === "hi" ? "hi" : "en",
             tableOrAddress,
             note,
             orderType,
@@ -218,7 +227,8 @@ export async function POST(req: NextRequest) {
             totalPaise: quote.totalPaise,
             items: lines,
             source: "qr",
-            status: "NEW"
+            status: "NEW",
+            events
           }
         });
       });
@@ -230,6 +240,19 @@ export async function POST(req: NextRequest) {
     }
   }
   if (!order) return NextResponse.json({ error: "Could not save the order" }, { status: 500 });
+
+  try {
+    await notifyNewOrder({
+      businessId,
+      ownerId: qr.business.ownerId,
+      number: order.number,
+      businessName: qr.business.name,
+      totalPaise: quote.totalPaise,
+      orderId: order.id
+    });
+  } catch (err) {
+    console.error("[orders] notify failed", err);
+  }
 
   const wa = whatsAppNumberUrl(qr.business.whatsappNumber);
   const digits = wa ? wa.replace("https://wa.me/", "") : "";
