@@ -69,6 +69,7 @@ function serialize(item: {
   photos: string[];
   brand: string;
   durationMinutes: number | null;
+  barcode: string;
   veg: "VEG" | "NON_VEG" | "EGG" | "NONE";
   available: boolean;
   variants: {
@@ -100,6 +101,7 @@ function serialize(item: {
     photos: item.photos || [],
     brand: item.brand || "",
     durationMinutes: item.durationMinutes,
+    barcode: item.barcode || "",
     veg: item.veg,
     available: item.available,
     variants: item.variants.map((variant) => ({

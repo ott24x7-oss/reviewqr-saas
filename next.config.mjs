@@ -13,7 +13,7 @@ const nextConfig = {
     serverActions: {
       allowedOrigins: ["localhost:3000", "*.up.railway.app", "*.railway.app"]
     },
-    serverComponentsExternalPackages: ["@whiskeysockets/baileys", "pino", "sharp", "@aws-sdk/client-s3"]
+    serverComponentsExternalPackages: ["@whiskeysockets/baileys", "pino", "sharp", "@aws-sdk/client-s3", "exceljs"]
   },
   async headers() {
     const security = [

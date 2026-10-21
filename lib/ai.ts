@@ -14,6 +14,7 @@ import { assertSafeOutboundUrl } from "./ssrf";
 import { consumeAiCall } from "./entitlements";
 import { parseMenuDraft, type MenuDraftItem } from "./tap/menu-draft";
 import { readItemCopy, type ItemCopyField } from "./store/item-copy";
+import { readProductDraft, type ProductDraft } from "./store/entry";
 
 export type BusinessContext = {
   name: string;
@@ -274,14 +275,74 @@ export async function generateMenuFromPhoto(
           {
             type: "text",
             text:
-              'List the visible dishes. Respond as JSON: {"items":[{"name":"Filter coffee","priceRupees":80,"veg":"VEG"}]}. ' +
-              "veg is VEG, NON_VEG, EGG, or NONE. Use 0 when a price is not printed. Skip section headings."
+              'List the visible dishes, at most 50. Respond as JSON: {"items":[{"name":"Filter coffee","priceRupees":80,"veg":"VEG"}]}. ' +
+              "veg is VEG, NON_VEG, EGG, or NONE. Use 0 when a price is not printed. Do not invent a price. Skip section headings."
           },
           { type: "image_url", image_url: { url: imageDataUrl } }
         ]
       }
     ],
-    { maxTokens: 900, temperature: 0.2, businessId }
+    { maxTokens: 2200, temperature: 0.2, businessId }
   );
   return parseMenuDraft(raw);
+}
+
+const imagePattern = /^data:image\/(?:png|jpeg|jpg|webp);base64,[a-z0-9+/=\s]+$/i;
+
+/** One product in a photo. The reply's price is discarded. Does not save. */
+export async function readProductPhoto(
+  cfg: AiConfig,
+  imageDataUrl: string,
+  businessId: string
+): Promise<ProductDraft> {
+  if (!imagePattern.test(imageDataUrl)) throw new Error("Use a JPEG or PNG photo");
+  if (imageDataUrl.length > 2_000_000) throw new Error("That photo is too large");
+  const raw = await chat(
+    cfg,
+    [
+      {
+        role: "system",
+        content:
+          "You name one product in a photo for a shop in India. Return only JSON. Do not invent a price, a phone number, an offer, or a reward. If you are unsure, leave the field empty."
+      },
+      {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text:
+              'Respond as JSON: {"name":"","category":"","description":"","veg":"NONE","brand":"","colour":"","durationMinutes":null}. ' +
+              "veg is VEG, NON_VEG, EGG, or NONE. Do not include a price. description is one short sentence."
+          },
+          { type: "image_url", image_url: { url: imageDataUrl } }
+        ]
+      }
+    ],
+    { maxTokens: 300, temperature: 0.2, businessId }
+  );
+  const draft = readProductDraft(raw);
+  if (!draft) throw new Error("No usable text");
+  return draft;
+}
+
+/** Turns messy notes into priced rows. Lines with no written price are dropped. Does not save. */
+export async function cleanPastedItems(cfg: AiConfig, text: string, businessId: string): Promise<MenuDraftItem[]> {
+  const notes = text.replace(/[\u0000-\u001f]/g, " ").trim().slice(0, 4000);
+  if (notes.length < 3) throw new Error("Paste the items first");
+  const raw = await chat(
+    cfg,
+    [
+      {
+        role: "system",
+        content:
+          "You turn an owner's notes into a product list. Return only JSON. Do not invent a price. Skip any line that has no price written. Do not add a phone number, an offer, or a reward."
+      },
+      {
+        role: "user",
+        content: `${notes}\n\nRespond as JSON: {"items":[{"name":"Cappuccino","priceRupees":120,"veg":"NONE"}]}. At most 50 items.`
+      }
+    ],
+    { maxTokens: 2200, temperature: 0.1, businessId }
+  );
+  return parseMenuDraft(raw).filter((item) => item.priceRupees > 0);
 }

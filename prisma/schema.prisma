@@ -764,6 +764,8 @@ model MenuItem {
   brand      String        @default("")
   /// Service length. Hidden on food and shop.
   durationMinutes Int?
+  /// Shop barcode. Empty when the owner has not scanned or typed one.
+  barcode    String        @default("")
   veg        VegMark       @default(NONE)
   available  Boolean       @default(true)
   sortOrder  Int           @default(0)

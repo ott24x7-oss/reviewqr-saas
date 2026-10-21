@@ -4,8 +4,10 @@ import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { planOwner, requireBusinessRole } from "@/lib/tenant";
 import { ownerLimitError } from "@/lib/entitlements";
+import { effectiveTier, getPlan } from "@/lib/payments";
 import { revalidateBusinessTap } from "@/lib/tap/theme-store";
-import { CAFE_TEMPLATE } from "@/lib/tap/cafe-template";
+import { takeForSave } from "@/lib/store/entry";
+import { flattenTemplate, templateById } from "@/lib/store/templates";
 import { adjustedPricePaise } from "@/lib/store/variants";
 
 const veg = z.enum(["VEG", "NON_VEG", "EGG", "NONE"]);
@@ -23,10 +25,11 @@ const schema = z.object({
     "addon",
     "addon-update",
     "addon-delete",
-    "bulk-price"
+    "bulk-price",
+    "duplicate"
   ]),
   id: z.string().optional(),
-  kind: z.enum(["item", "category"]).optional(),
+  kind: z.enum(["item", "category", "variant"]).optional(),
   name: z.string().max(80).optional(),
   nameHi: z.string().max(80).optional(),
   priceRupees: z.number().min(0).max(100000).optional(),
@@ -40,6 +43,9 @@ const schema = z.object({
   photos: z.array(z.string().max(1_500_000)).max(5).optional(),
   brand: z.string().max(40).optional(),
   durationMinutes: z.number().int().min(1).max(480).nullable().optional(),
+  barcode: z.string().max(64).optional(),
+  category: z.string().max(80).optional(),
+  templateId: z.enum(["cafe", "restaurant", "mobile", "clothing", "kirana", "salon"]).optional(),
   size: z.string().max(40).optional(),
   colour: z.string().max(40).optional(),
   inStock: z.boolean().optional(),
@@ -50,10 +56,19 @@ const schema = z.object({
       z.object({
         name: z.string().min(1).max(80),
         priceRupees: z.number().min(0).max(100000),
-        veg: veg.optional()
+        veg: veg.optional(),
+        category: z.string().max(80).optional(),
+        nameHi: z.string().max(80).optional(),
+        description: z.string().max(200).optional(),
+        brand: z.string().max(40).optional(),
+        mrpRupees: z.number().min(0).max(100000).nullable().optional(),
+        colour: z.string().max(40).optional(),
+        photo: z.string().max(1_500_000).optional(),
+        barcode: z.string().max(64).optional(),
+        durationMinutes: z.number().int().min(1).max(480).nullable().optional()
       })
     )
-    .max(40)
+    .max(50)
     .optional()
 });
 
@@ -71,31 +86,56 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   }
   const data = parsed.data;
   const count = await prisma.menuItem.count({ where: { businessId: business.id } });
+  let message = "";
+  let added = 0;
+  let variantId = "";
 
   if (data.action === "template") {
-    const adding = CAFE_TEMPLATE.reduce((sum, group) => sum + group.items.length, 0);
-    const limitError = await ownerLimitError(owner, "storeProducts", count, adding);
-    if (limitError) return NextResponse.json({ error: limitError }, { status: 402 });
+    const chosen = flattenTemplate(templateById(data.templateId));
+    const limit = (await getPlan(effectiveTier(owner))).limits.storeProducts;
+    const fit = takeForSave(chosen.length, count, limit);
+    if (fit.take === 0) {
+      const limitError = await ownerLimitError(owner, "storeProducts", count, 1);
+      return NextResponse.json({ error: limitError || "Your plan has no room for more products." }, { status: 402 });
+    }
     await prisma.$transaction(async (tx) => {
-      for (const [index, group] of CAFE_TEMPLATE.entries()) {
-        const category = await tx.menuCategory.create({
-          data: { businessId: business.id, name: group.category, nameHi: group.categoryHi, sortOrder: index }
-        });
-        await tx.menuItem.createMany({
-          data: group.items.map((item, itemIndex) => ({
+      const existing = await tx.menuCategory.findMany({ where: { businessId: business.id } });
+      const byName = new Map(existing.map((category) => [category.name.trim().toLowerCase(), category]));
+      let sortBase = existing.length;
+      for (const [index, row] of chosen.slice(0, fit.take).entries()) {
+        const key = row.category.trim().toLowerCase();
+        let category = byName.get(key);
+        if (!category) {
+          category = await tx.menuCategory.create({
+            data: {
+              businessId: business.id,
+              name: row.category,
+              nameHi: row.categoryHi || null,
+              sortOrder: sortBase
+            }
+          });
+          sortBase += 1;
+          byName.set(key, category);
+        }
+        await tx.menuItem.create({
+          data: {
             businessId: business.id,
             categoryId: category.id,
-            name: item.name,
-            nameHi: item.nameHi,
-            pricePaise: item.pricePaise,
-            veg: item.veg,
-            description: item.description || null,
-            bestseller: item.bestseller === true,
-            sortOrder: itemIndex
-          }))
+            name: row.item.name,
+            nameHi: row.item.nameHi || null,
+            pricePaise: row.item.pricePaise,
+            veg: row.item.veg,
+            description: row.item.description || null,
+            bestseller: row.item.bestseller === true,
+            brand: row.item.brand || "",
+            durationMinutes: row.item.durationMinutes ?? null,
+            sortOrder: count + index
+          }
         });
       }
     });
+    added = fit.take;
+    message = fit.skipped > 0 ? `Added ${fit.take} items. ${fit.skipped} did not fit the plan.` : `Added ${fit.take} items.`;
   } else if (data.action === "category") {
     const name = (data.name || "").trim();
     if (!name) return NextResponse.json({ error: "Name the category" }, { status: 400 });
@@ -103,17 +143,27 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       data: { businessId: business.id, name, nameHi: (data.nameHi || "").trim() || null }
     });
   } else if (data.action === "item") {
-    if (data.categoryId && !(await categoryOwned(business.id, data.categoryId))) {
+    let categoryId = data.categoryId || null;
+    if (categoryId && !(await categoryOwned(business.id, categoryId))) {
       return NextResponse.json({ error: "Category not found" }, { status: 400 });
+    }
+    const categoryName = (data.category || "").trim();
+    if (!categoryId && categoryName) {
+      const found = await prisma.menuCategory.findFirst({
+        where: { businessId: business.id, name: { equals: categoryName, mode: "insensitive" } }
+      });
+      categoryId = found?.id || (await prisma.menuCategory.create({
+        data: { businessId: business.id, name: categoryName }
+      })).id;
     }
     const limitError = await ownerLimitError(owner, "storeProducts", count);
     if (limitError) return NextResponse.json({ error: limitError }, { status: 402 });
     const name = (data.name || "").trim();
     if (!name) return NextResponse.json({ error: "Name the item" }, { status: 400 });
-    await prisma.menuItem.create({
+    const created = await prisma.menuItem.create({
       data: {
         businessId: business.id,
-        categoryId: data.categoryId || null,
+        categoryId,
         name,
         nameHi: (data.nameHi || "").trim() || null,
         pricePaise: Math.round((data.priceRupees || 0) * 100),
@@ -125,9 +175,23 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         photo: (data.photo || "").trim() || null,
         photos: (data.photos || []).map((src) => src.trim()).filter(Boolean).slice(0, 5),
         brand: (data.brand || "").trim().slice(0, 40),
-        durationMinutes: data.durationMinutes ?? null
+        durationMinutes: data.durationMinutes ?? null,
+        barcode: (data.barcode || "").trim().slice(0, 64)
       }
     });
+    const colour = (data.colour || "").trim().slice(0, 40);
+    if (colour) {
+      await prisma.menuVariant.create({
+        data: {
+          itemId: created.id,
+          businessId: business.id,
+          label: colour,
+          colour,
+          pricePaise: created.pricePaise,
+          sortOrder: 0
+        }
+      });
+    }
   } else if (data.action === "update" && data.id) {
     if (data.categoryId && !(await categoryOwned(business.id, data.categoryId))) {
       return NextResponse.json({ error: "Category not found" }, { status: 400 });
@@ -149,23 +213,72 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         ...(data.photo !== undefined ? { photo: data.photo.trim() || null } : {}),
         ...(data.photos !== undefined ? { photos: data.photos.map((src) => src.trim()).filter(Boolean).slice(0, 5) } : {}),
         ...(data.brand !== undefined ? { brand: data.brand.trim().slice(0, 40) } : {}),
-        ...(data.durationMinutes !== undefined ? { durationMinutes: data.durationMinutes } : {})
+        ...(data.durationMinutes !== undefined ? { durationMinutes: data.durationMinutes } : {}),
+        ...(data.barcode !== undefined ? { barcode: data.barcode.trim().slice(0, 64) } : {})
       }
     });
   } else if (data.action === "items") {
     const rows = data.items || [];
     if (!rows.length) return NextResponse.json({ error: "Add at least one item" }, { status: 400 });
-    const limitError = await ownerLimitError(owner, "storeProducts", count, rows.length);
-    if (limitError) return NextResponse.json({ error: limitError }, { status: 402 });
-    await prisma.menuItem.createMany({
-      data: rows.map((item, index) => ({
-        businessId: business.id,
-        name: item.name.trim(),
-        pricePaise: Math.round(item.priceRupees * 100),
-        veg: item.veg || "NONE",
-        sortOrder: count + index
-      }))
+    const limit = (await getPlan(effectiveTier(owner))).limits.storeProducts;
+    const fit = takeForSave(rows.length, count, limit);
+    if (fit.take === 0) {
+      const limitError = await ownerLimitError(owner, "storeProducts", count, 1);
+      return NextResponse.json({ error: limitError || "Your plan has no room for more products." }, { status: 402 });
+    }
+    await prisma.$transaction(async (tx) => {
+      const existing = await tx.menuCategory.findMany({ where: { businessId: business.id } });
+      const byName = new Map(existing.map((category) => [category.name.trim().toLowerCase(), category]));
+      let sortBase = existing.length;
+      for (const [index, item] of rows.slice(0, fit.take).entries()) {
+        let categoryId: string | null = null;
+        const categoryName = (item.category || "").trim();
+        if (categoryName) {
+          const key = categoryName.toLowerCase();
+          let category = byName.get(key);
+          if (!category) {
+            category = await tx.menuCategory.create({
+              data: { businessId: business.id, name: categoryName, sortOrder: sortBase }
+            });
+            sortBase += 1;
+            byName.set(key, category);
+          }
+          categoryId = category.id;
+        }
+        const created = await tx.menuItem.create({
+          data: {
+            businessId: business.id,
+            categoryId,
+            name: item.name.trim(),
+            nameHi: (item.nameHi || "").trim() || null,
+            pricePaise: Math.round(item.priceRupees * 100),
+            mrpPaise: mrpPaise(item.mrpRupees, item.priceRupees),
+            description: (item.description || "").trim() || null,
+            veg: item.veg || "NONE",
+            brand: (item.brand || "").trim().slice(0, 40),
+            photo: (item.photo || "").trim() || null,
+            barcode: (item.barcode || "").trim().slice(0, 64),
+            durationMinutes: item.durationMinutes ?? null,
+            sortOrder: count + index
+          }
+        });
+        const colour = (item.colour || "").trim().slice(0, 40);
+        if (colour) {
+          await tx.menuVariant.create({
+            data: {
+              itemId: created.id,
+              businessId: business.id,
+              label: colour,
+              colour,
+              pricePaise: created.pricePaise,
+              sortOrder: 0
+            }
+          });
+        }
+      }
     });
+    added = fit.take;
+    message = fit.skipped > 0 ? `Added ${fit.take} items. ${fit.skipped} did not fit the plan.` : `Added ${fit.take} items.`;
   } else if (data.action === "delete" && data.id) {
     if (data.kind === "category") {
       await prisma.menuCategory.deleteMany({ where: { id: data.id, businessId: business.id } });
@@ -191,12 +304,57 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   } else if (data.action === "bulk-price") {
     const saved = await bulkPrice(business.id, data);
     if (saved) return saved;
+  } else if (data.action === "duplicate" && data.id) {
+    const item = await prisma.menuItem.findFirst({ where: { id: data.id, businessId: business.id } });
+    if (!item) return NextResponse.json({ error: "Item not found" }, { status: 400 });
+    if (data.kind === "item") {
+      const limitError = await ownerLimitError(owner, "storeProducts", count);
+      if (limitError) return NextResponse.json({ error: limitError }, { status: 402 });
+      await prisma.menuItem.create({
+        data: {
+          businessId: business.id,
+          categoryId: item.categoryId,
+          name: item.name,
+          nameHi: item.nameHi,
+          pricePaise: item.pricePaise,
+          mrpPaise: item.mrpPaise,
+          description: item.description,
+          bestseller: item.bestseller,
+          veg: item.veg,
+          available: item.available,
+          photo: item.photo,
+          photos: item.photos,
+          brand: item.brand,
+          durationMinutes: item.durationMinutes,
+          sortOrder: count
+        }
+      });
+      added = 1;
+      message = "Added a copy.";
+    } else {
+      const sortOrder = await prisma.menuVariant.count({ where: { itemId: item.id } });
+      const variant = await prisma.menuVariant.create({
+        data: {
+          itemId: item.id,
+          businessId: business.id,
+          label: "",
+          pricePaise: item.pricePaise,
+          sortOrder
+        }
+      });
+      variantId = variant.id;
+      message = "Add a size or colour.";
+    }
   } else {
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   }
 
   await revalidateBusinessTap(business.id);
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({
+    ok: true,
+    ...(message ? { message, added } : {}),
+    ...(variantId ? { variantId } : {})
+  });
 }
 
 /** A crossed-out price only makes sense above the selling price. */
@@ -248,7 +406,6 @@ async function updateVariant(businessId: string, data: MenuBody) {
   const size = data.size !== undefined ? data.size.trim() : row.size;
   const colour = data.colour !== undefined ? data.colour.trim() : row.colour;
   const label = data.name !== undefined ? variantLabel(data.name, size, colour) : variantLabel(row.label, size, colour);
-  if (!label) return NextResponse.json({ error: "Name the option" }, { status: 400 });
   await prisma.menuVariant.update({
     where: { id: row.id },
     data: {

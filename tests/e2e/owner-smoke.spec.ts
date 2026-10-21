@@ -110,6 +110,18 @@ test("owner registers, collects a private review, and sees UPI checkout", async 
   const pageCss = await bill.locator("style").evaluateAll((nodes) => nodes.map((node) => node.textContent || "").join("\n"));
   expect(pageCss).toContain("size: 58mm");
 
+  await page.goto("/dashboard/businesses");
+  await page.getByRole("link", { name: "Manage", exact: true }).click();
+  await page.getByRole("link", { name: /^Menu/ }).click();
+  await page.getByLabel("Quick add name").fill("Smoke Bun");
+  await page.getByLabel("Quick add price").fill("40");
+  await page.getByLabel("Quick add price").press("Enter");
+  await expect(page.getByText("Smoke Bun").first()).toBeVisible();
+  await page.getByLabel("Paste items").fill("Smoke Toast 45");
+  await page.getByRole("button", { name: "Add these lines" }).click();
+  await expect(page.getByLabel("Draft name 1")).toHaveValue("Smoke Toast");
+  await expect(page.getByLabel("Draft price 1")).toHaveValue("45");
+
   await page.goto("/dashboard/billing");
   await page.getByRole("button", { name: "Upgrade" }).first().click();
   await expect(page.getByText(/Pay with UPI|GPay, PhonePe/)).toBeVisible();
