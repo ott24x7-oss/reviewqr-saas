@@ -427,8 +427,169 @@
   color: var(--sd-muted);
 }
 
+.minimal,
+.bold {
+  color: var(--sd-ink);
+  font-family: var(--font-geist), var(--font-mukta), var(--font-noto-deva), sans-serif;
+  min-height: 100dvh;
+}
+
+.minimal h1,
+.minimal h2,
+.minimal h3,
+.bold h1,
+.bold h2,
+.bold h3,
+.premium h1,
+.premium h2,
+.premium h3 {
+  font-family: var(--font-bricolage), var(--font-mukta), var(--font-noto-deva), sans-serif;
+  letter-spacing: -0.03em;
+}
+
+.minimal {
+  --sd-paper: #ffffff;
+  --sd-card: #ffffff;
+  --sd-ink: #161616;
+  --sd-muted: #5c5c5c;
+  --sd-line: rgba(22, 22, 22, 0.1);
+  --sd-accent: var(--store-cta, #161616);
+  --sd-accent-ink: var(--store-cta-ink, #ffffff);
+  background: var(--sd-paper);
+  padding-bottom: 2.5rem;
+}
+
+.minimal .hero h2 {
+  font-size: 2.6rem;
+  font-weight: 600;
+  line-height: 0.98;
+}
+
+.minimal .body h3 {
+  font-size: 1.45rem;
+}
+
+.minimal .grid,
+.minimal .scroller,
+.minimal .stack .card {
+  grid-template-columns: 1fr;
+  grid-auto-flow: row;
+  grid-auto-columns: auto;
+  overflow: visible;
+}
+
+.minimal .card img,
+.minimal .photoFall,
+.minimal .stack .card img,
+.minimal .stack .card .photoFall {
+  aspect-ratio: 4 / 3;
+  width: 100%;
+}
+
+.minimal .cartBtn,
+.minimal .iconBtn {
+  background: transparent;
+  color: var(--sd-ink);
+  border: 1px solid var(--sd-line);
+}
+
+.minimal .add {
+  width: fit-content;
+  padding: 0 0 0.15rem;
+  border-radius: 0;
+  background: transparent;
+  color: var(--sd-ink);
+  border-bottom: 2px solid var(--sd-accent);
+}
+
+.minimal .badge {
+  background: var(--sd-accent);
+  color: var(--sd-accent-ink);
+}
+
+.bold {
+  --sd-paper: #09090b;
+  --sd-card: rgba(255, 255, 255, 0.07);
+  --sd-ink: #f4f4f5;
+  --sd-muted: #c4c4ce;
+  --sd-line: rgba(255, 255, 255, 0.16);
+  --sd-accent: var(--store-cta, #39ff88);
+  --sd-accent-ink: var(--store-cta-ink, #06140c);
+  background:
+    radial-gradient(70rem 26rem at 8% -10%, color-mix(in srgb, var(--sd-accent) 24%, transparent), transparent 58%),
+    var(--sd-paper);
+  padding-bottom: 6.75rem;
+}
+
+.bold .card,
+.bold .hero,
+.bold .promo,
+.bold .deal,
+.bold .top,
+.bold .dock,
+.bold .search input,
+.bold .iconBtn {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(18px);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.bold .add,
+.bold .cartBtn,
+.bold .dock .dockCart {
+  box-shadow: 0 0 22px color-mix(in srgb, var(--sd-accent) 48%, transparent);
+}
+
+.bold .cat img,
+.bold .cat i {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--sd-accent) 75%, transparent);
+}
+
+.bold[data-scheme="light"] {
+  --sd-paper: #f3f3f6;
+  --sd-card: rgba(255, 255, 255, 0.72);
+  --sd-ink: #121218;
+  --sd-muted: #4a4a55;
+  --sd-line: rgba(18, 18, 24, 0.1);
+}
+
+.bold[data-scheme="light"] .card,
+.bold[data-scheme="light"] .hero,
+.bold[data-scheme="light"] .promo,
+.bold[data-scheme="light"] .deal,
+.bold[data-scheme="light"] .top,
+.bold[data-scheme="light"] .dock,
+.bold[data-scheme="light"] .search input,
+.bold[data-scheme="light"] .iconBtn {
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(18, 18, 24, 0.1);
+}
+
+@media (prefers-color-scheme: light) {
+  .bold:not([data-scheme]) {
+    --sd-paper: #f3f3f6;
+    --sd-card: rgba(255, 255, 255, 0.72);
+    --sd-ink: #121218;
+    --sd-muted: #4a4a55;
+    --sd-line: rgba(18, 18, 24, 0.1);
+  }
+
+  .bold:not([data-scheme]) .card,
+  .bold:not([data-scheme]) .hero,
+  .bold:not([data-scheme]) .promo,
+  .bold:not([data-scheme]) .deal,
+  .bold:not([data-scheme]) .top,
+  .bold:not([data-scheme]) .dock,
+  .bold:not([data-scheme]) .search input,
+  .bold:not([data-scheme]) .iconBtn {
+    background: rgba(255, 255, 255, 0.72);
+    border-color: rgba(18, 18, 24, 0.1);
+  }
+}
+
 @media (min-width: 768px) {
-  .premium {
+  .premium,
+  .bold {
     padding-bottom: 2rem;
   }
 
@@ -438,6 +599,10 @@
 
   .hero h2 {
     font-size: 2.6rem;
+  }
+
+  .minimal .hero h2 {
+    font-size: 3.4rem;
   }
 }
 
@@ -452,7 +617,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .premium {
+  .premium,
+  .minimal,
+  .bold {
     scroll-behavior: auto;
   }
 }

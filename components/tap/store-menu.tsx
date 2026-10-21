@@ -16,6 +16,8 @@ import { ShopCatalog } from "./store-shop";
 import { ServicesCatalog } from "./store-services";
 
 const PremiumStore = dynamic(() => import("./store-premium").then((mod) => mod.PremiumStore));
+const MinimalStore = dynamic(() => import("./store-premium").then((mod) => mod.MinimalStore));
+const BoldStore = dynamic(() => import("./store-premium").then((mod) => mod.BoldStore));
 
 export type StoreVariant = {
   id: string;
@@ -344,13 +346,14 @@ export function StoreMenu({
     document.getElementById(`sec-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
-  const premium = design === "PREMIUM";
-  const pageStyle = premium && themeStyle ? { ...themeStyle, background: undefined } : themeStyle;
+  const designed = design === "PREMIUM" || design === "MINIMAL" || design === "BOLD";
+  const DesignShell = design === "MINIMAL" ? MinimalStore : design === "BOLD" ? BoldStore : PremiumStore;
+  const pageStyle = designed && themeStyle ? { ...themeStyle, background: undefined } : themeStyle;
 
   return (
     <div className="store-page" data-design={design} style={pageStyle}>
-      {premium ? (
-        <PremiumStore
+      {designed ? (
+        <DesignShell
           code={code}
           businessName={businessName}
           logoUrl={logoUrl}
@@ -537,7 +540,7 @@ export function StoreMenu({
       </div>
       )}
 
-      {layout === "FOOD" && !premium && sections.length > 1 ? (
+      {layout === "FOOD" && !designed && sections.length > 1 ? (
         <button type="button" className="store-menu-fab" data-raised={count > 0 ? "true" : "false"} onClick={() => setMenuOpen(true)}>
           <BookOpen aria-hidden="true" />
           {text("menu").toUpperCase()}
@@ -558,7 +561,7 @@ export function StoreMenu({
         </>
       ) : null}
 
-      {!premium && count > 0 ? (
+      {!designed && count > 0 ? (
         <button type="button" className="store-bar" onClick={() => setOpen(true)}>
           <span className="store-bar-count">
             {count} {count === 1 ? (lang === "hi" ? "आइटम" : "item") : lang === "hi" ? "आइटम" : "items"} {text("itemsAdded")}

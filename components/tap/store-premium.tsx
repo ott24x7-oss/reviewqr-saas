@@ -49,21 +49,29 @@ function Countdown({ endsAt, text }: { endsAt: string; text: (key: Parameters<ty
 
 function useScheme() {
   const [choice, setChoice] = React.useState<"light" | "dark" | "system">("system");
+  const [systemDark, setSystemDark] = React.useState(false);
   React.useEffect(() => {
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
     const saved = window.localStorage.getItem("rq-store-scheme");
     if (saved === "light" || saved === "dark") setChoice(saved);
+    const apply = () => setSystemDark(media.matches);
+    apply();
+    media.addEventListener("change", apply);
+    return () => media.removeEventListener("change", apply);
   }, []);
+  const dark = choice === "dark" || (choice === "system" && systemDark);
   function toggle() {
-    const systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const current = choice === "system" ? (systemDark ? "dark" : "light") : choice;
-    const next = current === "dark" ? "light" : "dark";
+    const next = dark ? "light" : "dark";
     setChoice(next);
     window.localStorage.setItem("rq-store-scheme", next);
   }
-  return { scheme: choice === "system" ? undefined : choice, toggle, dark: choice === "dark" };
+  return { scheme: choice === "system" ? undefined : choice, toggle, dark };
 }
 
-export function PremiumStore({
+type Look = "premium" | "minimal" | "bold";
+
+function StoreLook({
+  look,
   code,
   businessName,
   logoUrl,
@@ -109,9 +117,12 @@ export function PremiumStore({
   onChange: (item: StoreItem, delta: number) => void;
   onOpenCart: () => void;
   askBase: string;
+  look: Look;
 }) {
   const searchRef = React.useRef<HTMLInputElement>(null);
   const { scheme, toggle, dark } = useScheme();
+  const schemeOn = look !== "minimal";
+  const root = look === "minimal" ? styles.minimal : look === "bold" ? styles.bold : styles.premium;
   const [rows, setRows] = React.useState(false);
   const [categoryId, setCategoryId] = React.useState("");
   const [lastOrder, setLastOrder] = React.useState("");
@@ -134,16 +145,18 @@ export function PremiumStore({
   }
 
   return (
-    <div className={`${styles.premium} ${storeDesignFontClass}`} data-scheme={scheme}>
+    <div className={`${root} ${storeDesignFontClass}`} data-scheme={schemeOn ? scheme : undefined}>
       <header className={styles.top}>
         {logo ? <img className={styles.logo} src={logo} alt="" /> : <span className={styles.initial}>{categoryInitials(businessName)}</span>}
         <label className={styles.search}>
           <Search aria-hidden="true" />
           <input ref={searchRef} value={query} aria-label={searchLabel} placeholder={searchLabel} onChange={(event) => setQuery(event.target.value)} />
         </label>
-        <button type="button" className={styles.iconBtn} aria-pressed={dark} onClick={toggle}>
-          {dark ? text("lightMode") : text("darkMode")}
-        </button>
+        {schemeOn ? (
+          <button type="button" className={styles.iconBtn} aria-pressed={dark} onClick={toggle}>
+            {dark ? text("lightMode") : text("darkMode")}
+          </button>
+        ) : null}
         <button type="button" className={styles.cartBtn} onClick={onOpenCart} aria-label={text("cart")}>
           <ShoppingBag aria-hidden="true" />
           {count > 0 ? <span className={styles.badge}>{count}</span> : null}
@@ -239,6 +252,7 @@ export function PremiumStore({
           </div>
         </section>
       ) : null}
+      {look === "minimal" ? null : (
       <nav className={styles.dock} aria-label={text("home")}>
         <button type="button" onClick={() => window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" })}>
           <Home aria-hidden="true" size={18} />
@@ -262,8 +276,23 @@ export function PremiumStore({
           {text("searchNav")}
         </button>
       </nav>
+      )}
     </div>
   );
+}
+
+type LookProps = Omit<React.ComponentProps<typeof StoreLook>, "look">;
+
+export function PremiumStore(props: LookProps) {
+  return <StoreLook look="premium" {...props} />;
+}
+
+export function MinimalStore(props: LookProps) {
+  return <StoreLook look="minimal" {...props} />;
+}
+
+export function BoldStore(props: LookProps) {
+  return <StoreLook look="bold" {...props} />;
 }
 
 function ProductCard({
