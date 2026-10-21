@@ -14,7 +14,7 @@ export default function TermsPage() {
       eyebrow="Legal"
       title="Terms of Service"
       intro="These terms govern your access to and use of ReviewQR. Please read them carefully."
-      updated="2 August 2026"
+      updated="21 October 2026"
     >
       <p>
         By creating an account or using ReviewQR (the "Service"), you agree to these Terms of Service. If
@@ -23,8 +23,8 @@ export default function TermsPage() {
 
       <h2>1. The Service</h2>
       <p>
-        ReviewQR provides QR-code-based review collection, private feedback routing, analytics, and related
-        tools for businesses. We may add, change, or remove features over time to improve the Service.
+        ReviewQR shows a public review link and a private feedback form on the same screen, plus analytics
+        and related tools for businesses. We may add, change, or remove features over time to improve the Service.
       </p>
 
       <h2>2. Accounts</h2>
@@ -37,7 +37,7 @@ export default function TermsPage() {
       <h2>3. Acceptable use</h2>
       <p>You agree not to:</p>
       <ul>
-        <li>Incentivise, filter, or manipulate reviews in violation of Google's or any platform's policies.</li>
+        <li>Offer a reward, coupon, or loyalty stamp in exchange for a public review, hide the public review link from some customers, or otherwise filter or manipulate reviews in violation of Google's or any platform's policies.</li>
         <li>Submit unlawful, misleading, or abusive content.</li>
         <li>Attempt to breach, overload, or reverse-engineer the Service.</li>
         <li>Use the Service to spam or harass customers.</li>

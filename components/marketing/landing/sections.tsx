@@ -58,14 +58,14 @@ const SUITE: { icon: any; title: string; body: string; module: Module; tone: str
   {
     icon: Star,
     title: "Google reviews",
-    body: "One tap takes customers to your Google review page. AI helps them put their experience into words.",
+    body: "Every star shows the public Google or Trustpilot link. AI only tidies words the customer already wrote. They post it themselves.",
     module: "reviews",
     tone: "bg-amber-50 text-amber-600"
   },
   {
     icon: BellRing,
     title: "Private feedback alerts",
-    body: "Unhappy customers can message you privately. You get an instant WhatsApp + email alert to fix it fast.",
+    body: "Any customer can also send a private note on the same screen. A low rating with a message alerts you on WhatsApp and email.",
     module: "alerts",
     tone: "bg-rose-50 text-rose-600"
   },
@@ -278,11 +278,11 @@ export function ReviewsShowcase() {
       eyebrow="Reviews & feedback"
       module="reviews"
       title="More Google reviews. Fewer surprises."
-      sub="Every customer gets a one-tap path to your Google review page, and anyone unhappy can tell you privately first — so you can fix it."
+      sub="Every star shows the public review link and a private note, in the same order. A low rating with a message alerts you so you can follow up."
       bullets={[
-        "Google and Trustpilot review links, per branch and per staff member",
-        "AI helps customers turn a few taps into their own review, which they can edit",
-        "Instant WhatsApp + email alert on private feedback, with tags and status tracking",
+        "Google and Trustpilot links stay visible for every star. The customer opens the link themselves.",
+        "AI only suggests a cleanup of words they already wrote. They edit and copy it. Nothing is posted for them.",
+        "Instant WhatsApp + email alert on a low-rating private note, with tags and status tracking",
         "Staff leaderboard, CSV export and monthly PDF reports"
       ]}
       visual={
@@ -398,8 +398,8 @@ export function ProductsShowcase() {
 /* ─────────────────── 5. Growth tools ─────────────────── */
 const GROWTH: { icon: any; title: string; body: string; module: Module }[] = [
   { icon: UsersRound, title: "Customer list", body: "Every order and feedback builds your own customer list with visits and spend.", module: "crm" },
-  { icon: Gift, title: "Loyalty stamps", body: "“10th coffee free” — tracked automatically by phone number, no paper cards.", module: "loyalty" },
-  { icon: Sparkles, title: "AI assistant", body: "Writes product descriptions, review replies and festival offer posters for you.", module: "ai" },
+  { icon: Gift, title: "Loyalty stamps", body: "“10th coffee free” — a visit perk tracked by phone number. Never a reward for a public review.", module: "loyalty" },
+  { icon: Sparkles, title: "AI assistant", body: "Cleans up words a customer already wrote, and drafts a reply you can copy. Nothing is posted for you.", module: "ai" },
   { icon: IndianRupee, title: "UPI payments", body: "Your UPI link with the exact amount, right inside every order.", module: "whatsappStore" },
   { icon: MessageCircle, title: "WhatsApp alerts", body: "New orders and private feedback reach you instantly on WhatsApp.", module: "alerts" },
   { icon: Languages, title: "Hindi + English", body: "Your page, store and dashboard in the language your customers speak.", module: "dashboard" }
@@ -528,7 +528,7 @@ const FAQS = [
   },
   {
     q: "Is this allowed by Google?",
-    a: "Every customer can choose to post a public Google review, and anyone can also send private feedback to the owner. AI only helps customers phrase their own experience, which they can edit before posting."
+    a: "Every customer sees the public Google or Trustpilot link and a private note on the same screen, whatever the star rating. AI only tidies words the customer already wrote. They edit and copy it, and nothing is posted for them. Rewards, coupons, and stamps are never offered in exchange for a public review."
   },
   {
     q: "Do you deliver the stands? How long does it take?",

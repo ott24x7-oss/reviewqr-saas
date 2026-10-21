@@ -8,15 +8,15 @@ import {
 const faqs = [
   {
     q: "How does the smart review link work?",
-    a: "When a customer scans your QR code or clicks your link, they see a clean star rating page. If they choose 4 or 5 stars, they're auto-redirected to your Google or Trustpilot review page — whichever you set for the business. If they choose 1, 2 or 3 stars, they're shown a private feedback form so you can fix the issue without it ever becoming a public review."
+    a: "A customer scans your QR or opens your link and taps a star. Every rating then shows the public review link and a private form, in that order, with the same buttons. They can open Google or Trustpilot themselves, and they can also send the owner a private note. Nothing is posted for them."
   },
   {
     q: "Do you support both Google and Trustpilot?",
-    a: "Yes. Each business picks its review platform — Google Maps or Trustpilot — and the AI-written review and auto-redirect adapt to that choice. Run some outlets on Google and others on Trustpilot; multi-location plans can even set it per branch."
+    a: "Yes. Each business can save a Google link and a Trustpilot link. The one you prefer is listed first, and both stay visible. A branch can have its own Google link."
   },
   {
     q: "Is this allowed by Google and Trustpilot?",
-    a: "Yes. We don't filter out negative reviews — we ask all customers for feedback. Some customers choose to leave private feedback instead of public, just like they would over the phone. Both Google's and Trustpilot's policies are against soliciting reviews only from happy customers, which we don't do. Customers always have the option to post publicly."
+    a: "Yes. Every customer sees the public review link, whatever star they tap. They can also send a private note. We do not hide that link from lower ratings, and we do not offer a reward, coupon, or stamp for a public review. If AI is on, it only tidies words the customer already wrote. They can edit that suggestion and copy it themselves."
   },
   {
     q: "Do my customers need to install an app?",

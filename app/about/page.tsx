@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "About",
-  description: "Why ReviewQR exists — helping Indian small businesses grow Google reviews and catch unhappy customers privately."
+  description: "Why ReviewQR exists — a public review link for every customer, and a private note for the owner."
 };
 
 export default function AboutPage() {
@@ -13,20 +13,20 @@ export default function AboutPage() {
     <LegalPage
       eyebrow="Our story"
       title="Built for Indian small businesses"
-      intro="ReviewQR turns happy customers into public Google reviews — and routes unhappy ones into private feedback before they ever hit the internet."
+      intro="ReviewQR shows every customer a public review link and a private note, on the same screen and in the same order."
     >
       <h2>Why we built ReviewQR</h2>
       <p>
-        Great local businesses lose out for one simple reason: their happiest customers stay quiet, while
-        the occasional unhappy one posts a public one-star review. A single QR code fixes both problems.
-        Scan it, tap a star, and 4★+ customers are sent straight to your Google or Trustpilot review page
-        while 1–3★ feedback lands privately in your dashboard so you can make it right.
+        A customer who had a good visit often leaves without posting, and a customer who had a bad one
+        may only say so in public. One QR gives every customer both choices. Whatever star they tap,
+        they see the Google or Trustpilot link and a private form. A low rating with a written note
+        alerts the owner, and the public link stays on that same screen.
       </p>
 
       <h2>What we believe</h2>
       <ul>
         <li><strong>Simple beats powerful.</strong> A shop owner should set this up in minutes, from a phone, with no training.</li>
-        <li><strong>Feedback is a gift.</strong> Negative feedback handled privately builds a better business than a defensive public reply ever could.</li>
+        <li><strong>Feedback is a gift.</strong> A private note helps you fix a visit. It is never a reason to hide the public review link, or to offer a reward for posting one.</li>
         <li><strong>Made for India.</strong> UPI-first billing, WhatsApp alerts, and pricing in rupees — not an afterthought bolted onto a US product.</li>
       </ul>
 

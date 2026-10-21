@@ -330,7 +330,7 @@ export const DEFAULT_SITE: SiteConfig = {
   logoUrl: "",
   supportEmail: "hello@reviewqr.in",
   appUrl: "",
-  marketingTagline: "Turn happy customers into Google reviews.",
+  marketingTagline: "Every customer can leave a public review.",
   signupsEnabled: true,
   maintenanceMode: false,
   maintenanceMessage: "We'll be back shortly."

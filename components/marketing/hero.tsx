@@ -30,14 +30,13 @@ export function Hero() {
             </div>
 
             <h1 className="mt-5 text-4xl sm:text-5xl lg:text-6xl font-bold font-display tracking-tight text-balance">
-              Happy customers →{" "}
+              Ask every customer for{" "}
               <RotatingReviewWord />
             </h1>
             <p className="mt-3 text-base sm:text-lg text-muted-foreground text-pretty max-w-md mx-auto lg:mx-0">
-              Our <b className="text-foreground">AI writes the 5★ review for them</b> — they just tap
-              Copy and post it to <b className="gradient-text-google">Google</b> or{" "}
-              <b className="text-[#00b67a]">Trustpilot</b>. Unhappy ones go to your private inbox. One
-              smart QR, 30 seconds.
+              Every star shows your <b className="gradient-text-google">Google</b> or{" "}
+              <b className="text-[#00b67a]">Trustpilot</b> link and a private note. If they write a few
+              words, AI can tidy them. They edit, copy, and post it themselves.
             </p>
 
             <div className="mt-6 flex flex-col sm:flex-row gap-2 justify-center lg:justify-start">
@@ -163,7 +162,7 @@ export function Hero() {
                       </span>
                     </div>
                     <div className="mt-5 rounded-xl bg-secondary/60 border p-3 text-center">
-                      <div className="text-[10px] text-muted-foreground">Auto-redirecting to</div>
+                      <div className="text-[10px] text-muted-foreground">Public review link</div>
                       <div className="mt-1 inline-flex items-center gap-1.5 text-xs font-semibold">
                         <span><span className="gradient-text-google">G</span>oogle</span>
                         <span className="text-muted-foreground/50">/</span>

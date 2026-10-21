@@ -19,7 +19,7 @@ import {
 export const metadata = {
   title: "Live Demo · ReviewQR",
   description:
-    "Scan the QR or use the live preview to see how ReviewQR turns happy customers into Google reviews — without lifting a finger."
+    "Scan the QR or use the live preview. Every star shows the public review link and a private note."
 };
 
 const DEMO_QR_IMAGE = "https://i.ibb.co/Y7RWPMK5/QR-pay.png";
@@ -34,22 +34,22 @@ const steps = [
   {
     icon: Star,
     title: "They tap a star to rate",
-    body: "5-star review flow is two taps. The whole interaction is under 30 seconds — much higher conversion than a 'leave a review' link."
+    body: "Every rating then shows the public review link and a private note, in the same order."
   },
   {
     icon: ThumbsUp,
-    title: "Happy? Pick a ready-made review",
-    body: "On 4–5★ we show 3 of your pre-loaded review variants. Each one is shown to a single customer only — so the reviews you actually receive on Google or Trustpilot are unique and authentic."
+    title: "They write their own words",
+    body: "Short topic hints can be tapped into their text. If AI is on, it suggests a cleanup. They can edit it before copying. Nothing is posted for them."
   },
   {
     icon: Copy,
-    title: "One tap → Copied + redirected",
-    body: "We copy the chosen text to their clipboard and send them to your Google or Trustpilot review form. They paste, hit post — done."
+    title: "They open the public link themselves",
+    body: "The Google or Trustpilot link stays on the page. If they copied a suggestion, they paste it on that form themselves."
   },
   {
     icon: Bell,
     title: "You get a WhatsApp ping",
-    body: "Owner gets an instant WhatsApp showing exactly what the customer copied — and any 1–3★ private feedback before it ever hits the public web."
+    body: "A private note from a low rating alerts the owner on WhatsApp and email. The public link stays visible on that same screen."
   }
 ];
 
@@ -106,8 +106,7 @@ export default async function DemoPage() {
                     <Star className="h-3 w-3" />
                   </span>
                   <span>
-                    Try rating 5★ — see the &quot;Select your content&quot; modal pop up with
-                    pre-loaded reviews.
+                    Try 5 stars and 2 stars. The public link and the private note stay in the same order.
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
@@ -115,7 +114,7 @@ export default async function DemoPage() {
                     <ThumbsUp className="h-3 w-3" />
                   </span>
                   <span>
-                    Try 1–2★ — see the private feedback path that protects your Google &amp; Trustpilot rating.
+                    Write a few words. A cleanup, when AI is on, is only a suggestion they can edit.
                   </span>
                 </li>
               </ul>

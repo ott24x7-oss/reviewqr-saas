@@ -114,17 +114,17 @@ function SmartLinkCard() {
             ))}
           </div>
           <div className="text-[10px] text-center font-semibold text-accent-600">
-            4★ → Google / Trustpilot
+            Same screen for every star
           </div>
         </div>
         <div className="mt-2 grid grid-cols-2 gap-1.5">
           <div className="rounded-md bg-accent-50 border border-accent-200 p-2 text-[9px] text-center">
-            <div className="font-bold text-accent-700">4★ – 5★</div>
-            <div className="text-muted-foreground">→ Google / Trustpilot</div>
+            <div className="font-bold text-accent-700">Public link</div>
+            <div className="text-muted-foreground">Google / Trustpilot</div>
           </div>
           <div className="rounded-md bg-amber-50 border border-amber-200 p-2 text-[9px] text-center">
-            <div className="font-bold text-amber-700">1★ – 3★</div>
-            <div className="text-muted-foreground">→ Private form</div>
+            <div className="font-bold text-amber-700">Private note</div>
+            <div className="text-muted-foreground">Same screen</div>
           </div>
         </div>
       </div>

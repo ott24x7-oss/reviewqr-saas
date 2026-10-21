@@ -206,7 +206,7 @@ export function welcomeEmail(opts: { name: string; email: string; loginUrl: stri
         <h2 style="margin:0;font-size:20px">Welcome to ReviewQR ${escapeHtml(opts.name.split(" ")[0])}!</h2>
       </div>
       <div style="padding:24px">
-        <p style="font-size:15px;line-height:1.6">Your free trial is active. Start collecting Google reviews from happy customers in minutes.</p>
+        <p style="font-size:15px;line-height:1.6">Your free trial is active. Add your public review link so every customer can post, and so private notes can reach you.</p>
         <ul style="font-size:14px;line-height:1.8;color:#374151;padding-left:20px">
           <li>Add your business and Google review link</li>
           <li>Generate a QR code for your counter / table / bills</li>

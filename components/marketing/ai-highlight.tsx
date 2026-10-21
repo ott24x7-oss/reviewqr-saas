@@ -1,9 +1,7 @@
 import { Sparkles, Copy, Check, Wand2, Clock, Languages } from "lucide-react";
 
 /**
- * Flagship highlight: the AI that writes the review for the customer.
- * The device mockup is a 3D-tilted CSS composition (no image asset needed);
- * swap the `<figure>` contents for a real render later if desired.
+ * AI only tidies words the customer already wrote.
  */
 export function AiHighlight() {
   return (
@@ -12,26 +10,25 @@ export function AiHighlight() {
         {/* Copy */}
         <div className="order-2 lg:order-1">
           <div className="inline-flex items-center gap-2 rounded-full bg-brand/10 border border-brand/20 px-3 py-1 text-xs font-semibold text-brand">
-            <Sparkles className="h-3.5 w-3.5" /> AI Auto-Review
+            <Sparkles className="h-3.5 w-3.5" /> Cleanup only
           </div>
           <h2 className="mt-4 font-display text-3xl sm:text-4xl lg:text-[2.75rem] font-bold tracking-tight leading-[1.1] text-ink">
-            Your customers won't write a review.
+            They write the review.
             <br />
-            <span className="text-gradient">Our AI writes it for them.</span>
+            <span className="text-gradient">AI only tidies it.</span>
           </h2>
           <p className="mt-4 text-base sm:text-lg text-muted-ink leading-relaxed max-w-lg">
-            A happy customer taps 3 quick buttons — our AI turns their answers into a genuine,
-            ready-to-post <b className="gradient-text-google">Google</b> or{" "}
-            <b className="text-[#00b67a]">Trustpilot</b> review in{" "}
-            <b className="text-ink">their own words</b>. They just tap{" "}
-            <b className="text-ink">Copy</b> and paste. That's it.
+            A customer writes a few words, or taps a short topic into their own text. AI may suggest a
+            cleaner version for <b className="gradient-text-google">Google</b> or{" "}
+            <b className="text-[#00b67a]">Trustpilot</b>. They edit it, then copy and paste it
+            themselves. Nothing is posted for them.
           </p>
 
           <div className="mt-7 grid sm:grid-cols-3 gap-3">
             {[
-              { icon: Wand2, t: "Written for them", s: "No blank box, no effort" },
-              { icon: Clock, t: "Under 30 seconds", s: "Tap, copy, done" },
-              { icon: Languages, t: "On-brand every time", s: "Trained on your business" }
+              { icon: Wand2, t: "Their own words", s: "At least a few, or a topic hint" },
+              { icon: Clock, t: "They edit it", s: "Then they copy it" },
+              { icon: Languages, t: "Nothing auto-posted", s: "They paste it themselves" }
             ].map((f) => (
               <div key={f.t} className="neu rounded-2xl p-4">
                 <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand/10 text-brand">
@@ -57,13 +54,13 @@ export function AiHighlight() {
               </span>
               <div className="min-w-0">
                 <div className="text-sm font-semibold text-ink truncate">Spice Junction Café</div>
-                <div className="text-[11px] text-muted-ink">AI is drafting your review…</div>
+                <div className="text-[11px] text-muted-ink">Suggested wording</div>
               </div>
             </div>
 
             {/* answer chips */}
             <div className="mt-4 flex flex-wrap gap-1.5">
-              {["Loved the dosa", "Super quick", "Warm staff"].map((c) => (
+              {["hot dosa", "quick service", "warm staff"].map((c) => (
                 <span
                   key={c}
                   className="skeuo-accent text-white text-[11px] font-medium rounded-full px-2.5 py-1"
@@ -73,14 +70,13 @@ export function AiHighlight() {
               ))}
             </div>
 
-            {/* generated review */}
+            {/* suggested wording */}
             <div className="mt-3 neu-inset rounded-2xl p-3.5">
               <div className="flex items-center gap-1.5 text-[10px] font-semibold text-brand uppercase tracking-wide">
-                <Sparkles className="h-3 w-3" /> AI-written review
+                <Sparkles className="h-3 w-3" /> Cleaned-up wording
               </div>
               <p className="mt-1.5 text-[13px] leading-relaxed text-ink/90">
-                "Had the best masala dosa at Spice Junction — crisp, hot, and served in minutes. The
-                staff were so warm and welcoming. Easily my new favourite spot in Indiranagar!"
+                "The dosa was hot, the service was quick, and the staff were warm."
               </p>
               <div className="mt-3 flex justify-end">
                 <span className="skeuo-accent text-white text-[11px] font-semibold rounded-lg px-3 py-1.5 inline-flex items-center gap-1">
@@ -90,13 +86,13 @@ export function AiHighlight() {
             </div>
 
             <div className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-muted-ink">
-              <Check className="h-3.5 w-3.5 text-accent" /> Copied — opening Google / Trustpilot…
+              <Check className="h-3.5 w-3.5 text-accent" /> Copied. They paste it themselves.
             </div>
 
             {/* floating badge */}
             <div className="absolute -left-4 -bottom-4 hidden sm:flex items-center gap-2 glass rounded-2xl px-3 py-2 shadow-lg">
               <Sparkles className="h-4 w-4 text-brand" />
-              <span className="text-xs font-semibold text-ink">2 options, instantly</span>
+              <span className="text-xs font-semibold text-ink">They can edit it first</span>
             </div>
           </figure>
         </div>

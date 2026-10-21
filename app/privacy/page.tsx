@@ -14,7 +14,7 @@ export default function PrivacyPage() {
       eyebrow="Legal"
       title="Privacy Policy"
       intro="Your data belongs to you. This policy explains what we collect, why, and the choices you have."
-      updated="20 October 2026"
+      updated="21 October 2026"
     >
       <p>
         This Privacy Policy describes how ReviewQR ("we", "us", "the Service") collects, uses, and
@@ -33,8 +33,8 @@ export default function PrivacyPage() {
 
       <h2>2. How we use information</h2>
       <ul>
-        <li>To operate the Service — generating QR codes, routing reviews, and delivering dashboards.</li>
-        <li>To send transactional alerts (e.g. negative-feedback notifications) by email or WhatsApp where you have configured them.</li>
+        <li>To operate the Service — generating QR codes, showing the public review link, storing private feedback, and delivering dashboards.</li>
+        <li>To send transactional alerts (for example when private feedback is not a positive rating) by email or WhatsApp where you have configured them.</li>
         <li>To secure the platform, prevent spam and abuse, and enforce rate limits.</li>
         <li>To process subscriptions and issue invoices.</li>
       </ul>

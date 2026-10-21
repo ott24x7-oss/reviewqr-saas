@@ -209,7 +209,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Notify owner on negative feedback (rating < threshold or any 1-3 stars)
+    // Notify the owner when the rating is not positive (1–3 stars).
     if (sentiment !== "POSITIVE") {
       notifyNegativeFeedback({
         businessId: business.id,
