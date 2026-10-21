@@ -46,6 +46,7 @@ FAMILIES = [
     ("noto-sans-devanagari", "notosansdevanagari/NotoSansDevanagari[wdth,wght].ttf", [400, 600, 700], [LATIN, DEVANAGARI]),
     ("playfair-display", "playfairdisplay/PlayfairDisplay[wght].ttf", [500, 700], [LATIN]),
     ("hind", "hind/Hind-{name}.ttf", [400, 600, 700], [LATIN, DEVANAGARI]),
+    ("geist", "geist/Geist[wght].ttf", [400, 600], [LATIN]),
 ]
 
 _cache = {}
