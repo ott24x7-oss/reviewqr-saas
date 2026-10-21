@@ -9,6 +9,7 @@ import { PolishDraft } from "@/components/review/polish-draft";
 import { scanSource, type ScanSource } from "@/lib/tap/source";
 import { TapIcon } from "./tap-icons";
 import { HintChips } from "@/components/review/hint-chips";
+import { NpsPicker } from "@/components/review/nps-picker";
 
 export type TapExperienceProps = {
   code: string;
@@ -348,6 +349,7 @@ function FeedbackForm({
   const [name, setName] = React.useState("");
   const [phone, setPhone] = React.useState("");
   const [consent, setConsent] = React.useState(false);
+  const [npsScore, setNpsScore] = React.useState<number | null>(null);
   const [token, setToken] = React.useState("");
   const [error, setError] = React.useState("");
   const [done, setDone] = React.useState(false);
@@ -380,6 +382,7 @@ function FeedbackForm({
           customerName: name,
           customerPhone: phone,
           consent: phone.trim() ? consent : false,
+          npsScore,
           source,
           qrCode: code,
           locationSlug,
@@ -459,6 +462,7 @@ function FeedbackForm({
       <label htmlFor="tap-feedback">What could we have done better?</label>
       <textarea id="tap-feedback" value={message} onChange={(e) => setMessage(e.target.value)} maxLength={2000} />
       {aiEnabled ? <PolishDraft slug={slug} text={message} lang={lang} /> : null}
+      <NpsPicker value={npsScore} onChange={setNpsScore} lang={lang} />
       <label htmlFor="tap-name">{lang === "hi" ? "नाम" : "Your name"}</label>
       <input id="tap-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} autoComplete="name" />
       <label htmlFor="tap-phone">{lang === "hi" ? "फोन" : "Phone"}</label>

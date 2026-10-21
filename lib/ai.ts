@@ -4,6 +4,7 @@
  * configured by the admin in Admin → AI.
  *
  * polishReviewDraft() cleans up words the customer already wrote.
+ * draftOwnerReplies() suggests replies the owner copies. Nothing is posted.
  * generateMenuFromPhoto() reads a menu photo.
  *
  * All functions THROW on failure. Callers keep the customer's own text.
@@ -185,6 +186,40 @@ export async function polishReviewDraft(
   const suggestion = String(data?.suggestion || data?.text || "").trim();
   if (suggestion.length < 5) throw new Error("No usable suggestion");
   return suggestion;
+}
+
+/** Two drafts the owner edits and copies. The public one must not quote the private note. */
+export async function draftOwnerReplies(
+  cfg: AiConfig,
+  ctx: BusinessContext,
+  input: { rating: number; message: string; tags: string[] },
+  businessId?: string
+): Promise<{ publicReply: string; whatsappReply: string }> {
+  const system =
+    "You draft two replies for a business owner. Return ONLY JSON. " +
+    "publicReply may be pasted on Google. It must not quote, paraphrase, or repeat the private note, " +
+    "the customer's name, phone, or email, and it must not mention a reward, coupon, or star rating. " +
+    "whatsappReply is a private message. It may respond to the note. It must not include a phone number " +
+    "or offer a reward for a public review. No emojis, hashtags, or markdown.";
+  const user =
+    `${contextBlock(ctx)}\n\n` +
+    `Star rating (context only, do not mention it): ${input.rating}\n` +
+    `Topics: ${input.tags.join(", ") || "none"}\n` +
+    `Private note, for the WhatsApp reply only:\n"""${input.message.slice(0, 1500)}"""\n\n` +
+    'Return JSON: {"publicReply":"...","whatsappReply":"..."}';
+  const raw = await chat(
+    cfg,
+    [
+      { role: "system", content: system },
+      { role: "user", content: user }
+    ],
+    { maxTokens: 400, temperature: 0.3, businessId }
+  );
+  const data = parseJson(raw);
+  const publicReply = String(data?.publicReply || "").trim();
+  const whatsappReply = String(data?.whatsappReply || "").trim();
+  if (publicReply.length < 5 || whatsappReply.length < 5) throw new Error("No usable reply");
+  return { publicReply, whatsappReply };
 }
 
 /** Reads a menu photo. Throws when AI is not configured. Does not save items. */

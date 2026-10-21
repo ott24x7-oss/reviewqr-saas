@@ -34,7 +34,15 @@ export default async function FeedbackPage({
       ...(filter && { status: filter })
     },
     include: {
-      review: { select: { rating: true, customerName: true, customerPhone: true, customerEmail: true } },
+      review: {
+        select: {
+          rating: true,
+          customerName: true,
+          customerPhone: true,
+          customerEmail: true,
+          consentAt: true
+        }
+      },
       business: { select: { name: true, slug: true, whatsappNumber: true } },
       tags: { include: { tag: { select: { name: true, color: true } } } }
     },
@@ -59,7 +67,7 @@ export default async function FeedbackPage({
             <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
             <h3 className="text-lg font-semibold">No feedback {filter ? `with status ${filter}` : "yet"}</h3>
             <p className="text-sm text-muted-foreground mt-1">
-              {filter ? "Try changing the filter." : "When customers rate below your threshold, their feedback shows up here."}
+              {filter ? "Try changing the filter." : "Private messages from customers show up here."}
             </p>
           </CardContent>
         </Card>
@@ -78,6 +86,8 @@ export default async function FeedbackPage({
                 customerName: f.review.customerName,
                 customerPhone: f.review.customerPhone,
                 customerEmail: f.review.customerEmail,
+                consentAt: f.review.consentAt ? f.review.consentAt.toISOString() : null,
+                npsScore: f.npsScore,
                 businessName: f.business.name,
                 tags: f.tags.map((t) => ({ name: t.tag.name, color: t.tag.color }))
               }}

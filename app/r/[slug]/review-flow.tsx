@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { appendHint, orderedReviewTargets } from "@/lib/review-policy";
 import { HintChips } from "@/components/review/hint-chips";
+import { NpsPicker } from "@/components/review/nps-picker";
 import { PolishDraft } from "@/components/review/polish-draft";
 
 type Business = {
@@ -1049,7 +1050,7 @@ function FeedbackStep(props: {
   tags: string[];
   toggleTag: (t: string) => void;
   npsScore: number | null;
-  setNpsScore: (n: number) => void;
+  setNpsScore: (n: number | null) => void;
   onSubmit: (e: React.FormEvent) => void;
   loading: boolean;
   consent: boolean;
@@ -1129,6 +1130,8 @@ function FeedbackStep(props: {
               ))}
             </div>
           </div>
+
+          <NpsPicker value={props.npsScore} onChange={props.setNpsScore} lang={props.lang || "en"} />
 
           <div className="grid sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">

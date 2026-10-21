@@ -29,7 +29,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (parsed.data.eraseContact) {
     await prisma.review.update({
       where: { id: feedback.reviewId },
-      data: { customerName: null, customerEmail: null, customerPhone: null }
+      data: { customerName: null, customerEmail: null, customerPhone: null, consentAt: null }
     });
     await logAudit({
       userId: user.id,
