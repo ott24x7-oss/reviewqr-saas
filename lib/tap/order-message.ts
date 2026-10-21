@@ -5,6 +5,22 @@ export type OrderLine = {
   note?: string;
 };
 
+export type OrderCharges = {
+  subtotalPaise: number;
+  discountPaise?: number;
+  deliveryPaise?: number;
+  packingPaise?: number;
+  gstPaise?: number;
+  pricesIncludeGst?: boolean;
+  totalPaise: number;
+  orderForLater?: boolean;
+  prepMinutes?: number;
+  orderType?: "DINE_IN" | "TAKEAWAY" | "DELIVERY";
+  pincode?: string;
+  paymentUrl?: string;
+  trackUrl?: string;
+};
+
 export type OrderMessageInput = {
   businessName: string;
   lines: OrderLine[];
@@ -12,6 +28,7 @@ export type OrderMessageInput = {
   customerName?: string;
   note?: string;
   hindi?: boolean;
+  charges?: OrderCharges;
 };
 
 const URL_LIMIT = 1800;
@@ -44,14 +61,37 @@ export function buildOrderText(input: OrderMessageInput, noteLimit = 80) {
   const total = input.lines.reduce((sum, line) => sum + lineTotalPaise(line), 0);
   const place = clip(input.tableOrAddress, 80);
   const name = clip(input.customerName, 40);
-  const who = [place && `${input.hindi ? "टेबल" : "Table"}: ${place}`, name && `${input.hindi ? "नाम" : "Name"}: ${name}`]
+  const placeLabel = input.charges?.orderType === "DELIVERY"
+    ? (input.hindi ? "पता" : "Address")
+    : input.charges?.orderType === "TAKEAWAY"
+      ? (input.hindi ? "पार्सल" : "Takeaway")
+      : (input.hindi ? "टेबल" : "Table");
+  const who = [place && `${placeLabel}: ${place}`, name && `${input.hindi ? "नाम" : "Name"}: ${name}`]
     .filter(Boolean)
     .join(" | ");
   const orderNote = clip(input.note, noteLimit);
+  const charges = input.charges;
+  const moneyLines = charges
+    ? [
+        `${input.hindi ? "सामान" : "Subtotal"}: ${formatRupees(charges.subtotalPaise)}`,
+        charges.discountPaise ? `${input.hindi ? "छूट" : "Discount"}: ${formatRupees(charges.discountPaise)}` : "",
+        charges.packingPaise ? `${input.hindi ? "पैकिंग" : "Packing"}: ${formatRupees(charges.packingPaise)}` : "",
+        charges.deliveryPaise ? `${input.hindi ? "डिलीवरी" : "Delivery"}: ${formatRupees(charges.deliveryPaise)}` : "",
+        charges.gstPaise
+          ? `${charges.pricesIncludeGst === false ? "GST" : input.hindi ? "GST शामिल" : "GST included"}: ${formatRupees(charges.gstPaise)}`
+          : "",
+        `${input.hindi ? "कुल" : "Total"}: ${formatRupees(charges.totalPaise)}`,
+        charges.orderForLater ? (input.hindi ? "बाद के लिए ऑर्डर" : "Order for later") : "",
+        charges.prepMinutes ? (input.hindi ? `लगभग ${charges.prepMinutes} मिनट में तैयार` : `Ready in about ${charges.prepMinutes} min`) : "",
+        charges.pincode ? `${input.hindi ? "पिनकोड" : "Pincode"}: ${charges.pincode}` : "",
+        charges.paymentUrl ? `${input.hindi ? "भुगतान" : "Pay"}: ${charges.paymentUrl}` : "",
+        charges.trackUrl ? `${input.hindi ? "स्थिति" : "Track"}: ${charges.trackUrl}` : ""
+      ]
+    : [`${input.hindi ? "कुल" : "Total"}: ${formatRupees(total)}`];
   const lines = [
     title,
     ...rows,
-    `${input.hindi ? "कुल" : "Total"}: ${formatRupees(total)}`,
+    ...moneyLines,
     who,
     orderNote && `${input.hindi ? "नोट" : "Note"}: ${orderNote}`
   ].filter(Boolean);

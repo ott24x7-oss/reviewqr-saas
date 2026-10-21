@@ -48,7 +48,7 @@ export function parseMenuDraft(raw: string): MenuDraftItem[] {
     const price = priceOf(record.priceRupees ?? record.price);
     if (!name || price === null || price < 0 || price > 100000) continue;
     items.push({ name, priceRupees: Math.round(price * 100) / 100, veg: vegOf(record.veg) });
-    if (items.length === 40) break;
+    if (items.length === 50) break;
   }
   return items;
 }

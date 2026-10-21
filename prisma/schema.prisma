@@ -186,6 +186,9 @@ model Business {
   menuCategories MenuCategory[]
   menuItems    MenuItem[]
   menuOrders   MenuOrder[]
+  storeSettings StoreSettings?
+  coupons      Coupon[]
+  offerBanners OfferBanner[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -450,7 +453,9 @@ model Contact {
   email      String?
   phone      String?
   notes      String? @db.Text
-  source     String? // manual / csv / pos / api
+  /// Short labels such as VIP or regular. The owner writes these.
+  tags       String[] @default([])
+  source     String? // manual / csv / pos / api / order / feedback
 
   campaigns  CampaignContact[]
 
@@ -753,9 +758,19 @@ model MenuItem {
   description String?
   bestseller Boolean       @default(false)
   photo      String?
+  /// Extra gallery images. `photo` stays the cover. At most five, so six with the cover.
+  photos     String[]      @default([])
+  /// Shop brand. Empty on food and services.
+  brand      String        @default("")
+  /// Service length. Hidden on food and shop.
+  durationMinutes Int?
+  /// Shop barcode. Empty when the owner has not scanned or typed one.
+  barcode    String        @default("")
   veg        VegMark       @default(NONE)
   available  Boolean       @default(true)
   sortOrder  Int           @default(0)
+  variants   MenuVariant[]
+  addOns     MenuAddOn[]
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @updatedAt
 
@@ -763,27 +778,163 @@ model MenuItem {
   @@index([categoryId])
 }
 
+model MenuVariant {
+  id         String   @id @default(cuid())
+  itemId     String
+  item       MenuItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  businessId String
+  label      String
+  labelHi    String?
+  /// Set together with colour for a shop size/colour pair. Food sizes use label only.
+  size       String   @default("")
+  colour     String   @default("")
+  pricePaise Int
+  inStock    Boolean  @default(true)
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([itemId])
+  @@index([businessId])
+}
+
+model MenuAddOn {
+  id         String   @id @default(cuid())
+  itemId     String
+  item       MenuItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  businessId String
+  name       String
+  nameHi     String?
+  pricePaise Int      @default(0)
+  inStock    Boolean  @default(true)
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([itemId])
+  @@index([businessId])
+}
+
 enum MenuOrderStatus {
   NEW
+  ACCEPTED
+  REJECTED
+  PREPARING
+  READY
+  OUT_FOR_DELIVERY
+  COMPLETED
+}
+
+enum StoreLayout {
+  AUTO
+  FOOD
+  SHOP
+  SERVICES
+}
+
+model StoreSettings {
+  id                     String      @id @default(cuid())
+  businessId             String      @unique
+  business               Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  layout                 StoreLayout @default(AUTO)
+  hours                  Json?
+  holiday                Boolean     @default(false)
+  dineIn                 Boolean     @default(true)
+  takeaway               Boolean     @default(true)
+  delivery               Boolean     @default(false)
+  deliveryPincodes       String      @default("")
+  deliveryChargePaise    Int         @default(0)
+  freeDeliveryAbovePaise Int?
+  minOrderPaise          Int         @default(0)
+  packingChargePaise     Int         @default(0)
+  gstEnabled             Boolean     @default(false)
+  gstPercent             Int         @default(5)
+  pricesIncludeGst       Boolean     @default(true)
+  prepMinutes            Int         @default(20)
+  upiId                  String      @default("")
+  createdAt              DateTime    @default(now())
+  updatedAt              DateTime    @updatedAt
 }
 
 model MenuOrder {
-  id              String          @id @default(cuid())
-  businessId      String
-  business        Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  qrCodeId        String?
-  qrCode          QRCode?         @relation(fields: [qrCodeId], references: [id], onDelete: SetNull)
-  number          String          @unique
-  customerName    String?
-  tableOrAddress  String?
-  note            String?         @db.Text
-  totalPaise      Int
-  items           Json
-  source          String?
-  status          MenuOrderStatus @default(NEW)
-  createdAt       DateTime        @default(now())
+  id               String          @id @default(cuid())
+  businessId       String
+  business         Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  qrCodeId         String?
+  qrCode           QRCode?         @relation(fields: [qrCodeId], references: [id], onDelete: SetNull)
+  number           String          @unique
+  customerName     String?
+  customerPhone    String?
+  /// Set only when the customer agreed to save their phone with this order.
+  consentAt        DateTime?
+  lang             String?
+  tableOrAddress   String?
+  note             String?         @db.Text
+  orderType        String?
+  pincode          String?
+  subtotalPaise    Int             @default(0)
+  discountPaise    Int             @default(0)
+  deliveryPaise    Int             @default(0)
+  packingPaise     Int             @default(0)
+  gstPaise         Int             @default(0)
+  pricesIncludeGst Boolean         @default(true)
+  orderForLater    Boolean         @default(false)
+  prepMinutes      Int?
+  couponCode       String?
+  payment          StorePayment?
+  totalPaise       Int
+  items            Json
+  source           String?
+  status           MenuOrderStatus @default(NEW)
+  /// Status changes in order, each { status, at }.
+  events           Json?
+  createdAt        DateTime        @default(now())
 
   @@index([businessId, createdAt])
+}
+
+enum CouponKind {
+  PERCENT
+  FLAT
+}
+
+enum StorePayment {
+  CASH
+  UPI
+}
+
+model Coupon {
+  id               String     @id @default(cuid())
+  businessId       String
+  business         Business   @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  code             String
+  kind             CouponKind
+  /// Percent from 1 to 100, or a flat discount in paise.
+  amount           Int
+  minSubtotalPaise Int        @default(0)
+  expiresAt        DateTime?
+  usageLimit       Int?
+  usedCount        Int        @default(0)
+  active           Boolean    @default(true)
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  @@unique([businessId, code])
+  @@index([businessId])
+}
+
+model OfferBanner {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  title      String
+  body       String   @default("")
+  active     Boolean  @default(true)
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([businessId])
 }
 
 model IndustryPreset {

@@ -7,7 +7,7 @@ import { TeamPanel } from "@/components/dashboard/team-panel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { absoluteUrl } from "@/lib/utils";
-import { ExternalLink, QrCode, MapPin, Users, Edit3, Star, FileText, Sparkles, Quote, Palette } from "lucide-react";
+import { ExternalLink, QrCode, MapPin, Users, Edit3, Star, FileText, Sparkles, Quote, Palette, ShoppingBag, Ticket } from "lucide-react";
 import { getReviewUrl } from "@/lib/qr";
 import { BusinessActions } from "./business-actions";
 
@@ -64,6 +64,14 @@ export default async function BusinessDetailPage({ params }: { params: { id: str
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <Button asChild variant="outline" className="h-11 min-h-11">
+            <a href={absoluteUrl(`/${business.slug}/store`)} target="_blank" rel="noopener noreferrer">
+              <ShoppingBag className="h-3.5 w-3.5" /> Open store
+            </a>
+          </Button>
+          <Button asChild variant="outline" className="h-11 min-h-11">
+            <a href={`/api/businesses/${business.id}/store/poster`}>Store poster</a>
+          </Button>
           <Button asChild variant="outline" size="sm">
             <a href={absoluteUrl(`/r/${business.slug}`)} target="_blank" rel="noopener noreferrer">
               <ExternalLink className="h-3.5 w-3.5" /> View page
@@ -144,6 +152,32 @@ export default async function BusinessDetailPage({ params }: { params: { id: str
               <div>
                 <div className="font-semibold">QR codes</div>
                 <div className="text-xs text-muted-foreground">{business._count.qrCodes} active</div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href={`/dashboard/businesses/${business.id}/store`}>
+          <Card className="hover:shadow-card transition cursor-pointer">
+            <CardContent className="p-5 flex items-start gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
+                <ShoppingBag className="h-5 w-5" />
+              </span>
+              <div>
+                <div className="font-semibold">Store settings</div>
+                <div className="text-xs text-muted-foreground">Hours, delivery, packing, and GST</div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href={`/dashboard/businesses/${business.id}/offers`}>
+          <Card className="hover:shadow-card transition cursor-pointer">
+            <CardContent className="p-5 flex items-start gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-rose-50 text-rose-700">
+                <Ticket className="h-5 w-5" />
+              </span>
+              <div>
+                <div className="font-semibold">Offers</div>
+                <div className="text-xs text-muted-foreground">Coupons and banners for this store</div>
               </div>
             </CardContent>
           </Card>

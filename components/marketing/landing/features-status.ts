@@ -11,9 +11,9 @@ export const LIVE = {
   alerts: true,
   tapPage: false,
   themes: false,
-  whatsappStore: false,
+  whatsappStore: true,
   nfc: false,
-  crm: false,
+  crm: true,
   loyalty: false
 } as const;
 

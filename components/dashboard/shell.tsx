@@ -21,7 +21,8 @@ import {
   Plus,
   ShieldCheck,
   LifeBuoy,
-  ShoppingBag
+  ShoppingBag,
+  Users
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { VerifyEmailBanner } from "@/components/dashboard/verify-email-banner";
@@ -80,6 +81,7 @@ const nav = [
   { href: "/dashboard/feedback", label: "Feedback", icon: MessageSquare, badge: true },
   { href: "/dashboard/qr-codes", label: "QR Codes", icon: QrCode },
   { href: "/dashboard/orders", label: "Orders", icon: ShoppingBag },
+  { href: "/dashboard/customers", label: "Customers", icon: Users },
   { href: "/dashboard/ai", label: "AI Reviews", icon: Sparkles },
   { href: "/dashboard/campaigns", label: "Campaigns", icon: Send },
   { href: "/dashboard/billing", label: "Billing", icon: CreditCard },

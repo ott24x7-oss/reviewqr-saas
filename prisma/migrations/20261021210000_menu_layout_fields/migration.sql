@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "MenuItem" ADD COLUMN "brand" TEXT NOT NULL DEFAULT '';
+ALTER TABLE "MenuItem" ADD COLUMN "photos" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];
+ALTER TABLE "MenuItem" ADD COLUMN "durationMinutes" INTEGER;
