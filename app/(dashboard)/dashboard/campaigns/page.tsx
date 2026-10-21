@@ -58,6 +58,10 @@ export default async function CampaignsPage() {
             <code className="bg-secondary px-1 rounded">{"{{businessName}}"}</code>{" "}
             <code className="bg-secondary px-1 rounded">{"{{reviewUrl}}"}</code>
           </p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Rewards, coupons, and loyalty stamps may be tied only to private feedback or a visit.
+            Never offer them in exchange for a public review.
+          </p>
         </CardContent>
       </Card>
 

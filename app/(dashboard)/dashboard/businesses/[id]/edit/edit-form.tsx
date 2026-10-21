@@ -276,6 +276,10 @@ export function EditBusinessForm({ initial }: { initial: Init }) {
               </div>
             </>
           )}
+          <p className="text-sm text-muted-foreground">
+            Rewards, coupons, and loyalty stamps may be tied only to private feedback or a visit.
+            Never offer them in exchange for a public review.
+          </p>
           <div className="space-y-1.5">
             <Label htmlFor="whatsappNumber">WhatsApp alert number</Label>
             <Input

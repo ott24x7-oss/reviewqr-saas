@@ -17,6 +17,17 @@ export default async function SettingsPage() {
         <p className="text-sm text-muted-foreground">Account, notifications, and white-label</p>
       </div>
 
+      <Card>
+        <CardHeader>
+          <CardTitle>Rewards</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            Rewards, coupons, and loyalty stamps may be tied only to private feedback or a visit.
+            Never offer them in exchange for a public review.
+          </p>
+        </CardContent>
+      </Card>
       <SettingsForm
         user={{
           id: user.id,

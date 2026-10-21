@@ -42,9 +42,9 @@ export default async function BusinessAiPage({ params }: { params: { id: string 
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold font-display">AI Reviews</h1>
         <p className="text-sm text-muted-foreground">
-          When a customer taps 4–5★, AI asks a couple of quick questions, then suggests ready-to-post
-          Google reviews tailored to your business — each with a Copy button. Give the AI good context
-          below so the questions and reviews sound right.
+          A customer writes their own words first. AI can suggest a cleaner version they edit and
+          copy. Nothing is posted for them. A short description of what you offer keeps that cleanup
+          closer to the visit.
         </p>
       </div>
 
