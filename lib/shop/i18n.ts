@@ -27,6 +27,9 @@ const STRINGS = {
     hindi: "हिंदी",
     english: "English",
     save: "Save cart",
+    pay: "Pay now",
+    orders: "Your orders",
+    prepaid: "Prepaid. Cash on delivery stays off unless the shop allows an advance.",
     mrp: "MRP",
     off: "off"
   },
@@ -56,6 +59,9 @@ const STRINGS = {
     hindi: "हिंदी",
     english: "English",
     save: "कार्ट सहेजें",
+    pay: "अभी भुगतान करें",
+    orders: "आपके ऑर्डर",
+    prepaid: "भुगतान पहले। कैश ऑन डिलीवरी तब तक बंद है जब तक दुकान अग्रिम की अनुमति न दे।",
     mrp: "एमआरपी",
     off: "छूट"
   }

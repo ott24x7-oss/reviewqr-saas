@@ -71,7 +71,10 @@ export type AuditAction =
   | "device.uid"
   | "print.batch"
   | "catalog.update"
-  | "settings.shipping.update";
+  | "settings.shipping.update"
+  | "settings.shop.update"
+  | "shop.order.pay"
+  | "shop.order.move";
 
 export async function logAudit(opts: {
   userId?: string;

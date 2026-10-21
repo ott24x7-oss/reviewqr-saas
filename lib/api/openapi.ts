@@ -265,6 +265,19 @@ registry.registerPath({
 
 registry.registerPath({
   method: "post",
+  path: "/api/v1/shop/checkout",
+  summary: "Pay the shop cart through YouPI, or a non-production stub",
+  security: [{ bearerAuth: [] }],
+  responses: {
+    200: { description: "Checkout" },
+    400: validation,
+    401: unauthorized,
+    429: rateLimit
+  }
+});
+
+registry.registerPath({
+  method: "post",
   path: "/api/v1/shop/estimate",
   summary: "Pincode serviceability and the cheapest mock or live rate",
   security: [{ bearerAuth: [] }],

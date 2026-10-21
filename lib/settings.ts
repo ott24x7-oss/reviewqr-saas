@@ -6,6 +6,7 @@
 import { prisma } from "./db";
 import type { SubscriptionTier } from "@prisma/client";
 import { encryptSecret, decryptSecret } from "./crypto";
+import { normalizeShopCheckout, shopCheckoutError, type ShopCheckoutConfig } from "./shop/charge";
 import { DEFAULT_SHIPPING, pickupError, presetError, type ShippingConfig } from "./shop/shipping";
 
 const TTL_MS = 30_000;
@@ -19,7 +20,8 @@ export const SETTING_KEYS = {
   site: "site",
   turnstile: "turnstile",
   ai: "ai",
-  shipping: "shipping"
+  shipping: "shipping",
+  shop: "shop"
 } as const;
 
 // Which fields inside each settings blob are secrets encrypted at rest.
@@ -508,6 +510,17 @@ export async function setShippingConfig(value: ShippingConfig, by?: string) {
   const pickupProblem = pickupError(value.pickup);
   if (pickupProblem) throw new Error(pickupProblem);
   await writeKey(SETTING_KEYS.shipping, value, by);
+}
+
+export async function getShopCheckoutConfig(): Promise<ShopCheckoutConfig> {
+  const stored = await readKey<Partial<ShopCheckoutConfig>>(SETTING_KEYS.shop, {});
+  return normalizeShopCheckout(stored);
+}
+
+export async function setShopCheckoutConfig(value: ShopCheckoutConfig, by?: string) {
+  const problem = shopCheckoutError(value);
+  if (problem) throw new Error(problem);
+  await writeKey(SETTING_KEYS.shop, normalizeShopCheckout(value), by);
 }
 
 /* ============== Pricing ============== */

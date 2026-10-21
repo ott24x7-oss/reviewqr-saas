@@ -81,30 +81,49 @@ export function CartEditor() {
     setCart((current) => (current ? { ...current, ...partial } : current));
   }
 
+  async function persist() {
+    if (!cart) return false;
+    const response = await fetch("/api/v1/shop/cart", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        businessId: cart.businessId,
+        couponCode: cart.couponCode,
+        referralCode: cart.referralCode,
+        buyerGstin: cart.buyerGstin,
+        buyerLegalName: cart.buyerLegalName,
+        addressId: cart.addressId,
+        lines: cart.lines.filter((line) => line.sku).map((line) => ({ sku: line.sku, qty: line.qty, design: line.design }))
+      })
+    });
+    const payload = (await response.json()) as { data?: CartView; error?: { message?: string } };
+    if (!response.ok || !payload.data) throw new Error(payload.error?.message || "Could not save the cart");
+    setCart(payload.data);
+    return true;
+  }
+
   async function save() {
-    if (!cart) return;
     setSaving(true);
     try {
-      const response = await fetch("/api/v1/shop/cart", {
-        method: "PUT",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          businessId: cart.businessId,
-          couponCode: cart.couponCode,
-          referralCode: cart.referralCode,
-          buyerGstin: cart.buyerGstin,
-          buyerLegalName: cart.buyerLegalName,
-          addressId: cart.addressId,
-          lines: cart.lines.filter((line) => line.sku).map((line) => ({ sku: line.sku, qty: line.qty, design: line.design }))
-        })
-      });
-      const payload = (await response.json()) as { data?: CartView; error?: { message?: string } };
-      if (!response.ok || !payload.data) throw new Error(payload.error?.message || "Could not save the cart");
-      setCart(payload.data);
+      await persist();
       toast.success(copy.save);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not save the cart");
     } finally {
+      setSaving(false);
+    }
+  }
+
+  async function pay() {
+    setSaving(true);
+    try {
+      await persist();
+      const response = await fetch("/api/v1/shop/checkout", { method: "POST" });
+      const payload = (await response.json()) as { data?: { orderId: string; checkoutUrl?: string | null }; error?: { message?: string } };
+      if (!response.ok || !payload.data) throw new Error(payload.error?.message || "Could not start payment");
+      window.location.href = payload.data.checkoutUrl || `/dashboard/shop/orders/${payload.data.orderId}`;
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not start payment");
       setSaving(false);
     }
   }
@@ -129,7 +148,10 @@ export function CartEditor() {
   return (
     <div className="mx-auto max-w-2xl space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <Link href="/dashboard/shop" className="text-sm text-muted-ink">{copy.shop}</Link>
+        <div className="flex gap-3 text-sm">
+          <Link href="/dashboard/shop" className="text-muted-ink">{copy.shop}</Link>
+          <Link href="/dashboard/shop/orders" className="font-semibold text-ink">{copy.orders}</Link>
+        </div>
         <ShopLangToggle lang={lang} choose={choose} />
       </div>
       <h1 className="font-display text-2xl font-bold text-ink">{copy.cart}</h1>
@@ -307,7 +329,11 @@ export function CartEditor() {
         ) : (
           <p className="text-sm text-amber-800">{cart.quote.error}</p>
         )}
-        <Button type="button" className="rounded-full bg-ink text-white hover:bg-ink/90" onClick={save} disabled={saving}>{copy.save}</Button>
+        <p className="text-sm text-muted-ink">{copy.prepaid}</p>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="outline" className="rounded-full" onClick={save} disabled={saving}>{copy.save}</Button>
+          <Button type="button" className="rounded-full bg-ink text-white hover:bg-ink/90" onClick={pay} disabled={saving || cart.lines.length === 0}>{copy.pay}</Button>
+        </div>
       </section>
     </div>
   );

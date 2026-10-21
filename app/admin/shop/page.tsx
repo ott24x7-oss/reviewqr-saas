@@ -1,4 +1,6 @@
+import { ShopCheckoutSettings } from "@/components/admin/shop-checkout-settings";
 import { requireAdminPage } from "@/lib/admin";
+import { getShopCheckoutConfig } from "@/lib/settings";
 import { isLowStock } from "@/lib/shop/catalog";
 import { listCatalog } from "@/lib/shop/catalog-store";
 import { CatalogBoard } from "./catalog-board";
@@ -7,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminShopPage() {
   await requireAdminPage();
-  const products = await listCatalog();
+  const [products, checkout] = await Promise.all([listCatalog(), getShopCheckoutConfig()]);
   const low = products.flatMap((product) =>
     product.variants.filter((variant) => variant.active && isLowStock(variant.stock, variant.lowStockAt))
   );
@@ -19,6 +21,7 @@ export default async function AdminShopPage() {
           Hardware owners buy from ReviewQR. Prices are GST-inclusive. {low.length} variant{low.length === 1 ? "" : "s"} at or below the low-stock level.
         </p>
       </div>
+      <ShopCheckoutSettings codEnabled={checkout.codEnabled} codAdvancePercent={checkout.codAdvancePercent} />
       <CatalogBoard
         products={products.map((product) => ({
           id: product.id,

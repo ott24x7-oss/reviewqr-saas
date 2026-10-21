@@ -93,6 +93,7 @@ model User {
   shippingAddresses ShippingAddress[]
   referralCodes   ReferralCode[]
   shopCart        ShopCart?
+  shopOrders      ShopOrder[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -271,6 +272,7 @@ model Business {
   coupons      Coupon[]
   offerBanners OfferBanner[]
   devices      Device[]
+  shopOrders   ShopOrder[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1232,6 +1234,7 @@ model CatalogVariant {
   // Digital SKUs (the Founder plan) do not ship and may use a zero box.
   ships      Boolean        @default(true)
   cartLines  ShopCartLine[]
+  orderLines ShopOrderLine[]
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
 
@@ -1316,6 +1319,118 @@ model ShippingAddress {
   updatedAt DateTime @updatedAt
 
   @@index([userId])
+}
+
+// A ReviewQR shop order. Plan payments stay on Payment. This row is the hardware or bundle sale.
+enum ShopOrderStatus {
+  PENDING_PAYMENT
+  PAID
+  PROOF_SENT
+  CHANGES_REQUESTED
+  APPROVED
+  PRINTING
+  NFC_WRITTEN
+  PACKED
+  PICKUP_SCHEDULED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  RTO
+  REPRINT
+}
+
+enum ShopPayStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+model ShopOrder {
+  id                String          @id @default(cuid())
+  userId            String
+  user              User            @relation(fields: [userId], references: [id], onDelete: Restrict)
+  businessId        String?
+  business          Business?       @relation(fields: [businessId], references: [id], onDelete: SetNull)
+  status            ShopOrderStatus @default(PENDING_PAYMENT)
+  paymentStatus     ShopPayStatus   @default(PENDING)
+  subtotalPaise     Int
+  discountPaise     Int
+  totalPaise        Int
+  taxablePaise      Int
+  cgstPaise         Int
+  sgstPaise         Int
+  igstPaise         Int
+  advancePaise      Int
+  balancePaise      Int
+  cod               Boolean         @default(false)
+  couponCode        String?
+  referralCode      String?
+  buyerGstin        String?
+  buyerLegalName    String?
+  buyerState        String?
+  sellerName        String?
+  sellerGstin       String?
+  sellerState       String?
+  addressJson       Json?
+  providerPaymentId String?         @unique
+  checkoutUrl       String?         @db.Text
+  utr               String?
+  verifiedVia       String?
+  invoiceNumber     String?         @unique
+  invoiceIssuedAt   DateTime?
+  paidAt            DateTime?
+  fingerprint       String?         @db.Text
+  lines             ShopOrderLine[]
+  deliveries        ShopPaymentDelivery[]
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([businessId])
+}
+
+model ShopOrderLine {
+  id               String            @id @default(cuid())
+  orderId          String
+  order            ShopOrder         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variantId        String?
+  variant          CatalogVariant?   @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  sku              String
+  name             String
+  qty              Int
+  unitPaise        Int
+  hsn              String
+  gstPercent       Int
+  discountPaise    Int
+  netPaise         Int
+  taxablePaise     Int
+  cgstPaise        Int
+  sgstPaise        Int
+  igstPaise        Int
+  ships            Boolean
+  needsDesign      Boolean
+  needsNfc         Boolean
+  weightGrams      Int
+  includedTier     SubscriptionTier?
+  includedMonths   Int?
+  includedLifetime Boolean           @default(false)
+  design           Json?
+  createdAt        DateTime          @default(now())
+
+  @@index([orderId])
+  @@index([variantId])
+}
+
+// One gateway delivery may settle a shop order once. Plan deliveries stay on PaymentDelivery.
+model ShopPaymentDelivery {
+  id         String    @id @default(cuid())
+  deliveryId String    @unique
+  orderId    String
+  order      ShopOrder @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  createdAt  DateTime  @default(now())
 }
 
 // Singleton: admin-overridable branding for the WatShop Review *platform*

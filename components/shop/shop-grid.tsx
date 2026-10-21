@@ -19,7 +19,11 @@ export function ShopGrid({ products }: { products: ShopProduct[] }) {
           <h1 className="font-display text-2xl font-bold text-ink sm:text-3xl">{copy.shop}</h1>
           <p className="text-sm text-muted-ink">{copy.priceNote}</p>
         </div>
-        <ShopLangToggle lang={lang} choose={choose} />
+        <div className="flex items-center gap-3">
+          <Link href="/dashboard/shop/orders" className="text-sm font-semibold text-ink">{copy.orders}</Link>
+          <Link href="/dashboard/shop/cart" className="text-sm font-semibold text-ink">{copy.cart}</Link>
+          <ShopLangToggle lang={lang} choose={choose} />
+        </div>
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {products.map((product) => {

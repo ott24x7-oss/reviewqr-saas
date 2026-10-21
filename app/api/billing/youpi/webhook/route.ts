@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { activateCompletedPayment } from "@/lib/subscription";
+import { settleShopYoupiWebhook } from "@/lib/shop/youpi-settle";
 import {
   getYoupiConfig,
   verifyYoupiWebhook,
@@ -27,6 +28,12 @@ export async function POST(req: NextRequest) {
   const deliveryId = req.headers.get("x-gateway-delivery-id") || "";
   if (!deliveryId) return NextResponse.json({ error: "Missing delivery id" }, { status: 400 });
 
+  const [planDelivery, shopDelivery] = await Promise.all([
+    prisma.paymentDelivery.findUnique({ where: { deliveryId } }),
+    prisma.shopPaymentDelivery.findUnique({ where: { deliveryId } })
+  ]);
+  if (planDelivery || shopDelivery) return NextResponse.json({ ok: true, duplicate: true });
+
   let event: any;
   try {
     event = JSON.parse(rawBody);
@@ -38,7 +45,15 @@ export async function POST(req: NextRequest) {
   const payment = orderId
     ? await prisma.payment.findUnique({ where: { id: orderId } })
     : null;
-  if (!payment) return NextResponse.json({ error: "Unknown order" }, { status: 404 });
+  if (!payment) {
+    const settled = await settleShopYoupiWebhook({
+      orderId,
+      deliveryId,
+      gatewayPaymentId: String(event.paymentId || ""),
+      eventUtr: event.utr || null
+    });
+    return NextResponse.json(settled.body, { status: settled.status });
+  }
 
   const alreadyDelivered = await prisma.paymentDelivery.findUnique({ where: { deliveryId } });
   if (alreadyDelivered) return NextResponse.json({ ok: true, duplicate: true });
