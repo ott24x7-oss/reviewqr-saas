@@ -15,71 +15,30 @@ import {
   Lock
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { THEME_PRESETS } from "@/lib/tap/themes";
 
 /* ───────────── Linktree-style tap page ───────────── */
 export type TapTheme = {
   name: string;
-  bg: string;
-  card: string;
+  background: string;
   text: string;
   sub: string;
   primary: string;
   primaryText: string;
-  button: string;
+  buttonBg: string;
+  buttonText: string;
 };
 
-export const TAP_THEMES: TapTheme[] = [
-  {
-    name: "Fresh",
-    bg: "bg-gradient-to-b from-emerald-50 to-white",
-    card: "bg-white",
-    text: "text-slate-900",
-    sub: "text-slate-500",
-    primary: "bg-emerald-500",
-    primaryText: "text-white",
-    button: "bg-white border border-slate-200 text-slate-800"
-  },
-  {
-    name: "Dark luxe",
-    bg: "bg-gradient-to-b from-slate-950 to-slate-800",
-    card: "bg-slate-800",
-    text: "text-amber-100",
-    sub: "text-slate-400",
-    primary: "bg-amber-400",
-    primaryText: "text-slate-950",
-    button: "bg-white/5 border border-amber-200/20 text-amber-50"
-  },
-  {
-    name: "Café warm",
-    bg: "bg-gradient-to-b from-orange-100 to-amber-50",
-    card: "bg-white",
-    text: "text-stone-900",
-    sub: "text-stone-500",
-    primary: "bg-orange-700",
-    primaryText: "text-white",
-    button: "bg-white/80 border border-orange-200 text-stone-800"
-  },
-  {
-    name: "Royal",
-    bg: "bg-gradient-to-b from-rose-950 to-red-900",
-    card: "bg-rose-900",
-    text: "text-yellow-100",
-    sub: "text-rose-200",
-    primary: "bg-yellow-400",
-    primaryText: "text-rose-950",
-    button: "bg-white/10 border border-yellow-300/25 text-yellow-50"
-  },
-  {
-    name: "Ocean",
-    bg: "bg-gradient-to-b from-sky-500 to-indigo-600",
-    card: "bg-white/10",
-    text: "text-white",
-    sub: "text-sky-100",
-    primary: "bg-white",
-    primaryText: "text-indigo-700",
-    button: "bg-white/15 border border-white/25 text-white"
-  }
-];
+export const TAP_THEMES: TapTheme[] = THEME_PRESETS.map((theme) => ({
+  name: theme.name,
+  background: theme.tokens.background,
+  text: theme.tokens.ink,
+  sub: theme.tokens.muted,
+  primary: theme.tokens.buttonFill || theme.tokens.buttonBg,
+  primaryText: theme.tokens.buttonInk,
+  buttonBg: theme.tokens.buttons === "glass" ? "color-mix(in srgb, white 22%, transparent)" : theme.tokens.bg,
+  buttonText: theme.tokens.buttons === "glass" ? theme.tokens.buttonBg : theme.tokens.ink
+}));
 
 const TAP_LINKS = [
   { icon: Star, label: "Review us on Google" },
@@ -89,34 +48,34 @@ const TAP_LINKS = [
 
 export function TapPageScreen({ theme = TAP_THEMES[0] }: { theme?: TapTheme }) {
   return (
-    <div className={cn("flex h-full flex-col items-center px-4 pb-4 pt-10 transition-colors duration-500", theme.bg)}>
-      <div className={cn("flex h-16 w-16 items-center justify-center rounded-2xl text-2xl font-bold shadow-md", theme.primary, theme.primaryText)}>
+    <div className="flex h-full flex-col items-center px-4 pb-4 pt-10 transition-colors duration-500" style={{ background: theme.background, color: theme.text }}>
+      <div className="flex h-16 w-16 items-center justify-center rounded-2xl text-2xl font-bold shadow-md" style={{ background: theme.primary, color: theme.primaryText }}>
         S
       </div>
-      <p className={cn("mt-2 text-base font-bold", theme.text)}>Spice Junction Café</p>
-      <p className={cn("text-xs", theme.sub)}>Dosa · Coffee · Snacks</p>
-      <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-600">
-        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Open now
+      <p className="mt-2 text-base font-bold">Spice Junction Café</p>
+      <p className="text-xs" style={{ color: theme.sub }}>Dosa · Coffee · Snacks</p>
+      <p className="mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: "color-mix(in srgb, currentColor 12%, transparent)" }}>
+        <span className="h-1.5 w-1.5 rounded-full bg-current" /> Open now
       </p>
 
       <div className="mt-4 w-full space-y-2">
-        <div className={cn("flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold shadow-sm", theme.primary, theme.primaryText)}>
+        <div className="flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold shadow-sm" style={{ background: theme.primary, color: theme.primaryText }}>
           <Utensils className="h-4 w-4" /> View menu &amp; order
         </div>
         {TAP_LINKS.map((l) => (
-          <div key={l.label} className={cn("flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-medium", theme.button)}>
+          <div key={l.label} className="flex items-center justify-center gap-2 rounded-xl border py-3 text-sm font-medium" style={{ background: theme.buttonBg, color: theme.buttonText, borderColor: "color-mix(in srgb, currentColor 25%, transparent)" }}>
             <l.icon className="h-4 w-4" /> {l.label}
           </div>
         ))}
       </div>
 
-      <div className={cn("mt-4 flex gap-4", theme.sub)}>
+      <div className="mt-4 flex gap-4" style={{ color: theme.sub }}>
         <PhoneIcon className="h-5 w-5" />
         <MapPin className="h-5 w-5" />
         <Instagram className="h-5 w-5" />
         <Wifi className="h-5 w-5" />
       </div>
-      <p className={cn("mt-auto text-[10px]", theme.sub)}>Powered by ReviewQR</p>
+      <p className="mt-auto text-[10px]" style={{ color: theme.sub }}>Powered by ReviewQR</p>
     </div>
   );
 }
@@ -140,7 +99,7 @@ export function StoreScreen() {
               key={c}
               className={cn(
                 "shrink-0 rounded-full px-2.5 py-1",
-                i === 0 ? "bg-emerald-500 text-white" : "bg-white text-slate-600 border border-slate-200"
+                i === 0 ? "bg-emerald-800 text-white" : "bg-white text-slate-700 border border-slate-200"
               )}
             >
               {c}
@@ -159,25 +118,26 @@ export function StoreScreen() {
                     "inline-block h-2.5 w-2.5 shrink-0 rounded-[3px] border",
                     it.veg ? "border-emerald-600 bg-emerald-500/30" : "border-red-600 bg-red-500/30"
                   )}
+                  role="img"
                   aria-label={it.veg ? "Veg" : "Non-veg"}
                 />
                 {it.name}
               </p>
-              <p className="text-xs text-slate-500">₹{it.price}</p>
+              <p className="marketing-rupee text-xs text-slate-500">₹{it.price}</p>
             </div>
             {it.qty > 0 ? (
               <div className="flex shrink-0 items-center gap-1 rounded-lg bg-emerald-50 px-1 py-1 text-xs font-bold text-emerald-700">
                 <Minus className="h-3 w-3" /> {it.qty} <Plus className="h-3 w-3" />
               </div>
             ) : (
-              <span className="shrink-0 rounded-lg border border-emerald-500 px-2 py-1 text-xs font-bold text-emerald-600">ADD</span>
+              <span className="shrink-0 rounded-lg border border-emerald-800 px-2 py-1 text-xs font-bold text-emerald-800">ADD</span>
             )}
           </div>
         ))}
       </div>
-      <div className="m-3 flex items-center justify-between rounded-xl bg-emerald-600 px-3 py-3 text-white shadow-lg">
+      <div className="m-3 flex items-center justify-between rounded-xl bg-emerald-800 px-3 py-3 text-white shadow-lg">
         <span className="flex items-center gap-1.5 whitespace-nowrap text-[11px] font-semibold">
-          <ShoppingCart className="h-4 w-4" /> 4 · ₹320
+          <ShoppingCart className="h-4 w-4" /> 4 · <span className="marketing-rupee">₹320</span>
         </span>
         <span className="whitespace-nowrap text-[11px] font-bold">Order on WhatsApp →</span>
       </div>
@@ -189,11 +149,11 @@ export function WhatsAppOrderBubble({ className }: { className?: string }) {
   return (
     <div className={cn("w-[250px] rounded-2xl bg-[#e7ffdb] p-3 text-[12px] leading-relaxed text-slate-800 shadow-xl", className)}>
       <p className="font-bold">🧾 New order #1042</p>
-      <p>2 × Masala Dosa — ₹240</p>
-      <p>2 × Filter Coffee — ₹80</p>
-      <p className="mt-1 font-bold">Total: ₹320 · Table 4</p>
+      <p>2 × Masala Dosa — <span className="marketing-rupee">₹240</span></p>
+      <p>2 × Filter Coffee — <span className="marketing-rupee">₹80</span></p>
+      <p className="mt-1 font-bold">Total: <span className="marketing-rupee">₹320</span> · Table 4</p>
       <p className="text-emerald-700 underline">Pay by UPI: upi://pay?am=320</p>
-      <p className="mt-1 text-right text-[10px] text-slate-500">10:24 AM ✓✓</p>
+      <p className="mt-1 text-right text-[10px] text-slate-700">10:24 AM ✓✓</p>
     </div>
   );
 }
@@ -246,7 +206,9 @@ export function OrderToast({ className }: { className?: string }) {
         <CircleCheck className="h-4 w-4" />
       </span>
       <div>
-        <p className="text-xs font-bold text-slate-900">New order · ₹320</p>
+        <p className="text-xs font-bold text-slate-900">
+          New order · <span className="marketing-rupee">₹320</span>
+        </p>
         <p className="text-[11px] text-slate-500">Table 4 · via NFC tap</p>
       </div>
     </div>

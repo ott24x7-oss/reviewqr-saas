@@ -224,7 +224,7 @@ export function TapPageShowcase() {
       sub="One link for everything. Change links any time from your phone; the printed QR and NFC never change."
       bullets={[
         "Unlimited buttons: menu, Google, Trustpilot, Zomato, Instagram, call, directions, UPI, Wi-Fi or any custom link",
-        "15+ premium themes, or build your own with your logo, colours, fonts and background",
+        "20 graphic themes, six of them on paid plans, or build your own with your logo, colours, fonts and background",
         "Drag to reorder, hide or schedule links — live preview while you edit",
         "Hindi and English, loads instantly even on slow 3G"
       ]}
@@ -364,11 +364,11 @@ export function ProductsShowcase() {
         title="Premium stands your customers will actually use."
         sub="Designed with your logo and colours, printed, NFC-programmed and delivered. Customers can scan the QR, or simply tap their phone."
       />
-      <div className="mt-10 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        {PRODUCTS.map((p) => (
-          <div key={p.name} className="flex flex-col rounded-2xl bg-white/80 p-4 sm:p-5 ring-1 ring-white">
-            <div className="flex h-32 items-center justify-center rounded-xl bg-gradient-to-b from-slate-100 to-slate-50">{p.art}</div>
-            <h3 className="mt-4 text-sm sm:text-base font-bold text-ink">{p.name}</h3>
+      <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {PRODUCTS.map((p, index) => (
+          <div key={p.name} className="landing-tile" data-tone={["sage", "blush", "sky", "sand"][index]}>
+            <div className="flex min-h-44 items-center justify-center">{p.art}</div>
+            <h3 className="mt-4 text-xl font-bold text-ink">{p.name}</h3>
             <p className="text-xs sm:text-sm text-muted-ink">{p.sub}</p>
             <div className="mt-3 flex flex-wrap gap-1.5">
               {p.tags.map((t) => (
@@ -480,15 +480,15 @@ export function Comparison() {
   return (
     <SectionShell id="compare">
       <SectionHeading
-        eyebrow="Why pay more than ₹200?"
+        eyebrow={<span className="marketing-rupee">Why pay more than ₹200?</span>}
         title="A normal QR sticker vs. ReviewQR"
-        sub="A ₹200 sticker opens one link. ReviewQR runs your counter."
+        sub={<span className="marketing-rupee">A ₹200 sticker opens one link. ReviewQR runs your counter.</span>}
       />
       <div className="mx-auto mt-8 max-w-2xl overflow-hidden rounded-2xl bg-white/90 ring-1 ring-white">
         <div className="grid grid-cols-[1fr_72px_88px] sm:grid-cols-[1fr_120px_120px] items-center border-b border-slate-100 px-4 py-3 text-xs sm:text-sm font-bold text-ink">
           <span>Feature</span>
           <span className="text-center text-muted-ink">QR sticker</span>
-          <span className="text-center text-primary-700">ReviewQR</span>
+          <span className="text-center text-primary-800">ReviewQR</span>
         </div>
         {ROWS.map(([label, a, b]) => (
           <div
@@ -569,7 +569,7 @@ export function FaqV2() {
 /* ─────────────────── 9. Final CTA ─────────────────── */
 export function CtaV2() {
   return (
-    <section className="overflow-hidden rounded-[1.75rem] sm:rounded-[2rem] bg-grad-brand px-5 py-12 text-center text-white shadow-[0_18px_50px_-20px_rgba(30,41,59,0.4)] sm:px-10 sm:py-16">
+    <section className="marketing-ink-band px-5 py-20 text-center sm:px-10 sm:py-28">
       <h2 className="mx-auto max-w-2xl text-[1.75rem] leading-tight sm:text-4xl font-extrabold tracking-tight text-balance">
         Give your shop a digital counter today.
       </h2>

@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  FREE_THEME_ID,
   THEME_FONTS,
   buildBackground,
   findTheme,
@@ -30,11 +31,20 @@ export type PublishedTheme = {
     entrance?: "none" | "fade" | "rise";
     radius?: string;
     background?: string;
+    buttonFill?: string | null;
   } | null;
   seasonal?: { from?: string; to?: string } | null;
 };
 
 const BUTTONS: ButtonStyle[] = ["filled", "outline", "soft", "glass", "pill", "square", "raised"];
+const BACKGROUND_TYPES = ["preset", "solid", "gradient", "image", "pattern", "video"];
+
+function backgroundKind(value: string | undefined, presetBackground: string) {
+  if (!value || value === presetBackground) return "preset";
+  if (value.includes("url(")) return "image";
+  if (value.includes("gradient")) return "gradient";
+  return "solid";
+}
 const RADII = ["999px", "24px", "16px", "12px", "0px"];
 
 export function ThemeEditor({
@@ -56,7 +66,7 @@ export function ThemeEditor({
 }) {
   const router = useRouter();
   const custom = published.customTokens || {};
-  const initial = findTheme(String(published.theme || "minimal"), presets) || presets[0];
+  const initial = findTheme(String(published.theme || "minimal"), presets) || presets.find((theme) => theme.id === FREE_THEME_ID) || presets[0];
   const [themeId, setThemeId] = React.useState(initial.id);
   const [bg, setBg] = React.useState(custom.bg || initial.tokens.bg);
   const [ink, setInk] = React.useState(custom.ink || initial.tokens.ink);
@@ -67,7 +77,7 @@ export function ThemeEditor({
   const [avatar, setAvatar] = React.useState(custom.avatar || initial.tokens.avatar);
   const [entrance, setEntrance] = React.useState(custom.entrance || initial.tokens.entrance);
   const [radius, setRadius] = React.useState(custom.radius || initial.tokens.radius);
-  const [backgroundType, setBackgroundType] = React.useState("solid");
+  const [backgroundType, setBackgroundType] = React.useState(backgroundKind(custom.background, initial.tokens.background));
   const [backgroundTo, setBackgroundTo] = React.useState("#f4efe6");
   const [imageUrl, setImageUrl] = React.useState("");
   const [video, setVideo] = React.useState("");
@@ -100,6 +110,9 @@ export function ThemeEditor({
 
   const selected = findTheme(themeId, presets) || presets[0];
   const locked = !!selected.premium && !paid;
+  const graphic = backgroundType === "preset";
+  const buttonsUntouched =
+    buttonBg === selected.tokens.buttonBg && buttonInk === selected.tokens.buttonInk && buttons === selected.tokens.buttons;
   const style = tokensToStyle({
     ...selected.tokens,
     bg,
@@ -111,12 +124,15 @@ export function ThemeEditor({
     avatar,
     entrance,
     radius,
-    background: buildBackground({
-      type: backgroundType,
-      bg,
-      to: backgroundTo,
-      imageUrl
-    })
+    background: graphic
+      ? selected.tokens.background
+      : buildBackground({
+          type: backgroundType,
+          bg,
+          to: backgroundTo,
+          imageUrl
+        }),
+    buttonFill: graphic && buttonsUntouched ? selected.tokens.buttonFill : undefined
   });
 
   function pick(theme: ThemePreset) {
@@ -130,6 +146,7 @@ export function ThemeEditor({
     setAvatar(theme.tokens.avatar);
     setEntrance(theme.tokens.entrance);
     setRadius(theme.tokens.radius);
+    setBackgroundType("preset");
   }
 
   async function post(body: Record<string, unknown>) {
@@ -143,10 +160,9 @@ export function ThemeEditor({
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error || "Could not save the theme");
       if (body.action === "reset") {
-        pick(presets[0]);
+        pick(presets.find((theme) => theme.id === FREE_THEME_ID) || presets[0]);
         setSeasonalFrom("");
         setSeasonalTo("");
-        setBackgroundType("solid");
         setImageUrl("");
         setVideo("");
       }
@@ -208,20 +224,21 @@ export function ThemeEditor({
                   type="button"
                   onClick={() => pick(theme)}
                   aria-pressed={theme.id === themeId}
-                  className="min-h-11 rounded-full border px-3 py-2 text-left text-xs font-medium"
-                  style={{
-                    background: theme.tokens.bg,
-                    color: theme.tokens.ink,
-                    borderColor: theme.id === themeId ? theme.tokens.ink : "transparent"
-                  }}
+                  className="flex min-h-11 items-center gap-2 rounded-full border border-border bg-background px-2 py-1 text-left text-xs font-medium text-foreground"
+                  style={{ borderColor: theme.id === themeId ? theme.tokens.ink : undefined }}
                 >
+                  <span
+                    aria-hidden
+                    className="h-8 w-8 shrink-0 rounded-full border border-border"
+                    style={{ background: theme.tokens.background }}
+                  />
                   {theme.name}
                   {theme.premium ? " · Paid" : ""}
                 </button>
               ))}
             </div>
             {locked && (
-              <p className="text-sm text-muted-foreground">That theme is for paid plans. The public page stays on Minimal White.</p>
+              <p className="text-sm text-muted-foreground">That theme is for paid plans. The public page stays on Monochrome Luxe.</p>
             )}
             <div className="grid grid-cols-2 gap-3">
               <ColorField label="Background" value={bg} onChange={setBg} />
@@ -235,7 +252,7 @@ export function ThemeEditor({
               <SelectField label="Avatar" value={avatar} options={["circle", "rounded", "square"]} onChange={(value) => setAvatar(value as typeof avatar)} />
               <SelectField label="Entrance" value={entrance} options={["none", "fade", "rise"]} onChange={(value) => setEntrance(value as typeof entrance)} />
               <SelectField label="Radius" value={radius} options={RADII} onChange={setRadius} />
-              <SelectField label="Background type" value={backgroundType} options={["solid", "gradient", "image", "pattern", "video"]} onChange={setBackgroundType} />
+              <SelectField label="Background type" value={backgroundType} options={BACKGROUND_TYPES} onChange={setBackgroundType} />
             </div>
             {backgroundType === "gradient" && <ColorField label="Gradient end" value={backgroundTo} onChange={setBackgroundTo} />}
             {backgroundType === "image" && (

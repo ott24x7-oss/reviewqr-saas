@@ -226,7 +226,7 @@ async function main() {
   const demoPage = {
     bio: "Filter coffee, dosa, and a quiet corner in Indiranagar.",
     bioHi: "फ़िल्टर कॉफ़ी, डोसा, और एक शांत कोना।",
-    theme: "cafe",
+    theme: "coffee-house",
     links: [
       { key: "menu", type: "menu", labelEn: "View Menu", labelHi: "मेनू देखें", enabled: true, sort: 10, featured: true, url: "", emoji: "", schedule: null },
       { key: "order", type: "whatsapp_order", labelEn: "Order on WhatsApp", labelHi: "WhatsApp पर ऑर्डर", enabled: true, sort: 20, featured: true, url: "", emoji: "", schedule: null },
