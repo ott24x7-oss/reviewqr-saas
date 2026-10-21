@@ -20,6 +20,7 @@ enum UserRole {
   ADMIN
   AGENCY
   STAFF
+  AGENT
 }
 
 enum PushPlatform {
@@ -73,7 +74,8 @@ model User {
   razorpayCustomerId String?
   stripeCustomerId   String?
 
-  businesses  Business[]
+  businesses      Business[]
+  agentBusinesses Business[] @relation("BusinessAgent")
   sessions    Session[]
   accounts    Account[]
   payments    Payment[]
@@ -202,6 +204,8 @@ model Business {
   id              String  @id @default(cuid())
   ownerId         String
   owner           User    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  agentId         String?
+  agent           User?   @relation("BusinessAgent", fields: [agentId], references: [id], onDelete: SetNull)
   name            String
   slug            String  @unique
   industry        String?
@@ -268,6 +272,7 @@ model Business {
   updatedAt DateTime @updatedAt
 
   @@index([ownerId])
+  @@index([agentId])
   @@index([slug])
   @@index([customDomain])
 }

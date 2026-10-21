@@ -6,6 +6,7 @@ import { slugify } from "@/lib/utils";
 import { ownerLimitError } from "@/lib/entitlements";
 import { linksForNewBusiness } from "@/lib/tap/new-business";
 import { isReservedSlug } from "@/lib/tap/reserved-slugs";
+import { agentIdFor } from "@/lib/tenant";
 
 export async function POST(req: NextRequest) {
   const user = await requireUser().catch(() => null);
@@ -41,6 +42,7 @@ export async function POST(req: NextRequest) {
     const business = await tx.business.create({
       data: {
         ownerId: user.id,
+        agentId: agentIdFor(user),
         name: data.name,
         slug,
         industry: data.industry || null,

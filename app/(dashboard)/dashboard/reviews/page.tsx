@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { timeAgo } from "@/lib/utils";
+import { ownedOrAssignedWhere } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +20,7 @@ export default async function ReviewsPage({
   if (!user) redirect("/login");
 
   const businesses = await prisma.business.findMany({
-    where: { ownerId: user.id, archived: false },
+    where: ownedOrAssignedWhere(user.id),
     select: { id: true, name: true, slug: true }
   });
   const businessIds = businesses.map((b) => b.id);

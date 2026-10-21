@@ -5,13 +5,14 @@ import { businessSchema } from "@/lib/validations";
 import { slugify } from "@/lib/utils";
 import { ownerLimitError } from "@/lib/entitlements";
 import { attachTapDraft } from "@/lib/tap/new-business";
+import { agentIdFor, ownedOrAssignedWhere } from "@/lib/tenant";
 import { isReservedSlug } from "@/lib/tap/reserved-slugs";
 
 export async function GET() {
   const user = await requireUser().catch(() => null);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const businesses = await prisma.business.findMany({
-    where: { ownerId: user.id, archived: false },
+    where: ownedOrAssignedWhere(user.id),
     include: {
       _count: { select: { reviews: true, feedbacks: true, locations: true, qrCodes: true } }
     },
@@ -56,6 +57,7 @@ export async function POST(req: NextRequest) {
   const business = await prisma.business.create({
     data: {
       ownerId: user.id,
+      agentId: agentIdFor(user),
       name: data.name,
       slug,
       industry: data.industry || null,

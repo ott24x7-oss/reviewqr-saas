@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Send, MessageCircle, Mail, Plus } from "lucide-react";
 import { DEFAULT_TEMPLATES } from "@/lib/whatsapp";
 import { absoluteUrl, formatDate } from "@/lib/utils";
+import { ownedOrAssignedWhere } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +17,7 @@ export default async function CampaignsPage() {
   if (!user) redirect("/login");
 
   const businesses = await prisma.business.findMany({
-    where: { ownerId: user.id, archived: false },
+    where: ownedOrAssignedWhere(user.id),
     select: { id: true, name: true, slug: true },
     take: 20
   });

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { canonicalRedirect } from "@/lib/http/canonical";
+import { canAccessAdmin } from "@/lib/roles";
 
 /**
  * Login gate stays on /dashboard and /admin. Public QR links stay open.
@@ -37,7 +38,7 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (isAdmin && token.role !== "ADMIN") {
+  if (isAdmin && !canAccessAdmin(typeof token.role === "string" ? token.role : null)) {
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 

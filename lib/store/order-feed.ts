@@ -34,13 +34,14 @@ export async function loadOrderCards(userId: string, orderId?: string): Promise<
         select: {
           name: true,
           ownerId: true,
+          agentId: true,
           members: { where: { userId }, select: { role: true }, take: 1 }
         }
       }
     }
   });
   return orders.map((order) => {
-    const role = accessRole(order.business.ownerId, userId, order.business.members[0]?.role);
+    const role = accessRole(order.business.ownerId, userId, order.business.members[0]?.role, order.business.agentId);
     return toOrderCard(
       {
         id: order.id,

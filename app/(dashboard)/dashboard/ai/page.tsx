@@ -6,6 +6,7 @@ import { getAiConfig } from "@/lib/settings";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Sparkles, ArrowRight, AlertTriangle, CheckCircle2, Building2, Plus } from "lucide-react";
+import { ownedOrAssignedWhere } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,7 @@ export default async function DashboardAiPage() {
 
   const [businesses, ai] = await Promise.all([
     prisma.business.findMany({
-      where: { ownerId: user.id, archived: false },
+      where: ownedOrAssignedWhere(user.id),
       orderBy: { createdAt: "asc" },
       select: {
         id: true,

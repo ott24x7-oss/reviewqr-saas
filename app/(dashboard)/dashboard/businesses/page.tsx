@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { absoluteUrl, formatNumber } from "@/lib/utils";
+import { ownedOrAssignedWhere } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,7 @@ export default async function BusinessesPage() {
   if (!user) redirect("/login");
 
   const businesses = await prisma.business.findMany({
-    where: { ownerId: user.id, archived: false },
+    where: ownedOrAssignedWhere(user.id),
     include: {
       _count: { select: { reviews: true, locations: true, qrCodes: true } },
       reviews: { select: { rating: true } }

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { getAiConfig } from "@/lib/settings";
+import { ownedOrAssignedWhere } from "@/lib/tenant";
 import { AiReviewsClient } from "./ai-client";
 import { ArrowLeft } from "lucide-react";
 
@@ -13,7 +14,7 @@ export default async function BusinessAiPage({ params }: { params: { id: string 
   if (!user) redirect("/login");
 
   const business = await prisma.business.findFirst({
-    where: { id: params.id, ownerId: user.id, archived: false },
+    where: { id: params.id, ...ownedOrAssignedWhere(user.id) },
     select: {
       id: true,
       name: true,
