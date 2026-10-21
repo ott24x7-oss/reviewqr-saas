@@ -54,6 +54,10 @@ export function showPublicReviewLinks(input: {
  * A review counts as redirected only when the customer opened a public link.
  * Gating-on keeps the old analytics rule: a high rating with no written feedback.
  */
+export function draftWordCount(text: string) {
+  return text.trim().split(/\s+/).filter(Boolean).length;
+}
+
 export function appendHint(current: string, hint: string) {
   const next = hint.trim();
   if (!next) return current;

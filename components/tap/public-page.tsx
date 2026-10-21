@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { tapFontClass } from "@/components/brand/tap-font";
 import { getBrand } from "@/lib/brand";
 import { generateQrDataUrl } from "@/lib/qr";
-import { getTurnstileConfig } from "@/lib/settings";
+import { getAiConfig, getTurnstileConfig } from "@/lib/settings";
 import { recordQrScan } from "@/lib/scans";
 import { remindExpiredOwner } from "@/lib/tap/expiry-notice";
 import { tapText } from "@/lib/tap/i18n";
@@ -98,7 +98,11 @@ export async function PublicTap({
     );
   }
 
-  const turnstileSiteKey = (await getTurnstileConfig().catch(() => ({ siteKey: "" }))).siteKey || "";
+  const [turnstile, aiCfg] = await Promise.all([
+    getTurnstileConfig().catch(() => ({ siteKey: "" })),
+    getAiConfig().catch(() => ({ enabled: false, apiKey: "" }))
+  ]);
+  const turnstileSiteKey = turnstile.siteKey || "";
   const upiQr = await upiImages(view.links).catch(() => ({}));
   return (
     <div className={tapFontClass}>
@@ -122,6 +126,7 @@ export async function PublicTap({
         reviewLinks={orderedReviewTargets(record.business)}
         reviewGating={record.business.reviewGating === true}
         ratingThreshold={record.business.ratingThreshold || 4}
+        aiEnabled={aiCfg.enabled === true && !!aiCfg.apiKey && record.business.aiReviewsEnabled === true}
         {...themeProps}
       />
     </div>

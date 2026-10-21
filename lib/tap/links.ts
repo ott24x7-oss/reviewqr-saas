@@ -33,6 +33,7 @@ export type TapBusinessFields = {
   reviewPlatform?: string | null;
   reviewGating?: boolean;
   ratingThreshold?: number;
+  aiReviewsEnabled?: boolean;
   whatsappNumber: string | null;
   menuCount: number;
   published: unknown;

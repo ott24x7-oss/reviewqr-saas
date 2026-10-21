@@ -77,6 +77,7 @@ async function queryTap(code: string): Promise<TapRecord> {
     reviewPlatform: qr.business.reviewPlatform,
     reviewGating: qr.business.reviewGating,
     ratingThreshold: qr.business.ratingThreshold,
+    aiReviewsEnabled: qr.business.aiReviewsEnabled,
     whatsappNumber: qr.business.whatsappNumber,
     menuCount,
     published: tapPage?.published ?? null
@@ -166,6 +167,7 @@ async function queryBusinessPage(businessId: string): Promise<TapRecord> {
     reviewPlatform: business.reviewPlatform,
     reviewGating: business.reviewGating,
     ratingThreshold: business.ratingThreshold,
+    aiReviewsEnabled: business.aiReviewsEnabled,
     whatsappNumber: business.whatsappNumber,
     menuCount,
     published: tapPage?.published ?? null

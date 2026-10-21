@@ -5,6 +5,7 @@ import { Check, ChevronRight, Copy, Star } from "lucide-react";
 import { tapLang, tapText, type TapLang } from "@/lib/tap/i18n";
 import { splitLinks, type PublicLink } from "@/lib/tap/links";
 import { appendHint, showPublicReviewLinks, type PublicReviewTarget } from "@/lib/review-policy";
+import { PolishDraft } from "@/components/review/polish-draft";
 import { scanSource, type ScanSource } from "@/lib/tap/source";
 import { TapIcon } from "./tap-icons";
 import { HintChips } from "@/components/review/hint-chips";
@@ -29,6 +30,7 @@ export type TapExperienceProps = {
   reviewLinks?: PublicReviewTarget[];
   reviewGating?: boolean;
   ratingThreshold?: number;
+  aiEnabled?: boolean;
   themeStyle?: Record<string, string>;
   buttons?: string;
   avatar?: string;
@@ -188,6 +190,7 @@ export function TapExperience(props: TapExperienceProps) {
             reviewLinks={props.reviewLinks || []}
             reviewGating={props.reviewGating === true}
             ratingThreshold={props.ratingThreshold || 4}
+            aiEnabled={props.aiEnabled === true}
           />
         ) : null}
 
@@ -325,7 +328,8 @@ function FeedbackForm({
   turnstileSiteKey,
   reviewLinks,
   reviewGating,
-  ratingThreshold
+  ratingThreshold,
+  aiEnabled
 }: {
   lang: TapLang;
   code: string;
@@ -337,6 +341,7 @@ function FeedbackForm({
   reviewLinks: PublicReviewTarget[];
   reviewGating: boolean;
   ratingThreshold: number;
+  aiEnabled: boolean;
 }) {
   const [rating, setRating] = React.useState(0);
   const [message, setMessage] = React.useState("");
@@ -453,6 +458,7 @@ function FeedbackForm({
       <HintChips slug={slug} lang={lang} onInsert={(text) => setMessage((current) => appendHint(current, text))} />
       <label htmlFor="tap-feedback">What could we have done better?</label>
       <textarea id="tap-feedback" value={message} onChange={(e) => setMessage(e.target.value)} maxLength={2000} />
+      {aiEnabled ? <PolishDraft slug={slug} text={message} lang={lang} /> : null}
       <label htmlFor="tap-name">{lang === "hi" ? "नाम" : "Your name"}</label>
       <input id="tap-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} autoComplete="name" />
       <label htmlFor="tap-phone">{lang === "hi" ? "फोन" : "Phone"}</label>
