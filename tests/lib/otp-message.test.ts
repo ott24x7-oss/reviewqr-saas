@@ -1,5 +1,18 @@
 import { describe, expect, it, vi } from "vitest";
-import { deliverOtpCode, indiaE164, otpLoginMessage, type DeliverOtpDeps } from "../../lib/otp-message";
+import {
+  deliverOtpCode,
+  enforceOtpLimits,
+  indiaE164,
+  otpGateError,
+  otpIpLimits,
+  otpLoginMessage,
+  otpPhoneLimits,
+  otpWrongCodeError,
+  OTP_EXPIRED,
+  OTP_INVALID,
+  OTP_TOO_MANY,
+  type DeliverOtpDeps
+} from "../../lib/otp-message";
 
 function deps(over: Partial<DeliverOtpDeps> = {}): DeliverOtpDeps & {
   calls: string[];
@@ -121,5 +134,43 @@ describe("OTP delivery order", () => {
     const d = deps({ phone: "12" });
     await expect(deliverOtpCode(d)).resolves.toBe("none");
     expect(d.calls).toEqual([]);
+  });
+});
+
+describe("OTP limits and verify errors", () => {
+  it("keeps the old windows and adds the 15-minute cap and 30-second cooldown", () => {
+    expect(otpIpLimits("1.2.3.4", "login")).toEqual([
+      { key: "otp-req:1.2.3.4", limit: 8, windowSeconds: 600 },
+      { key: "otp-req-15:1.2.3.4", limit: 20, windowSeconds: 900 }
+    ]);
+    expect(otpIpLimits("1.2.3.4", "signup")[0]).toEqual({
+      key: "otp-signup:1.2.3.4",
+      limit: 8,
+      windowSeconds: 600
+    });
+    expect(otpPhoneLimits("9811111111")).toEqual([
+      { key: "otp-phone:9811111111", limit: 5, windowSeconds: 600 },
+      { key: "otp-phone-15:9811111111", limit: 5, windowSeconds: 900 },
+      { key: "otp-cooldown:9811111111", limit: 1, windowSeconds: 30 }
+    ]);
+  });
+
+  it("stops when a limit is used up", async () => {
+    const calls: string[] = [];
+    const result = await enforceOtpLimits(otpPhoneLimits("9811111111"), async (limit) => {
+      calls.push(limit.key);
+      return { ok: !limit.key.startsWith("otp-phone-15:") };
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.key).toBe("otp-phone-15:9811111111");
+    expect(calls).toEqual(["otp-phone:9811111111", "otp-phone-15:9811111111"]);
+  });
+
+  it("uses one invalid message for a missing code and separates expiry from the attempt cap", () => {
+    expect(otpGateError(null, 5)).toBe(OTP_INVALID);
+    expect(otpGateError({ expires: new Date(Date.now() - 1000), attempts: 0 }, 5)).toBe(OTP_EXPIRED);
+    expect(otpGateError({ expires: new Date(Date.now() + 60_000), attempts: 5 }, 5)).toBe(OTP_TOO_MANY);
+    expect(otpWrongCodeError(4, 5)).toBe(OTP_INVALID);
+    expect(otpWrongCodeError(5, 5)).toBe(OTP_TOO_MANY);
   });
 });

@@ -32,6 +32,7 @@ test("owner buys a combo, approves the proof, and the board shows Printing", asy
 
   try {
     await page.goto("/register");
+    await page.getByRole("button", { name: "Use email instead" }).click();
     await page.getByLabel("Your name").fill("Shop Owner");
     await page.getByLabel("Business name").fill(businessName);
     await page.getByLabel("Email").fill(email);
@@ -124,6 +125,7 @@ test("owner adds products from the shop grid and the cart count follows", async 
   test.setTimeout(120_000);
   const stamp = Date.now();
   await page.goto("/register");
+  await page.getByRole("button", { name: "Use email instead" }).click();
   await page.getByLabel("Your name").fill("Grid Owner");
   await page.getByLabel("Business name").fill(`Grid Cafe ${stamp}`);
   await page.getByLabel("Email").fill(`shop-grid-${stamp}@example.com`);
