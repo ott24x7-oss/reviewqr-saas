@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { MessageCircle } from "lucide-react";
 import type { PlanDuration } from "@prisma/client";
 import { DURATION_LABELS } from "@/lib/plans/catalog";
@@ -83,6 +84,9 @@ export function SellHero({
                 {pick(lang, "Talk to us", "बात करें")}
               </a>
             ) : null}
+            <Link href="/how-it-works" className="inline-flex min-h-11 items-center justify-center px-2 text-sm font-semibold underline">
+              {pick(lang, "How it works", "कैसे काम करता है")}
+            </Link>
           </div>
           <ul className="mt-4 flex flex-wrap gap-2">
             {facts.map((fact) => (

@@ -48,7 +48,8 @@ export function Footer({
             <div className="text-sm font-semibold mb-3">Product</div>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li><a href="/#features" className="hover:text-foreground">Features</a></li>
-              <li><a href="/#how" className="hover:text-foreground">How it works</a></li>
+              <li><Link href="/how-it-works" className="hover:text-foreground">How it works</Link></li>
+              <li><a href="/#how" className="hover:text-foreground">How it works on this page</a></li>
               <li><a href="/#pricing" className="hover:text-foreground">Pricing</a></li>
               <li><Link href="/demo" className="hover:text-foreground">Live demo</Link></li>
             </ul>

@@ -5,6 +5,7 @@ import { Menu, X, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const links = [
+  { href: "/how-it-works", label: "How it works" },
   { href: "/#features", label: "Features" },
   { href: "/#store", label: "WhatsApp store" },
   { href: "/#products", label: "QR + NFC" },
