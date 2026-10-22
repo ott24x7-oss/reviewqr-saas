@@ -125,6 +125,7 @@ export async function editUserSubscription(
     duration: input.tier === "FOUNDER" && input.status === "ACTIVE" ? "LIFETIME" : null,
     modules: modulesForTier(input.tier),
     limits: await limitsForTier(input.tier),
+    pricePaise: 0,
     clearPending: input.status === "CANCELED"
   });
   if (input.status === "CANCELED") await clearUserPending(tx, input.userId);
