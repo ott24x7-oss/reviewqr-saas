@@ -1,6 +1,6 @@
 import type { TokenPair } from "@reviewqr/shared";
 import { router } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { apiData } from "../../src/api/data";
@@ -21,10 +21,10 @@ export default function BusinessNameScreen() {
   const [busy, setBusy] = useState(false);
 
   const challenge = pending?.signupToken ? pending : null;
-  if (!challenge?.signupToken) {
-    router.replace("/(auth)/signup");
-    return null;
-  }
+  useEffect(() => {
+    if (!challenge?.signupToken) router.replace("/(auth)/signup");
+  }, [challenge?.signupToken]);
+  if (!challenge?.signupToken) return null;
   const phone = challenge.phone;
   const signupToken = challenge.signupToken;
 
