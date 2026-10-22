@@ -22,6 +22,20 @@ export default async function BillingPage() {
 
   const plans = await getPlans();
   const cfg = await getPaymentsConfig();
+  const [catalog, subscription] = await Promise.all([
+    prisma.plan.findMany({
+      where: { active: true, visibleOnPricingPage: true },
+      orderBy: { sortOrder: "asc" },
+      include: { prices: { where: { active: true } } }
+    }),
+    prisma.subscription.findFirst({
+      where: { userId: user.id, status: { in: ["ACTIVE", "TRIALING", "PAST_DUE"] } },
+      orderBy: { createdAt: "desc" }
+    })
+  ]);
+  const pending = subscription?.pendingPlanId
+    ? await prisma.plan.findUnique({ where: { id: subscription.pendingPlanId }, select: { nameEn: true } })
+    : null;
   const current = plans[user.subscriptionTier];
   const trialDays = user.trialEndsAt
     ? Math.max(0, Math.ceil((user.trialEndsAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
@@ -60,6 +74,11 @@ export default async function BillingPage() {
                   Renews on {formatDate(user.subscriptionEndsAt)}
                 </p>
               )}
+              {pending && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Changes to {pending.nameEn} when this period ends.
+                </p>
+              )}
             </div>
           </div>
         </CardContent>
@@ -71,6 +90,18 @@ export default async function BillingPage() {
         upiEnabled={cfg.upiEnabled && !!cfg.upiId}
         usdtEnabled={cfg.usdtEnabled && !!cfg.usdtAddress}
         youpiEnabled={!!(cfg.youpiBaseUrl && cfg.youpiMerchantId)}
+        catalog={catalog.map((plan) => ({
+          slug: plan.slug,
+          name: plan.nameEn,
+          description: plan.descriptionEn,
+          badge: plan.badge,
+          modules: plan.modules,
+          prices: plan.prices.map((price) => ({
+            duration: price.duration,
+            pricePaise: price.pricePaise,
+            mrpPaise: price.mrpPaise
+          }))
+        }))}
       />
 
       <Card>
