@@ -93,6 +93,7 @@ test("owner buys a combo, approves the proof, and the board shows Printing", asy
     await prisma.user.update({ where: { email }, data: { role: "ADMIN" } });
     await page.context().clearCookies();
     await page.goto("/login");
+    await page.getByRole("button", { name: "Use email instead" }).click();
     await page.getByLabel("Email").fill(email);
     await page.getByLabel("Password").fill("ShopTest1");
     await page.getByRole("button", { name: "Sign in" }).click();

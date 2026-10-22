@@ -3,6 +3,7 @@ import { prisma } from "../../lib/db";
 import { isCombo, pricingTab, savingsPercent } from "../../lib/plans/catalog";
 import { limitsForTier, modulesForTier, snapshotGrants } from "../../lib/plans/legacy";
 import { ensureLegacySubscription } from "../../lib/plans/backfill";
+import { hasModule, limit } from "../../lib/plans/entitlements";
 import { prorateCredit, quotePlanChange } from "../../lib/plans/quote";
 import { commissionAmount, pickCommissionRule, readyToApprove, renewalStillPays } from "../../lib/plans/commission-rules";
 import { approveDueCommissions, recordCommission, reverseCommissionsForPayment } from "../../lib/plans/ledger";
@@ -243,5 +244,77 @@ describe("referral rewards", () => {
     expect(rewardDestination(true)).toBe("extend");
     expect(hasActivePaidPlan({ tier: "GROWTH", status: "TRIALING", endsAt: new Date(Date.now() + 86_400_000) })).toBe(false);
     expect(hasActivePaidPlan({ tier: "STARTER", status: "ACTIVE", endsAt: new Date(Date.now() + 86_400_000) })).toBe(true);
+  });
+});
+
+describe("entitlements per module", () => {
+  const created: string[] = [];
+  afterAll(async () => {
+    if (!created.length) return;
+    await prisma.subscription.deleteMany({ where: { userId: { in: created } } });
+    await prisma.user.deleteMany({ where: { id: { in: created } } });
+  });
+
+  it("keeps reviews on a free account and the snapshot modules on a paid account", async () => {
+    const free = await prisma.user.create({
+      data: {
+        email: `ent-free-${Date.now()}@example.test`,
+        subscriptionTier: "FREE",
+        subscriptionStatus: "ACTIVE"
+      }
+    });
+    created.push(free.id);
+    expect(await hasModule(free.id, "REVIEWS")).toBe(true);
+    expect(await hasModule(free.id, "STORE")).toBe(false);
+    expect(await limit(free.id, "qrCodes")).toBe(2);
+
+    const trial = await prisma.user.create({
+      data: {
+        email: `ent-trial-${Date.now()}@example.test`,
+        subscriptionTier: "GROWTH",
+        subscriptionStatus: "TRIALING",
+        trialEndsAt: new Date(Date.now() + 7 * 86_400_000)
+      }
+    });
+    created.push(trial.id);
+    expect(await hasModule(trial.id, "MENU")).toBe(true);
+    expect(await hasModule(trial.id, "STORE")).toBe(true);
+
+    const endsAt = new Date("2027-08-01T00:00:00Z");
+    const paid = await prisma.user.create({
+      data: {
+        email: `ent-paid-${Date.now()}@example.test`,
+        subscriptionTier: "STARTER",
+        subscriptionStatus: "ACTIVE",
+        subscriptionEndsAt: endsAt
+      }
+    });
+    created.push(paid.id);
+    await prisma.subscription.create({
+      data: {
+        userId: paid.id,
+        modules: ["STORE"],
+        limits: {
+          businesses: 1,
+          qrCodes: 4,
+          products: 12,
+          staff: 1,
+          aiCalls: 5,
+          locations: 1,
+          reviews: 50,
+          campaigns: 1,
+          reviewTemplates: 10,
+          storeProducts: 12,
+          storeOrders: 100000,
+          aiCallsPerMonth: 5
+        },
+        tier: "STARTER",
+        status: "ACTIVE",
+        endsAt
+      }
+    });
+    expect(await hasModule(paid.id, "STORE")).toBe(true);
+    expect(await hasModule(paid.id, "MENU")).toBe(false);
+    expect(await limit(paid.id, "products")).toBe(12);
   });
 });

@@ -161,7 +161,7 @@ export function AgentsBoard({
               {agent.name} <span className="text-sm text-muted-foreground">{agent.active ? "" : "· inactive"}</span>
             </p>
             <p className="text-sm text-muted-foreground">
-              {agent.phone} · {agent.city || "No city"} · UPI {agent.upiId || "—"} · code {agent.code}
+              {agent.phone} · {agent.email || "No email"} · {agent.city || "No city"} · UPI {agent.upiId || "—"} · code {agent.code}
             </p>
             <p className="text-sm">Link: /join/{agent.code}</p>
             <Button type="button" variant="outline" className="mt-2" onClick={() => void toggle(agent)}>

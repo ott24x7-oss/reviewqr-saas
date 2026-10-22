@@ -566,7 +566,9 @@ export function BillingClient({
     if (!initialSlug) return;
     const match = catalog.find((plan) => plan.slug === initialSlug);
     if (match) setModalPlan(match);
-  }, [catalog, initialSlug]);
+    // The catalog is ready on the first paint. Later refreshes must not reopen the modal.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialSlug]);
 
   const tiers = (["FREE", "STARTER", "GROWTH", "AGENCY"] as const).filter(
     (k) => plans[k].visible
