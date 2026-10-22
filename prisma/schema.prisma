@@ -273,6 +273,9 @@ model Business {
   reviewPlatform    String   @default("google") // google | trustpilot — preferred public link order
   ratingThreshold   Int      @default(4) // used only when reviewGating is on
   reviewGating      Boolean  @default(false) // true hides the public link below ratingThreshold
+  // TAP_PAGE keeps today's page. DIRECT opens one published button. Existing rows stay TAP_PAGE.
+  directMode        String   @default("TAP_PAGE")
+  directTarget      String   @default("")
   enableWhatsApp    Boolean  @default(true)
   enableEmail       Boolean  @default(true)
   customThankYou    String?  @db.Text
@@ -520,6 +523,9 @@ model QRCode {
   // Kept in step with status so older queries keep working.
   isActive   Boolean @default(true)
   status     QrStatus @default(ACTIVE)
+  // INHERIT uses the business setting. TAP_PAGE or DIRECT overrides this code only.
+  directMode   String @default("INHERIT")
+  directTarget String @default("")
   assignedAt DateTime?
 
   qrScans    QrScan[]
@@ -886,6 +892,9 @@ model QrScan {
   // qr | nfc | link. Older rows stay null and are treated as qr.
   source     String?
   event      String   @default("view")
+  // Set when this visit skipped the tap page and opened one button.
+  direct     Boolean  @default(false)
+  target     String   @default("")
   createdAt  DateTime @default(now())
 
   @@index([qrCodeId, ipHash, createdAt])
