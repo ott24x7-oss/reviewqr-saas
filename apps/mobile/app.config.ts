@@ -21,7 +21,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     adaptiveIcon: {
       foregroundImage: "./assets/adaptive-icon.png",
       backgroundImage: "./assets/adaptive-icon-background.png",
-      backgroundColor: "#070B12"
+      monochromeImage: "./assets/adaptive-icon-monochrome.png",
+      backgroundColor: "#16A34A"
     },
     permissions: [
       "android.permission.CAMERA",
@@ -39,7 +40,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       "expo-splash-screen",
       {
-        backgroundColor: "#070B12",
+        backgroundColor: "#F4EFE6",
         image: "./assets/splash.png",
         imageWidth: 200
       }
@@ -70,7 +71,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       "expo-notifications",
       {
-        color: "#35C8F0",
+        color: "#16A34A",
         icon: "./assets/notification-icon.png"
       }
     ],
