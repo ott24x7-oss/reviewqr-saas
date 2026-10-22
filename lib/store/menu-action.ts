@@ -2,7 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { menuActionSchema } from "@reviewqr/shared";
 import { prisma } from "../db";
 import { ownerLimitError } from "../entitlements";
-import { effectiveTier, getPlan } from "../payments";
+import { limit, moduleBlock } from "../plans/entitlements";
 import { adjustedPricePaise } from "./variants";
 import { flattenTemplate, templateById } from "./templates";
 import { takeForSave } from "./entry";
@@ -35,6 +35,8 @@ export async function runMenuAction(userId: string, businessId: string, raw: unk
   if (!actor) return fail(401, "Unauthorized");
   const owner = await planOwner(actor, business.ownerId);
   if (!owner) return fail(404, "Not found");
+  const locked = await moduleBlock(owner.id, "MENU");
+  if (locked) return fail(403, locked);
 
   const parsed = menuActionSchema.safeParse(raw);
   if (!parsed.success) {
@@ -48,8 +50,8 @@ export async function runMenuAction(userId: string, businessId: string, raw: unk
 
   if (data.action === "template") {
     const chosen = flattenTemplate(templateById(data.templateId));
-    const limit = (await getPlan(effectiveTier(owner))).limits.storeProducts;
-    const fit = takeForSave(chosen.length, count, limit);
+    const productCap = await limit(owner.id, "products");
+    const fit = takeForSave(chosen.length, count, productCap);
     if (fit.take === 0) {
       const limitError = await ownerLimitError(owner, "storeProducts", count, 1);
       return fail(402, limitError || "Your plan has no room for more products.");
@@ -182,8 +184,8 @@ export async function runMenuAction(userId: string, businessId: string, raw: unk
   } else if (data.action === "items") {
     const rows = data.items || [];
     if (!rows.length) return fail(400, "Add at least one item");
-    const limit = (await getPlan(effectiveTier(owner))).limits.storeProducts;
-    const fit = takeForSave(rows.length, count, limit);
+    const productCap = await limit(owner.id, "products");
+    const fit = takeForSave(rows.length, count, productCap);
     if (fit.take === 0) {
       const limitError = await ownerLimitError(owner, "storeProducts", count, 1);
       return fail(402, limitError || "Your plan has no room for more products.");

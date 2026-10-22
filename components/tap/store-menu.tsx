@@ -129,7 +129,8 @@ export function StoreMenu({
   logoUrl = "",
   coupons = [],
   homeHref,
-  askBase
+  askBase,
+  canOrder = true
 }: {
   code: string;
   channel: "q" | "t";
@@ -148,6 +149,7 @@ export function StoreMenu({
   coupons?: DesignCoupon[];
   homeHref?: string;
   askBase?: string;
+  canOrder?: boolean;
 }) {
   const [lang, setLang] = React.useState<TapLang>("en");
   const [query, setQuery] = React.useState("");
@@ -179,6 +181,11 @@ export function StoreMenu({
     const storedLang = window.localStorage.getItem("rq-lang");
     if (storedLang === "hi" || storedLang === "en") setLang(storedLang);
     else if (window.navigator.language.toLowerCase().includes("hi")) setLang("hi");
+    if (!canOrder) {
+      setCart([]);
+      setReady(true);
+      return;
+    }
     try {
       const stored = JSON.parse(window.localStorage.getItem(storageKey) || "[]");
       setCart(Array.isArray(stored) ? stored.map((line) => readLine(line, items)).filter((line): line is Line => !!line) : []);
@@ -191,7 +198,7 @@ export function StoreMenu({
   }, [storageKey]);
 
   React.useEffect(() => {
-    if (!ready) return;
+    if (!ready || !canOrder) return;
     window.localStorage.setItem(storageKey, JSON.stringify(cart));
     window.localStorage.setItem("rq-lang", lang);
   }, [cart, lang, ready, storageKey]);
@@ -227,6 +234,7 @@ export function StoreMenu({
   }
 
   function addConfigured(id: string, variantId: string, addonIds: string[]) {
+    if (!canOrder) return;
     const ids = [...addonIds].sort();
     const key = lineKey(id, variantId, ids);
     setCart((current) => {
@@ -238,6 +246,7 @@ export function StoreMenu({
   }
 
   function changeItem(item: StoreItem, delta: number) {
+    if (!canOrder) return;
     if (delta > 0) {
       if (soldOut(item)) return;
       if (needsSheet(item)) {
@@ -561,7 +570,7 @@ export function StoreMenu({
         </>
       ) : null}
 
-      {!designed && count > 0 ? (
+      {!designed && canOrder && count > 0 ? (
         <button type="button" className="store-bar" onClick={() => setOpen(true)}>
           <span className="store-bar-count">
             {count} {count === 1 ? (lang === "hi" ? "आइटम" : "item") : lang === "hi" ? "आइटम" : "items"} {text("itemsAdded")}

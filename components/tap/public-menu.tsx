@@ -11,6 +11,7 @@ import { resolveLayout } from "@/lib/store/layout";
 import { resolveDesign } from "@/lib/store/design";
 import { readAdminThemes } from "@/lib/tap/theme-store";
 import { FREE_THEME_ID, THEME_PRESETS, resolveTheme, tokensToStyle } from "@/lib/tap/themes";
+import { loadEntitlement } from "@/lib/plans/entitlements";
 import { PublicTap } from "./public-page";
 import { StoreMenu, type StoreItem } from "./store-menu";
 
@@ -67,8 +68,14 @@ export async function PublicMenu({
       },
       select: { id: true, code: true, kind: true, amount: true, expiresAt: true, active: true }
     }),
-    prisma.business.findUnique({ where: { id: record.businessId }, select: { industry: true, logo: true } })
+    prisma.business.findUnique({ where: { id: record.businessId }, select: { industry: true, logo: true, ownerId: true } })
   ]);
+  const entitlement = profile ? await loadEntitlement(profile.ownerId) : null;
+  const showCatalogue = !!entitlement && (entitlement.modules.includes("MENU") || entitlement.modules.includes("STORE"));
+  const canOrder = !!entitlement?.modules.includes("STORE");
+  if (!showCatalogue) {
+    return <PublicTap code={code} channel={channel} countScan={false} />;
+  }
   const rules = rulesFromSettings(settings, hoursFromPublished(record.business.published));
   const items: StoreItem[] = [
     ...categories.flatMap((category) => category.items.map(toItem)),
@@ -125,6 +132,7 @@ export async function PublicMenu({
         design={resolveDesign(settings?.design)}
         logoUrl={profile?.logo || ""}
         homeHref={homeHref}
+        canOrder={canOrder}
         askBase={whatsAppNumberUrl(record.business.whatsappNumber) || ""}
       />
     </div>
