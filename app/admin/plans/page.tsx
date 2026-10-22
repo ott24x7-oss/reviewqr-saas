@@ -28,6 +28,8 @@ export default async function AdminPlansPage() {
         aiCalls: limits.aiCalls
       },
       badge: plan.badge,
+      category: plan.category,
+      imageUrl: plan.imageUrl,
       active: plan.active,
       visibleOnPricingPage: plan.visibleOnPricingPage,
       legacyTier: plan.legacyTier,

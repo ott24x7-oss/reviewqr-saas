@@ -8,6 +8,8 @@ export type PublicPlan = {
   descriptionEn: string;
   descriptionHi: string;
   badge: string | null;
+  category: string;
+  imageUrl: string;
   modules: string[];
   tab: PricingTab;
   prices: Array<{
@@ -17,6 +19,18 @@ export type PublicPlan = {
     savings: number;
   }>;
 };
+
+/** Active plans, including ones hidden from the pricing grid, so a free plan can still be offered. */
+export async function listActivePlanPrices() {
+  return prisma.plan.findMany({
+    where: { active: true },
+    orderBy: { sortOrder: "asc" },
+    select: {
+      slug: true,
+      prices: { where: { active: true }, select: { duration: true, pricePaise: true } }
+    }
+  });
+}
 
 export async function listPublicPlans(): Promise<PublicPlan[]> {
   const plans = await prisma.plan.findMany({
@@ -31,6 +45,8 @@ export async function listPublicPlans(): Promise<PublicPlan[]> {
     descriptionEn: plan.descriptionEn,
     descriptionHi: plan.descriptionHi,
     badge: plan.badge,
+    category: plan.category,
+    imageUrl: plan.imageUrl,
     modules: plan.modules,
     tab: pricingTab(plan.modules),
     prices: DURATIONS.flatMap((duration) => {

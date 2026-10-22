@@ -12,14 +12,14 @@ const moduleName = (id: string, hindi: boolean) => {
   return hindi ? found.nameHi : found.nameEn;
 };
 
-export function PlanPricing({ plans }: { plans: PublicPlan[] }) {
+export function PlanPricing({ plans, sectionId = "pricing" }: { plans: PublicPlan[]; sectionId?: string }) {
   const [hindi, setHindi] = React.useState(false);
   const [tab, setTab] = React.useState<PricingTab>("reviews");
   const [duration, setDuration] = React.useState<(typeof plans)[number]["prices"][number]["duration"]>("YEAR_1");
   const visible = plans.filter((plan) => plan.tab === tab);
 
   return (
-    <section id="pricing" className="py-16 sm:py-24">
+    <section id={sectionId} className="py-16 sm:py-24">
       <div className="container max-w-6xl px-4">
         <div className="mx-auto max-w-2xl text-center">
           <div className="mb-3 flex justify-end">

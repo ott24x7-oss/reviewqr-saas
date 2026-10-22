@@ -7,14 +7,14 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatINR } from "@/lib/utils";
 
-export function Pricing({ plans }: { plans: PricingConfig }) {
+export function Pricing({ plans, sectionId = "pricing" }: { plans: PricingConfig; sectionId?: string }) {
   const [annual, setAnnual] = React.useState(true);
   const tiers = (["FREE", "STARTER", "GROWTH", "AGENCY"] as const)
     .filter((t) => plans[t].visible)
     .map((t) => plans[t]);
 
   return (
-    <section id="pricing" className="py-16 sm:py-24">
+    <section id={sectionId} className="py-16 sm:py-24">
       <div className="container max-w-6xl">
         <div className="text-center max-w-2xl mx-auto">
           <span className="inline-block px-3 py-1 rounded-full bg-accent-50 text-accent-700 text-sm font-medium">

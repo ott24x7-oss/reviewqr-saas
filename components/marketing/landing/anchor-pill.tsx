@@ -9,7 +9,7 @@ const LINKS = [
 ];
 
 /** Section shortcuts that appear after the hero and step aside near the footer. */
-export function AnchorPill() {
+export function AnchorPill({ links = LINKS }: { links?: Array<{ href: string; label: string }> }) {
   const [visible, setVisible] = React.useState(false);
 
   React.useEffect(() => {
@@ -29,7 +29,7 @@ export function AnchorPill() {
 
   return (
     <nav className="marketing-anchor" data-visible={visible ? "true" : "false"} aria-label="On this page" aria-hidden={!visible}>
-      {LINKS.map((link) => (
+      {links.map((link) => (
         <a key={link.href} href={link.href} tabIndex={visible ? 0 : -1}>
           {link.label}
         </a>
