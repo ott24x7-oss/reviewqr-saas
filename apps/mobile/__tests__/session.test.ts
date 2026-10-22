@@ -144,18 +144,25 @@ describe("mobile API refresh", () => {
 
   it("sends the refresh token on logout and then forgets it", async () => {
     const store = memoryStore();
+    const calls: string[] = [];
     let logoutBody = "";
     const api = createMobileApi({
       baseUrl: "https://api.test",
       store,
       fetchImpl: async (url, init) => {
-        if (String(url).endsWith("/api/v1/auth/logout")) logoutBody = String(init?.body || "");
+        const href = String(url);
+        calls.push(href);
+        if (href.endsWith("/api/v1/auth/logout")) {
+          logoutBody = String(init?.body || "");
+          return json({ error: { message: "rejected" } }, 401);
+        }
         return json({ data: { ok: true } });
       }
     });
     await api.saveSession({ accessToken: "access", refreshToken: "refresh-9", expiresIn: 60, tokenType: "Bearer" });
     await api.logout();
     expect(logoutBody).toContain("refresh-9");
+    expect(calls.some((href) => href.endsWith("/api/v1/auth/refresh"))).toBe(false);
     expect(await store.get("reviewqr.refresh")).toBeNull();
     expect(api.getAccessToken()).toBeNull();
   });

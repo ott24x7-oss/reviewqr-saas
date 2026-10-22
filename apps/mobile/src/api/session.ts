@@ -86,8 +86,9 @@ export function createMobileApi(options: {
     },
     async logout() {
       const refreshToken = await options.store.get(REFRESH_KEY);
+      const fetchImpl = options.fetchImpl || fetch;
       if (refreshToken) {
-        await request("/api/v1/auth/logout", {
+        await fetchImpl(`${baseUrl}/api/v1/auth/logout`, {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ refreshToken })
