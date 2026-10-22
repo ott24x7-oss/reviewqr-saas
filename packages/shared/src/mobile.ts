@@ -37,6 +37,48 @@ export const placeDetailsSchema = z.object({
     .nullable()
 });
 
+export const tapLinkSchema = z
+  .object({
+    key: z.string(),
+    type: z.string(),
+    labelEn: z.string(),
+    labelHi: z.string(),
+    enabled: z.boolean(),
+    url: z.string(),
+    emoji: z.string().optional(),
+    featured: z.boolean().optional(),
+    schedule: z.object({ from: z.string(), to: z.string() }).nullable().optional()
+  })
+  .passthrough();
+
+export const tapThemeSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  premium: z.boolean()
+});
+
+export const tapPageSchema = z.object({
+  code: z.string().nullable(),
+  publicPath: z.string().nullable(),
+  bio: z.string(),
+  bioHi: z.string(),
+  themeId: z.string(),
+  links: z.array(tapLinkSchema),
+  themes: z.array(tapThemeSchema)
+});
+
+export const tapSaveSchema = z.object({
+  action: z.enum(["draft", "publish"]),
+  bio: z.string().max(800).optional(),
+  bioHi: z.string().max(800).optional(),
+  hours: z.unknown().optional(),
+  links: z.array(z.unknown()).max(40),
+  gallery: z.array(z.string().max(500)).max(8).optional(),
+  themeId: z.string().min(1).max(40).optional()
+});
+
 export type Dashboard = z.infer<typeof dashboardSchema>;
 export type PlacesSearch = z.infer<typeof placesSearchSchema>;
 export type PlaceDetails = z.infer<typeof placeDetailsSchema>;
+export type TapPage = z.infer<typeof tapPageSchema>;
+export type TapLink = z.infer<typeof tapLinkSchema>;

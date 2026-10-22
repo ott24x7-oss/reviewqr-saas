@@ -16,6 +16,8 @@ import {
   pageQuerySchema,
   placeDetailsSchema,
   placesSearchSchema,
+  tapPageSchema,
+  tapSaveSchema,
   qrClaimSchema,
   qrPatchSchema,
   storeSettingsSchema,
@@ -372,6 +374,34 @@ export function registerResourcePaths(registry: OpenAPIRegistry, errorRef: JsonS
       200: jsonResponse("Marked read", dataSchema(okSchema)),
       400: validation,
       401: unauthorized
+    }
+  });
+
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/businesses/{id}/tap",
+    summary: "Tap page buttons, theme, and the public QR code",
+    security: bearer,
+    request: { params: idParams },
+    responses: {
+      200: jsonResponse("Tap page", dataSchema(tapPageSchema)),
+      401: unauthorized,
+      404: notFound
+    }
+  });
+
+  registry.registerPath({
+    method: "patch",
+    path: "/api/v1/businesses/{id}/tap",
+    summary: "Save tap page buttons and an optional preset theme",
+    security: bearer,
+    request: { params: idParams, ...jsonBody(tapSaveSchema) },
+    responses: {
+      200: jsonResponse("Saved", dataSchema(z.object({ published: z.boolean() }))),
+      400: validation,
+      401: unauthorized,
+      402: planLimit,
+      404: notFound
     }
   });
 

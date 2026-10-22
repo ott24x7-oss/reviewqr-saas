@@ -28,6 +28,7 @@ export default function AppLayout() {
       <Tabs.Screen name="more" options={{ title: t.more }} />
       <Tabs.Screen name="business-new" options={{ href: null, title: t.addBusiness }} />
       <Tabs.Screen name="business-edit" options={{ href: null, title: t.businesses }} />
+      <Tabs.Screen name="tap" options={{ href: null, title: t.preview }} />
     </Tabs>
     </BusinessProvider>
   );

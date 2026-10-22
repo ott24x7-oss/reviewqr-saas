@@ -34,7 +34,8 @@ export default function HomeScreen() {
       </View>
       {plan?.subscriptionEndsAt ? <Text style={styles.hint}>{plan.subscriptionEndsAt.slice(0, 10)}</Text> : null}
       {plan?.trialEndsAt && !plan.subscriptionEndsAt ? <Text style={styles.hint}>{plan.trialEndsAt.slice(0, 10)}</Text> : null}
-      <PillButton label={t.addBusiness} onPress={() => router.push("/(app)/business-new")} tone="dark" />
+      <PillButton label={t.preview} onPress={() => router.push("/(app)/tap")} tone="dark" />
+      <PillButton label={t.addBusiness} onPress={() => router.push("/(app)/business-new")} tone="outline" />
       {business ? <PillButton label={business.name} onPress={() => router.push("/(app)/business-edit")} tone="outline" /> : null}
     </ScrollView>
   );

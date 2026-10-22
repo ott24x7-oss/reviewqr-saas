@@ -68,6 +68,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         color: "#35C8F0"
       }
     ],
+    "expo-sharing",
     [
       "react-native-nfc-manager",
       {
