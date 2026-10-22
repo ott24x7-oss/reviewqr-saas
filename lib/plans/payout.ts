@@ -92,6 +92,34 @@ async function findPayout(
   return tx.commissionPayout.findUnique({ where: { agentId_utr: { agentId, utr } } });
 }
 
+export async function decideLegacyCommission(id: string, action: "approve" | "paid") {
+  const row = await prisma.shopCommission.findUnique({ where: { id }, select: { id: true, status: true } });
+  if (!row || row.status !== "LEGACY_UNSETTLED") {
+    return { ok: false as const, error: "That commission is not in the unsettled history" };
+  }
+  const now = new Date();
+  if (action === "approve") {
+    await prisma.shopCommission.update({
+      where: { id },
+      data: { status: "APPROVED", approvedAt: now }
+    });
+  } else {
+    await prisma.shopCommission.update({
+      where: { id },
+      data: { status: "PAID", paidAt: now }
+    });
+  }
+  return { ok: true as const };
+}
+
+export async function legacyCommissionRows() {
+  return prisma.shopCommission.findMany({
+    where: { status: "LEGACY_UNSETTLED" },
+    orderBy: { createdAt: "asc" },
+    include: { agent: { select: { name: true, phone: true, email: true } } }
+  });
+}
+
 export async function commissionReportRows() {
   const agents = await prisma.agentProfile.findMany({
     include: { user: { select: { id: true, name: true, phone: true, email: true } } },
@@ -125,7 +153,8 @@ export async function commissionReportRows() {
       salesCount: sales._count._all,
       pendingPaise: bucket("PENDING"),
       approvedPaise: bucket("APPROVED"),
-      paidPaise: bucket("PAID")
+      paidPaise: bucket("PAID"),
+      legacyPaise: bucket("LEGACY_UNSETTLED")
     });
   }
   return rows;

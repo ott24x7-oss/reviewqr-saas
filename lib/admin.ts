@@ -83,6 +83,7 @@ export type AuditAction =
   | "plan.update"
   | "agent.update"
   | "commission.pay"
+  | "commission.legacy"
   | "referral.update";
 
 export async function logAudit(opts: {
