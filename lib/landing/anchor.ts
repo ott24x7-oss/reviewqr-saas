@@ -22,7 +22,8 @@ const MONTHS: Partial<Record<PlanDuration, number>> = {
 export function monthlyEquivalentPaise(duration: PlanDuration, pricePaise: number): number | null {
   const months = MONTHS[duration];
   if (!months || pricePaise <= 0) return null;
-  return Math.round(pricePaise / months);
+  // Whole rupees, rounded up, so "From ₹417/month" never understates the price.
+  return Math.ceil(pricePaise / months / 100) * 100;
 }
 
 /**
