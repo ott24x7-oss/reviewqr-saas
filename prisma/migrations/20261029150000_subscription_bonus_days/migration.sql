@@ -1,0 +1,1 @@
+ALTER TABLE "Subscription" ADD COLUMN "bonusDays" INTEGER NOT NULL DEFAULT 0;

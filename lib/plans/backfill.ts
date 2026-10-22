@@ -30,7 +30,7 @@ export async function ensureLegacySubscription(userId: string) {
       userId: user.id,
       planId: legacyPlanId(tier),
       modules: modulesForTier(tier),
-      limits: limitsForTier(tier),
+      limits: await limitsForTier(tier),
       tier,
       duration: tier === "FOUNDER" && user.subscriptionStatus === "ACTIVE" ? "LIFETIME" : null,
       status: user.subscriptionStatus,

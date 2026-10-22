@@ -1,18 +1,33 @@
 /**
  * Old SubscriptionTier rows keep today's access.
- * FREE is reviews only. Every paid tier, including an active trial, keeps all modules.
+ * FREE keeps reviews, the menu, and the store at today's free limits.
+ * Every paid tier, including an active trial, keeps all modules.
+ * A plan bought from the catalogue can omit a module. Legacy plan ids cannot.
  */
 import type { SubscriptionStatus, SubscriptionTier } from "@prisma/client";
-import { DEFAULT_PLANS } from "../settings";
+import { getPlan } from "../payments";
 import { parseLimits, type PlanLimits } from "./catalog";
 
+const TODAY_MODULES: Record<SubscriptionTier, string[]> = {
+  FREE: ["REVIEWS", "MENU", "STORE"],
+  STARTER: ["REVIEWS", "MENU", "STORE"],
+  GROWTH: ["REVIEWS", "MENU", "STORE"],
+  AGENCY: ["REVIEWS", "MENU", "STORE"],
+  FOUNDER: ["REVIEWS", "MENU", "STORE"]
+};
+
 export function modulesForTier(tier: SubscriptionTier): string[] {
-  if (tier === "FREE") return ["REVIEWS"];
-  return ["REVIEWS", "MENU", "STORE"];
+  return TODAY_MODULES[tier];
 }
 
-export function limitsForTier(tier: SubscriptionTier): PlanLimits {
-  const limits = DEFAULT_PLANS[tier].limits;
+/** True when this subscription was bought from a plan that is not a legacy tier mirror. */
+export function isCataloguePlan(planId: string | null | undefined) {
+  return !!planId && !planId.startsWith("plan_legacy_");
+}
+
+/** Admin pricing limits when they are stored, otherwise today's catalogue defaults. */
+export async function limitsForTier(tier: SubscriptionTier): Promise<PlanLimits> {
+  const limits = (await getPlan(tier)).limits;
   return parseLimits(
     {
       ...limits,

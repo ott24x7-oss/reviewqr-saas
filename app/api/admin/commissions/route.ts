@@ -8,7 +8,8 @@ const schema = z.object({
   agentId: z.string().min(1),
   utr: z.string().min(6),
   paidAt: z.string().optional(),
-  note: z.string().max(240).optional()
+  note: z.string().max(240).optional(),
+  idempotencyKey: z.string().min(8).max(120).optional()
 });
 
 export async function POST(req: NextRequest) {
@@ -22,7 +23,8 @@ export async function POST(req: NextRequest) {
     agentId: parsed.data.agentId,
     utr: parsed.data.utr,
     paidAt,
-    note: parsed.data.note
+    note: parsed.data.note,
+    idempotencyKey: parsed.data.idempotencyKey
   });
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
   await logAudit({

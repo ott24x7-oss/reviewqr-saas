@@ -6,6 +6,7 @@ import { prisma } from "../db";
 import { effectiveTier } from "../payments";
 import { sanitizeText } from "../sanitize";
 import { planOwner, requireBusinessRole } from "../tenant";
+import { storedDirectOptions } from "./direct";
 import { hoursFromPublished, safeImageSrc } from "./links";
 import { nfcUrl, publicAppOrigin } from "./nfc";
 import { normalizeLinks } from "./page-draft";
@@ -58,7 +59,9 @@ export async function readTapPage(userId: string, businessId: string) {
     bioHi: textField(source.bioHi),
     themeId: canonicalThemeId(textField(source.theme) || FREE_THEME_ID),
     links: linksFrom(source.links),
-    themes
+    themes,
+    directMode: business.directMode === "DIRECT" ? "DIRECT" : "TAP_PAGE",
+    directTarget: business.directTarget || ""
   });
 }
 
@@ -71,6 +74,11 @@ export async function saveTapPage(userId: string, businessId: string, raw: unkno
 
   const links = normalizeLinks(parsed.data.links);
   if ("error" in links) return fail(400, links.error);
+  const directMode = parsed.data.directMode;
+  const directTarget = (parsed.data.directTarget || "").trim().slice(0, 40);
+  if (directMode === "DIRECT" && !storedDirectOptions(links.links, "q", "preview").some((item) => item.key === directTarget)) {
+    return fail(400, "Choose an enabled button");
+  }
 
   const bio = sanitizeText(parsed.data.bio || "", 400);
   const bioHi = sanitizeText(parsed.data.bioHi || "", 400);
@@ -124,7 +132,13 @@ export async function saveTapPage(userId: string, businessId: string, raw: unkno
     create: { businessId: business.id, ...data },
     update: data
   });
-  if (publish || parsed.data.themeId) {
+  if (directMode) {
+    await prisma.business.update({
+      where: { id: business.id },
+      data: { directMode, directTarget: directMode === "DIRECT" ? directTarget : "" }
+    });
+  }
+  if (publish || parsed.data.themeId || directMode) {
     try {
       await revalidateBusinessTap(business.id);
     } catch {

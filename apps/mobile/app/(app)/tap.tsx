@@ -29,10 +29,16 @@ export default function TapScreen() {
   const [links, setLinks] = useState<TapLink[] | null>(null);
   const [themeId, setThemeId] = useState<string | null>(null);
   const [bio, setBio] = useState<string | null>(null);
+  const [directOn, setDirectOn] = useState<boolean | null>(null);
+  const [directKey, setDirectKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const data = tap.data;
   const shown = links ?? data?.links ?? [];
+  const directMode = (directOn ?? data?.directMode === "DIRECT") ? "DIRECT" : "TAP_PAGE";
+  const directTarget = directKey ?? data?.directTarget ?? "";
+  const directOptions = shown.filter((link) => link.enabled && (link.type === "menu" || link.type === "whatsapp_order" || link.type === "vcard" || link.url.startsWith("https://")));
+  const chosen = directOptions.find((link) => link.key === directTarget) || null;
   const theme = themeId ?? data?.themeId ?? "";
   const bioText = bio ?? data?.bio ?? "";
   const base = apiBaseUrl();
@@ -53,12 +59,16 @@ export default function TapScreen() {
           action: "publish",
           bio: bioText,
           themeId: theme || undefined,
-          links: shown
+          links: shown,
+          directMode,
+          directTarget: directMode === "DIRECT" ? directTarget : ""
         })
       });
       setLinks(null);
       setThemeId(null);
       setBio(null);
+      setDirectOn(null);
+      setDirectKey(null);
       await client.invalidateQueries({ queryKey: accountKey(user?.id ?? "", "tap", business.id) });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not publish");
@@ -85,6 +95,31 @@ export default function TapScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+      <Text style={[styles.section, lang === "hi" && styles.hindi]}>{t.directTitle}</Text>
+      <PillButton
+        label={t.directToggle}
+        tone={directMode === "DIRECT" ? "dark" : "outline"}
+        onPress={() => {
+          const next = directMode !== "DIRECT";
+          setDirectOn(next);
+          if (next && !directOptions.some((link) => link.key === directTarget) && directOptions[0]) {
+            setDirectKey(directOptions[0].key);
+          }
+        }}
+      />
+      {directOptions.map((link) => (
+        <Pressable key={link.key} onPress={() => { setDirectOn(true); setDirectKey(link.key); }} style={[styles.chip, link.key === directTarget && directMode === "DIRECT" && styles.chipOn]}>
+          <Text style={[styles.chipText, link.key === directTarget && directMode === "DIRECT" && styles.chipTextOn, lang === "hi" && styles.hindi]}>
+            {lang === "hi" && link.labelHi ? link.labelHi : link.labelEn}
+          </Text>
+        </Pressable>
+      ))}
+      {directMode === "DIRECT" && chosen ? (
+        <Text style={[styles.note, lang === "hi" && styles.hindi]}>{t.directOpens} {lang === "hi" && chosen.labelHi ? chosen.labelHi : chosen.labelEn}</Text>
+      ) : null}
+      {directMode === "TAP_PAGE" && shown.filter((link) => link.enabled).length === 1 && directOptions.length === 1 ? (
+        <Text style={[styles.note, lang === "hi" && styles.hindi]}>{t.directHint}</Text>
+      ) : null}
       <Field label={t.about} tone="paper" value={bioText} onChangeText={setBio} />
       <Text style={[styles.section, lang === "hi" && styles.hindi]}>{t.theme}</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>

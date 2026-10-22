@@ -26,6 +26,7 @@ function asView(rule: {
 }
 
 export async function creditRenewalCommission(ownerId: string, paymentId: string, amountPaise: number) {
+  if (amountPaise <= 0) return;
   const businesses = await prisma.business.findMany({
     where: { ownerId, archived: false },
     select: { agentId: true }
@@ -38,7 +39,7 @@ export async function creditRenewalCommission(ownerId: string, paymentId: string
     });
     agentId = attribution?.agentId || null;
   }
-  if (!agentId) return;
+  if (!agentId || agentId === ownerId) return;
 
   const [payment, settings, earlier] = await Promise.all([
     prisma.payment.findUnique({ where: { id: paymentId }, select: { planId: true } }),

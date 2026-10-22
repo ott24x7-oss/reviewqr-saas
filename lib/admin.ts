@@ -63,6 +63,7 @@ export type AuditAction =
   | "qr.enable"
   | "qr.label"
   | "qr.location"
+  | "qr.direct"
   | "device.assign"
   | "device.activate"
   | "device.reassign"
@@ -82,6 +83,7 @@ export type AuditAction =
   | "plan.update"
   | "agent.update"
   | "commission.pay"
+  | "commission.legacy"
   | "referral.update";
 
 export async function logAudit(opts: {

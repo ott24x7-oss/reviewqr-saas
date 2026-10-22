@@ -8,7 +8,8 @@ import { prisma } from "./db";
 import { getPaymentsConfig } from "./settings";
 import { absoluteUrl } from "./utils";
 import { limitsForTier, modulesForTier } from "./plans/legacy";
-import { extendByReward } from "./plans/quote";
+import { bonusCarry, carriedRenewalPaise, paidEndsAt, remainingBonusDays, upgradeEndsAt } from "./plans/quote";
+import { grantPlanAccess } from "./plans/snapshot";
 
 export function financialYearLabel(date: Date): string {
   const start = date.getMonth() >= 3 ? date.getFullYear() : date.getFullYear() - 1;
@@ -146,14 +147,49 @@ export async function activateCompletedPayment(input: ActivateInput): Promise<Ac
 
     const now = new Date();
     const lifetime = row.duration === "LIFETIME" || row.periodMonths === 0;
-    let expiresAt: Date | null = lifetime
-      ? null
-      : row.creditPaise > 0
-        ? addMonths(now, Math.max(1, row.periodMonths || 1))
-        : extendSubscriptionEnd(user.subscriptionEndsAt, row.periodMonths || 1, now);
+    const open = await tx.subscription.findFirst({
+      where: { userId: user.id, status: { in: ["ACTIVE", "TRIALING", "PAST_DUE"] } },
+      orderBy: { createdAt: "desc" }
+    });
+    const differentPlan = !!(open?.planId && row.planId && open.planId !== row.planId);
+    const months = Math.max(1, row.periodMonths || 1);
+    const openBonus = open?.bonusDays || 0;
+    const carriedBonus = remainingBonusDays({ endsAt: open?.endsAt ?? null, bonusDays: openBonus, now });
+    const paidOpenEnd = open?.endsAt ? paidEndsAt(open.endsAt, openBonus) : null;
+    let paidExpiresAt: Date | null = null;
+    let carriedPaise = 0;
+    if (lifetime) {
+      paidExpiresAt = null;
+    } else if (differentPlan) {
+      paidExpiresAt = upgradeEndsAt({
+        now,
+        months,
+        creditPaise: row.creditPaise || 0,
+        pricePaise: row.amount + Math.max(0, row.creditPaise || 0)
+      });
+    } else if (row.creditPaise > 0) {
+      paidExpiresAt = addMonths(now, months);
+    } else {
+      const openStillRunning = !!(paidOpenEnd && paidOpenEnd.getTime() > now.getTime());
+      const bonusStillRunning = !!(open?.endsAt && open.endsAt.getTime() > now.getTime());
+      const baseEnd = openStillRunning ? paidOpenEnd : bonusStillRunning ? null : user.subscriptionEndsAt;
+      paidExpiresAt = extendSubscriptionEnd(baseEnd, months, now);
+      if (open && openStillRunning && paidOpenEnd) {
+        carriedPaise = carriedRenewalPaise({
+          now,
+          open: { pricePaise: open.pricePaise, startsAt: open.startsAt, endsAt: paidOpenEnd }
+        });
+      }
+    }
     const credit = await tx.referralCredit.findUnique({ where: { userId: user.id } });
-    if (expiresAt && credit && (credit.months > 0 || credit.days > 0)) {
-      expiresAt = extendByReward(expiresAt, credit.months, credit.days);
+    const carried = bonusCarry({
+      paidEndsAt: paidExpiresAt,
+      carriedDays: lifetime ? 0 : carriedBonus,
+      rewardMonths: credit?.months || 0,
+      rewardDays: credit?.days || 0
+    });
+    const expiresAt = carried.endsAt;
+    if (credit && (credit.months > 0 || credit.days > 0)) {
       await tx.referralCredit.update({ where: { userId: user.id }, data: { months: 0, days: 0 } });
     }
     const invoiceNumber = row.invoiceNumber ?? (await nextInvoiceNumber(tx, now));
@@ -185,15 +221,6 @@ export async function activateCompletedPayment(input: ActivateInput): Promise<Ac
       }
     });
 
-    await tx.user.update({
-      where: { id: user.id },
-      data: {
-        subscriptionTier: row.tier,
-        subscriptionStatus: "ACTIVE",
-        subscriptionEndsAt: expiresAt
-      }
-    });
-
     const modules = row.modules && row.modules.length ? row.modules : modulesForTier(row.tier);
     let rawLimits: unknown = row.limits;
     if (typeof rawLimits === "string") {
@@ -203,31 +230,21 @@ export async function activateCompletedPayment(input: ActivateInput): Promise<Ac
         rawLimits = null;
       }
     }
-    const limits = rawLimits && typeof rawLimits === "object" ? rawLimits : limitsForTier(row.tier);
-    const snapshot = {
+    const limits = rawLimits && typeof rawLimits === "object" ? rawLimits : await limitsForTier(row.tier);
+    await grantPlanAccess(tx, {
+      userId: user.id,
+      tier: row.tier,
+      status: "ACTIVE",
+      endsAt: expiresAt,
+      startsAt: now,
       planId: row.planId,
+      duration: row.duration,
       modules,
       limits,
-      tier: row.tier,
-      duration: row.duration,
-      status: "ACTIVE" as const,
-      startsAt: now,
-      endsAt: expiresAt,
-      pricePaise: row.amount + Math.max(0, row.creditPaise || 0),
-      pendingPlanId: null,
-      pendingDuration: null,
-      pendingModules: [] as string[],
-      pendingLimits: Prisma.DbNull
-    };
-    const open = await tx.subscription.findFirst({
-      where: { userId: user.id, status: { in: ["ACTIVE", "TRIALING", "PAST_DUE"] } },
-      orderBy: { createdAt: "desc" }
+      pricePaise: carriedPaise + row.amount + Math.max(0, row.creditPaise || 0),
+      bonusDays: carried.bonusDays,
+      clearPending: true
     });
-    if (open) {
-      await tx.subscription.update({ where: { id: open.id }, data: snapshot });
-    } else {
-      await tx.subscription.create({ data: { userId: user.id, ...snapshot } });
-    }
 
     return { ok: true, already: false, expiresAt: expiresAt ?? now, invoiceNumber };
   });

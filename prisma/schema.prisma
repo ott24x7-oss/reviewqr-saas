@@ -56,6 +56,7 @@ enum CommissionStatus {
   APPROVED
   PAID
   REVERSED
+  LEGACY_UNSETTLED
 }
 
 enum CommissionBasis {
@@ -274,6 +275,9 @@ model Business {
   reviewPlatform    String   @default("google") // google | trustpilot — preferred public link order
   ratingThreshold   Int      @default(4) // used only when reviewGating is on
   reviewGating      Boolean  @default(false) // true hides the public link below ratingThreshold
+  // TAP_PAGE keeps today's page. DIRECT opens one published button. Existing rows stay TAP_PAGE.
+  directMode        String   @default("TAP_PAGE")
+  directTarget      String   @default("")
   enableWhatsApp    Boolean  @default(true)
   enableEmail       Boolean  @default(true)
   customThankYou    String?  @db.Text
@@ -521,6 +525,9 @@ model QRCode {
   // Kept in step with status so older queries keep working.
   isActive   Boolean @default(true)
   status     QrStatus @default(ACTIVE)
+  // INHERIT uses the business setting. TAP_PAGE or DIRECT overrides this code only.
+  directMode   String @default("INHERIT")
+  directTarget String @default("")
   assignedAt DateTime?
 
   qrScans    QrScan[]
@@ -887,6 +894,9 @@ model QrScan {
   // qr | nfc | link. Older rows stay null and are treated as qr.
   source     String?
   event      String   @default("view")
+  // Set when this visit skipped the tap page and opened one button.
+  direct     Boolean  @default(false)
+  target     String   @default("")
   createdAt  DateTime @default(now())
 
   @@index([qrCodeId, ipHash, createdAt])
@@ -1673,6 +1683,8 @@ model Subscription {
   status          SubscriptionStatus
   startsAt        DateTime           @default(now())
   endsAt          DateTime?
+  /// Free days at the end of endsAt. An upgrade carries whatever is left.
+  bonusDays       Int                @default(0)
   pricePaise      Int                @default(0)
   pendingPlanId   String?
   pendingDuration PlanDuration?
@@ -1721,16 +1733,18 @@ model CommissionRule {
 }
 
 model CommissionPayout {
-  id          String           @id @default(cuid())
-  agentId     String
-  agent       User             @relation(fields: [agentId], references: [id], onDelete: Restrict)
-  amountPaise Int
-  utr         String
-  paidAt      DateTime
-  note        String           @default("")
-  entries     ShopCommission[]
-  createdAt   DateTime         @default(now())
+  id             String           @id @default(cuid())
+  agentId        String
+  agent          User             @relation(fields: [agentId], references: [id], onDelete: Restrict)
+  amountPaise    Int
+  utr            String
+  paidAt         DateTime
+  note           String           @default("")
+  idempotencyKey String?          @unique
+  entries        ShopCommission[]
+  createdAt      DateTime         @default(now())
 
+  @@unique([agentId, utr])
   @@index([agentId, paidAt])
 }
 

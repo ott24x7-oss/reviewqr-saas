@@ -12,13 +12,16 @@ export function PayButton({ agentId, disabled }: { agentId: string; disabled: bo
   const [utr, setUtr] = React.useState("");
   const [paidAt, setPaidAt] = React.useState("");
   const [note, setNote] = React.useState("");
+  const [idempotencyKey] = React.useState(() =>
+    typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `pay-${agentId}-${Date.now()}`
+  );
 
   async function pay(event: React.FormEvent) {
     event.preventDefault();
     const res = await fetch("/api/admin/commissions", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ agentId, utr, paidAt: paidAt || undefined, note })
+      body: JSON.stringify({ agentId, utr, paidAt: paidAt || undefined, note, idempotencyKey })
     });
     const json = await res.json().catch(() => ({}));
     if (!res.ok) {

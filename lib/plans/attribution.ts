@@ -4,6 +4,23 @@ import { chooseAttribution } from "./referral";
 
 export const JOIN_COOKIE = "rq_join";
 
+/**
+ * First attribution wins. An agent link replaces an owner link.
+ * An agent link is never replaced by a later agent or owner link.
+ * Returns the cookie value to store, or null when the current cookie stays.
+ */
+export function joinCookieUpdate(
+  current: string | null | undefined,
+  incoming: { kind: "agent" | "owner"; code: string }
+) {
+  const code = normalizeCode(incoming.code);
+  if (!code) return null;
+  const parsed = parseJoinCookie(current);
+  if (parsed?.kind === "agent") return null;
+  if (parsed && incoming.kind === "owner") return null;
+  return `${incoming.kind}:${code}`;
+}
+
 export function parseJoinCookie(value: string | null | undefined) {
   const raw = (value || "").trim();
   const split = raw.indexOf(":");

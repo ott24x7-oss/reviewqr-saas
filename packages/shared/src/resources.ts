@@ -132,6 +132,12 @@ export const qrPatchSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("label"), code: z.string(), label: z.string().min(1).max(80) }),
   z.object({ action: z.literal("location"), code: z.string(), locationId: z.string().nullable() }),
   z.object({
+    action: z.literal("direct"),
+    code: z.string(),
+    mode: z.enum(["INHERIT", "TAP_PAGE", "DIRECT"]),
+    target: z.string().max(40).optional()
+  }),
+  z.object({
     action: z.enum(["disable", "enable"]),
     codes: z.array(z.string()).min(1).max(100)
   })

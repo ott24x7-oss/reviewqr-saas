@@ -1,8 +1,8 @@
 import type { PlanDuration, SubscriptionTier } from "@prisma/client";
 import { prisma } from "../db";
 import { durationMonths } from "./catalog";
-import { snapshotGrants } from "./legacy";
-import { prorateCredit, quotePlanChange, type PlanQuote } from "./quote";
+import { legacyPlanId, snapshotGrants } from "./legacy";
+import { creditBasePaise, inferDuration, prorateCredit, quotePlanChange, type PlanQuote } from "./quote";
 
 export type CheckoutQuote =
   | {
@@ -42,15 +42,19 @@ export async function quotePlanCheckout(userId: string, slug: string, duration: 
     });
     currentPrice = sameDuration?.active ? sameDuration.pricePaise : 0;
   }
+  const basis = granting ? await paidValuePaise(sub, userId) : 0;
   const credit = granting
-    ? prorateCredit({ pricePaidPaise: sub.pricePaise, startsAt: sub.startsAt, endsAt: sub.endsAt })
+    ? prorateCredit({ pricePaidPaise: basis, startsAt: sub.startsAt, endsAt: sub.endsAt })
     : 0;
   const samePlan = granting && sub.planId === plan.id && sub.duration === duration;
+  const currentMonths = granting ? durationMonths(sub.duration ?? inferDuration(sub.startsAt, sub.endsAt)) ?? 1 : 1;
   const quote = quotePlanChange({
     samePlan,
     currentPricePaise: currentPrice,
     targetPricePaise: price.pricePaise,
-    creditPaise: credit
+    creditPaise: credit,
+    currentMonths,
+    targetMonths: durationMonths(duration) ?? 1
   });
   const months = durationMonths(duration) ?? 0;
   return {
@@ -66,6 +70,42 @@ export async function quotePlanCheckout(userId: string, slug: string, duration: 
     pricePaise: price.pricePaise,
     quote
   };
+}
+
+async function paidValuePaise(
+  sub: {
+    pricePaise: number;
+    planId: string | null;
+    tier: SubscriptionTier;
+    duration: PlanDuration | null;
+    startsAt: Date;
+    endsAt: Date | null;
+  },
+  userId: string
+) {
+  const duration = sub.duration ?? inferDuration(sub.startsAt, sub.endsAt);
+  const planId = sub.planId || legacyPlanId(sub.tier);
+  const price = await prisma.planPrice.findUnique({
+    where: { planId_duration: { planId, duration } }
+  });
+  let catalogue = price?.active ? price.pricePaise : 0;
+  if (catalogue <= 0) {
+    const monthly = await prisma.planPrice.findUnique({
+      where: { planId_duration: { planId, duration: "MONTH_1" } }
+    });
+    const months = durationMonths(duration) ?? 1;
+    catalogue = (monthly?.active ? monthly.pricePaise : 0) * months;
+  }
+  const last = await prisma.payment.findFirst({
+    where: { userId, status: "COMPLETED", amount: { gt: 0 } },
+    orderBy: { createdAt: "desc" },
+    select: { amount: true }
+  });
+  return creditBasePaise({
+    snapshotPaise: sub.pricePaise,
+    cataloguePaise: catalogue,
+    lastPaymentPaise: last?.amount || 0
+  });
 }
 
 export async function scheduleDowngrade(userId: string, quote: Extract<CheckoutQuote, { ok: true }>) {

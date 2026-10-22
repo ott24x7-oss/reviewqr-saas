@@ -37,6 +37,7 @@ export function pickCommissionRule(
 }
 
 export function commissionAmount(basis: CommissionBasisName, percent: number, flatPaise: number, basePaise: number) {
+  if (basePaise <= 0) return 0;
   if (basis === "FLAT") return Math.max(0, Math.floor(flatPaise));
   return commissionPaise(basePaise, percent);
 }

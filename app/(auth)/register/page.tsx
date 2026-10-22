@@ -80,7 +80,7 @@ export default function RegisterPage() {
       }
       const entered = await enterSession(
         { email: form.email.trim().toLowerCase(), password: form.password },
-        "/dashboard"
+        planCheckoutPath() || "/dashboard"
       );
       if (!entered.ok) {
         toast.error("Account created — please log in");
@@ -88,7 +88,7 @@ export default function RegisterPage() {
         return;
       }
       toast.success("Welcome to ReviewQR!");
-      window.location.assign(planCheckoutPath() || entered.path);
+      window.location.assign(entered.path);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong");
     } finally {

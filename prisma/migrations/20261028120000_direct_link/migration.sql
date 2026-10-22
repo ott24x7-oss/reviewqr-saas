@@ -1,0 +1,7 @@
+-- Direct link. Defaults keep every existing QR on the tap page.
+ALTER TABLE "Business" ADD COLUMN "directMode" TEXT NOT NULL DEFAULT 'TAP_PAGE';
+ALTER TABLE "Business" ADD COLUMN "directTarget" TEXT NOT NULL DEFAULT '';
+ALTER TABLE "QRCode" ADD COLUMN "directMode" TEXT NOT NULL DEFAULT 'INHERIT';
+ALTER TABLE "QRCode" ADD COLUMN "directTarget" TEXT NOT NULL DEFAULT '';
+ALTER TABLE "QrScan" ADD COLUMN "direct" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "QrScan" ADD COLUMN "target" TEXT NOT NULL DEFAULT '';

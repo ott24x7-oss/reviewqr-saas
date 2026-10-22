@@ -8,7 +8,7 @@ export async function settleConfirmedPayment(paymentId: string) {
     where: { id: paymentId },
     select: { id: true, userId: true, amount: true, status: true }
   });
-  if (!payment || payment.status !== "COMPLETED") return;
+  if (!payment || payment.status !== "COMPLETED" || payment.amount <= 0) return;
   await creditRenewalCommission(payment.userId, payment.id, payment.amount);
   await queueReferralReward(payment.id);
 }

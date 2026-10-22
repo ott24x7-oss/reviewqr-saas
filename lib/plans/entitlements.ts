@@ -2,7 +2,7 @@ import type { SubscriptionTier } from "@prisma/client";
 import { prisma } from "../db";
 import { effectiveTier } from "../payments";
 import { cleanModules, limitValue, parseLimits, type ModuleId, type PlanLimits } from "./catalog";
-import { limitsForTier, modulesForTier, snapshotGrants } from "./legacy";
+import { isCataloguePlan, limitsForTier, modulesForTier, snapshotGrants } from "./legacy";
 import { formatINR } from "../utils";
 
 export type Entitlement = {
@@ -22,25 +22,26 @@ const userSelect = {
 export async function loadEntitlement(userId: string): Promise<Entitlement> {
   const user = await prisma.user.findUnique({ where: { id: userId }, select: userSelect });
   if (!user) {
-    return { tier: "FREE", modules: ["REVIEWS"], limits: limitsForTier("FREE") };
+    return { tier: "FREE", modules: cleanModules(modulesForTier("FREE")), limits: await limitsForTier("FREE") };
   }
   const sub = await prisma.subscription.findFirst({
     where: { userId, status: { in: ["ACTIVE", "TRIALING", "PAST_DUE"] } },
     orderBy: { createdAt: "desc" }
   });
-  if (
-    sub &&
-    snapshotGrants({ tier: sub.tier, status: sub.status, endsAt: sub.endsAt })
-  ) {
+  if (sub && snapshotGrants({ tier: sub.tier, status: sub.status, endsAt: sub.endsAt })) {
     const tier = sub.tier;
-    return {
-      tier,
-      modules: cleanModules(sub.modules),
-      limits: parseLimits(sub.limits, limitsForTier(tier))
-    };
+    // Catalogue purchases keep the modules they bought. Legacy tiers keep today's access.
+    if (isCataloguePlan(sub.planId)) {
+      return {
+        tier,
+        modules: cleanModules(sub.modules),
+        limits: parseLimits(sub.limits, await limitsForTier(tier))
+      };
+    }
+    return { tier, modules: cleanModules(modulesForTier(tier)), limits: await limitsForTier(tier) };
   }
   const tier = effectiveTier(user);
-  return { tier, modules: cleanModules(modulesForTier(tier)), limits: limitsForTier(tier) };
+  return { tier, modules: cleanModules(modulesForTier(tier)), limits: await limitsForTier(tier) };
 }
 
 export async function hasModule(userId: string, moduleId: ModuleId) {

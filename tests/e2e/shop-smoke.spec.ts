@@ -34,12 +34,6 @@ async function registerWithEmail(
   await page.getByLabel("Email").fill(input.email);
   await page.getByLabel("Password").fill(input.password);
   await page.getByRole("button", { name: "Create account" }).click();
-  await page.waitForURL(/\/(dashboard|login)(?:\?|$)/);
-  if (!page.url().includes("/login")) return;
-  await page.getByRole("button", { name: "Use email instead" }).click();
-  await page.getByLabel("Email").fill(input.email);
-  await page.getByLabel("Password").fill(input.password);
-  await page.getByRole("button", { name: "Sign in" }).click();
   await page.waitForURL("**/dashboard**");
 }
 
