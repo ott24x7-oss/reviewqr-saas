@@ -7,6 +7,7 @@ import { resolveLayout, type StoreView } from "@/lib/store/layout";
 import { moduleBlock, upsellOffer } from "@/lib/plans/entitlements";
 import { ModuleUpsell } from "@/components/plans/module-upsell";
 import { MenuEditor } from "./menu-editor";
+import { HelpLink } from "@/components/help/help-link";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +48,8 @@ export default async function BusinessMenuPage({ params }: { params: { id: strin
     return <ModuleUpsell title={offer.title} body={locked} href={offer.href} />;
   }
   return (
+    <div className="space-y-3">
+    <HelpLink context="menu" page="Menu" />
     <MenuEditor
       businessId={access.id}
       businessName={access.name}
@@ -61,6 +64,7 @@ export default async function BusinessMenuPage({ params }: { params: { id: strin
       }))}
       loose={loose.map(serialize)}
     />
+    </div>
   );
 }
 

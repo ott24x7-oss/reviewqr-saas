@@ -175,3 +175,20 @@ export async function storeUpload(opts: {
     storage: "s3"
   };
 }
+
+const VIDEO_MAX = 20 * 1024 * 1024;
+
+/** Short help videos. Images stay on storeUpload. Without a bucket, paste a link instead. */
+export async function storeVideo(bytes: Buffer, contentType: string) {
+  if (!bytes.length) throw new Error("Empty file");
+  if (bytes.length > VIDEO_MAX) throw new Error("Video is too large (max 20MB)");
+  const type = contentType === "video/webm" ? "video/webm" : contentType === "video/mp4" ? "video/mp4" : "";
+  if (!type) throw new Error("Upload an MP4 or WebM video, or paste a YouTube or Vimeo link");
+  if (!storageConfigured()) {
+    throw new Error("Video upload needs storage. Paste a YouTube or Vimeo link instead.");
+  }
+  const cfg = storageConfig();
+  const key = `help/${randomUUID()}.${type === "video/webm" ? "webm" : "mp4"}`;
+  await putObject(cfg, key, bytes, type);
+  return { url: `${cfg.publicBaseUrl}/${key}` };
+}

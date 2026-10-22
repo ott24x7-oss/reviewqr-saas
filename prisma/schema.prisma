@@ -114,6 +114,8 @@ model User {
   supportMessages SupportMessage[] @relation("SupportMessageAuthor")
   onboardingMarks OnboardingMark[]
   onboardingDraft OnboardingDraft?
+  reportPreference ReportPreference?
+  announcementDismissals AnnouncementDismiss[]
   printBatches    PrintBatch[]
   refreshSessions RefreshSession[]
   pushDevices     PushDevice[]
@@ -316,6 +318,10 @@ model Business {
   offerBanners OfferBanner[]
   devices      Device[]
   shopOrders   ShopOrder[]
+  menuViews    MenuItemView[]
+  analyticsDays AnalyticsDaily[]
+  growthScores GrowthScore[]
+  growthTips   GrowthTipDone[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -978,6 +984,7 @@ model MenuItem {
   sortOrder  Int           @default(0)
   variants   MenuVariant[]
   addOns     MenuAddOn[]
+  views      MenuItemView[]
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @updatedAt
 
@@ -1260,6 +1267,131 @@ model ReviewTemplate {
   createdAt  DateTime @default(now())
 
   @@index([businessId, used])
+}
+
+// One menu-item open. visitorHash is SHA-256 of a client id and QR_SCAN_SALT. No IP is stored.
+model MenuItemView {
+  id          String   @id @default(cuid())
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  itemId      String
+  item        MenuItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  qrCodeId    String?
+  visitorHash String
+  createdAt   DateTime @default(now())
+
+  @@index([businessId, createdAt])
+  @@index([itemId, createdAt])
+}
+
+// One row per business per Asia/Kolkata day. The dashboard reads this, not raw events.
+model AnalyticsDaily {
+  id            String   @id @default(cuid())
+  businessId    String
+  business      Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  day           DateTime @db.Date
+  scans         Int      @default(0)
+  tapsNfc       Int      @default(0)
+  tapsQr        Int      @default(0)
+  pageViews     Int      @default(0)
+  buttonClicks  Json     @default("{}")
+  menuViews     Int      @default(0)
+  topItems      Json     @default("[]")
+  orderCount    Int      @default(0)
+  orderPaise    Int      @default(0)
+  feedbackCount Int      @default(0)
+  ratingSum     Int      @default(0)
+  ratingCount   Int      @default(0)
+  ratings       Json     @default("{\"1\":0,\"2\":0,\"3\":0,\"4\":0,\"5\":0}")
+  hours         Json     @default("[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]")
+  byQr          Json     @default("[]")
+  byStaff       Json     @default("[]")
+  byDevice      Json     @default("{\"mobile\":0,\"tablet\":0,\"desktop\":0,\"other\":0}")
+  byTable       Json     @default("[]")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([businessId, day])
+  @@index([businessId, day])
+}
+
+model GrowthScore {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  day        DateTime @db.Date
+  score      Int
+  parts      Json
+  createdAt  DateTime @default(now())
+
+  @@unique([businessId, day])
+  @@index([businessId, day])
+}
+
+model GrowthTipDone {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  tipKey     String
+  createdAt  DateTime @default(now())
+
+  @@unique([businessId, tipKey])
+}
+
+model ReportPreference {
+  userId         String    @id
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emailOptIn     Boolean   @default(true)
+  whatsappOptIn  Boolean   @default(false)
+  unsubscribedAt DateTime?
+  updatedAt      DateTime  @updatedAt
+}
+
+model HelpArticle {
+  id         String   @id @default(cuid())
+  slug       String
+  category   String
+  language   String
+  title      String
+  body       String   @db.Text
+  videoUrl   String   @default("")
+  contextKey String   @default("")
+  sortOrder  Int      @default(0)
+  published  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([slug, language])
+  @@index([published, language, sortOrder])
+  @@index([contextKey, published])
+}
+
+model Announcement {
+  id         String   @id @default(cuid())
+  title      String
+  titleHi    String   @default("")
+  body       String   @db.Text
+  bodyHi     String   @default("")
+  link       String   @default("")
+  audience   String   @default("all")
+  startsAt   DateTime
+  endsAt     DateTime
+  published  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  dismissals AnnouncementDismiss[]
+
+  @@index([published, startsAt, endsAt])
+}
+
+model AnnouncementDismiss {
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  announcementId String
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+
+  @@id([userId, announcementId])
 }
 
 // Admin-editable key/value config (overrides env). value holds JSON.
