@@ -78,7 +78,11 @@ export type AuditAction =
   | "shop.order.ndr"
   | "shop.reprint"
   | "shop.credit"
-  | "whatsapp.baileys.disconnect";
+  | "whatsapp.baileys.disconnect"
+  | "plan.update"
+  | "agent.update"
+  | "commission.pay"
+  | "referral.update";
 
 export async function logAudit(opts: {
   userId?: string;
