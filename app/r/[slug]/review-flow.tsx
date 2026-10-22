@@ -740,7 +740,7 @@ export function ReviewFlow(props: Props) {
 
       <footer className="py-6 text-center text-xs rv-sub">
         <a
-          href={props.brand?.appUrl || "https://reviewqr.in"}
+          href={props.brand?.appUrl || process.env.NEXT_PUBLIC_APP_URL || "/"}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1 hover:rv-body"

@@ -71,9 +71,22 @@ export function getInitials(name?: string | null) {
     .toUpperCase();
 }
 
+export function appBaseUrl() {
+  return (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
+}
+
 export function absoluteUrl(path: string) {
-  const base = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  return `${base.replace(/\/$/, "")}${path.startsWith("/") ? path : `/${path}`}`;
+  const base = appBaseUrl();
+  return `${base}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
+/** Host shown in marketing mockups. It follows NEXT_PUBLIC_APP_URL. */
+export function publicHostLabel() {
+  try {
+    return new URL(appBaseUrl()).host;
+  } catch {
+    return "localhost:3000";
+  }
 }
 
 export function getClientIp(headers: Headers) {

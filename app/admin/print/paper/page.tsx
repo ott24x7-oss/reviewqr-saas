@@ -9,6 +9,7 @@ import { templateById } from "@/lib/print/templates";
 import { needsRaster } from "@/lib/print/text";
 import { PRINT_JOB_KEY, readDataUrl, type PrintJob } from "@/lib/print/job";
 import { isLookupCode } from "@/lib/tap/ids";
+import { absoluteUrl } from "@/lib/utils";
 
 export default function PrintPaperPage() {
   const [job, setJob] = React.useState<PrintJob | null>(null);
@@ -54,7 +55,7 @@ export default function PrintPaperPage() {
       preset: "exact",
       sheet: null,
       qrMm,
-      codes: [{ code: job.code, label: job.label, url: `https://reviewqr.example/q/${job.code}?src=qr` }]
+      codes: [{ code: job.code, label: job.label, url: absoluteUrl(`/q/${job.code}?src=qr`) }]
     });
     const next = scenes.map((scene) => ({
       url: URL.createObjectURL(new Blob([sceneToSvg(scene)], { type: "image/svg+xml;charset=utf-8" })),

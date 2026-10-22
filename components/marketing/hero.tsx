@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { AvatarInitials } from "@/components/ui/avatar-initials";
 import { RotatingReviewWord } from "@/components/marketing/rotating-word";
 import { DEFAULT_BRAND_TAGLINE } from "@/lib/brand-defaults";
+import { publicHostLabel } from "@/lib/utils";
 
 export function Hero() {
   return (
@@ -97,7 +98,7 @@ export function Hero() {
                   <span className="h-2.5 w-2.5 rounded-full bg-red-400" />
                   <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
                   <span className="h-2.5 w-2.5 rounded-full bg-green-400" />
-                  <span className="ml-2 text-[10px] text-muted-foreground font-mono">app.reviewqr.in</span>
+                  <span className="ml-2 text-[10px] text-muted-foreground font-mono">{publicHostLabel()}</span>
                 </div>
                 <div className="p-3 grid grid-cols-2 gap-2 bg-gradient-to-br from-primary-50/40 to-accent-50/40">
                   <div className="rounded-lg bg-white border p-2.5">

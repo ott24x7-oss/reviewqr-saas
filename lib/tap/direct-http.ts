@@ -47,7 +47,7 @@ export function absoluteRedirect(href: string, origin: string): string | null {
   }
 }
 
-export function ownHostsFrom(hostHeader: string, appUrl: string | undefined) {
+export function ownHostsFrom(hostHeader: string, appUrl: string | undefined, extraHosts: string[] = []) {
   const hosts = new Set<string>();
   const raw = hostHeader.split(",")[0]?.trim().toLowerCase() || "";
   const hostname = raw.replace(/:\d+$/, "");
@@ -58,6 +58,10 @@ export function ownHostsFrom(hostHeader: string, appUrl: string | undefined) {
     } catch {
       // An unset or relative app URL does not add a host.
     }
+  }
+  for (const item of extraHosts) {
+    const name = item.trim().toLowerCase().replace(/:\d+$/, "");
+    if (name) hosts.add(name);
   }
   return [...hosts];
 }

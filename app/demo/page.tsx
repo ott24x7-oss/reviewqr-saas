@@ -3,6 +3,7 @@ import { MarketingNavbar } from "@/components/marketing/navbar";
 import { Footer } from "@/components/marketing/footer";
 import { Button } from "@/components/ui/button";
 import { getBrand } from "@/lib/brand";
+import { absoluteUrl } from "@/lib/utils";
 import {
   ScanLine,
   Star,
@@ -23,7 +24,6 @@ export const metadata = {
 };
 
 const DEMO_QR_IMAGE = "https://i.ibb.co/Y7RWPMK5/QR-pay.png";
-const DEMO_REVIEW_URL = "https://review.watshop.in/r/ensofter";
 
 const steps = [
   {
@@ -57,6 +57,7 @@ export const dynamic = "force-dynamic";
 
 export default async function DemoPage() {
   const brand = await getBrand();
+  const demoReviewUrl = absoluteUrl("/r/ensofter");
   return (
     <main className="min-h-screen bg-white">
       <MarketingNavbar brand={brand} />
@@ -120,7 +121,7 @@ export default async function DemoPage() {
               </ul>
               <div className="mt-6">
                 <Button asChild variant="gradient" size="lg">
-                  <Link href={DEMO_REVIEW_URL} target="_blank" rel="noopener noreferrer">
+                  <Link href={demoReviewUrl} target="_blank" rel="noopener noreferrer">
                     Open demo in a new tab <ExternalLink className="h-4 w-4" />
                   </Link>
                 </Button>
@@ -174,7 +175,7 @@ export default async function DemoPage() {
                 <div className="rounded-[1.75rem] sm:rounded-[2rem] overflow-hidden bg-white relative">
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 z-10 h-5 sm:h-6 w-20 sm:w-32 bg-slate-900 rounded-b-2xl" />
                   <iframe
-                    src={DEMO_REVIEW_URL}
+                    src={demoReviewUrl}
                     title="QR24x7 live demo"
                     className="block w-full h-[78svh] min-h-[560px] max-h-[780px] sm:h-[720px] border-0"
                     loading="lazy"
@@ -187,12 +188,12 @@ export default async function DemoPage() {
           <p className="mt-5 text-center text-xs text-muted-foreground">
             Embedded preview of{" "}
             <a
-              href={DEMO_REVIEW_URL}
+              href={demoReviewUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="underline hover:text-foreground"
             >
-              {DEMO_REVIEW_URL.replace(/^https?:\/\//, "")}
+              {demoReviewUrl.replace(/^https?:\/\//, "")}
             </a>
           </p>
         </div>

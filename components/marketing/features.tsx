@@ -1,3 +1,4 @@
+import { publicHostLabel } from "@/lib/utils";
 import {
   QrCode,
   MessageCircle,
@@ -200,7 +201,7 @@ function WhatsAppCard() {
               <br />
               Quick review:
               <br />
-              <span className="text-primary underline">reviewqr.in/r/...</span>
+              <span className="text-primary underline">{publicHostLabel()}/r/...</span>
             </div>
             <div className="mt-1 text-[8px] text-muted-foreground text-right">10:24 AM ✓✓</div>
           </div>

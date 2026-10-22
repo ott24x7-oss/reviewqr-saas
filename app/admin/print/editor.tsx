@@ -14,6 +14,7 @@ import { needsRaster } from "@/lib/print/text";
 import { isLookupCode } from "@/lib/tap/ids";
 import { PRINT_JOB_KEY, readDataUrl, type HindiFont, type PrintJob } from "@/lib/print/job";
 import type { EyeStyle, ModuleStyle, PrintRaster } from "@/lib/print/design";
+import { absoluteUrl } from "@/lib/utils";
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
 
@@ -121,7 +122,7 @@ export function PrintEditor({
       preset: "exact",
       sheet: null,
       qrMm,
-      codes: [{ code: job.code, label: job.label, url: `https://reviewqr.example/q/${job.code}?src=qr` }]
+      codes: [{ code: job.code, label: job.label, url: absoluteUrl(`/q/${job.code}?src=qr`) }]
     });
     return scenes[face === "back" && scenes[1] ? 1 : 0] || null;
   }, [job, template, qrMm, codeOk, face]);
