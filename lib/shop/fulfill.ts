@@ -6,6 +6,8 @@ import type { Prisma, SubscriptionTier } from "@prisma/client";
 import { logAudit } from "../admin";
 import { prisma } from "../db";
 import { extendSubscriptionEnd, nextInvoiceNumber } from "../subscription";
+import { legacyPlanId, limitsForTier, modulesForTier } from "../plans/legacy";
+import { grantPlanAccess } from "../plans/snapshot";
 import { bundleGrant } from "./bundle";
 import { holdUntil } from "../plans/commission-rules";
 import { getPlanProgramSettings } from "../plans/settings";
@@ -151,9 +153,16 @@ export async function fulfillPaidShopOrder(input: FulfillInput): Promise<Fulfill
       });
     }
     if (grant) {
-      await tx.user.update({
-        where: { id: user.id },
-        data: { subscriptionTier: tier, subscriptionStatus: "ACTIVE", subscriptionEndsAt: endsAt }
+      await grantPlanAccess(tx, {
+        userId: user.id,
+        tier,
+        status: "ACTIVE",
+        endsAt,
+        startsAt: now,
+        planId: legacyPlanId(tier),
+        duration: tier === "FOUNDER" ? "LIFETIME" : null,
+        modules: modulesForTier(tier),
+        limits: limitsForTier(tier)
       });
     }
     await tx.shopCartLine.deleteMany({ where: { cart: { userId: row.userId } } });

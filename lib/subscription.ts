@@ -9,6 +9,7 @@ import { getPaymentsConfig } from "./settings";
 import { absoluteUrl } from "./utils";
 import { limitsForTier, modulesForTier } from "./plans/legacy";
 import { extendByReward } from "./plans/quote";
+import { grantPlanAccess } from "./plans/snapshot";
 
 export function financialYearLabel(date: Date): string {
   const start = date.getMonth() >= 3 ? date.getFullYear() : date.getFullYear() - 1;
@@ -185,15 +186,6 @@ export async function activateCompletedPayment(input: ActivateInput): Promise<Ac
       }
     });
 
-    await tx.user.update({
-      where: { id: user.id },
-      data: {
-        subscriptionTier: row.tier,
-        subscriptionStatus: "ACTIVE",
-        subscriptionEndsAt: expiresAt
-      }
-    });
-
     const modules = row.modules && row.modules.length ? row.modules : modulesForTier(row.tier);
     let rawLimits: unknown = row.limits;
     if (typeof rawLimits === "string") {
@@ -204,30 +196,19 @@ export async function activateCompletedPayment(input: ActivateInput): Promise<Ac
       }
     }
     const limits = rawLimits && typeof rawLimits === "object" ? rawLimits : limitsForTier(row.tier);
-    const snapshot = {
+    await grantPlanAccess(tx, {
+      userId: user.id,
+      tier: row.tier,
+      status: "ACTIVE",
+      endsAt: expiresAt,
+      startsAt: now,
       planId: row.planId,
+      duration: row.duration,
       modules,
       limits,
-      tier: row.tier,
-      duration: row.duration,
-      status: "ACTIVE" as const,
-      startsAt: now,
-      endsAt: expiresAt,
       pricePaise: row.amount + Math.max(0, row.creditPaise || 0),
-      pendingPlanId: null,
-      pendingDuration: null,
-      pendingModules: [] as string[],
-      pendingLimits: Prisma.DbNull
-    };
-    const open = await tx.subscription.findFirst({
-      where: { userId: user.id, status: { in: ["ACTIVE", "TRIALING", "PAST_DUE"] } },
-      orderBy: { createdAt: "desc" }
+      clearPending: true
     });
-    if (open) {
-      await tx.subscription.update({ where: { id: open.id }, data: snapshot });
-    } else {
-      await tx.subscription.create({ data: { userId: user.id, ...snapshot } });
-    }
 
     return { ok: true, already: false, expiresAt: expiresAt ?? now, invoiceNumber };
   });

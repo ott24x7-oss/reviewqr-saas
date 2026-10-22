@@ -11,6 +11,7 @@ import {
 } from "./referral";
 import { getPlanProgramSettings } from "./settings";
 import { notifyUser } from "./notify";
+import { grantPlanAccess } from "./snapshot";
 
 async function addCredit(userId: string, months: number, days: number) {
   if (months <= 0 && days <= 0) return;
@@ -24,11 +25,19 @@ async function addCredit(userId: string, months: number, days: number) {
   });
 }
 
-async function pushEnd(userId: string, endsAt: Date) {
-  await prisma.user.update({ where: { id: userId }, data: { subscriptionEndsAt: endsAt } });
-  await prisma.subscription.updateMany({
-    where: { userId, status: { in: ["ACTIVE", "TRIALING", "PAST_DUE"] } },
-    data: { endsAt }
+export async function pushRewardEnd(userId: string, endsAt: Date) {
+  await prisma.$transaction(async (tx) => {
+    const user = await tx.user.findUnique({
+      where: { id: userId },
+      select: { subscriptionTier: true, subscriptionStatus: true }
+    });
+    if (!user) return;
+    await grantPlanAccess(tx, {
+      userId,
+      tier: user.subscriptionTier,
+      status: user.subscriptionStatus,
+      endsAt
+    });
   });
 }
 
@@ -138,13 +147,13 @@ export async function applyDueReferralRewards(now = new Date()) {
     if (claimed.count !== 1) continue;
     if (months > 0 && extend && referrer.subscriptionEndsAt) {
       const next = extendByReward(referrer.subscriptionEndsAt, months, 0);
-      if (next) await pushEnd(reward.referrerUserId, next);
+      if (next) await pushRewardEnd(reward.referrerUserId, next);
     } else if (months > 0) {
       await addCredit(reward.referrerUserId, months, 0);
     }
     if (reward.bonusDays > 0 && referred.subscriptionEndsAt) {
       const next = extendByReward(referred.subscriptionEndsAt, 0, reward.bonusDays);
-      if (next) await pushEnd(reward.referredUserId, next);
+      if (next) await pushRewardEnd(reward.referredUserId, next);
     } else if (reward.bonusDays > 0) {
       await addCredit(reward.referredUserId, 0, reward.bonusDays);
     }
