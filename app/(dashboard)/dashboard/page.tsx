@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatNumber, timeAgo } from "@/lib/utils";
 import { ownedOrAssignedWhere, readableBusinessWhere } from "@/lib/tenant";
+import { GrowthCard } from "@/components/dashboard/growth-card";
 
 export const dynamic = "force-dynamic";
 
@@ -134,6 +135,7 @@ export default async function DashboardOverview() {
           </Link>
         </Button>
       </div>
+      {businesses[0] ? <GrowthCard businessId={businesses[0].id} /> : null}
 
       {owned && setupSteps.some((step) => !step.done) && (
         <Card>
