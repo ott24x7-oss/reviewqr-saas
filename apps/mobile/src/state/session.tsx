@@ -1,8 +1,13 @@
 import type { Me, TokenPair } from "@reviewqr/shared";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { endSession } from "../auth/end-session";
 import { apiData } from "../api/data";
-import { mobileApi } from "../api/instance";
+import { apiBaseUrl, mobileApi } from "../api/instance";
+import { forgetPushToken, readPushToken } from "../push/stored-token";
+import { BUSINESS_ID_KEY } from "./storage";
 
 type SessionValue = {
   ready: boolean;
@@ -15,6 +20,7 @@ type SessionValue = {
 const SessionContext = createContext<SessionValue | null>(null);
 
 export function SessionProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const [ready, setReady] = useState(false);
   const [user, setUser] = useState<Me | null>(null);
 
@@ -32,9 +38,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   );
 
   const logout = useCallback(async () => {
-    await mobileApi.logout();
+    await endSession({
+      baseUrl: apiBaseUrl(),
+      accessToken: mobileApi.getAccessToken(),
+      pushToken: await readPushToken(),
+      revoke: () => mobileApi.logout(),
+      clearQuery: () => queryClient.clear(),
+      clearBusinessId: () => AsyncStorage.removeItem(BUSINESS_ID_KEY),
+      clearPushToken: () => forgetPushToken()
+    });
     setUser(null);
-  }, []);
+  }, [queryClient]);
 
   useEffect(() => {
     let live = true;

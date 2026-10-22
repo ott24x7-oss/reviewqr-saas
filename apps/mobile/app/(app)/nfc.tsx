@@ -7,7 +7,9 @@ import { apiData } from "../../src/api/data";
 import { useI18n } from "../../src/i18n";
 import { readUriPayload, tagIdMatches } from "../../src/nfc/read";
 import { nfcPayloadMatches, nfcUrlIsPublicHttps } from "../../src/nfc/url";
+import { accountKey } from "../../src/query/keys";
 import { useBusiness } from "../../src/state/business";
+import { useSession } from "../../src/state/session";
 import { colors, fonts } from "../../src/theme";
 import { PillButton } from "../../src/ui/controls";
 
@@ -21,10 +23,11 @@ async function loadNfc() {
 
 export default function NfcScreen() {
   const { t, lang } = useI18n();
+  const { user } = useSession();
   const { business } = useBusiness();
   const tap = useQuery({
-    queryKey: ["tap", business?.id],
-    enabled: !!business,
+    queryKey: accountKey(user?.id ?? "", "tap", business?.id),
+    enabled: !!user && !!business,
     queryFn: () => apiData<TapPage>(`/api/v1/businesses/${business!.id}/tap`)
   });
   const [status, setStatus] = useState<string | null>(null);

@@ -4,15 +4,19 @@ import { router } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { apiData } from "../../src/api/data";
 import { useI18n } from "../../src/i18n";
+import { accountKey } from "../../src/query/keys";
 import { useBusiness } from "../../src/state/business";
+import { useSession } from "../../src/state/session";
 import { colors, fonts } from "../../src/theme";
 import { PillButton } from "../../src/ui/controls";
 
 export default function HomeScreen() {
   const { t, lang } = useI18n();
+  const { user } = useSession();
   const { businesses, business, choose } = useBusiness();
   const home = useQuery({
-    queryKey: ["dashboard", business?.id ?? "all"],
+    queryKey: accountKey(user?.id ?? "", "dashboard", business?.id ?? "all"),
+    enabled: !!user,
     queryFn: () => apiData<Dashboard>(`/api/v1/dashboard${business ? `?businessId=${business.id}` : ""}`)
   });
   const plan = home.data?.plan;

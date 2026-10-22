@@ -2,8 +2,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useQuery } from "@tanstack/react-query";
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { apiData } from "../api/data";
-
-const KEY = "reviewqr.businessId";
+import { accountKey } from "../query/keys";
+import { useSession } from "./session";
+import { BUSINESS_ID_KEY } from "./storage";
 
 export type BusinessCard = {
   id: string;
@@ -30,15 +31,17 @@ type BusinessValue = {
 const BusinessContext = createContext<BusinessValue | null>(null);
 
 export function BusinessProvider({ children }: { children: ReactNode }) {
+  const { user } = useSession();
   const [businessId, setBusinessId] = useState<string | null>(null);
   const [stored, setStored] = useState(false);
   const query = useQuery({
-    queryKey: ["businesses"],
+    queryKey: accountKey(user?.id ?? "", "businesses"),
+    enabled: !!user,
     queryFn: () => apiData<{ items: BusinessCard[] }>("/api/v1/businesses?limit=50")
   });
 
   useEffect(() => {
-    AsyncStorage.getItem(KEY)
+    AsyncStorage.getItem(BUSINESS_ID_KEY)
       .then((value) => setBusinessId(value))
       .finally(() => setStored(true));
   }, []);
@@ -48,7 +51,7 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!stored || !selected) return;
-    AsyncStorage.setItem(KEY, selected.id).catch(() => undefined);
+    AsyncStorage.setItem(BUSINESS_ID_KEY, selected.id).catch(() => undefined);
   }, [stored, selected]);
 
   const value = useMemo<BusinessValue>(
@@ -58,7 +61,7 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
       business: selected,
       choose: (id: string) => {
         setBusinessId(id);
-        AsyncStorage.setItem(KEY, id).catch(() => undefined);
+        AsyncStorage.setItem(BUSINESS_ID_KEY, id).catch(() => undefined);
       },
       loading: query.isLoading,
       reload: () => {

@@ -7,7 +7,9 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { apiData } from "../../src/api/data";
 import { ApiError } from "../../src/api/http";
 import { useI18n } from "../../src/i18n";
+import { accountKey } from "../../src/query/keys";
 import { useBusiness } from "../../src/state/business";
+import { useSession } from "../../src/state/session";
 import { cartPaise } from "../../src/shop/totals";
 import { colors, fonts } from "../../src/theme";
 import { Field, PillButton } from "../../src/ui/controls";
@@ -38,6 +40,7 @@ function rupees(paise: number) {
 
 export default function ShopScreen() {
   const { t, lang } = useI18n();
+  const { user } = useSession();
   const { business } = useBusiness();
   const client = useQueryClient();
   const params = useLocalSearchParams<{ tab?: string; order?: string }>();
@@ -59,23 +62,25 @@ export default function ShopScreen() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  const userId = user?.id ?? "";
   const catalog = useQuery({
-    queryKey: ["shop-catalog"],
+    queryKey: accountKey(userId, "shop-catalog"),
+    enabled: !!user,
     queryFn: () => apiData<{ items: Product[] }>("/api/v1/shop/catalog")
   });
   const orders = useQuery({
-    queryKey: ["shop-orders"],
-    enabled: tab === "orders",
+    queryKey: accountKey(userId, "shop-orders"),
+    enabled: !!user && tab === "orders",
     queryFn: () => apiData<{ items: OrderRow[] }>("/api/v1/shop/orders")
   });
   const detail = useQuery({
-    queryKey: ["shop-order", openId],
-    enabled: !!openId,
+    queryKey: accountKey(userId, "shop-order", openId),
+    enabled: !!user && !!openId,
     queryFn: () => apiData<ShopOrderDetail>(`/api/v1/shop/orders/${openId}`)
   });
   const billing = useQuery({
-    queryKey: ["billing"],
-    enabled: tab === "plan",
+    queryKey: accountKey(userId, "billing"),
+    enabled: !!user && tab === "plan",
     queryFn: () => apiData<BillingSummary>("/api/v1/billing/summary")
   });
 
@@ -138,7 +143,7 @@ export default function ShopScreen() {
       setLines([]);
       setOpenId(checkout.orderId);
       setTab("orders");
-      await client.invalidateQueries({ queryKey: ["shop-orders"] });
+      await client.invalidateQueries({ queryKey: accountKey(userId, "shop-orders") });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not start payment");
     } finally {
@@ -217,7 +222,7 @@ export default function ShopScreen() {
                       method: "POST",
                       body: JSON.stringify({ reason: "damage" })
                     })
-                      .then(() => client.invalidateQueries({ queryKey: ["shop-order", detail.data!.id] }))
+                      .then(() => client.invalidateQueries({ queryKey: accountKey(userId, "shop-order", detail.data!.id) }))
                       .catch((err) => setError(err instanceof ApiError ? err.message : "Could not ask for a reprint"))
                   }
                 />

@@ -2,6 +2,7 @@ import { router } from "expo-router";
 import { useEffect } from "react";
 import { apiData } from "../api/data";
 import { useSession } from "../state/session";
+import { rememberPushToken } from "./stored-token";
 import { routeForPush } from "./routes";
 
 /** Registers this Android device when the owner allows push, and opens the screen a tap names. */
@@ -41,6 +42,7 @@ export function PushBridge() {
         method: "POST",
         body: JSON.stringify({ token: token.data, platform: "ANDROID" })
       });
+      await rememberPushToken(token.data);
     })().catch(() => undefined);
     return () => {
       live = false;

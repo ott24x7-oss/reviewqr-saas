@@ -6,7 +6,9 @@ import { Pressable, ScrollView, StyleSheet, Text } from "react-native";
 import { apiData } from "../api/data";
 import { ApiError } from "../api/http";
 import { useI18n } from "../i18n";
+import { accountKey } from "../query/keys";
 import { useBusiness, type BusinessCard } from "../state/business";
+import { useSession } from "../state/session";
 import { colors, fonts } from "../theme";
 import { Field, PillButton } from "./controls";
 
@@ -32,6 +34,7 @@ const empty: Draft = {
 
 export function BusinessForm({ initial, businessId }: { initial?: BusinessCard | null; businessId?: string }) {
   const { t, lang } = useI18n();
+  const { user } = useSession();
   const { choose, reload } = useBusiness();
   const client = useQueryClient();
   const [draft, setDraft] = useState<Draft>({
@@ -110,8 +113,8 @@ export function BusinessForm({ initial, businessId }: { initial?: BusinessCard |
             method: "POST",
             body: JSON.stringify(body)
           });
-      await client.invalidateQueries({ queryKey: ["businesses"] });
-      await client.invalidateQueries({ queryKey: ["dashboard"] });
+      await client.invalidateQueries({ queryKey: accountKey(user?.id ?? "", "businesses") });
+      await client.invalidateQueries({ queryKey: accountKey(user?.id ?? "", "dashboard") });
       choose(saved.business.id);
       reload();
       router.back();

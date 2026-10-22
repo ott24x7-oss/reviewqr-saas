@@ -8,7 +8,9 @@ import { apiBaseUrl } from "../../src/api/instance";
 import { apiData } from "../../src/api/data";
 import { ApiError } from "../../src/api/http";
 import { useI18n } from "../../src/i18n";
+import { accountKey } from "../../src/query/keys";
 import { useBusiness } from "../../src/state/business";
+import { useSession } from "../../src/state/session";
 import { colors, fonts } from "../../src/theme";
 import { Field, PillButton } from "../../src/ui/controls";
 
@@ -16,11 +18,12 @@ const ADDABLE = ["menu", "whatsapp_chat", "call", "google", "website", "feedback
 
 export default function TapScreen() {
   const { t, lang } = useI18n();
+  const { user } = useSession();
   const { business } = useBusiness();
   const client = useQueryClient();
   const tap = useQuery({
-    queryKey: ["tap", business?.id],
-    enabled: !!business,
+    queryKey: accountKey(user?.id ?? "", "tap", business?.id),
+    enabled: !!user && !!business,
     queryFn: () => apiData<TapPage>(`/api/v1/businesses/${business!.id}/tap`)
   });
   const [links, setLinks] = useState<TapLink[] | null>(null);
@@ -56,7 +59,7 @@ export default function TapScreen() {
       setLinks(null);
       setThemeId(null);
       setBio(null);
-      await client.invalidateQueries({ queryKey: ["tap", business.id] });
+      await client.invalidateQueries({ queryKey: accountKey(user?.id ?? "", "tap", business.id) });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not publish");
     } finally {

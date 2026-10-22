@@ -6,7 +6,9 @@ import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-na
 import { apiData } from "../../src/api/data";
 import { ApiError } from "../../src/api/http";
 import { useI18n } from "../../src/i18n";
+import { accountKey } from "../../src/query/keys";
 import { useBusiness } from "../../src/state/business";
+import { useSession } from "../../src/state/session";
 import { colors, fonts } from "../../src/theme";
 import { Field, PillButton } from "../../src/ui/controls";
 
@@ -40,6 +42,7 @@ const STATUSES = ["ACCEPTED", "PREPARING", "READY", "COMPLETED"] as const;
 
 export default function OrdersScreen() {
   const { t, lang } = useI18n();
+  const { user } = useSession();
   const { business } = useBusiness();
   const client = useQueryClient();
   const params = useLocalSearchParams<{ tab?: string }>();
@@ -55,20 +58,21 @@ export default function OrdersScreen() {
   const [error, setError] = useState<string | null>(null);
   const [reply, setReply] = useState<string | null>(null);
   const id = business?.id;
+  const userId = user?.id ?? "";
 
   const products = useQuery({
-    queryKey: ["menu", id],
-    enabled: !!id && tab === "products",
+    queryKey: accountKey(userId, "menu", id),
+    enabled: !!user && !!id && tab === "products",
     queryFn: () => apiData<{ items: Product[] }>(`/api/v1/businesses/${id}/menu?limit=50`)
   });
   const orders = useQuery({
-    queryKey: ["orders", id],
-    enabled: !!id && tab === "orders",
+    queryKey: accountKey(userId, "orders", id),
+    enabled: !!user && !!id && tab === "orders",
     queryFn: () => apiData<{ items: OrderCard[] }>(`/api/v1/orders?limit=30${id ? `&businessId=${id}` : ""}`)
   });
   const feedback = useQuery({
-    queryKey: ["feedback", id],
-    enabled: !!id && tab === "feedback",
+    queryKey: accountKey(userId, "feedback", id),
+    enabled: !!user && !!id && tab === "feedback",
     queryFn: () => apiData<{ items: FeedbackRow[] }>(`/api/v1/feedback?limit=30${id ? `&businessId=${id}` : ""}`)
   });
 
@@ -86,7 +90,7 @@ export default function OrdersScreen() {
     if (!id) return;
     const priceRupees = Number(price);
     if (!name.trim() || !Number.isFinite(priceRupees)) return;
-    await run(`/api/v1/businesses/${id}/menu`, { action: "item", name: name.trim(), priceRupees }, ["menu", id]);
+    await run(`/api/v1/businesses/${id}/menu`, { action: "item", name: name.trim(), priceRupees }, accountKey(userId, "menu", id));
     setName("");
     setPrice("");
   }
@@ -110,9 +114,9 @@ export default function OrdersScreen() {
   async function toggle(item: Product) {
     if (!id) return;
     const available = !item.available;
-    await run(`/api/v1/businesses/${id}/menu`, { action: "update", id: item.id, available }, ["menu", id]);
+    await run(`/api/v1/businesses/${id}/menu`, { action: "update", id: item.id, available }, accountKey(userId, "menu", id));
     for (const variant of item.variants || []) {
-      await run(`/api/v1/businesses/${id}/menu`, { action: "variant-update", id: variant.id, inStock: available }, ["menu", id]);
+      await run(`/api/v1/businesses/${id}/menu`, { action: "variant-update", id: variant.id, inStock: available }, accountKey(userId, "menu", id));
     }
   }
 
@@ -160,7 +164,7 @@ export default function OrdersScreen() {
               <PillButton
                 label={t.duplicate}
                 tone="outline"
-                onPress={() => id && run(`/api/v1/businesses/${id}/menu`, { action: "duplicate", id: item.id, kind: "item" }, ["menu", id])}
+                onPress={() => id && run(`/api/v1/businesses/${id}/menu`, { action: "duplicate", id: item.id, kind: "item" }, accountKey(userId, "menu", id))}
               />
             </View>
           ))}
@@ -179,7 +183,7 @@ export default function OrdersScreen() {
                   <Pressable
                     key={status}
                     style={styles.chip}
-                    onPress={() => run(`/api/v1/orders/${order.id}/status`, { status }, ["orders", id || ""])}
+                    onPress={() => run(`/api/v1/orders/${order.id}/status`, { status }, accountKey(userId, "orders", id || ""))}
                   >
                     <Text style={styles.chipText}>{status}</Text>
                   </Pressable>
@@ -202,7 +206,7 @@ export default function OrdersScreen() {
                 tone="outline"
                 onPress={() =>
                   apiData(`/api/v1/feedback/${row.id}`, { method: "PATCH", body: JSON.stringify({ status: "RESOLVED" }) })
-                    .then(() => client.invalidateQueries({ queryKey: ["feedback", id] }))
+                    .then(() => client.invalidateQueries({ queryKey: accountKey(userId, "feedback", id) }))
                     .catch((err) => setError(err instanceof ApiError ? err.message : "Could not save"))
                 }
               />
