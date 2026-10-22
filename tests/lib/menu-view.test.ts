@@ -1,6 +1,7 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { NextRequest } from "next/server";
-import { POST, menuViewLimitKey } from "../../app/api/public/menu-view/route";
+import { POST } from "../../app/api/public/menu-view/route";
+import { menuViewLimitKey } from "../../lib/analytics/menu-view";
 import { prisma } from "../../lib/db";
 
 describe("menu item views", () => {

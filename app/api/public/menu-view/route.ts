@@ -1,16 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { isBotUserAgent } from "@/lib/analytics/bots";
+import { menuViewLimitKey } from "@/lib/analytics/menu-view";
 import { hashVisitor } from "@/lib/analytics/visitor";
 import { prisma } from "@/lib/db";
 import { rateLimitDb } from "@/lib/rate-limit";
 import { isLookupCode } from "@/lib/tap/ids";
 import { getClientIp } from "@/lib/utils";
-
-/** One bucket per caller and printed code. The visitor id is not a limit key. */
-export function menuViewLimitKey(ip: string, shortCode: string) {
-  return `menu-view:${ip || "unknown"}:${shortCode}`;
-}
 
 const bodySchema = z.object({
   code: z.string().min(4).max(32),

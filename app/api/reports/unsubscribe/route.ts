@@ -14,7 +14,7 @@ function escapeAttr(value: string) {
 }
 
 /** Confirm page only. Opening the link does not change preferences. */
-export function unsubscribeConfirmHtml(token: string) {
+function unsubscribeConfirmHtml(token: string) {
   const safe = escapeAttr(token);
   return `<!doctype html>
 <html lang="en">
