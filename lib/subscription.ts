@@ -239,6 +239,19 @@ export async function activateCompletedPayment(input: ActivateInput): Promise<Ac
     } catch (error) {
       console.warn("[plans] could not record commission", error);
     }
+    try {
+      const payment = await prisma.payment.findUnique({ where: { id: input.paymentId }, select: { userId: true } });
+      if (payment) {
+        const { sendPushToUsers } = await import("./push");
+        await sendPushToUsers([payment.userId], {
+          title: "Your plan is active",
+          body: "Your plan is active",
+          data: { type: "plan_active" }
+        });
+      }
+    } catch (error) {
+      console.warn("[plans] could not send the plan push", error);
+    }
   }
   return result;
 }

@@ -8,9 +8,11 @@ import { ApiError } from "../../src/api/http";
 import { useI18n } from "../../src/i18n";
 import { accountKey } from "../../src/query/keys";
 import { useBusiness } from "../../src/state/business";
+import { hasModule, useEntitlement } from "../../src/state/entitlement";
 import { useSession } from "../../src/state/session";
 import { colors, fonts } from "../../src/theme";
 import { Field, PillButton } from "../../src/ui/controls";
+import { LockedModuleCard } from "../../src/ui/locked-module";
 
 type Tab = "products" | "orders" | "feedback";
 
@@ -57,6 +59,8 @@ export default function OrdersScreen() {
   const [price, setPrice] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [reply, setReply] = useState<string | null>(null);
+  const entitlement = useEntitlement();
+  const modules = entitlement.data?.modules;
   const id = business?.id;
   const userId = user?.id ?? "";
 
@@ -150,7 +154,8 @@ export default function OrdersScreen() {
         ))}
       </View>
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      {tab === "products" ? (
+      {tab === "products" && modules && !hasModule(modules, "MENU") ? <LockedModuleCard moduleId="MENU" /> : null}
+      {tab === "products" && (!modules || hasModule(modules, "MENU")) ? (
         <View style={styles.stack}>
           <Field label={t.name} tone="paper" value={name} onChangeText={setName} />
           <Field label={t.price} tone="paper" value={price} onChangeText={setPrice} keyboardType="decimal-pad" />
@@ -170,7 +175,8 @@ export default function OrdersScreen() {
           ))}
         </View>
       ) : null}
-      {tab === "orders"
+      {tab === "orders" && modules && !hasModule(modules, "STORE") ? <LockedModuleCard moduleId="STORE" /> : null}
+      {tab === "orders" && (!modules || hasModule(modules, "STORE"))
         ? (orders.data?.items ?? []).map((order) => (
             <View key={order.id} style={styles.card}>
               <Text style={styles.title}>#{order.number}</Text>
@@ -192,7 +198,8 @@ export default function OrdersScreen() {
             </View>
           ))
         : null}
-      {tab === "feedback"
+      {tab === "feedback" && modules && !hasModule(modules, "REVIEWS") ? <LockedModuleCard moduleId="REVIEWS" /> : null}
+      {tab === "feedback" && (!modules || hasModule(modules, "REVIEWS"))
         ? (feedback.data?.items ?? []).map((row) => (
             <View key={row.id} style={styles.card}>
               <Text style={styles.title}>
