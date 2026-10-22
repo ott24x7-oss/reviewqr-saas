@@ -2,6 +2,13 @@ import { addIstDays, istDayKey } from "./ist";
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
+export class FutureRangeError extends Error {
+  constructor() {
+    super("That date range is in the future");
+    this.name = "FutureRangeError";
+  }
+}
+
 function daysBetween(fromKey: string, toKey: string) {
   const from = Date.parse(`${fromKey}T00:00:00.000Z`);
   const to = Date.parse(`${toKey}T00:00:00.000Z`);
@@ -38,6 +45,8 @@ export function resolveRange(input: {
       to = swap;
     }
   }
+  if (to > today) to = today;
+  if (from > today || from > to) throw new FutureRangeError();
   if (daysBetween(from, to) > 366) from = addIstDays(to, -365);
   const days = daysBetween(from, to);
   const previousTo = addIstDays(from, -1);

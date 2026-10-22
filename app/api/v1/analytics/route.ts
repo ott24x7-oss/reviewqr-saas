@@ -15,7 +15,10 @@ async function getHandler(req: NextRequest) {
     from: req.nextUrl.searchParams.get("from"),
     to: req.nextUrl.searchParams.get("to")
   });
-  if (!result.ok) return v1Error(result.status, "NOT_FOUND", result.error);
+  if (!result.ok) {
+    const code = result.status === 429 ? "RATE_LIMIT" : result.status === 400 ? "VALIDATION" : "NOT_FOUND";
+    return v1Error(result.status, code, result.error);
+  }
   return v1Data(result.data);
 }
 

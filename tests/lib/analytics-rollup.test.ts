@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { isBotUserAgent } from "../../lib/analytics/bots";
 import { compareSummaries, foldDay, foldRange, percentChange, type StoredDay } from "../../lib/analytics/fold";
 import { addIstDays, istDayKey, istDayRange, istHour, istParts } from "../../lib/analytics/ist";
-import { daysNeedingRollup, rollupJobDays } from "../../lib/analytics/build";
-import { resolveRange } from "../../lib/analytics/range";
+import { daysNeedingRollup, isFutureIstDay, rollupJobDays } from "../../lib/analytics/build";
+import { FutureRangeError, resolveRange } from "../../lib/analytics/range";
 import { hashVisitor } from "../../lib/analytics/visitor";
 
 describe("analytics rollup", () => {
@@ -137,5 +137,18 @@ describe("analytics rollup", () => {
     expect(daysNeedingRollup(["2026-10-23"], [], "2026-10-22")).toEqual(["2026-10-23"]);
     expect(rollupJobDays("2026-10-23", 0)).toEqual(["2026-10-23", "2026-10-22"]);
     expect(rollupJobDays("2026-10-23", 1)).toEqual(["2026-10-23"]);
+  });
+
+  it("clamps the end to today, keeps at most 366 days, and rejects a future range", () => {
+    const now = new Date("2026-10-23T06:00:00.000Z");
+    const clamped = resolveRange({ preset: "custom", from: "2026-10-01", to: "2026-12-01", now });
+    expect(clamped.to).toBe("2026-10-23");
+    expect(clamped.from).toBe("2026-10-01");
+    const wide = resolveRange({ preset: "custom", from: "2020-01-01", to: "2026-10-23", now });
+    expect(wide.days).toBeLessThanOrEqual(366);
+    expect(wide.to).toBe("2026-10-23");
+    expect(() => resolveRange({ preset: "custom", from: "2026-10-24", to: "2026-10-30", now })).toThrow(FutureRangeError);
+    expect(isFutureIstDay("2026-10-24", now)).toBe(true);
+    expect(isFutureIstDay("2026-10-23", now)).toBe(false);
   });
 });

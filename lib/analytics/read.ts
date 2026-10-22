@@ -1,8 +1,9 @@
+import { rateLimitDb } from "../rate-limit";
 import { hasModule } from "../plans/entitlements";
 import { requireBusinessRole } from "../tenant";
 import { ensureRollups } from "./build";
 import { compareSummaries, foldRange } from "./fold";
-import { resolveRange } from "./range";
+import { FutureRangeError, resolveRange } from "./range";
 
 function clickTotal(clicks: Record<string, number>) {
   return Object.values(clicks).reduce((sum, count) => sum + count, 0);
@@ -15,7 +16,15 @@ export async function readBusinessAnalytics(
 ) {
   const access = await requireBusinessRole(userId, businessId, "read");
   if (!access) return { ok: false as const, status: 404, error: "Business not found" };
-  const range = resolveRange(query);
+  let range;
+  try {
+    range = resolveRange(query);
+  } catch (error) {
+    if (error instanceof FutureRangeError) return { ok: false as const, status: 400, error: error.message };
+    throw error;
+  }
+  const limit = await rateLimitDb({ key: `analytics-read:${userId}`, limit: 60, windowSeconds: 60 });
+  if (!limit.ok) return { ok: false as const, status: 429, error: "Too many requests" };
   const [menu, store, currentDays, previousDays] = await Promise.all([
     hasModule(access.ownerId, "MENU"),
     hasModule(access.ownerId, "STORE"),

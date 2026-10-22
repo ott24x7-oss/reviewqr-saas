@@ -64,7 +64,12 @@ export function toStoredDay(row: {
   };
 }
 
-export async function rollupBusinessDay(businessId: string, dayKey: string) {
+export function isFutureIstDay(dayKey: string, now = new Date()) {
+  return dayKey > istDayKey(now);
+}
+
+export async function rollupBusinessDay(businessId: string, dayKey: string, now = new Date()) {
+  if (isFutureIstDay(dayKey, now)) return null;
   const { start, end } = istDayRange(dayKey);
   const [qrs, devices] = await Promise.all([
     prisma.qRCode.findMany({
@@ -137,11 +142,13 @@ export async function rollupBusinessDay(businessId: string, dayKey: string) {
   return folded;
 }
 
-export async function rollupBusinessRange(businessId: string, fromKey: string, toKey: string) {
+export async function rollupBusinessRange(businessId: string, fromKey: string, toKey: string, now = new Date()) {
+  const today = istDayKey(now);
+  const endKey = toKey > today ? today : toKey;
   let cursor = fromKey;
   let guard = 0;
-  while (cursor <= toKey && guard < 400) {
-    await rollupBusinessDay(businessId, cursor);
+  while (cursor <= endKey && guard < 400) {
+    await rollupBusinessDay(businessId, cursor, now);
     cursor = addIstDays(cursor, 1);
     guard += 1;
   }
@@ -172,7 +179,10 @@ export function rollupJobDays(today: string, hour: number) {
 
 /** Fill any missing IST days in the window, then return the stored rows in order. */
 export async function ensureRollups(businessId: string, fromKey: string, toKey: string, now = new Date()) {
-  const wanted = istDaysEnding(toKey, daysBetween(fromKey, toKey));
+  const today = istDayKey(now);
+  const cappedTo = toKey > today ? today : toKey;
+  if (fromKey > cappedTo) return [];
+  const wanted = istDaysEnding(cappedTo, daysBetween(fromKey, cappedTo)).filter((day) => day <= today);
   const yesterday = addIstDays(istDayKey(now), -1);
   const existing = await prisma.analyticsDaily.findMany({
     where: { businessId, day: { gte: new Date(`${fromKey}T00:00:00.000Z`), lte: new Date(`${toKey}T00:00:00.000Z`) } },
