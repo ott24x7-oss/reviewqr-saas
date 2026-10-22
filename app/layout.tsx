@@ -32,7 +32,7 @@ export async function generateMetadata(): Promise<Metadata> {
     name: DEFAULT_BRAND_NAME,
     logoUrl: "",
     appUrl: process.env.NEXT_PUBLIC_APP_URL || "",
-    supportEmail: "hello@reviewqr.in",
+    supportEmail: "hello@qr24x7.in",
     tagline: DEFAULT_BRAND_TAGLINE
   }));
 

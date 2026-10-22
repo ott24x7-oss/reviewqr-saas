@@ -10,7 +10,7 @@ export function Footer({
 }) {
   const name = brand?.name || DEFAULT_BRAND_NAME;
   const logoUrl = brand?.logoUrl || "";
-  const supportEmail = brand?.supportEmail || "hello@reviewqr.in";
+  const supportEmail = brand?.supportEmail || "hello@qr24x7.in";
   const tagline = brand?.tagline || DEFAULT_BRAND_TAGLINE;
   const customLogo = logoUrl && logoUrl !== BRAND_ICON ? logoUrl : "";
   const mark = customLogo || BRAND_LOGO;

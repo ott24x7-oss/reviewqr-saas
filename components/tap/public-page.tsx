@@ -52,7 +52,7 @@ export async function PublicTap({
 
   if (record.status === "unassigned") {
     const brand = await getBrand().catch(() => null);
-    const email = brand?.supportEmail || "hello@reviewqr.in";
+    const email = brand?.supportEmail || "hello@qr24x7.in";
     return (
       <StatusCard
         title={tapText("en", "unassignedTitle")}
