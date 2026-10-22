@@ -75,7 +75,7 @@ export function TapPageScreen({ theme = TAP_THEMES[0] }: { theme?: TapTheme }) {
         <Instagram className="h-5 w-5" />
         <Wifi className="h-5 w-5" />
       </div>
-      <p className="mt-auto text-[10px]" style={{ color: theme.sub }}>Powered by ReviewQR</p>
+      <p className="mt-auto text-[10px]" style={{ color: theme.sub }}>Powered by QR24x7</p>
     </div>
   );
 }

@@ -71,7 +71,7 @@ function daysAgo(d: number) {
 }
 
 async function main() {
-  console.log("🌱 Seeding ReviewQR...");
+  console.log("🌱 Seeding QR24x7...");
 
   const existingAdmin = await prisma.user.findUnique({ where: { email: ADMIN_EMAIL } });
   if (existingAdmin) {
@@ -87,7 +87,7 @@ async function main() {
     const admin = await prisma.user.create({
       data: {
         email: ADMIN_EMAIL,
-        name: "ReviewQR Admin",
+        name: "QR24x7 Admin",
         password: adminHash,
         role: "ADMIN",
         subscriptionTier: "AGENCY",

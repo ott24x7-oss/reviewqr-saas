@@ -36,7 +36,7 @@ const faqs = [
   },
   {
     q: "Can I white-label this for my agency clients?",
-    a: "Absolutely — that's the Agency plan. Your logo, your domain, your colours. Your clients never see ReviewQR branding."
+    a: "Absolutely — that's the Agency plan. Your logo, your domain, your colours. Your clients never see QR24x7 branding."
   },
   {
     q: "What happens after my free trial?",
@@ -65,7 +65,7 @@ export function FAQ() {
           </h2>
           <p className="section-sub mt-4">
             Can't find what you're looking for?{" "}
-            <a href="mailto:hello@reviewqr.in" className="text-primary font-medium hover:underline">
+            <a href="mailto:hello@qr24x7.in" className="text-primary font-medium hover:underline">
               Email us
             </a>
             .

@@ -30,7 +30,7 @@ export async function remindExpiredOwner(ownerId: string, businessName: string) 
   const billing = `${(process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "")}/dashboard/billing`;
   await sendEmail({
     to: user.email,
-    subject: "Your ReviewQR page is limited",
+    subject: "Your QR24x7 page is limited",
     html: `<p>${safe} is showing only the name, phone, and directions until you renew.</p><p><a href="${escapeHtml(billing)}">Open billing</a></p>`,
     text: `${name} is showing only the name, phone, and directions until you renew. ${billing}`
   }).catch(() => {});

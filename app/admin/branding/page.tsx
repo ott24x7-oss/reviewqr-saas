@@ -35,7 +35,7 @@ export default async function AdminBrandingPage() {
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold font-display">Frontend branding</h1>
         <p className="text-sm text-muted-foreground">
-          Override the WatShop Review platform logo, brand name, tagline, footer and
+          Override the QR24x7 platform logo, brand name, tagline, footer and
           primary color shown on customer-facing marketing pages. Changes apply within
           ~60 seconds without a redeploy. Per-business branding is unaffected.
         </p>

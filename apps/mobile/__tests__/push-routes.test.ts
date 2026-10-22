@@ -8,6 +8,7 @@ describe("push routes", () => {
     expect(routeForPush({ type: "plan_active" })).toBe("/(app)/plan");
     expect(routeForPush({ url: "https://reviewqr.example/dashboard/shop/orders/ord_1" })).toBe("/(app)/shop?order=ord_1");
     expect(routeForPush({ url: "reviewqr://shop?order=ord_1" })).toBe("/(app)/shop?order=ord_1");
+    expect(routeForPush({ url: "qr24x7://shop?order=ord_1" })).toBe("/(app)/shop?order=ord_1");
     expect(routeForPush({ order: "ord_1" })).toBe("/(app)/shop?order=ord_1");
     expect(routeForPush({ url: "reviewqr://shop?order=a%2Fb" })).toBe("/(app)");
     expect(routeForPush({ url: "reviewqr://shop?order=.." })).toBe("/(app)");

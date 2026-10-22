@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Refund & Cancellation Policy",
-  description: "How cancellations and refunds work for ReviewQR subscriptions."
+  description: "How cancellations and refunds work for QR24x7 subscriptions."
 };
 
 export default function RefundPage() {
@@ -18,7 +18,7 @@ export default function RefundPage() {
     >
       <h2>1. Free plan</h2>
       <p>
-        ReviewQR offers a free plan so you can evaluate the Service at no cost before paying. We encourage
+        QR24x7 offers a free plan so you can evaluate the Service at no cost before paying. We encourage
         you to try it fully before upgrading to a paid plan.
       </p>
 

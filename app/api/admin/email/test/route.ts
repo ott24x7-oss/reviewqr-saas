@@ -16,9 +16,9 @@ export async function POST(req: NextRequest) {
   try {
     const result = await sendEmail({
       to: parsed.data.to,
-      subject: "ReviewQR — test email",
+      subject: "QR24x7 — test email",
       html: `<!doctype html><html><body style="font-family:Arial,sans-serif;padding:24px">
-        <h2 style="color:#1a73e8">ReviewQR test email</h2>
+        <h2 style="color:#1a73e8">QR24x7 test email</h2>
         <p>This is a test from your admin panel. If you received this, your email transport works.</p>
         <p style="color:#888;font-size:12px">Sent ${new Date().toISOString()}</p>
       </body></html>`

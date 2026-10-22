@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Delete your account",
-  description: "Request deletion of a ReviewQR account from the web."
+  description: "Request deletion of a QR24x7 account from the web."
 };
 
 export default function DeleteAccountPage() {
@@ -14,7 +14,7 @@ export default function DeleteAccountPage() {
     <LegalPage
       eyebrow="Account"
       title="Delete your account"
-      intro="This page is the public way to delete a ReviewQR account. The Android app uses the same check."
+      intro="This page is the public way to delete a QR24x7 account. The Android app uses the same check."
       updated="22 October 2026"
     >
       <p>

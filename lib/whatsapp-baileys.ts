@@ -168,7 +168,7 @@ class BaileysManager {
         auth: state,
         printQRInTerminal: false,
         logger: pino({ level: "silent" }),
-        browser: ["ReviewQR", "Chrome", "1.0"],
+        browser: ["QR24x7", "Chrome", "1.0"],
         markOnlineOnConnect: false,
         syncFullHistory: false
       });

@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
-  description: "How ReviewQR collects, uses, and protects your data."
+  description: "How QR24x7 collects, uses, and protects your data."
 };
 
 export default function PrivacyPage() {
@@ -17,7 +17,7 @@ export default function PrivacyPage() {
       updated="22 October 2026"
     >
       <p>
-        This Privacy Policy describes how ReviewQR ("we", "us", "the Service") collects, uses, and
+        This Privacy Policy describes how QR24x7 ("we", "us", "the Service") collects, uses, and
         safeguards information when you use our website, dashboard, and review pages. By using the
         Service you agree to the practices described here.
       </p>

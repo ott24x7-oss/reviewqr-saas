@@ -87,7 +87,7 @@ export default function RegisterPage() {
         router.push("/login");
         return;
       }
-      toast.success("Welcome to ReviewQR!");
+      toast.success("Welcome to QR24x7!");
       window.location.assign(entered.path);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong");

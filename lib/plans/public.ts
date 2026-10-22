@@ -1,3 +1,4 @@
+import { planDescriptionOrDefault } from "../brand-defaults";
 import { prisma } from "../db";
 import { DURATIONS, pricingTab, savingsPercent, type PricingTab } from "./catalog";
 
@@ -42,8 +43,8 @@ export async function listPublicPlans(): Promise<PublicPlan[]> {
     slug: plan.slug,
     nameEn: plan.nameEn,
     nameHi: plan.nameHi,
-    descriptionEn: plan.descriptionEn,
-    descriptionHi: plan.descriptionHi,
+    descriptionEn: planDescriptionOrDefault(plan.descriptionEn),
+    descriptionHi: planDescriptionOrDefault(plan.descriptionHi),
     badge: plan.badge,
     category: plan.category,
     imageUrl: plan.imageUrl,

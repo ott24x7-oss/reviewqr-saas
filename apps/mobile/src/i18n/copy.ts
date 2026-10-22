@@ -1,7 +1,7 @@
 export type Lang = "en" | "hi";
 
 const en = {
-  brand: "ReviewQR",
+  brand: "QR24x7",
   welcome: "Sign in",
   welcomeSub: "We will send a 6-digit code on WhatsApp.",
   phone: "Mobile number",
@@ -105,6 +105,7 @@ const en = {
   deleteSend: "Send deletion code",
   deleteDone: "This account is deleted.",
   deleteWeb: "You can also use the website.",
+  privacyWeb: "Privacy policy",
   introSkip: "Skip",
   introStart: "Get started",
   introReviews: "Get Google reviews",
@@ -153,7 +154,7 @@ const en = {
 };
 
 const hi: typeof en = {
-  brand: "ReviewQR",
+  brand: "QR24x7",
   welcome: "साइन इन",
   welcomeSub: "हम WhatsApp पर 6 अंकों का कोड भेजेंगे।",
   phone: "मोबाइल नंबर",
@@ -257,6 +258,7 @@ const hi: typeof en = {
   deleteSend: "हटाने का कोड भेजें",
   deleteDone: "यह खाता हट गया।",
   deleteWeb: "वेबसाइट से भी हटा सकते हैं।",
+  privacyWeb: "प्राइवेसी पॉलिसी",
   introSkip: "छोड़ें",
   introStart: "शुरू करें",
   introReviews: "Google रिव्यू पाएँ",

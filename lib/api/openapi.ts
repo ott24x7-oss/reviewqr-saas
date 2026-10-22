@@ -268,7 +268,7 @@ registry.registerPath({
 registry.registerPath({
   method: "get",
   path: "/api/v1/shop/catalog",
-  summary: "ReviewQR hardware catalogue",
+  summary: "QR24x7 hardware catalogue",
   security: [{ bearerAuth: [] }],
   responses: {
     200: { description: "Catalogue" },
@@ -449,9 +449,9 @@ export function openApiDocument() {
   cached = generator.generateDocument({
     openapi: "3.0.0",
     info: {
-      title: "ReviewQR API",
+      title: "QR24x7 API",
       version: "1.0.0",
-      description: "Versioned JSON API for the ReviewQR mobile app. Cookie sessions are also accepted when Authorization is absent."
+      description: "Versioned JSON API for the QR24x7 mobile app. Cookie sessions are also accepted when Authorization is absent."
     },
     servers: [{ url: "/" }]
   });

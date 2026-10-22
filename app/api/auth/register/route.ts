@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
   // Welcome and verify emails — best-effort. Login works before the inbox is confirmed.
   sendEmail({
     to: email,
-    subject: "Welcome to ReviewQR 🎉",
+    subject: "Welcome to QR24x7 🎉",
     html: welcomeEmail({
       name: data.name,
       email,

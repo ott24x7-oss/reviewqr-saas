@@ -18,7 +18,7 @@ export default async function AdminShopPage() {
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold font-display">Product catalogue</h1>
         <p className="text-sm text-muted-foreground">
-          Hardware owners buy from ReviewQR. Prices are GST-inclusive. {low.length} variant{low.length === 1 ? "" : "s"} at or below the low-stock level.
+          Hardware owners buy from QR24x7. Prices are GST-inclusive. {low.length} variant{low.length === 1 ? "" : "s"} at or below the low-stock level.
         </p>
       </div>
       <ShopCheckoutSettings

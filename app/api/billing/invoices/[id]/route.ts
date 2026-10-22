@@ -31,7 +31,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   draw(`Issued ${payment.invoiceIssuedAt ? payment.invoiceIssuedAt.toISOString().slice(0, 10) : ""}`);
   y -= 8;
   draw("Seller", 12, true);
-  draw(payment.invoiceSellerName || "ReviewQR");
+  draw(payment.invoiceSellerName || "QR24x7");
   draw(payment.invoiceSellerGstin ? `GSTIN ${payment.invoiceSellerGstin}` : "GSTIN pending");
   if (payment.invoicePlaceOfSupply) draw(`Place of supply ${payment.invoicePlaceOfSupply}`);
   y -= 8;
@@ -40,7 +40,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   draw(payment.invoiceBuyerGstin ? `GSTIN ${payment.invoiceBuyerGstin}` : "GSTIN not provided");
   y -= 8;
   draw("Description", 12, true);
-  draw(`ReviewQR ${payment.tier} plan, ${payment.periodMonths} month(s)`);
+  draw(`QR24x7 ${payment.tier} plan, ${payment.periodMonths} month(s)`);
   draw("SAC 998314");
   draw(`Taxable value ${formatINR(payment.invoiceTaxablePaise || 0)}`);
   draw(`CGST ${formatINR(payment.invoiceCgstPaise || 0)}`);

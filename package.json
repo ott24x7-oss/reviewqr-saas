@@ -5,7 +5,7 @@
   "workspaces": [
     "packages/*"
   ],
-  "description": "ReviewQR - Turn happy customers into Google reviews. Indian SMB focused review management SaaS.",
+  "description": "QR24x7 - Turn happy customers into Google reviews. Indian SMB focused review management SaaS.",
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
@@ -20,6 +20,7 @@
     "db:reset": "prisma migrate reset --force",
     "seed:admin": "tsx prisma/seed-admin.ts",
     "worker": "tsx scripts/worker.ts",
+    "brand:icons": "tsx scripts/brand-icons.ts",
     "test": "vitest run",
     "test:e2e": "playwright test"
   },

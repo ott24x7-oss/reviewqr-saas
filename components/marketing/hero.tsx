@@ -4,6 +4,8 @@ import { ArrowRight, Star, Play, ChevronRight, MessageCircle, Heart, ExternalLin
 import { Button } from "@/components/ui/button";
 import { AvatarInitials } from "@/components/ui/avatar-initials";
 import { RotatingReviewWord } from "@/components/marketing/rotating-word";
+import { DEFAULT_BRAND_TAGLINE } from "@/lib/brand-defaults";
+import { publicHostLabel } from "@/lib/utils";
 
 export function Hero() {
   return (
@@ -29,7 +31,8 @@ export function Hero() {
               2,500+ Indian SMBs
             </div>
 
-            <h1 className="mt-5 text-4xl sm:text-5xl lg:text-6xl font-bold font-display tracking-tight text-balance">
+            <p className="mt-4 text-sm font-semibold tracking-wide text-primary-700">{DEFAULT_BRAND_TAGLINE}</p>
+            <h1 className="mt-2 text-4xl sm:text-5xl lg:text-6xl font-bold font-display tracking-tight text-balance">
               Ask every customer for{" "}
               <RotatingReviewWord />
             </h1>
@@ -95,7 +98,7 @@ export function Hero() {
                   <span className="h-2.5 w-2.5 rounded-full bg-red-400" />
                   <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
                   <span className="h-2.5 w-2.5 rounded-full bg-green-400" />
-                  <span className="ml-2 text-[10px] text-muted-foreground font-mono">app.reviewqr.in</span>
+                  <span className="ml-2 text-[10px] text-muted-foreground font-mono">{publicHostLabel()}</span>
                 </div>
                 <div className="p-3 grid grid-cols-2 gap-2 bg-gradient-to-br from-primary-50/40 to-accent-50/40">
                   <div className="rounded-lg bg-white border p-2.5">
@@ -171,7 +174,7 @@ export function Hero() {
                       </div>
                     </div>
                     <div className="mt-3 flex items-center justify-center gap-1 text-[9px] text-muted-foreground">
-                      Powered by <span className="gradient-text font-semibold">ReviewQR</span>
+                      Powered by <span className="gradient-text font-semibold">QR24x7</span>
                     </div>
                   </div>
                 </div>

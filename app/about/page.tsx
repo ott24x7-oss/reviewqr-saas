@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "About",
-  description: "Why ReviewQR exists — a public review link for every customer, and a private note for the owner."
+  description: "Why QR24x7 exists — a public review link for every customer, and a private note for the owner."
 };
 
 export default function AboutPage() {
@@ -13,9 +13,9 @@ export default function AboutPage() {
     <LegalPage
       eyebrow="Our story"
       title="Built for Indian small businesses"
-      intro="ReviewQR shows every customer a public review link and a private note, on the same screen and in the same order."
+      intro="QR24x7 shows every customer a public review link and a private note, on the same screen and in the same order."
     >
-      <h2>Why we built ReviewQR</h2>
+      <h2>Why we built QR24x7</h2>
       <p>
         A customer who had a good visit often leaves without posting, and a customer who had a bad one
         may only say so in public. One QR gives every customer both choices. Whatever star they tap,

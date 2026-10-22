@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
   const url = absoluteUrl(`/reset-password?token=${token}`);
   sendEmail({
     to: email,
-    subject: "Reset your ReviewQR password",
+    subject: "Reset your QR24x7 password",
     html: passwordResetEmail({ resetUrl: url, email })
   }).catch(() => {});
 

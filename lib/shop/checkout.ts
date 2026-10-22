@@ -118,7 +118,7 @@ export async function checkoutShop(userId: string, env: EnvLike = process.env) {
         buyerGstin: view.buyerGstin,
         buyerLegalName: view.buyerLegalName,
         buyerState: address?.state || null,
-        sellerName: payments.sellerLegalName || "ReviewQR",
+        sellerName: payments.sellerLegalName || "QR24x7",
         sellerGstin: payments.sellerGstin || "",
         sellerState: payments.sellerState || "",
         addressJson: address

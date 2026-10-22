@@ -16,7 +16,7 @@ const PRINTABLE = ["APPROVED", "PRINTING", "NFC_WRITTEN", "PACKED", "PICKUP_SCHE
 function shopPrintDesign(templateId: string, name: string, showNfc: boolean): PrintDesign {
   return {
     templateId,
-    name: name.trim() || "ReviewQR",
+    name: name.trim() || "QR24x7",
     cta: "Scan to review",
     ctaHi: "",
     backLine: "",
@@ -52,7 +52,7 @@ export async function sendShopProof(orderId: string, adminId: string) {
     return fail(400, "Send the proof from Paid or Changes requested");
   }
 
-  const name = order.business?.name || order.buyerLegalName || "ReviewQR";
+  const name = order.business?.name || order.buyerLegalName || "QR24x7";
   try {
     for (const line of order.lines) {
       if (!line.needsDesign) continue;
@@ -86,7 +86,7 @@ export async function imposedShopPdf(orderIds: string[]) {
   });
   const groups = new Map<string, { design: PrintDesign; codes: Array<{ code: string; label: string }> }>();
   for (const order of orders) {
-    const name = order.business?.name || order.buyerLegalName || "ReviewQR";
+    const name = order.business?.name || order.buyerLegalName || "QR24x7";
     for (const line of order.lines) {
       if (!line.needsDesign) continue;
       const parsed = shopDesignSchema.safeParse(line.design);

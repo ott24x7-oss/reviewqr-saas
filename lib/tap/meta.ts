@@ -4,7 +4,7 @@ import type { TapRecord } from "./resolve";
 
 export function metadataForBusiness(record: TapRecord, index: boolean): Metadata {
   if (record.status !== "active" && record.status !== "limited") {
-    return { title: "ReviewQR", robots: { index: false, follow: false } };
+    return { title: "QR24x7", robots: { index: false, follow: false } };
   }
   const name = record.business.name;
   const description = record.business.description || name;

@@ -1,4 +1,4 @@
-# ReviewQR
+# QR24x7
 
 > Every customer can leave a public review, and can also tell the owner privately.
 > A production-ready review-management SaaS built for Indian SMBs.
@@ -121,7 +121,7 @@ The QR image itself encodes `https://<your-domain>/q/<code>?src=qr`.
    SMTP_PORT=587
    SMTP_USER=you@gmail.com
    SMTP_PASS=app-password-no-spaces
-   SMTP_FROM=ReviewQR <noreply@yourdomain.com>
+   SMTP_FROM=QR24x7 <noreply@yourdomain.com>
    ```
    Drop `mailer-php/send.php` (from `wa-Invoice-bot-main`) on a normal PHP host.
 

@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
+import { legacyHostnames, legacyHostRedirect } from "@/lib/http/legacy-host";
 import { absoluteRedirect, destinationFor, directRedirectResponse, ownHostsFrom } from "@/lib/tap/direct-http";
 
 export async function middleware(req: NextRequest) {
+  const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || req.nextUrl.host;
+  const legacy = legacyHostRedirect({
+    pathname: req.nextUrl.pathname,
+    search: req.nextUrl.search,
+    host,
+    appUrl: process.env.NEXT_PUBLIC_APP_URL || null,
+    legacyHosts: process.env.LEGACY_HOSTS || null
+  });
+  if (legacy) return NextResponse.redirect(legacy, 301);
+
   const match = req.nextUrl.pathname.match(/^\/(q|t)\/([^/]+)\/?$/);
   if (!match) return NextResponse.next();
   if (req.nextUrl.searchParams.get("page") === "1") return NextResponse.next();
@@ -27,7 +38,7 @@ export async function middleware(req: NextRequest) {
     if (!res.ok) return NextResponse.next();
     const body = (await res.json()) as { redirect?: unknown };
     if (typeof body.redirect !== "string" || !body.redirect) return NextResponse.next();
-    const hosts = ownHostsFrom(req.headers.get("host") || req.nextUrl.host, process.env.NEXT_PUBLIC_APP_URL);
+    const hosts = ownHostsFrom(host, process.env.NEXT_PUBLIC_APP_URL, legacyHostnames(process.env.LEGACY_HOSTS));
     const safe = destinationFor(body.redirect, hosts);
     if (!safe) return NextResponse.next();
     const location = absoluteRedirect(safe, req.nextUrl.origin);
@@ -39,7 +50,7 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  // The segment pattern has to be written out. A bare :code makes Next append
-  // (.json) to that name, and then /q/<code> never matches.
-  matcher: ["/q/:code([^/]+)", "/t/:code([^/]+)"]
+  // A catch-all, not a :code param. A bare :code makes Next append (.json),
+  // and then /q/<code> never matches. Static files stay out of this matcher.
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)"]
 };

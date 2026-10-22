@@ -1,8 +1,8 @@
 /* branding.js — applies admin-overridable branding to every public page.
  *
  * Mark elements that should be patched:
- *   <img data-brand-logo src="/watshop-review-lockup.svg">     → src + alt
- *   <span data-brand-name>WatShop Review</span>                 → textContent
+ *   <img data-brand-logo src="/brand/logo-horizontal.png">      → src + alt
+ *   <span data-brand-name>QR24x7</span>                         → textContent
  *   <p   data-brand-tagline>...</p>                             → textContent
  *   <p   data-brand-footer>...</p>                              → textContent
  *
@@ -27,9 +27,11 @@
         el.textContent = b.brandName;
       });
       // Patch <title> if it contains the default brand
-      if (document.title && document.title.indexOf('WatShop Review') !== -1) {
-        document.title = document.title.split('WatShop Review').join(b.brandName);
-      }
+      ['QR24x7', 'WatShop Review'].forEach(function (previous) {
+        if (document.title && document.title.indexOf(previous) !== -1) {
+          document.title = document.title.split(previous).join(b.brandName);
+        }
+      });
     }
     if (b.tagline) {
       document.querySelectorAll('[data-brand-tagline]').forEach(function (el) {

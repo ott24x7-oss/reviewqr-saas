@@ -107,8 +107,8 @@ export function DashboardShell({
   impersonation?: { exp: number } | null;
   children: React.ReactNode;
 }) {
-  const brandName = brand?.name || "ReviewQR";
-  const brandLogo = brand?.logoUrl || "";
+  const brandName = brand?.name || "QR24x7";
+  const brandLogo = brand?.logoUrl || "/brand/icon-192.png";
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = React.useState(false);
@@ -328,7 +328,7 @@ export function DashboardShell({
             <div className="rounded-lg bg-gradient-to-br from-primary-50 to-accent-50 dark:from-primary-500/10 dark:to-accent-500/10 p-3 text-xs">
               <div className="font-semibold text-foreground mb-1">Need help?</div>
               <p className="text-muted-foreground leading-relaxed">
-                Email us at hello@reviewqr.in or check the docs.
+                Email us at hello@qr24x7.in or check the docs.
               </p>
             </div>
           </div>

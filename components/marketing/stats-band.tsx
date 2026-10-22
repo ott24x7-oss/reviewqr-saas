@@ -15,7 +15,7 @@ export function StatsBand() {
           Real results, <span className="text-gradient">not just reviews.</span>
         </h2>
         <p className="mt-2 text-sm sm:text-base text-muted-ink">
-          What owners see in their first 60 days on ReviewQR.
+          What owners see in their first 60 days on QR24x7.
         </p>
       </div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

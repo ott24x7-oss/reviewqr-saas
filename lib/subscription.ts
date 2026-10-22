@@ -202,7 +202,7 @@ export async function activateCompletedPayment(input: ActivateInput): Promise<Ac
         invoiceUrl: absoluteUrl(`/api/billing/invoices/${row.id}`),
         invoiceBuyerName: user.name || user.email,
         invoiceBuyerGstin: null,
-        invoiceSellerName: cfg.sellerLegalName || "ReviewQR",
+        invoiceSellerName: cfg.sellerLegalName || "QR24x7",
         invoiceSellerGstin: cfg.sellerGstin || "",
         invoicePlaceOfSupply: cfg.sellerState || "",
         invoiceTaxablePaise: split.taxable,

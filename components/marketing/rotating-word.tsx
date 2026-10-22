@@ -4,7 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 /**
- * Animated headline word that cycles between the review platforms ReviewQR
+ * Animated headline word that cycles between the review platforms QR24x7
  * supports. "Google reviews" (Google multicolor) ↔ "Trustpilot reviews"
  * (Trustpilot green). Respects prefers-reduced-motion.
  */

@@ -22,7 +22,9 @@ export default function DeleteAccountScreen() {
   const [sentAt, setSentAt] = useState(0);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
-  const web = apiBaseUrl() ? `${apiBaseUrl()}/account/delete` : "/account/delete";
+  const origin = apiBaseUrl();
+  const web = origin ? `${origin}/account/delete` : "/account/delete";
+  const privacy = origin ? `${origin}/privacy` : "/privacy";
   const shownCode = devCodeFrom(sent);
 
   useEffect(() => {
@@ -72,6 +74,9 @@ export default function DeleteAccountScreen() {
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Text style={[styles.title, lang === "hi" && styles.hindi]}>{t.deleteAccount}</Text>
       <Text style={[styles.note, lang === "hi" && styles.hindi]}>{t.deleteHint}</Text>
+      <Text style={[styles.note, lang === "hi" && styles.hindi]}>{t.privacyWeb}</Text>
+      <Text style={styles.url}>{privacy}</Text>
+      <Text style={[styles.note, lang === "hi" && styles.hindi]}>{t.deleteWeb}</Text>
       <Text style={styles.url}>{web}</Text>
       {done ? <Text style={[styles.note, lang === "hi" && styles.hindi]}>{t.deleteDone}</Text> : null}
       {sent && !done ? (

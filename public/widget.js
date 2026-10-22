@@ -1,4 +1,4 @@
-/* ReviewQR public testimonial widget — drop one tag on any website. */
+/* QR24x7 public testimonial widget — drop one tag on any website. */
 (function () {
   const script = document.currentScript || document.querySelector("script[data-business]");
   if (!script) return;
@@ -63,7 +63,7 @@
           )
           .join("") +
         `</div>` +
-        `<div class="rqw-foot"><a href="${apiOrigin}" target="_blank" rel="noopener">Powered by ReviewQR</a></div>` +
+        `<div class="rqw-foot"><a href="${apiOrigin}" target="_blank" rel="noopener">Powered by QR24x7</a></div>` +
         `</div>`;
     })
     .catch(() => {});

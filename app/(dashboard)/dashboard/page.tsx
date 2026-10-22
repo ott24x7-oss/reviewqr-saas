@@ -312,7 +312,7 @@ function EmptyState() {
       <div className="h-20 w-20 rounded-2xl gradient-brand flex items-center justify-center mb-5 shadow-glow">
         <Building2 className="h-10 w-10 text-white" />
       </div>
-      <h2 className="text-2xl sm:text-3xl font-bold font-display">Welcome to ReviewQR!</h2>
+      <h2 className="text-2xl sm:text-3xl font-bold font-display">Welcome to QR24x7!</h2>
       <p className="mt-2 text-muted-foreground max-w-md">
         Add your first business to get a smart review link, generate QR codes, and start collecting Google reviews.
       </p>

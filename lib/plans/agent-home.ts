@@ -62,7 +62,7 @@ export async function loadAgentHome(agentId: string) {
     name: profile.user.name || "Agent",
     code: profile.code,
     link,
-    shareText: `Join me on ReviewQR: ${link}`,
+    shareText: `Join me on QR24x7: ${link}`,
     businesses: businesses.map((business) => {
       const sub = byOwner.get(business.owner.id);
       const endsAt = sub?.endsAt || business.owner.subscriptionEndsAt;

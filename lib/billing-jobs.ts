@@ -94,10 +94,10 @@ export async function sendRenewalReminders(): Promise<number> {
 
     const when = days === 0 ? "today" : `in ${days} day${days === 1 ? "" : "s"}`;
     const payUrl = absoluteUrl("/dashboard/billing");
-    const text = `Your ReviewQR ${user.subscriptionTier} plan ends ${when}. Renew here: ${payUrl}`;
+    const text = `Your QR24x7 ${user.subscriptionTier} plan ends ${when}. Renew here: ${payUrl}`;
     await sendEmail({
       to: user.email,
-      subject: days === 0 ? "Your ReviewQR plan ends today" : `Your ReviewQR plan ends ${when}`,
+      subject: days === 0 ? "Your QR24x7 plan ends today" : `Your QR24x7 plan ends ${when}`,
       html: `<p>Hi ${user.name || "there"},</p><p>${text}</p>`
     }).catch(() => {});
 
@@ -105,7 +105,7 @@ export async function sendRenewalReminders(): Promise<number> {
       await sendWhatsAppCloud({ to: user.phone, message: text }).catch(() => {});
     }
     await sendPushToUsers([user.id], {
-      title: days === 0 ? "Your ReviewQR plan ends today" : `Your ReviewQR plan ends ${when}`,
+      title: days === 0 ? "Your QR24x7 plan ends today" : `Your QR24x7 plan ends ${when}`,
       body: text,
       data: { type: "plan_reminder", kind }
     });

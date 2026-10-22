@@ -1,4 +1,4 @@
-# ReviewQR design direction
+# QR24x7 design direction
 
 Three reference demos set the look. Use them for **inspiration only**: they are paid templates ("Buy this template"), so do not copy their code, images, illustrations or copywriting. Recreate the feel with our own components, Tailwind tokens and content.
 
@@ -21,7 +21,7 @@ All three are fully responsive. Design mobile-first at 360px, then 390, 768, 128
 ## 1. Auth pages (Flow-inspired)
 
 - Background: near-black navy (`#070B12`) with one or two very soft radial glows (cyan/blue, low opacity) — no images.
-- A small glowing orb/logo mark above the card (our ReviewQR mark with a soft cyan glow).
+- A small glowing orb/logo mark above the card (our QR24x7 mark with a soft cyan glow).
 - Centered card, max-width ~400px: translucent surface (white ~4%), 1px border (white ~10%), radius ~24px, `backdrop-filter: blur`, soft cyan outer glow.
 - Title in **Sora 800** with a cyan gradient text (`#7CE7FF → #35C8F0`), short friendly subtitle in muted grey-blue.
 - Inputs: dark translucent fill, 1px subtle border, radius ~13px, light text, eye toggle on password; focus = cyan border + glow ring.

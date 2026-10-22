@@ -44,7 +44,7 @@ export default async function ProductionPage() {
     cards.push({
       id: order.id,
       status: order.status,
-      businessName: order.business?.name || order.buyerLegalName || "ReviewQR",
+      businessName: order.business?.name || order.buyerLegalName || "QR24x7",
       anyLineNeedsNfc: order.lines.some((line) => line.needsNfc),
       ships: order.lines.some((line) => line.ships),
       awb: shipment?.awb ?? null,

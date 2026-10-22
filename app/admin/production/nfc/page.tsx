@@ -19,7 +19,7 @@ export default async function NfcQueuePage() {
       <ul className="space-y-3">
         {items.map((item) => (
           <li key={`${item.orderId}-${item.device.id}`} className="rounded-[20px] bg-white p-4 text-sm text-ink">
-            <p className="font-semibold">{item.businessName || "ReviewQR"}</p>
+            <p className="font-semibold">{item.businessName || "QR24x7"}</p>
             <p>{item.lineName}</p>
             <p>
               {item.device.kind} · {item.device.shortCode} · {item.device.chipUid || "No chip uid"} · {item.device.status}

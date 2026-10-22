@@ -72,7 +72,7 @@ export function AdminShell({
   brand?: { name: string; logoUrl: string };
   children: React.ReactNode;
 }) {
-  const brandName = brand?.name || "ReviewQR";
+  const brandName = brand?.name || "QR24x7";
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = React.useState(false);
   React.useEffect(() => setMobileOpen(false), [pathname]);
