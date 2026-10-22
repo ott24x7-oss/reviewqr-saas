@@ -12,7 +12,7 @@ import { absoluteUrl } from "@/lib/utils";
 import { getYoupiConfig, youpiConfigured, youpiCreatePayment } from "@/lib/payments/youpi";
 import { shopCartView } from "./cart-store";
 import { chargeForOrder } from "./charge";
-import { commissionPaise } from "./commission";
+import { hardwareCommissionSnapshot } from "../plans/hardware";
 import { fulfillPaidShopOrder } from "./fulfill";
 import { confirmStubbedShopOrder, shopStubHonoured } from "./payment-stub";
 
@@ -55,7 +55,10 @@ export async function checkoutShop(userId: string, env: EnvLike = process.env) {
     : null;
   const agentId = business?.agentId || null;
   const orderTotal = view.quote.ok ? view.quote.totalPaise : 0;
-  const commissionAmount = agentId ? commissionPaise(orderTotal, shopConfig.commissionPercent) : 0;
+  const hardware = agentId
+    ? await hardwareCommissionSnapshot(agentId, orderTotal, shopConfig.commissionPercent)
+    : { percent: null as number | null, paise: 0, basis: "PERCENT" as const, flatPaise: 0 };
+  const commissionAmount = hardware.paise;
   const address = view.addresses.find((row) => row.id === view.addressId) ?? null;
   const bySku = new Map(variants.map((variant) => [variant.sku, variant]));
   const quoted = new Map(view.quote.lines.map((line) => [line.sku, line]));
@@ -98,7 +101,7 @@ export async function checkoutShop(userId: string, env: EnvLike = process.env) {
         userId,
         businessId: view.businessId,
         agentId,
-        commissionPercent: agentId ? shopConfig.commissionPercent : null,
+        commissionPercent: agentId ? hardware.percent : null,
         commissionPaise: commissionAmount,
         subtotalPaise: view.quote.ok ? view.quote.subtotalPaise : 0,
         discountPaise: view.quote.ok ? view.quote.discountPaise : 0,

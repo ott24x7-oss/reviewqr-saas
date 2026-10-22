@@ -80,7 +80,7 @@ export async function activateCompletedPayment(input: ActivateInput): Promise<Ac
   const cfg = await getPaymentsConfig();
   const allowed = input.allowStatuses ?? ["PENDING", "QUEUED"];
 
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const rows = await tx.$queryRaw<
       Array<{
         id: string;
@@ -231,4 +231,14 @@ export async function activateCompletedPayment(input: ActivateInput): Promise<Ac
 
     return { ok: true, already: false, expiresAt: expiresAt ?? now, invoiceNumber };
   });
+
+  if (result.ok && !result.already) {
+    try {
+      const { settleConfirmedPayment } = await import("./plans/settle");
+      await settleConfirmedPayment(input.paymentId);
+    } catch (error) {
+      console.warn("[plans] could not record commission", error);
+    }
+  }
+  return result;
 }

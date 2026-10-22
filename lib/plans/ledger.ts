@@ -57,6 +57,14 @@ export async function recordCommission(input: LedgerInput) {
   }
 }
 
+export async function reverseCommissionsForOrder(orderId: string, now = new Date()) {
+  const result = await prisma.shopCommission.updateMany({
+    where: { orderId, status: { in: ["PENDING", "APPROVED", "PAID"] } },
+    data: { status: "REVERSED", reversedAt: now }
+  });
+  return result.count;
+}
+
 export async function reverseCommissionsForPayment(paymentId: string, now = new Date()) {
   const result = await prisma.shopCommission.updateMany({
     where: { paymentId, status: { in: ["PENDING", "APPROVED", "PAID"] } },

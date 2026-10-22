@@ -9,10 +9,15 @@ import { sendWhatsAppCloud } from "./whatsapp";
 import { getWhatsAppConfig } from "./settings";
 import { sendPushToUsers } from "./push";
 import { absoluteUrl } from "./utils";
+import { approveDueCommissions } from "./plans/ledger";
 
 const REMINDER_DAYS = [7, 3, 1, 0] as const;
 
 export async function expireLapsedSubscriptions(): Promise<number> {
+  await approveDueCommissions(new Date()).catch((error) => {
+    console.warn("[plans] could not approve held commission", error);
+    return 0;
+  });
   const result = await prisma.user.updateMany({
     where: {
       subscriptionTier: { not: "FREE" },

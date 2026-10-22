@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireAdminApi, logAudit } from "@/lib/admin";
 import { prisma } from "@/lib/db";
 import { activateManually } from "@/lib/manual-payments";
+import { reverseCommissionsForPayment } from "@/lib/plans/ledger";
 import { getClientIp } from "@/lib/utils";
 
 const schema = z.object({
@@ -72,6 +73,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (updated.count === 0) {
     return NextResponse.json({ error: "Only a completed payment can be refunded" }, { status: 409 });
   }
+  await reverseCommissionsForPayment(payment.id);
   await logAudit({
     userId: guard.user.id,
     action: "payment.refund",
