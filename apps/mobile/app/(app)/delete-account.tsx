@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Text, TextInput } from "react-native";
 import { apiBaseUrl } from "../../src/api/instance";
 import { apiData } from "../../src/api/data";
 import { ApiError } from "../../src/api/http";
-import { digitsFrom } from "../../src/auth/otp";
+import { devCodeFrom, digitsFrom } from "../../src/auth/otp";
 import { channelCopy } from "../../src/i18n/copy";
 import { useI18n } from "../../src/i18n";
 import { useSession } from "../../src/state/session";
@@ -23,6 +23,7 @@ export default function DeleteAccountScreen() {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const web = apiBaseUrl() ? `${apiBaseUrl()}/account/delete` : "/account/delete";
+  const shownCode = devCodeFrom(sent);
 
   useEffect(() => {
     if (!sentAt) return;
@@ -86,9 +87,9 @@ export default function DeleteAccountScreen() {
             maxLength={6}
             style={styles.code}
           />
-          {sent.devCode ? (
+          {shownCode ? (
             <Text style={styles.dev}>
-              {t.devHint}: {sent.devCode}
+              {t.devHint}: {shownCode}
             </Text>
           ) : null}
         </>
