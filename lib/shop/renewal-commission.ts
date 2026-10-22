@@ -39,7 +39,7 @@ export async function creditRenewalCommission(ownerId: string, paymentId: string
     });
     agentId = attribution?.agentId || null;
   }
-  if (!agentId) return;
+  if (!agentId || agentId === ownerId) return;
 
   const [payment, settings, earlier] = await Promise.all([
     prisma.payment.findUnique({ where: { id: paymentId }, select: { planId: true } }),

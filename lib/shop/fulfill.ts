@@ -171,7 +171,7 @@ export async function fulfillPaidShopOrder(input: FulfillInput): Promise<Fulfill
       data: { couponCode: null, referralCode: null }
     });
     // Find-then-create. A caught unique violation inside this transaction would abort it.
-    if (row.agentId && row.commissionPaise > 0) {
+    if (row.agentId && row.agentId !== row.userId && row.agentId !== beneficiaryId && row.commissionPaise > 0) {
       const existing = await tx.shopCommission.findUnique({
         where: {
           agentId_kind_sourceId: { agentId: row.agentId, kind: "ORDER", sourceId: row.id }
