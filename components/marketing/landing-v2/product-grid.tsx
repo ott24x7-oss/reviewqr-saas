@@ -11,45 +11,29 @@ import {
   DURATION_CHIPS,
   PLAN_CATEGORIES,
   buyHref,
-  fallbackImageName,
   planCategory,
   planTicks,
   type PlanCategory
 } from "@/lib/plans/categories";
+import { assignCardImages, pictureNameFromSrc } from "@/lib/landing/card-images";
 import { LandingPicture } from "./picture";
 import { pick, useLandingLang } from "./lang";
 
-function PlanPhoto({
-  category,
-  imageUrl,
-  alt,
-  sizes
-}: {
-  category: string;
-  imageUrl: string;
-  alt: string;
-  sizes: string;
-}) {
-  if (imageUrl.trim()) {
+function PlanPhoto({ src, alt, sizes }: { src: string; alt: string; sizes: string }) {
+  const name = pictureNameFromSrc(src);
+  if (!name) {
     return (
       // Admin uploads may be a data URL or another host, which next/image will not serve.
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={imageUrl} alt={alt} width={1200} height={1200} className="h-full w-full object-cover" loading="lazy" />
+      <img src={src} alt={alt} width={1200} height={1200} className="h-full w-full object-cover" loading="lazy" />
     );
   }
   return (
-    <LandingPicture
-      name={fallbackImageName(category)}
-      alt={alt}
-      width={1200}
-      height={1200}
-      sizes={sizes}
-      className="h-full w-full object-cover"
-    />
+    <LandingPicture name={name} alt={alt} width={1200} height={1200} sizes={sizes} className="h-full w-full object-cover" />
   );
 }
 
-function ProductCard({ plan }: { plan: PublicPlan }) {
+function ProductCard({ plan, imageSrc }: { plan: PublicPlan; imageSrc: string }) {
   const { lang } = useLandingLang();
   const initial = (plan.prices.find((price) => price.duration === "MONTH_1") || plan.prices[0])?.duration;
   const [duration, setDuration] = React.useState<PlanDuration | undefined>(initial);
@@ -61,9 +45,13 @@ function ProductCard({ plan }: { plan: PublicPlan }) {
   const off = selected.savings;
 
   return (
-    <article data-plan-card={plan.slug} className="flex min-w-0 flex-col overflow-hidden rounded-[20px] border border-[var(--marketing-line)] bg-white/80">
+    <article
+      data-plan-card={plan.slug}
+      data-card-image={imageSrc}
+      className="flex min-w-0 flex-col overflow-hidden rounded-[20px] border border-[var(--marketing-line)] bg-white/80"
+    >
       <Link href={`/plans/${plan.slug}`} className="relative block aspect-square bg-[var(--marketing-sand)]">
-        <PlanPhoto category={plan.category} imageUrl={plan.imageUrl} alt={alt} sizes="(max-width: 768px) 50vw, 25vw" />
+        <PlanPhoto src={imageSrc} alt={alt} sizes="(max-width: 768px) 50vw, 25vw" />
         {plan.badge ? (
           <span className="absolute left-2 top-2 rounded-full bg-[var(--marketing-ink)] px-2 py-1 text-[10px] font-semibold text-[var(--marketing-bg)]">
             {plan.badge}
@@ -126,7 +114,24 @@ function ProductCard({ plan }: { plan: PublicPlan }) {
 export function ProductGrid({ plans, hardware }: { plans: PublicPlan[]; hardware: StandAddon[] }) {
   const { lang } = useLandingLang();
   const [filter, setFilter] = React.useState<"all" | PlanCategory>("all");
+  const [columns, setColumns] = React.useState(2);
   const visible = plans.filter((plan) => filter === "all" || planCategory(plan.category) === filter);
+  const images = assignCardImages(
+    visible.map((plan) => ({ imageUrl: plan.imageUrl, category: plan.category })),
+    columns
+  );
+  const standImages = assignCardImages(
+    hardware.map((item) => ({ imageUrl: item.imageUrl, category: "reviews" })),
+    columns
+  );
+
+  React.useLayoutEffect(() => {
+    const media = window.matchMedia("(min-width: 1024px)");
+    const apply = () => setColumns(media.matches ? 4 : 2);
+    apply();
+    media.addEventListener("change", apply);
+    return () => media.removeEventListener("change", apply);
+  }, []);
 
   return (
     <section id="pricing" className="px-4 py-8 sm:py-14">
@@ -161,8 +166,8 @@ export function ProductGrid({ plans, hardware }: { plans: PublicPlan[]; hardware
           </p>
         ) : (
           <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-            {visible.map((plan) => (
-              <ProductCard key={plan.slug} plan={plan} />
+            {visible.map((plan, index) => (
+              <ProductCard key={plan.slug} plan={plan} imageSrc={images[index]} />
             ))}
           </div>
         )}
@@ -170,21 +175,11 @@ export function ProductGrid({ plans, hardware }: { plans: PublicPlan[]; hardware
           <div className="mt-8">
             <h3 className="text-lg font-semibold">{pick(lang, "Add a stand", "स्टैंड जोड़ें")}</h3>
             <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
-              {hardware.map((item) => (
-                <article key={item.slug} className="min-w-0 overflow-hidden rounded-[20px] border border-[var(--marketing-line)] bg-white/80">
-                  {item.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={item.imageUrl} alt={lang === "hi" ? item.nameHi : item.name} width={800} height={800} className="aspect-square w-full object-cover" loading="lazy" />
-                  ) : (
-                    <LandingPicture
-                      name="product-reviews"
-                      alt={lang === "hi" ? item.nameHi : item.name}
-                      width={1200}
-                      height={1200}
-                      sizes="(max-width: 768px) 50vw, 25vw"
-                      className="aspect-square w-full object-cover"
-                    />
-                  )}
+              {hardware.map((item, index) => (
+                <article key={item.slug} data-card-image={standImages[index]} className="min-w-0 overflow-hidden rounded-[20px] border border-[var(--marketing-line)] bg-white/80">
+                  <div className="aspect-square bg-[var(--marketing-sand)]">
+                    <PlanPhoto src={standImages[index]} alt={lang === "hi" ? item.nameHi : item.name} sizes="(max-width: 768px) 50vw, 25vw" />
+                  </div>
                   <div className="space-y-2 p-3">
                     <p className="text-sm font-semibold">{lang === "hi" ? item.nameHi : item.name}</p>
                     <p className="marketing-rupee text-sm font-semibold">

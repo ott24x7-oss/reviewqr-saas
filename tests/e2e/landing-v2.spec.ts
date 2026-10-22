@@ -17,6 +17,27 @@ test("landing at 360px shows the hero buy button on the first screen", async ({ 
   await page.screenshot({ path: "docs/landing/home-1280.png" });
 });
 
+test("adjacent plan cards do not share an image", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/");
+  const cards = page.locator("[data-plan-card]");
+  await expect(cards.first()).toBeVisible();
+  const srcs: string[] = [];
+  const count = await cards.count();
+  for (let index = 0; index < count; index += 1) {
+    const card = cards.nth(index);
+    if (!(await card.isVisible())) continue;
+    const src = await card.getAttribute("data-card-image");
+    expect(src).toBeTruthy();
+    srcs.push(src!);
+  }
+  expect(srcs.length).toBeGreaterThan(1);
+  for (let index = 1; index < srcs.length; index += 1) {
+    expect(srcs[index]).not.toBe(srcs[index - 1]);
+    if (index >= 2) expect(srcs[index]).not.toBe(srcs[index - 2]);
+  }
+});
+
 test("the home price anchor is a paid monthly price", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("/");
