@@ -9,7 +9,13 @@ import { sendEmail } from "./email";
 import { getWhatsAppConfig } from "./settings";
 import { sendWhatsAppCloud } from "./whatsapp";
 import { hashToken, randomOtpCode, randomToken } from "./tokens";
-import { deliverOtpCode, otpBrandName, type OtpChannel } from "./otp-message";
+import {
+  deliverOtpCode,
+  otpBrandName,
+  otpGateError,
+  otpWrongCodeError,
+  type OtpChannel
+} from "./otp-message";
 
 export type { OtpChannel };
 
@@ -41,6 +47,35 @@ export async function findUserByPhone(raw: string) {
       ]
     }
   });
+}
+
+export async function preferredOtpChannel(): Promise<"whatsapp" | "email"> {
+  try {
+    const { getBaileys } = await import("./whatsapp-baileys");
+    if (getBaileys().isConnected()) return "whatsapp";
+  } catch {
+    /* try Cloud next */
+  }
+  try {
+    const wa = await getWhatsAppConfig();
+    if (wa.apiToken && wa.phoneId) return "whatsapp";
+  } catch {
+    /* email is the public fallback */
+  }
+  return "email";
+}
+
+async function rejectIfUnusable(row: { expires: Date; attempts: number } | null) {
+  const error = otpGateError(row, OTP_MAX_ATTEMPTS);
+  if (!error) return null;
+  return { ok: false as const, error };
+}
+
+async function noteWrongCode(row: { id: string; attempts: number }) {
+  const attempts = row.attempts + 1;
+  if (attempts >= OTP_MAX_ATTEMPTS) await prisma.emailOtp.delete({ where: { id: row.id } });
+  else await prisma.emailOtp.update({ where: { id: row.id }, data: { attempts } });
+  return { ok: false as const, error: otpWrongCodeError(attempts, OTP_MAX_ATTEMPTS) };
 }
 
 async function platformBrand() {
@@ -146,18 +181,10 @@ export async function verifyLoginOtp(rawPhone: string, code: string) {
     where: { identifier: key, purpose: "login" },
     orderBy: { createdAt: "desc" }
   });
-  if (!row || !otpStillValid(row.expires, row.attempts)) {
-    return { ok: false as const, error: "Code expired. Request a new one." };
-  }
-  if (row.tokenHash !== hashToken(code)) {
-    const attempts = row.attempts + 1;
-    if (attempts >= OTP_MAX_ATTEMPTS) {
-      await prisma.emailOtp.delete({ where: { id: row.id } });
-    } else {
-      await prisma.emailOtp.update({ where: { id: row.id }, data: { attempts } });
-    }
-    return { ok: false as const, error: "Invalid code" };
-  }
+  const blocked = await rejectIfUnusable(row);
+  if (blocked) return blocked;
+  if (!row) return { ok: false as const, error: "Invalid code" };
+  if (row.tokenHash !== hashToken(code)) return noteWrongCode(row);
 
   const user = await findUserByPhone(rawPhone);
   if (!user || user.deletedAt) return { ok: false as const, error: "Invalid code" };
@@ -210,7 +237,7 @@ export async function requestSignupOtp(rawPhone: string, email?: string | null) 
   });
   const channel = await deliverCode({ phone: rawPhone, email, code });
   if (channel === "none") return { ok: false as const, error: "We could not send a code right now" };
-  return { ok: true as const, channel };
+  return { ok: true as const, channel, issuedCode: code };
 }
 
 export async function verifySignupOtp(rawPhone: string, code: string) {
@@ -220,15 +247,10 @@ export async function verifySignupOtp(rawPhone: string, code: string) {
     where: { identifier: key, purpose: "signup" },
     orderBy: { createdAt: "desc" }
   });
-  if (!row || !otpStillValid(row.expires, row.attempts)) {
-    return { ok: false as const, error: "Code expired. Request a new one." };
-  }
-  if (row.tokenHash !== hashToken(code)) {
-    const attempts = row.attempts + 1;
-    if (attempts >= OTP_MAX_ATTEMPTS) await prisma.emailOtp.delete({ where: { id: row.id } });
-    else await prisma.emailOtp.update({ where: { id: row.id }, data: { attempts } });
-    return { ok: false as const, error: "Invalid code" };
-  }
+  const blocked = await rejectIfUnusable(row);
+  if (blocked) return blocked;
+  if (!row) return { ok: false as const, error: "Invalid code" };
+  if (row.tokenHash !== hashToken(code)) return noteWrongCode(row);
   await prisma.emailOtp.deleteMany({ where: { identifier: key, purpose: "signup" } });
   return { ok: true as const, phone: key };
 }
@@ -259,17 +281,45 @@ export async function verifyPurposeOtp(identifier: string, purpose: string, code
     where: { identifier, purpose },
     orderBy: { createdAt: "desc" }
   });
-  if (!row || !otpStillValid(row.expires, row.attempts)) {
-    return { ok: false as const, error: "Code expired. Request a new one." };
-  }
-  if (row.tokenHash !== hashToken(code)) {
-    const attempts = row.attempts + 1;
-    if (attempts >= OTP_MAX_ATTEMPTS) await prisma.emailOtp.delete({ where: { id: row.id } });
-    else await prisma.emailOtp.update({ where: { id: row.id }, data: { attempts } });
-    return { ok: false as const, error: "Invalid code" };
-  }
+  const blocked = await rejectIfUnusable(row);
+  if (blocked) return blocked;
+  if (!row) return { ok: false as const, error: "Invalid code" };
+  if (row.tokenHash !== hashToken(code)) return noteWrongCode(row);
   await prisma.emailOtp.delete({ where: { id: row.id } });
   return { ok: true as const };
+}
+
+const SIGNUP_PROOF_TTL_MS = 10 * 60 * 1000;
+
+/** Short-lived proof that the signup code was checked, before the business name is collected. */
+export async function issueSignupProof(phone: string) {
+  const proof = randomToken();
+  await prisma.emailOtp.deleteMany({ where: { identifier: phone, purpose: "signup-proof" } });
+  await prisma.emailOtp.create({
+    data: {
+      identifier: phone,
+      tokenHash: hashToken(proof),
+      channel: "phone",
+      purpose: "signup-proof",
+      expires: new Date(Date.now() + SIGNUP_PROOF_TTL_MS),
+      attempts: 0
+    }
+  });
+  return proof;
+}
+
+export async function consumeSignupProof(rawPhone: string, proof: string) {
+  const key = phoneKey(rawPhone);
+  if (!key || proof.length < 16) return null;
+  const row = await prisma.emailOtp.findFirst({
+    where: { identifier: key, purpose: "signup-proof", tokenHash: hashToken(proof) }
+  });
+  if (!row || row.expires.getTime() <= Date.now()) {
+    if (row) await prisma.emailOtp.delete({ where: { id: row.id } }).catch(() => {});
+    return null;
+  }
+  await prisma.emailOtp.delete({ where: { id: row.id } });
+  return key;
 }
 
 /** Single use. Returns the user id or null. */

@@ -10,27 +10,41 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PasswordField } from "@/components/brand/password-field";
+import {
+  channelLine,
+  LangToggle,
+  OtpCodeField,
+  useAuthLang,
+  useResendCountdown,
+  WhatsAppIcon
+} from "@/components/auth/otp-ui";
 
 function LoginForm() {
   const router = useRouter();
   const search = useSearchParams();
+  const { lang, choose, t } = useAuthLang();
+  const [method, setMethod] = React.useState<"whatsapp" | "email">("whatsapp");
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const [phone, setPhone] = React.useState("");
   const [otpCode, setOtpCode] = React.useState("");
   const [otpSent, setOtpSent] = React.useState(false);
-  const [otpLoading, setOtpLoading] = React.useState(false);
+  const [channel, setChannel] = React.useState<string | undefined>();
+  const [error, setError] = React.useState("");
+  const [resendAfter, setResendAfter] = React.useState(30);
+  const left = useResendCountdown(otpSent, resendAfter);
 
   React.useEffect(() => {
     if (search.get("verified") === "1") toast.success("Email confirmed. You can sign in.");
     if (search.get("verify") === "failed") toast.error("That confirmation link is invalid or expired.");
   }, [search]);
 
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function signInWithPassword(event: React.FormEvent) {
+    event.preventDefault();
     if (!email || !password) return;
     setLoading(true);
+    setError("");
     const res = await signIn("credentials", {
       email: email.trim().toLowerCase(),
       password,
@@ -38,6 +52,7 @@ function LoginForm() {
     });
     setLoading(false);
     if (res?.error) {
+      setError("Invalid email or password");
       toast.error("Invalid email or password");
       return;
     }
@@ -46,122 +61,158 @@ function LoginForm() {
     router.refresh();
   }
 
+  async function sendCode() {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/auth/otp/request", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ phone })
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || "Could not send the code");
+      setOtpSent(true);
+      setOtpCode("");
+      setChannel(json.channel);
+      setResendAfter(typeof json.resendAfterSec === "number" ? json.resendAfterSec : 30);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not send the code");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function verifyCode(event: React.FormEvent) {
+    event.preventDefault();
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/auth/otp/verify", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ phone, code: otpCode })
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || "Invalid code");
+      const signed = await signIn("credentials", {
+        otpToken: json.otpToken,
+        email: "otp-login@invalid.local",
+        password: "unused",
+        redirect: false
+      });
+      if (signed?.error) throw new Error("Could not sign in");
+      toast.success("Welcome back!");
+      router.push(search.get("callbackUrl") || "/dashboard");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Invalid code");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function changeNumber() {
+    setOtpSent(false);
+    setOtpCode("");
+    setError("");
+    setChannel(undefined);
+  }
+
   return (
     <Card className="shadow-card">
       <CardHeader className="text-center">
-        <CardTitle className="text-2xl font-display">Welcome back</CardTitle>
-        <CardDescription>Sign in to manage your reviews</CardDescription>
+        <LangToggle lang={lang} choose={choose} />
+        <CardTitle className="text-2xl font-display">
+          {method === "whatsapp" ? t.loginTitle : "Welcome back"}
+        </CardTitle>
+        <CardDescription>
+          {method === "whatsapp" ? t.loginSubtitle : "Sign in to manage your reviews"}
+        </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={onSubmit} className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@business.com"
-              className="h-11"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <div className="flex justify-between">
-              <Label htmlFor="password">Password</Label>
-              <Link href="/forgot-password" className="text-sm text-primary hover:underline">
-                Forgot?
-              </Link>
-            </div>
-            <PasswordField
-              id="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={setPassword}
-              placeholder="••••••••"
-            />
-          </div>
-          <Button type="submit" variant="gradient" size="lg" className="w-full" disabled={loading}>
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
-            Sign in
-          </Button>
-        </form>
-        <div className="my-6 border-t pt-5 space-y-3">
-          <p className="text-sm font-medium">Sign in with mobile OTP</p>
-          <div className="space-y-1.5">
-            <Label htmlFor="phone">Mobile</Label>
-            <Input
-              id="phone"
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="98xxxxxxxx"
-              className="h-11"
-            />
-          </div>
-          {otpSent && (
+        {method === "whatsapp" ? (
+          <form onSubmit={otpSent ? verifyCode : (event) => { event.preventDefault(); void sendCode(); }} className="space-y-4">
+            {error ? <p role="alert" className="auth-error text-sm">{error}</p> : null}
+            {!otpSent ? (
+              <div className="space-y-1.5">
+                <Label htmlFor="phone">{t.phone}</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  required
+                  value={phone}
+                  onChange={(event) => setPhone(event.target.value)}
+                  placeholder={t.phonePlaceholder}
+                  className="h-11"
+                />
+              </div>
+            ) : (
+              <>
+                <p className="text-sm">{t.notice}</p>
+                <p className="text-sm">{channelLine(channel, t)}</p>
+                <OtpCodeField id="otp" label={t.code} value={otpCode} onChange={setOtpCode} />
+              </>
+            )}
+            <Button type="submit" className="auth-whatsapp w-full" disabled={loading || (otpSent && otpCode.length !== 6)}>
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <WhatsAppIcon />}
+              {otpSent ? t.verify : t.send}
+            </Button>
+            {otpSent ? (
+              <div className="flex items-center justify-between gap-2 text-sm">
+                <button type="button" onClick={changeNumber}>{t.change}</button>
+                <button type="button" disabled={left > 0 || loading} onClick={() => void sendCode()}>
+                  {left > 0 ? t.resendIn(left) : t.resend}
+                </button>
+              </div>
+            ) : null}
+            <button type="button" className="w-full text-sm" onClick={() => { setMethod("email"); setError(""); }}>
+              {t.emailInstead}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={signInWithPassword} className="space-y-4">
+            {error ? <p role="alert" className="auth-error text-sm">{error}</p> : null}
             <div className="space-y-1.5">
-              <Label htmlFor="otp">6-digit code</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
-                id="otp"
-                inputMode="numeric"
-                value={otpCode}
-                onChange={(e) => setOtpCode(e.target.value)}
-                placeholder="000000"
+                id="email"
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="you@business.com"
                 className="h-11"
               />
             </div>
-          )}
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            disabled={otpLoading}
-            onClick={async () => {
-              setOtpLoading(true);
-              try {
-                if (!otpSent) {
-                  const res = await fetch("/api/auth/otp/request", {
-                    method: "POST",
-                    headers: { "content-type": "application/json" },
-                    body: JSON.stringify({ phone })
-                  });
-                  const json = await res.json().catch(() => ({}));
-                  if (!res.ok) throw new Error(json.error || "Could not send the code");
-                  setOtpSent(true);
-                  toast.success("If this number has an account, a code is on the way");
-                } else {
-                  const res = await fetch("/api/auth/otp/verify", {
-                    method: "POST",
-                    headers: { "content-type": "application/json" },
-                    body: JSON.stringify({ phone, code: otpCode })
-                  });
-                  const json = await res.json().catch(() => ({}));
-                  if (!res.ok) throw new Error(json.error || "Invalid code");
-                  const signed = await signIn("credentials", {
-                    otpToken: json.otpToken,
-                    email: "otp-login@invalid.local",
-                    password: "unused",
-                    redirect: false
-                  });
-                  if (signed?.error) throw new Error("Could not sign in");
-                  toast.success("Welcome back!");
-                  router.push(search.get("callbackUrl") || "/dashboard");
-                  router.refresh();
-                }
-              } catch (e: any) {
-                toast.error(e.message || "Something went wrong");
-              } finally {
-                setOtpLoading(false);
-              }
-            }}
-          >
-            {otpLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            {otpSent ? "Verify code" : "Send code"}
-          </Button>
-        </div>
+            <div className="space-y-1.5">
+              <div className="flex justify-between">
+                <Label htmlFor="password">Password</Label>
+                <Link href="/forgot-password" className="text-sm text-primary hover:underline">
+                  Forgot?
+                </Link>
+              </div>
+              <PasswordField
+                id="password"
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={setPassword}
+                placeholder="••••••••"
+              />
+            </div>
+            <Button type="submit" variant="gradient" size="lg" className="w-full" disabled={loading}>
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
+              Sign in
+            </Button>
+            <button type="button" className="w-full text-sm" onClick={() => { setMethod("whatsapp"); setError(""); }}>
+              {t.whatsappInstead}
+            </button>
+          </form>
+        )}
         <div className="mt-6 text-center text-sm text-muted-foreground">
           New to ReviewQR?{" "}
           <Link href="/register" className="font-medium text-primary hover:underline">
@@ -169,7 +220,7 @@ function LoginForm() {
           </Link>
         </div>
         {process.env.NODE_ENV !== "production" ? (
-          <div className="mt-4 p-3 rounded-lg bg-secondary text-xs text-muted-foreground">
+          <div className="mt-4 rounded-lg bg-secondary p-3 text-xs text-muted-foreground">
             <strong>Demo:</strong> demo@reviewqr.in / Demo@123
           </div>
         ) : null}

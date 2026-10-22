@@ -4,8 +4,29 @@
  */
 
 export const OTP_BRAND_FALLBACK = "ReviewQR";
+export const OTP_RESEND_AFTER_SEC = 30;
+export const LOGIN_OTP_NOTICE = "If this number is registered, a code was sent";
+export const OTP_INVALID = "Invalid code";
+export const OTP_EXPIRED = "Code expired. Request a new one.";
+export const OTP_TOO_MANY = "Too many attempts. Request a new code.";
 
 export type OtpChannel = "whatsapp" | "email" | "dev" | "none";
+
+/** Missing rows stay "Invalid code" so an unknown number is not revealed. */
+export function otpGateError(
+  row: { expires: Date; attempts: number } | null,
+  maxAttempts: number,
+  now = Date.now()
+) {
+  if (!row) return OTP_INVALID;
+  if (row.expires.getTime() <= now) return OTP_EXPIRED;
+  if (row.attempts >= maxAttempts) return OTP_TOO_MANY;
+  return null;
+}
+
+export function otpWrongCodeError(nextAttempts: number, maxAttempts: number) {
+  return nextAttempts >= maxAttempts ? OTP_TOO_MANY : OTP_INVALID;
+}
 
 export function otpBrandName(raw: string | null | undefined) {
   const name = (raw ?? "").trim();

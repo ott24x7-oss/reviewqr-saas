@@ -10,9 +10,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PasswordField } from "@/components/brand/password-field";
+import {
+  channelLine,
+  LangToggle,
+  OtpCodeField,
+  useAuthLang,
+  useResendCountdown,
+  WhatsAppIcon
+} from "@/components/auth/otp-ui";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { lang, choose, t } = useAuthLang();
+  const [method, setMethod] = React.useState<"whatsapp" | "email">("whatsapp");
   const [form, setForm] = React.useState({
     name: "",
     email: "",
@@ -21,21 +31,29 @@ export default function RegisterPage() {
     password: ""
   });
   const [loading, setLoading] = React.useState(false);
-  const [otpOpen, setOtpOpen] = React.useState(false);
-  const [otpSent, setOtpSent] = React.useState(false);
-  const [otp, setOtp] = React.useState({ name: "", phone: "", email: "", code: "" });
+  const [error, setError] = React.useState("");
+  const [step, setStep] = React.useState<"phone" | "code" | "business">("phone");
+  const [phone, setPhone] = React.useState("");
+  const [code, setCode] = React.useState("");
+  const [signupToken, setSignupToken] = React.useState("");
+  const [ownerName, setOwnerName] = React.useState("");
+  const [businessName, setBusinessName] = React.useState("");
+  const [channel, setChannel] = React.useState<string | undefined>();
+  const [resendAfter, setResendAfter] = React.useState(30);
+  const left = useResendCountdown(step === "code", resendAfter);
 
-  function update<K extends keyof typeof form>(key: K, v: string) {
-    setForm((s) => ({ ...s, [key]: v }));
+  function update<K extends keyof typeof form>(key: K, value: string) {
+    setForm((current) => ({ ...current, [key]: value }));
   }
 
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function onSubmit(event: React.FormEvent) {
+    event.preventDefault();
     if (!form.name || !form.email || !form.password) {
       toast.error("Please fill all required fields");
       return;
     }
     setLoading(true);
+    setError("");
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",
@@ -45,6 +63,7 @@ export default function RegisterPage() {
       const json = await res.json();
       if (!res.ok) {
         toast.error(json.error || "Registration failed");
+        setError(json.error || "Registration failed");
         setLoading(false);
         return;
       }
@@ -61,8 +80,85 @@ export default function RegisterPage() {
       toast.success("Welcome to ReviewQR!");
       router.push("/dashboard");
       router.refresh();
-    } catch (e: any) {
-      toast.error(e.message || "Something went wrong");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function sendCode() {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/auth/otp/signup", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "request", phone })
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || "Could not send a code");
+      setStep("code");
+      setCode("");
+      setChannel(json.channel);
+      setResendAfter(typeof json.resendAfterSec === "number" ? json.resendAfterSec : 30);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not send a code");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function confirmCode(event: React.FormEvent) {
+    event.preventDefault();
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/auth/otp/signup", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "confirm", phone, code })
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || "Invalid code");
+      setSignupToken(json.signupToken);
+      setStep("business");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Invalid code");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function finish(event: React.FormEvent) {
+    event.preventDefault();
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/auth/otp/signup", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          action: "finish",
+          phone,
+          signupToken,
+          name: ownerName,
+          businessName
+        })
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || "Could not create the account");
+      const sign = await signIn("credentials", {
+        otpToken: json.otpToken,
+        email: "otp-login@invalid.local",
+        password: "unused",
+        redirect: false
+      });
+      if (sign?.error) throw new Error("Account created — please sign in");
+      router.push("/dashboard/onboarding");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not create the account");
     } finally {
       setLoading(false);
     }
@@ -71,152 +167,158 @@ export default function RegisterPage() {
   return (
     <Card className="shadow-card">
       <CardHeader className="text-center">
-        <CardTitle className="text-2xl font-display">Start your free trial</CardTitle>
-        <CardDescription>14 days free · no credit card needed</CardDescription>
+        <LangToggle lang={lang} choose={choose} />
+        <CardTitle className="text-2xl font-display">
+          {method === "whatsapp" ? t.registerTitle : "Start your free trial"}
+        </CardTitle>
+        <CardDescription>
+          {method === "whatsapp" ? t.registerSubtitle : "14 days free · no credit card needed"}
+        </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={onSubmit} className="space-y-3.5">
-          <div className="grid sm:grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="name">Your name *</Label>
-              <Input
-                id="name"
-                required
-                value={form.name}
-                onChange={(e) => update("name", e.target.value)}
-                placeholder="Rakesh Sharma"
-                className="h-11"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="phone">Mobile</Label>
-              <Input
-                id="phone"
-                type="tel"
-                value={form.phone}
-                onChange={(e) => update("phone", e.target.value)}
-                placeholder="98xxxxxxxx"
-                className="h-11"
-              />
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="businessName">Business name</Label>
-            <Input
-              id="businessName"
-              value={form.businessName}
-              onChange={(e) => update("businessName", e.target.value)}
-              placeholder="Spice Junction Café"
-              className="h-11"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="email">Email *</Label>
-            <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              required
-              value={form.email}
-              onChange={(e) => update("email", e.target.value)}
-              placeholder="you@business.com"
-              className="h-11"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="password">Password *</Label>
-            <PasswordField
-              id="password"
-              autoComplete="new-password"
-              required
-              minLength={8}
-              value={form.password}
-              onChange={(value) => update("password", value)}
-              placeholder="At least 8 characters"
-            />
-            <p className="text-xs text-muted-foreground">Min 8 chars, 1 uppercase, 1 number</p>
-          </div>
-
-          <Button type="submit" variant="gradient" size="lg" className="w-full" disabled={loading}>
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
-            Create account
-          </Button>
-
-          <ul className="mt-4 grid gap-1.5 text-xs text-muted-foreground">
-            <li className="inline-flex items-center gap-1.5">
-              <Check className="h-3.5 w-3.5 text-accent" /> 14-day free trial of Growth plan
-            </li>
-            <li className="inline-flex items-center gap-1.5">
-              <Check className="h-3.5 w-3.5 text-accent" /> No credit card required to start
-            </li>
-            <li className="inline-flex items-center gap-1.5">
-              <Check className="h-3.5 w-3.5 text-accent" /> Cancel anytime, downgrade to Free
-            </li>
-          </ul>
-        </form>
-        {!otpOpen ? (
-          <Button type="button" variant="outline" className="mt-4 min-h-[44px] w-full" onClick={() => setOtpOpen(true)}>
-            Sign up with mobile
-          </Button>
-        ) : (
+        {method === "whatsapp" ? (
           <form
-            className="mt-4 space-y-3 border-t pt-4"
-            onSubmit={async (event) => {
-              event.preventDefault();
-              setLoading(true);
-              try {
-                if (!otpSent) {
-                  const res = await fetch("/api/auth/otp/signup", {
-                    method: "POST",
-                    headers: { "content-type": "application/json" },
-                    body: JSON.stringify({ action: "request", phone: otp.phone, email: otp.email })
-                  });
-                  const json = await res.json().catch(() => ({}));
-                  if (!res.ok) throw new Error(json.error || "Could not send a code");
-                  setOtpSent(true);
-                  toast.success("Code sent");
-                  return;
-                }
-                const res = await fetch("/api/auth/otp/signup", {
-                  method: "POST",
-                  headers: { "content-type": "application/json" },
-                  body: JSON.stringify({ action: "verify", phone: otp.phone, email: otp.email, name: otp.name, code: otp.code })
-                });
-                const json = await res.json().catch(() => ({}));
-                if (!res.ok) throw new Error(json.error || "Could not create the account");
-                const sign = await signIn("credentials", { otpToken: json.otpToken, redirect: false });
-                if (sign?.error) throw new Error("Account created — please sign in");
-                router.push("/dashboard/onboarding");
-                router.refresh();
-              } catch (error) {
-                toast.error(error instanceof Error ? error.message : "Could not sign up");
-              } finally {
-                setLoading(false);
-              }
-            }}
+            className="space-y-4"
+            onSubmit={step === "code" ? confirmCode : step === "business" ? finish : (event) => { event.preventDefault(); void sendCode(); }}
           >
-            <p className="text-sm font-medium">Sign up with mobile OTP</p>
-            <label className="block space-y-1 text-sm">
-              <span>Full name</span>
-              <Input className="h-11" value={otp.name} onChange={(event) => setOtp((current) => ({ ...current, name: event.target.value }))} />
-            </label>
-            <label className="block space-y-1 text-sm">
-              <span>Mobile number</span>
-              <Input className="h-11" value={otp.phone} onChange={(event) => setOtp((current) => ({ ...current, phone: event.target.value }))} />
-            </label>
-            <label className="block space-y-1 text-sm">
-              <span>Contact address</span>
-              <Input className="h-11" value={otp.email} onChange={(event) => setOtp((current) => ({ ...current, email: event.target.value }))} />
-            </label>
-            {otpSent ? (
-              <label className="block space-y-1 text-sm">
-                <span>6-digit code</span>
-                <Input className="h-11" inputMode="numeric" value={otp.code} onChange={(event) => setOtp((current) => ({ ...current, code: event.target.value }))} />
-              </label>
+            {error ? <p role="alert" className="auth-error text-sm">{error}</p> : null}
+            {step === "phone" ? (
+              <div className="space-y-1.5">
+                <Label htmlFor="wa-phone">{t.phone}</Label>
+                <Input
+                  id="wa-phone"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  required
+                  value={phone}
+                  onChange={(event) => setPhone(event.target.value)}
+                  placeholder={t.phonePlaceholder}
+                  className="h-11"
+                />
+              </div>
             ) : null}
-            <Button type="submit" variant="outline" className="min-h-[44px] w-full" disabled={loading}>
-              {otpSent ? "Verify and continue" : "Send code"}
+            {step === "code" ? (
+              <>
+                <p className="text-sm">{channelLine(channel, t)}</p>
+                <OtpCodeField id="wa-code" label={t.code} value={code} onChange={setCode} />
+              </>
+            ) : null}
+            {step === "business" ? (
+              <>
+                <div className="space-y-1.5">
+                  <Label htmlFor="wa-name">{t.name}</Label>
+                  <Input id="wa-name" required minLength={2} value={ownerName} onChange={(event) => setOwnerName(event.target.value)} className="h-11" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="wa-business">{t.business}</Label>
+                  <Input id="wa-business" required minLength={2} value={businessName} onChange={(event) => setBusinessName(event.target.value)} className="h-11" />
+                </div>
+              </>
+            ) : null}
+            <Button
+              type="submit"
+              className="auth-whatsapp w-full"
+              disabled={loading || (step === "code" && code.length !== 6)}
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <WhatsAppIcon />}
+              {step === "phone" ? t.sendRegister : step === "code" ? t.verifyRegister : t.finish}
             </Button>
+            {step === "code" ? (
+              <div className="flex items-center justify-between gap-2 text-sm">
+                <button type="button" onClick={() => { setStep("phone"); setCode(""); setError(""); }}>
+                  {t.change}
+                </button>
+                <button type="button" disabled={left > 0 || loading} onClick={() => void sendCode()}>
+                  {left > 0 ? t.resendIn(left) : t.resend}
+                </button>
+              </div>
+            ) : null}
+            <button type="button" className="w-full text-sm" onClick={() => { setMethod("email"); setError(""); }}>
+              {t.emailInstead}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={onSubmit} className="space-y-3.5">
+            {error ? <p role="alert" className="auth-error text-sm">{error}</p> : null}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="name">Your name *</Label>
+                <Input
+                  id="name"
+                  required
+                  value={form.name}
+                  onChange={(event) => update("name", event.target.value)}
+                  placeholder="Rakesh Sharma"
+                  className="h-11"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="phone">Mobile</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={form.phone}
+                  onChange={(event) => update("phone", event.target.value)}
+                  placeholder="98xxxxxxxx"
+                  className="h-11"
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="businessName">Business name</Label>
+              <Input
+                id="businessName"
+                value={form.businessName}
+                onChange={(event) => update("businessName", event.target.value)}
+                placeholder="Spice Junction Café"
+                className="h-11"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="email">Email *</Label>
+              <Input
+                id="email"
+                type="email"
+                autoComplete="email"
+                required
+                value={form.email}
+                onChange={(event) => update("email", event.target.value)}
+                placeholder="you@business.com"
+                className="h-11"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="password">Password *</Label>
+              <PasswordField
+                id="password"
+                autoComplete="new-password"
+                required
+                minLength={8}
+                value={form.password}
+                onChange={(value) => update("password", value)}
+                placeholder="At least 8 characters"
+              />
+              <p className="text-xs text-muted-foreground">Min 8 chars, 1 uppercase, 1 number</p>
+            </div>
+            <Button type="submit" variant="gradient" size="lg" className="w-full" disabled={loading}>
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
+              Create account
+            </Button>
+            <ul className="mt-4 grid gap-1.5 text-xs text-muted-foreground">
+              <li className="inline-flex items-center gap-1.5">
+                <Check className="h-3.5 w-3.5 text-accent" /> 14-day free trial of Growth plan
+              </li>
+              <li className="inline-flex items-center gap-1.5">
+                <Check className="h-3.5 w-3.5 text-accent" /> No credit card required to start
+              </li>
+              <li className="inline-flex items-center gap-1.5">
+                <Check className="h-3.5 w-3.5 text-accent" /> Cancel anytime, downgrade to Free
+              </li>
+            </ul>
+            <button type="button" className="w-full text-sm" onClick={() => { setMethod("whatsapp"); setError(""); }}>
+              {t.whatsappInstead}
+            </button>
           </form>
         )}
         <div className="mt-6 text-center text-sm text-muted-foreground">
