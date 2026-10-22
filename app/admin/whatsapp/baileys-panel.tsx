@@ -17,6 +17,12 @@ type Status =
   | "logged-out"
   | "unavailable";
 
+type OtpHealth = {
+  lastAt: string | null;
+  lastChannel: string | null;
+  counts: { whatsapp: number; email: number; dev: number };
+};
+
 type Info = {
   status: Status;
   qrPng: string | null;
@@ -24,6 +30,7 @@ type Info = {
   error: string | null;
   connectedAt: string | null;
   lastEvent: string | null;
+  otp?: OtpHealth | null;
 };
 
 const POLL_MS = 2500;
@@ -131,6 +138,23 @@ export function BaileysPanel() {
             </div>
           </div>
         )}
+
+        <div className="rounded-xl border p-3 text-sm">
+          <div className="font-medium">Login codes today</div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Last sent:{" "}
+            {info?.otp?.lastAt
+              ? `${new Date(info.otp.lastAt).toLocaleString()} via ${info.otp.lastChannel || "unknown"}`
+              : "none yet"}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            WhatsApp {info?.otp?.counts.whatsapp ?? 0} · Email {info?.otp?.counts.email ?? 0} · Dev{" "}
+            {info?.otp?.counts.dev ?? 0}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            If this session drops, new codes use WhatsApp Cloud and then email.
+          </p>
+        </div>
 
         <div className="flex flex-wrap gap-2">
           {status === "connected" || status === "connecting" || status === "qr-pending" ? (

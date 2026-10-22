@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
+import { phoneKey } from "@/lib/otp";
 import { effectiveTier } from "@/lib/payments";
 import { z } from "zod";
 
@@ -25,6 +26,14 @@ export async function PATCH(req: NextRequest) {
 
   // White-label only allowed on Agency tier
   const data = { ...parsed.data };
+  if (data.phone !== undefined) {
+    const currentKey = phoneKey(user.phone || "");
+    const nextKey = phoneKey(data.phone);
+    if (nextKey !== currentKey) {
+      return NextResponse.json({ error: "Verify the new WhatsApp number before saving it." }, { status: 400 });
+    }
+    if (nextKey) data.phone = nextKey;
+  }
   if (effectiveTier(user) !== "AGENCY") {
     delete data.whiteLabelEnabled;
     delete data.whiteLabelName;

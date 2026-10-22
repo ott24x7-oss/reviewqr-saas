@@ -16,6 +16,7 @@ import {
   okSchema,
   otpRequestSchema,
   otpSentSchema,
+  otpSignupSchema,
   otpVerifySchema,
   pushRegisterSchema,
   pushUnregisterSchema,
@@ -70,9 +71,29 @@ registry.registerPath({
   summary: "Request a login code",
   request: jsonBody(otpRequestSchema),
   responses: {
-    200: jsonResponse("Code sent. devCode is present only outside production when OTP_DEV_REVEAL is set.", dataSchema(otpSentSchema)),
+    200: jsonResponse(
+      "Code accepted. channel and resendAfterSec say where to look and when a resend is allowed. devCode is present only outside production when OTP_DEV_REVEAL is set.",
+      dataSchema(otpSentSchema)
+    ),
     400: validation,
     429: rateLimit
+  }
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/v1/auth/otp/signup",
+  summary: "Request, confirm, or finish a WhatsApp signup",
+  request: jsonBody(otpSignupSchema),
+  responses: {
+    200: jsonResponse(
+      "Request returns the send channel. Confirm returns a signup token. Verify and finish return access and refresh tokens.",
+      dataSchema(z.union([otpSentSchema, z.object({ signupToken: z.string() }), tokenPairSchema]))
+    ),
+    400: validation,
+    409: { description: "Account already exists", content: { "application/json": { schema: errorRef } } },
+    429: rateLimit,
+    503: { description: "Code could not be sent", content: { "application/json": { schema: errorRef } } }
   }
 });
 

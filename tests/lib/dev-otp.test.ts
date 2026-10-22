@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { devOtpCode, otpRequestBody, warnDevOtpInProduction } from "../../lib/auth/dev-otp";
+import { LOGIN_OTP_NOTICE } from "../../lib/otp-message";
 
 describe("OTP dev reveal", () => {
   it("does not reveal the code when NODE_ENV is production", () => {
@@ -30,6 +31,21 @@ describe("OTP dev reveal", () => {
 
   it("does not invent a code for a missing account", () => {
     expect(otpRequestBody(null, { NODE_ENV: "development", OTP_DEV_REVEAL: "1" })).toEqual({ sent: true });
+  });
+
+  it("returns the same public login body for a known and an unknown number in production", () => {
+    const extra = { channel: "whatsapp" as const, resendAfterSec: 30, message: LOGIN_OTP_NOTICE };
+    const env = { NODE_ENV: "production", OTP_DEV_REVEAL: "1" };
+    const known = otpRequestBody("123456", env, extra);
+    const unknown = otpRequestBody(null, env, extra);
+    expect(known).toEqual(unknown);
+    expect(known).toEqual({
+      sent: true,
+      channel: "whatsapp",
+      resendAfterSec: 30,
+      message: LOGIN_OTP_NOTICE
+    });
+    expect(known).not.toHaveProperty("devCode");
   });
 
   it("warns at startup only when the flag is set in production", () => {

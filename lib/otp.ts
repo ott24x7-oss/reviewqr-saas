@@ -1,13 +1,24 @@
 /**
  * Mobile OTP login. The code is hashed, expires in 5 minutes, and locks after
- * too many wrong attempts. Delivery is WhatsApp Cloud when that provider is
- * configured, otherwise the user's email, otherwise a development log.
+ * too many wrong attempts. Delivery tries the connected Baileys session, then
+ * WhatsApp Cloud when a token and phone id are saved, then email, then a
+ * non-production log. A failed send falls through and never throws.
  */
 import { prisma } from "./db";
 import { sendEmail } from "./email";
 import { getWhatsAppConfig } from "./settings";
 import { sendWhatsAppCloud } from "./whatsapp";
 import { hashToken, randomOtpCode, randomToken } from "./tokens";
+import {
+  deliverOtpCode,
+  otpBrandName,
+  otpGateError,
+  otpWrongCodeError,
+  phoneKeyFromRaw,
+  type OtpChannel
+} from "./otp-message";
+
+export type { OtpChannel };
 
 export const OTP_TTL_MS = 5 * 60 * 1000;
 export const OTP_SESSION_TTL_MS = 2 * 60 * 1000;
@@ -18,9 +29,7 @@ export function otpStillValid(expires: Date, attempts: number, now = Date.now())
 }
 
 export function phoneKey(raw: string) {
-  const digits = raw.replace(/\D/g, "");
-  if (digits.length < 10) return "";
-  return digits.slice(-10);
+  return phoneKeyFromRaw(raw);
 }
 
 export async function findUserByPhone(raw: string) {
@@ -39,27 +48,100 @@ export async function findUserByPhone(raw: string) {
   });
 }
 
-async function deliverCode(opts: { phone: string; email?: string | null; code: string }) {
-  const wa = await getWhatsAppConfig();
-  const cloudReady = wa.provider === "cloud-api" && !!wa.apiToken && !!wa.phoneId;
-  const message = `Your ReviewQR login code is ${opts.code}. It expires in 5 minutes.`;
-  if (cloudReady) {
-    await sendWhatsAppCloud({ to: opts.phone, message });
-    return "whatsapp" as const;
+export async function preferredOtpChannel(): Promise<"whatsapp" | "email"> {
+  try {
+    const { getBaileys } = await import("./whatsapp-baileys");
+    if (getBaileys().isConnected()) return "whatsapp";
+  } catch {
+    /* try Cloud next */
   }
-  if (opts.email) {
-    await sendEmail({
-      to: opts.email,
-      subject: "Your ReviewQR login code",
-      html: `<p>Your login code is <b>${opts.code}</b>. It expires in 5 minutes.</p>`
+  try {
+    const wa = await getWhatsAppConfig();
+    if (wa.apiToken && wa.phoneId) return "whatsapp";
+  } catch {
+    /* email is the public fallback */
+  }
+  return "email";
+}
+
+async function rejectIfUnusable(row: { expires: Date; attempts: number } | null) {
+  const error = otpGateError(row, OTP_MAX_ATTEMPTS);
+  if (!error) return null;
+  return { ok: false as const, error };
+}
+
+async function noteWrongCode(row: { id: string; attempts: number }) {
+  const attempts = row.attempts + 1;
+  if (attempts >= OTP_MAX_ATTEMPTS) await prisma.emailOtp.delete({ where: { id: row.id } });
+  else await prisma.emailOtp.update({ where: { id: row.id }, data: { attempts } });
+  return { ok: false as const, error: otpWrongCodeError(attempts, OTP_MAX_ATTEMPTS) };
+}
+
+async function platformBrand() {
+  try {
+    const row = await prisma.platformBranding.findUnique({
+      where: { id: "singleton" },
+      select: { brandName: true }
     });
-    return "email" as const;
+    return otpBrandName(row?.brandName);
+  } catch {
+    return otpBrandName(null);
   }
-  if (process.env.NODE_ENV === "development") {
-    console.info(`[otp] ${opts.phone} code ${opts.code}`);
-    return "log" as const;
+}
+
+async function deliverCode(opts: { phone: string; email?: string | null; code: string }): Promise<OtpChannel> {
+  const brand = await platformBrand();
+  let baileysConnected = false;
+  try {
+    const { getBaileys } = await import("./whatsapp-baileys");
+    baileysConnected = getBaileys().isConnected();
+  } catch {
+    baileysConnected = false;
   }
-  return "none" as const;
+  let cloudConfigured = false;
+  try {
+    const wa = await getWhatsAppConfig();
+    cloudConfigured = !!(wa.apiToken && wa.phoneId);
+  } catch {
+    cloudConfigured = false;
+  }
+
+  let channel: OtpChannel = "none";
+  try {
+    channel = await deliverOtpCode({
+      phone: opts.phone,
+      email: opts.email,
+      code: opts.code,
+      brand,
+      baileysConnected,
+      cloudConfigured,
+      env: process.env.NODE_ENV,
+      sendBaileys: async (to, message) => {
+        const { getBaileys } = await import("./whatsapp-baileys");
+        await getBaileys().sendText(to, message);
+      },
+      sendCloud: async (to, message) => {
+        await sendWhatsAppCloud({ to, message });
+      },
+      sendMail: async (to, subject, html) => {
+        await sendEmail({ to, subject, html });
+      },
+      log: (line) => {
+        if (process.env.NODE_ENV === "production") return;
+        console.info(line);
+      }
+    });
+  } catch {
+    channel = "none";
+  }
+
+  if (channel === "whatsapp" || channel === "email" || channel === "dev") {
+    await prisma.otpDelivery.create({ data: { channel } }).catch((err: unknown) => {
+      const message = err instanceof Error ? err.message : "unknown";
+      console.warn("[otp] delivery log failed:", message);
+    });
+  }
+  return channel;
 }
 
 /** Always resolves for a well-formed phone. Missing accounts get the same result. */
@@ -68,7 +150,9 @@ export async function requestLoginOtp(rawPhone: string) {
   if (!key) return { ok: false as const, error: "Enter a valid mobile number" };
 
   const user = await findUserByPhone(rawPhone);
-  if (!user || user.deletedAt) return { ok: true as const, issuedCode: null as string | null };
+  if (!user || user.deletedAt) {
+    return { ok: true as const, issuedCode: null as string | null, channel: null as OtpChannel | null };
+  }
 
   const code = randomOtpCode();
   const expires = new Date(Date.now() + OTP_TTL_MS);
@@ -83,8 +167,8 @@ export async function requestLoginOtp(rawPhone: string) {
       attempts: 0
     }
   });
-  await deliverCode({ phone: rawPhone, email: user.email, code });
-  return { ok: true as const, issuedCode: code };
+  const channel = await deliverCode({ phone: rawPhone, email: user.email, code });
+  return { ok: true as const, issuedCode: code, channel };
 }
 
 /** Returns a one-time session token the credentials provider can exchange. */
@@ -96,18 +180,10 @@ export async function verifyLoginOtp(rawPhone: string, code: string) {
     where: { identifier: key, purpose: "login" },
     orderBy: { createdAt: "desc" }
   });
-  if (!row || !otpStillValid(row.expires, row.attempts)) {
-    return { ok: false as const, error: "Code expired. Request a new one." };
-  }
-  if (row.tokenHash !== hashToken(code)) {
-    const attempts = row.attempts + 1;
-    if (attempts >= OTP_MAX_ATTEMPTS) {
-      await prisma.emailOtp.delete({ where: { id: row.id } });
-    } else {
-      await prisma.emailOtp.update({ where: { id: row.id }, data: { attempts } });
-    }
-    return { ok: false as const, error: "Invalid code" };
-  }
+  const blocked = await rejectIfUnusable(row);
+  if (blocked) return blocked;
+  if (!row) return { ok: false as const, error: "Invalid code" };
+  if (row.tokenHash !== hashToken(code)) return noteWrongCode(row);
 
   const user = await findUserByPhone(rawPhone);
   if (!user || user.deletedAt) return { ok: false as const, error: "Invalid code" };
@@ -158,9 +234,9 @@ export async function requestSignupOtp(rawPhone: string, email?: string | null) 
       attempts: 0
     }
   });
-  const delivery = await deliverCode({ phone: rawPhone, email, code });
-  if (delivery === "none") return { ok: false as const, error: "We could not send a code right now" };
-  return { ok: true as const };
+  const channel = await deliverCode({ phone: rawPhone, email, code });
+  if (channel === "none") return { ok: false as const, error: "We could not send a code right now" };
+  return { ok: true as const, channel, issuedCode: code };
 }
 
 export async function verifySignupOtp(rawPhone: string, code: string) {
@@ -170,15 +246,10 @@ export async function verifySignupOtp(rawPhone: string, code: string) {
     where: { identifier: key, purpose: "signup" },
     orderBy: { createdAt: "desc" }
   });
-  if (!row || !otpStillValid(row.expires, row.attempts)) {
-    return { ok: false as const, error: "Code expired. Request a new one." };
-  }
-  if (row.tokenHash !== hashToken(code)) {
-    const attempts = row.attempts + 1;
-    if (attempts >= OTP_MAX_ATTEMPTS) await prisma.emailOtp.delete({ where: { id: row.id } });
-    else await prisma.emailOtp.update({ where: { id: row.id }, data: { attempts } });
-    return { ok: false as const, error: "Invalid code" };
-  }
+  const blocked = await rejectIfUnusable(row);
+  if (blocked) return blocked;
+  if (!row) return { ok: false as const, error: "Invalid code" };
+  if (row.tokenHash !== hashToken(code)) return noteWrongCode(row);
   await prisma.emailOtp.deleteMany({ where: { identifier: key, purpose: "signup" } });
   return { ok: true as const, phone: key };
 }
@@ -198,9 +269,9 @@ export async function requestPurposeOtp(opts: { identifier: string; phone: strin
       attempts: 0
     }
   });
-  const delivery = await deliverCode({ phone: opts.phone, email: opts.email, code });
-  if (delivery === "none") return { ok: false as const, error: "We could not send a code right now" };
-  return { ok: true as const, phone: key };
+  const channel = await deliverCode({ phone: opts.phone, email: opts.email, code });
+  if (channel === "none") return { ok: false as const, error: "We could not send a code right now" };
+  return { ok: true as const, phone: key, channel };
 }
 
 export async function verifyPurposeOtp(identifier: string, purpose: string, code: string) {
@@ -209,17 +280,72 @@ export async function verifyPurposeOtp(identifier: string, purpose: string, code
     where: { identifier, purpose },
     orderBy: { createdAt: "desc" }
   });
-  if (!row || !otpStillValid(row.expires, row.attempts)) {
-    return { ok: false as const, error: "Code expired. Request a new one." };
-  }
-  if (row.tokenHash !== hashToken(code)) {
-    const attempts = row.attempts + 1;
-    if (attempts >= OTP_MAX_ATTEMPTS) await prisma.emailOtp.delete({ where: { id: row.id } });
-    else await prisma.emailOtp.update({ where: { id: row.id }, data: { attempts } });
-    return { ok: false as const, error: "Invalid code" };
-  }
+  const blocked = await rejectIfUnusable(row);
+  if (blocked) return blocked;
+  if (!row) return { ok: false as const, error: "Invalid code" };
+  if (row.tokenHash !== hashToken(code)) return noteWrongCode(row);
   await prisma.emailOtp.delete({ where: { id: row.id } });
   return { ok: true as const };
+}
+
+const SIGNUP_PROOF_TTL_MS = 10 * 60 * 1000;
+
+/** Short-lived proof that the signup code was checked, before the business name is collected. */
+export async function issueSignupProof(phone: string) {
+  const proof = randomToken();
+  await prisma.emailOtp.deleteMany({ where: { identifier: phone, purpose: "signup-proof" } });
+  await prisma.emailOtp.create({
+    data: {
+      identifier: phone,
+      tokenHash: hashToken(proof),
+      channel: "phone",
+      purpose: "signup-proof",
+      expires: new Date(Date.now() + SIGNUP_PROOF_TTL_MS),
+      attempts: 0
+    }
+  });
+  return proof;
+}
+
+export async function consumeSignupProof(rawPhone: string, proof: string) {
+  const key = phoneKey(rawPhone);
+  if (!key || proof.length < 16) return null;
+  const row = await prisma.emailOtp.findFirst({
+    where: { identifier: key, purpose: "signup-proof", tokenHash: hashToken(proof) }
+  });
+  if (!row || row.expires.getTime() <= Date.now()) {
+    if (row) await prisma.emailOtp.delete({ where: { id: row.id } }).catch(() => {});
+    return null;
+  }
+  await prisma.emailOtp.delete({ where: { id: row.id } });
+  return key;
+}
+
+export async function otpDeliveryStats() {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const [last, grouped] = await Promise.all([
+    prisma.otpDelivery.findFirst({
+      orderBy: { createdAt: "desc" },
+      select: { createdAt: true, channel: true }
+    }),
+    prisma.otpDelivery.groupBy({
+      by: ["channel"],
+      where: { createdAt: { gte: start } },
+      _count: { _all: true }
+    })
+  ]);
+  const counts = { whatsapp: 0, email: 0, dev: 0 };
+  for (const row of grouped) {
+    if (row.channel === "whatsapp" || row.channel === "email" || row.channel === "dev") {
+      counts[row.channel] = row._count._all;
+    }
+  }
+  return {
+    lastAt: last?.createdAt.toISOString() ?? null,
+    lastChannel: last?.channel ?? null,
+    counts
+  };
 }
 
 /** Single use. Returns the user id or null. */

@@ -29,6 +29,7 @@ test("owner registers, collects a private review, and sees UPI checkout", async 
   const message = "The tea was cold and the wait was long";
 
   await page.goto("/register");
+  await page.getByRole("button", { name: "Use email instead" }).click();
   await page.getByLabel("Your name").fill("Smoke Owner");
   await page.getByLabel("Business name").fill("Smoke Cafe");
   await page.getByLabel("Email").fill(email);

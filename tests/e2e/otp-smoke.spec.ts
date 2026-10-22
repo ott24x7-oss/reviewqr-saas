@@ -15,6 +15,9 @@ test("otp login reads me, logout succeeds, and a used refresh token fails", asyn
   expect(sent.headers()["x-request-id"]).toBeTruthy();
   const sentBody = await sent.json();
   expect(sentBody.data?.devCode).toMatch(/^\d{6}$/);
+  expect(sentBody.data?.channel).toMatch(/^(whatsapp|email)$/);
+  expect(sentBody.data?.resendAfterSec).toBe(30);
+  expect(sentBody.data?.message).toBe("If this number is registered, a code was sent");
 
   const verified = await request.post("/api/v1/auth/otp/verify", {
     data: { phone, code: sentBody.data.devCode, deviceName: "otp-smoke" }
@@ -53,6 +56,7 @@ test("settings switch saves push through the shared client", async ({ page }) =>
   const email = `push-${Date.now()}@example.com`;
 
   await page.goto("/register");
+  await page.getByRole("button", { name: "Use email instead" }).click();
   await page.getByLabel("Your name").fill("Push Smoke");
   await page.getByLabel("Business name").fill("Push Cafe");
   await page.getByLabel("Email").fill(email);
@@ -60,6 +64,7 @@ test("settings switch saves push through the shared client", async ({ page }) =>
   await page.getByRole("button", { name: "Create account" }).click();
   await page.waitForURL((url) => url.pathname.startsWith("/dashboard") || url.pathname.startsWith("/login"));
   if (page.url().includes("/login")) {
+    await page.getByRole("button", { name: "Use email instead" }).click();
     await page.getByLabel("Email").fill(email);
     await page.getByLabel("Password").fill("SmokeTest1");
     await page.getByRole("button", { name: "Sign in" }).click();
@@ -78,4 +83,42 @@ test("settings switch saves push through the shared client", async ({ page }) =>
   const res = await saved;
   expect(res.status()).toBe(200);
   await expect(toggle).not.toBeChecked();
+});
+
+test("web WhatsApp login signs the owner in and an unknown number stays generic", async ({ page, request }) => {
+  test.setTimeout(180_000);
+  const phone = `9${String(Date.now()).slice(-9)}`;
+  const email = `wa-${Date.now()}@example.test`;
+  const registered = await request.post("/api/auth/register", {
+    data: { name: "WA Owner", email, password: "SmokeTest1", phone, businessName: "WA Cafe" }
+  });
+  expect(registered.status()).toBe(200);
+
+  await page.goto("/login");
+  await page.getByLabel("Mobile number").fill(phone);
+  const sent = page.waitForResponse(
+    (res) => res.url().includes("/api/auth/otp/request") && res.request().method() === "POST"
+  );
+  await page.getByRole("button", { name: "Login with WhatsApp" }).click();
+  const sentResponse = await sent;
+  expect(sentResponse.status()).toBe(200);
+  const sentBody = await sentResponse.json();
+  expect(sentBody.devCode).toMatch(/^\d{6}$/);
+  expect(sentBody.message).toBe("If this number is registered, a code was sent");
+  await expect(page.getByText("If this number is registered, a code was sent.")).toBeVisible();
+  await page.getByLabel("6-digit code").fill(sentBody.devCode);
+  await page.getByRole("button", { name: "Verify and sign in" }).click();
+  await page.waitForURL("**/dashboard**");
+
+  const unknownPhone = `8${String(Date.now()).slice(-9)}`;
+  const unknown = await request.post("/api/v1/auth/otp/request", { data: { phone: unknownPhone } });
+  expect(unknown.status()).toBe(200);
+  const unknownBody = await unknown.json();
+  expect(unknownBody.data.devCode).toBeUndefined();
+  expect(unknownBody.data).toMatchObject({
+    sent: true,
+    resendAfterSec: 30,
+    message: "If this number is registered, a code was sent"
+  });
+  expect(unknownBody.data.channel).toMatch(/^(whatsapp|email)$/);
 });

@@ -37,6 +37,8 @@ class BaileysManager {
   private _error: string | null = null;
   private _connectedAt: Date | null = null;
   private _lastEvent: string | null = null;
+  private _manualStop = false;
+  private _downTimer: ReturnType<typeof setTimeout> | null = null;
 
   getInfo() {
     return {
@@ -58,6 +60,7 @@ class BaileysManager {
     if (this._status === "connected") return;
 
     this._status = "starting";
+    this._manualStop = false;
     this._error = null;
     this._lastEvent = "starting";
 
@@ -207,8 +210,10 @@ class BaileysManager {
         this._phoneNumber = this.socket?.user?.id?.split(":")[0]?.split("@")[0] || null;
       } else if (connection === "close") {
         const code = (lastDisconnect?.error as any)?.output?.statusCode;
+        const wasConnected = !!this._connectedAt;
         this._connectedAt = null;
         this._phoneNumber = null;
+        const reason = code === DisconnectReason.loggedOut ? "logged-out" : "disconnected";
         if (code === DisconnectReason.loggedOut) {
           this._status = "logged-out";
           // Clear stored creds so a fresh QR appears next time.
@@ -217,14 +222,35 @@ class BaileysManager {
           this._status = "disconnected";
           // Auto-reconnect for transient drops
           setTimeout(() => {
-            if (this._status === "disconnected") this.start().catch(() => {});
+            if (this._status === "disconnected" && !this._manualStop) this.start().catch(() => {});
           }, 5000);
+        }
+        if (!this._manualStop) {
+          if (reason === "logged-out") this.alertDown(reason);
+          else if (wasConnected && !this._downTimer) {
+            // Transient drops reconnect in seconds. Alert only if still down after a minute.
+            this._downTimer = setTimeout(() => {
+              this._downTimer = null;
+              if (!this.isConnected() && !this._manualStop) this.alertDown(reason);
+            }, 60_000);
+          }
         }
       }
     });
   }
 
+  private alertDown(reason: string) {
+    import("./baileys-alert")
+      .then((mod) => mod.noteBaileysDown(reason))
+      .catch(() => {});
+  }
+
   async stop(opts: { logout?: boolean } = {}): Promise<void> {
+    this._manualStop = true;
+    if (this._downTimer) {
+      clearTimeout(this._downTimer);
+      this._downTimer = null;
+    }
     if (!this.socket) {
       this._status = "disconnected";
       return;
@@ -251,6 +277,21 @@ class BaileysManager {
     if (!this.isConnected()) throw new Error("Baileys not connected");
     const jid = toJid(to);
     return this.socket.sendMessage(jid, { text });
+  }
+
+  /** OTP path. Rejects after 10s so the caller can try the next channel. */
+  async sendText(toE164: string, message: string) {
+    if (!this.isConnected()) throw new Error("Baileys not connected");
+    const jid = toJid(toE164);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error("Baileys send timed out")), 10_000);
+    });
+    try {
+      return await Promise.race([this.socket.sendMessage(jid, { text: message }), timeout]);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
   }
 }
 

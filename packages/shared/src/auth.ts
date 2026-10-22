@@ -27,8 +27,41 @@ export const logoutSchema = z.object({
 
 export const otpSentSchema = z.object({
   sent: z.literal(true),
+  channel: z.enum(["whatsapp", "email", "dev"]).optional(),
+  resendAfterSec: z.number().int().positive().optional(),
+  message: z.string().optional(),
   devCode: z.string().optional()
 });
+
+export const otpSignupSchema = z.discriminatedUnion("action", [
+  z.object({
+    action: z.literal("request"),
+    phone: z.string().min(10, "Enter a valid mobile number").max(20),
+    email: z.string().email().optional().or(z.literal(""))
+  }),
+  z.object({
+    action: z.literal("confirm"),
+    phone: z.string().min(10, "Enter a valid mobile number").max(20),
+    code: z.string().regex(/^\d{6}$/, "Invalid code")
+  }),
+  z.object({
+    action: z.literal("verify"),
+    phone: z.string().min(10, "Enter a valid mobile number").max(20),
+    code: z.string().regex(/^\d{6}$/, "Invalid code"),
+    name: z.string().min(2).max(80),
+    email: z.string().email().optional().or(z.literal("")),
+    deviceName: z.string().max(80).optional()
+  }),
+  z.object({
+    action: z.literal("finish"),
+    phone: z.string().min(10, "Enter a valid mobile number").max(20),
+    signupToken: z.string().min(16).max(200),
+    name: z.string().min(2).max(80),
+    businessName: z.string().min(2).max(80),
+    email: z.string().email().optional().or(z.literal("")),
+    deviceName: z.string().max(80).optional()
+  })
+]);
 
 export const tokenPairSchema = z.object({
   accessToken: z.string(),
@@ -83,6 +116,7 @@ export const sessionSchema = z.object({
 export const okSchema = z.object({ ok: z.literal(true) });
 
 export type OtpRequestInput = z.infer<typeof otpRequestSchema>;
+export type OtpSignupInput = z.infer<typeof otpSignupSchema>;
 export type OtpVerifyInput = z.infer<typeof otpVerifySchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RefreshInput = z.infer<typeof refreshSchema>;
