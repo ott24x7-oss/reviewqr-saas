@@ -1,5 +1,5 @@
 import { canWriteNfc } from "../src/nfc/access";
-import { readUriPayload } from "../src/nfc/read";
+import { readUriPayload, tagIdMatches } from "../src/nfc/read";
 import { nfcPayloadMatches, nfcTapUrl, nfcUrlIsPublicHttps } from "../src/nfc/url";
 
 describe("nfc writer", () => {
@@ -21,6 +21,13 @@ describe("nfc writer", () => {
     expect(nfcPayloadMatches(url, "/t/abc")).toBe(true);
     expect(nfcPayloadMatches("https://reviewqr.example/t/abc", "/t/abc")).toBe(false);
     expect(nfcPayloadMatches(url, "/menu")).toBe(false);
+  });
+
+  it("locks only the tag id that was just read back", () => {
+    expect(tagIdMatches("04:aa", "04:aa")).toBe(true);
+    expect(tagIdMatches("04:aa", "04:bb")).toBe(false);
+    expect(tagIdMatches(null, "04:aa")).toBe(false);
+    expect(tagIdMatches("04:aa", null)).toBe(false);
   });
 
   it("allows owners and field roles, and hides staff", () => {
