@@ -85,6 +85,11 @@ export default defineConfig({
       name: "landing",
       testMatch: /landing-v2\.spec\.ts/,
       use: { ...devices["Desktop Chrome"], baseURL }
+    },
+    {
+      name: "phase8",
+      testMatch: /phase8\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"], baseURL }
     }
   ],
   webServer: [
