@@ -37,7 +37,7 @@ export function ReportPrompt() {
 
   if (!open) return null;
   return (
-    <div className="mb-4 rounded-xl border bg-card p-4" role="dialog" aria-label="Weekly summary">
+    <div className="mb-4 rounded-xl border bg-card p-4" role="region" aria-label="Weekly summary">
       <p className="text-sm font-medium">Get a weekly summary by email/WhatsApp?</p>
       <div className="mt-3 flex flex-wrap gap-2">
         <button type="button" className="rounded-lg bg-primary px-3 py-1.5 text-sm text-primary-foreground" onClick={() => answer(true, false)}>

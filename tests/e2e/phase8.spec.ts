@@ -2,7 +2,7 @@ import { mkdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { PrismaClient } from "@prisma/client";
 import { expect, test } from "@playwright/test";
-import { addIstDays, istDayKey } from "../../lib/analytics/ist";
+import { addIstDays, istDayKey, istDayStart } from "../../lib/analytics/ist";
 
 function databaseUrl() {
   if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
@@ -84,6 +84,23 @@ test("owner reads analytics, growth tips, help, and dismisses an announcement", 
           byTable: []
         };
       })
+    });
+    const yesterday = addIstDays(today, -1);
+    const qr =
+      (await prisma.qRCode.findFirst({ where: { businessId: businessId as string } })) ||
+      (await prisma.qRCode.create({
+        data: {
+          businessId: businessId as string,
+          label: "Counter",
+          shortCode: `P8${stamp}`.replace(/[^A-Za-z0-9]/g, "").slice(0, 12).toUpperCase()
+        }
+      }));
+    const seenAt = new Date(istDayStart(yesterday).getTime() + 60 * 60 * 1000);
+    await prisma.qrScan.createMany({
+      data: [
+        { qrCodeId: qr.id, ipHash: `e2e-${stamp}-a`, createdAt: seenAt },
+        { qrCodeId: qr.id, ipHash: `e2e-${stamp}-b`, createdAt: new Date(seenAt.getTime() + 60_000) }
+      ]
     });
     const articles = await prisma.helpArticle.createManyAndReturn({
       data: [
