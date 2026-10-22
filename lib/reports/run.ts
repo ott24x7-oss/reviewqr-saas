@@ -11,6 +11,7 @@ import { buildMonthlyPdf } from "./pdf";
 import { getInsightSettings } from "./settings";
 import { claimDeliveries, releaseDeliveries } from "./delivery";
 import { sendSlots, wantsReport } from "./schedule";
+import { DEFAULT_BRAND_NAME } from "../brand-defaults";
 import { reportToken } from "./token";
 
 function escapeHtml(value: string) {
@@ -34,7 +35,7 @@ export function weeklyText(input: {
       : `WhatsApp orders: ${input.orders} (Rs ${Math.round((input.orderPaise || 0) / 100)})`;
   const rating = input.avgRating == null ? "—" : String(input.avgRating);
   return [
-    `ReviewQR weekly summary — ${input.name}`,
+    `${DEFAULT_BRAND_NAME} weekly summary — ${input.name}`,
     `साप्ताहिक सारांश — ${input.name}`,
     `Scans / स्कैन: ${input.scans}`,
     `Taps / टैप: ${input.taps}`,
@@ -150,7 +151,7 @@ export async function sendWeeklyToUser(userId: string, weekKey: string) {
       const text = await summarize(emailTargets);
       await sendEmail({
         to: user.email,
-        subject: `ReviewQR week of ${weekKey}`,
+        subject: `${DEFAULT_BRAND_NAME} week of ${weekKey}`,
         text,
         html: `<pre style="font-family:sans-serif">${escapeHtml(text)}</pre>`
       });
@@ -191,7 +192,7 @@ export async function monthlyPdfFor(businessId: string, monthKey: string) {
       { label: "Average rating", value: summary.avgRating == null ? "-" : String(summary.avgRating) }
     ]
   });
-  return { pdf, filename: `reviewqr-${monthKey}.pdf`, businessName: business.name };
+  return { pdf, filename: `${DEFAULT_BRAND_NAME.toLowerCase()}-${monthKey}.pdf`, businessName: business.name };
 }
 
 export async function enqueueMonthlySends(monthKey: string, now = new Date()) {
@@ -233,7 +234,7 @@ export async function sendMonthlyToUser(userId: string, monthKey: string) {
   const text = `Monthly report for ${report.businessName} (${monthKey}) is attached.\nUnsubscribe: ${unsubscribeUrl}`;
   await sendEmail({
     to: user.email,
-    subject: `ReviewQR ${monthKey} report`,
+    subject: `${DEFAULT_BRAND_NAME} ${monthKey} report`,
     text,
     html: `<p>${escapeHtml(text).replace("\n", "<br>")}</p>`,
     attachments: [{ filename: report.filename, content: report.pdf, contentType: "application/pdf" }]

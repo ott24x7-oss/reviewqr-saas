@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import sharp from "sharp";
+import { DEFAULT_BRAND_NAME } from "../brand-defaults";
 
 export function lineNeedsRaster(text: string) {
   return /[^\x20-\x7e]/.test(text);
@@ -39,7 +40,7 @@ export async function buildMonthlyPdf(input: MonthlyReportInput) {
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
   const ink = rgb(0.11, 0.1, 0.09);
-  page.drawText("ReviewQR", { x: 48, y: 790, size: 12, font: bold, color: ink });
+  page.drawText(DEFAULT_BRAND_NAME, { x: 48, y: 790, size: 12, font: bold, color: ink });
   page.drawText(input.monthLabel, { x: 48, y: 768, size: 16, font: bold, color: ink });
   let y = 730;
   if (lineNeedsRaster(input.businessName)) {
