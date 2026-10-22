@@ -94,6 +94,32 @@ export async function sendWhatsApp(payload: WhatsAppPayload) {
   };
 }
 
+/**
+ * Weekly reports try Cloud API first, then a connected Baileys session.
+ * A click-to-chat link is not a send. The caller falls back to email.
+ */
+export async function sendWhatsAppReport(payload: WhatsAppPayload) {
+  const cfg = await getWhatsAppConfig();
+  if (cfg.apiToken && cfg.phoneId) {
+    try {
+      return await sendWhatsAppCloud(payload);
+    } catch (error) {
+      console.warn("[wa] report cloud failed:", error instanceof Error ? error.message : error);
+    }
+  }
+  try {
+    const { getBaileys } = await import("./whatsapp-baileys");
+    const manager = getBaileys();
+    if (manager.isConnected()) {
+      await manager.send(payload.to, payload.message);
+      return { ok: true as const, via: "baileys" as const };
+    }
+  } catch (error) {
+    console.warn("[wa] report baileys failed:", error instanceof Error ? error.message : error);
+  }
+  return { ok: false as const, via: "none" as const };
+}
+
 /* ============== Templates ============== */
 
 export type TemplateVars = Record<string, string | number | undefined | null>;
