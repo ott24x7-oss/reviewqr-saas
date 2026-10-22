@@ -80,7 +80,7 @@ export async function activateCompletedPayment(input: ActivateInput): Promise<Ac
   const cfg = await getPaymentsConfig();
   const allowed = input.allowStatuses ?? ["PENDING", "QUEUED"];
 
-  const result = await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx): Promise<ActivateResult> => {
     const rows = await tx.$queryRaw<
       Array<{
         id: string;

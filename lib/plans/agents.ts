@@ -54,7 +54,7 @@ export async function createAgentAccount(input: {
     await prisma.user.update({
       where: { id: existing.id },
       data: {
-        role: existing.role === "ADMIN" ? "ADMIN" : "AGENT",
+        role: "AGENT",
         name: input.name.trim() || existing.name,
         phone,
         ...(email ? { email } : {})
