@@ -37,6 +37,7 @@ describe("plan card images", () => {
     );
     expect(srcs[0]).toBe("/landing/product-menu-800.webp");
     expect(srcs[1]).not.toBe(srcs[0]);
+    expect(srcs[2]).not.toBe(srcs[1]);
     expect(srcs[2]).not.toBe(srcs[0]);
     expect(srcs[3]).not.toBe(srcs[2]);
     expect(srcs[3]).not.toBe(srcs[1]);

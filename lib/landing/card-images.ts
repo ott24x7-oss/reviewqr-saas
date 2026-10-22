@@ -34,7 +34,7 @@ export function assignCardImages(items: CardImageInput[], columns: number): stri
   const out: string[] = [];
   for (let index = 0; index < items.length; index += 1) {
     const banned = new Set<string>();
-    if (index % cols !== 0) banned.add(out[index - 1]);
+    if (index > 0) banned.add(out[index - 1]);
     if (index >= cols) banned.add(out[index - cols]);
     const category = planCategory(items[index].category);
     const choices = [preferredCardSrc(items[index]), categoryAltSrc(category), categoryImageSrc(category), ...pool];

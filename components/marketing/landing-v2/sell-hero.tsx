@@ -44,20 +44,17 @@ export function SellHero({
     "भारतीय कैफ़े काउंटर पर एक्रिलिक QR और NFC स्टैंड, जिसे फ़ोन स्कैन कर रहा है"
   );
 
-  const facts: Array<{ text: string; image?: string; alt?: string }> = [];
-  if (trust.rating != null && trust.reviewCount != null) {
-    facts.push({
-      text: pick(lang, `${trust.rating} from ${trust.reviewCount} reviews`, `${trust.reviewCount} रिव्यू पर ${trust.rating}`)
-    });
-  }
-  if (trust.businesses != null) {
-    facts.push({ text: pick(lang, `${trust.businesses} businesses`, `${trust.businesses} बिज़नेस`) });
-  }
-  facts.push(
-    { text: pick(lang, "No commission", "कोई कमीशन नहीं"), image: "spot-shield", alt: pick(lang, "Shield", "ढाल") },
-    { text: pick(lang, "Setup in 10 minutes", "10 मिनट में सेटअप"), image: "spot-time", alt: pick(lang, "Hourglass", "घड़ी") },
-    { text: pick(lang, "Made in India", "मेड इन इंडिया"), image: "spot-india", alt: pick(lang, "Marigold", "गेंदा") }
-  );
+  const trustLine = [
+    trust.rating != null && trust.reviewCount != null
+      ? pick(lang, `${trust.rating}★ (${trust.reviewCount})`, `${trust.rating}★ (${trust.reviewCount})`)
+      : null,
+    trust.businesses != null ? pick(lang, `${trust.businesses} shops`, `${trust.businesses} दुकान`) : null,
+    pick(lang, "No commission", "कोई कमीशन नहीं"),
+    pick(lang, "10 min setup", "10 मिनट सेटअप"),
+    pick(lang, "Made in India", "मेड इन इंडिया")
+  ]
+    .filter((item): item is string => Boolean(item))
+    .join(" · ");
 
   return (
     <section id="sell-hero" className="scroll-mt-24 px-4 pb-5 pt-3 sm:pt-6">
@@ -117,28 +114,9 @@ export function SellHero({
             <Link href="/how-it-works" className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold underline">
               {pick(lang, "How it works", "कैसे काम करता है")}
             </Link>
-            <ul className="mt-1 flex max-w-full flex-nowrap items-center gap-2 overflow-x-auto text-[11px] font-medium text-white/90 [scrollbar-width:none] lg:text-[var(--marketing-muted)]">
-              {facts.map((fact, index) => (
-                <li key={fact.text} className="inline-flex shrink-0 items-center gap-1">
-                  {fact.image ? (
-                    <LandingPicture
-                      name={fact.image}
-                      alt={fact.alt || ""}
-                      width={800}
-                      height={800}
-                      sizes="16px"
-                      className="h-4 w-4 rounded-full object-cover"
-                    />
-                  ) : null}
-                  <span>{fact.text}</span>
-                  {index < facts.length - 1 ? (
-                    <span aria-hidden className="pl-1">
-                      ·
-                    </span>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
+            <p className="mt-1 truncate text-[10px] font-medium leading-4 text-white/90 sm:text-xs lg:text-[var(--marketing-muted)]">
+              {trustLine}
+            </p>
           </div>
         </div>
       </div>
