@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { JOIN_COOKIE } from "@/lib/plans/attribution";
-import { normalizeCode } from "@/lib/plans/codes";
+import { JOIN_COOKIE, joinCookieUpdate } from "@/lib/plans/attribution";
 
 export async function GET(req: NextRequest, { params }: { params: { code: string } }) {
-  const code = normalizeCode(params.code);
   const url = new URL("/register", req.url);
   const res = NextResponse.redirect(url);
-  if (code) {
-    res.cookies.set(JOIN_COOKIE, `agent:${code}`, {
+  const next = joinCookieUpdate(req.cookies.get(JOIN_COOKIE)?.value, { kind: "agent", code: params.code });
+  if (next) {
+    res.cookies.set(JOIN_COOKIE, next, {
       httpOnly: true,
       sameSite: "lax",
       path: "/",
