@@ -1716,16 +1716,18 @@ model CommissionRule {
 }
 
 model CommissionPayout {
-  id          String           @id @default(cuid())
-  agentId     String
-  agent       User             @relation(fields: [agentId], references: [id], onDelete: Restrict)
-  amountPaise Int
-  utr         String
-  paidAt      DateTime
-  note        String           @default("")
-  entries     ShopCommission[]
-  createdAt   DateTime         @default(now())
+  id             String           @id @default(cuid())
+  agentId        String
+  agent          User             @relation(fields: [agentId], references: [id], onDelete: Restrict)
+  amountPaise    Int
+  utr            String
+  paidAt         DateTime
+  note           String           @default("")
+  idempotencyKey String?          @unique
+  entries        ShopCommission[]
+  createdAt      DateTime         @default(now())
 
+  @@unique([agentId, utr])
   @@index([agentId, paidAt])
 }
 
