@@ -52,7 +52,7 @@ describe("scheduled downgrade", () => {
         userId: user.id,
         planId: "plan_legacy_growth",
         modules: ["REVIEWS", "MENU", "STORE"],
-        limits: limitsForTier("GROWTH"),
+        limits: await limitsForTier("GROWTH"),
         tier: "GROWTH",
         duration: "MONTH_1",
         status: "ACTIVE",
@@ -60,7 +60,7 @@ describe("scheduled downgrade", () => {
         pendingPlanId: "plan_legacy_starter",
         pendingDuration: "MONTH_1",
         pendingModules: ["REVIEWS"],
-        pendingLimits: limitsForTier("STARTER")
+        pendingLimits: await limitsForTier("STARTER")
       }
     });
     await applyDuePlanChanges();

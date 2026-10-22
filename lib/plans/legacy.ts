@@ -5,7 +5,7 @@
  * A plan bought from the catalogue can omit a module. Legacy plan ids cannot.
  */
 import type { SubscriptionStatus, SubscriptionTier } from "@prisma/client";
-import { DEFAULT_PLANS } from "../settings";
+import { getPlan } from "../payments";
 import { parseLimits, type PlanLimits } from "./catalog";
 
 const TODAY_MODULES: Record<SubscriptionTier, string[]> = {
@@ -25,8 +25,9 @@ export function isCataloguePlan(planId: string | null | undefined) {
   return !!planId && !planId.startsWith("plan_legacy_");
 }
 
-export function limitsForTier(tier: SubscriptionTier): PlanLimits {
-  const limits = DEFAULT_PLANS[tier].limits;
+/** Admin pricing limits when they are stored, otherwise today's catalogue defaults. */
+export async function limitsForTier(tier: SubscriptionTier): Promise<PlanLimits> {
+  const limits = (await getPlan(tier)).limits;
   return parseLimits(
     {
       ...limits,

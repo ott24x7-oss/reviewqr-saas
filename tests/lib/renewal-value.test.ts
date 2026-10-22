@@ -35,7 +35,7 @@ describe("early renewal paid value", () => {
         userId: user.id,
         planId: "plan_legacy_starter",
         modules: ["REVIEWS", "MENU", "STORE"],
-        limits: limitsForTier("STARTER"),
+        limits: await limitsForTier("STARTER"),
         tier: "STARTER",
         duration: "MONTH_1",
         status: "ACTIVE",
@@ -62,7 +62,7 @@ describe("early renewal paid value", () => {
         planId: "plan_legacy_starter",
         duration: "MONTH_1",
         modules: ["REVIEWS", "MENU", "STORE"],
-        limits: limitsForTier("STARTER")
+        limits: await limitsForTier("STARTER")
       }
     });
     payments.push(payment.id);

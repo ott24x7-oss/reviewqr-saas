@@ -22,7 +22,7 @@ const userSelect = {
 export async function loadEntitlement(userId: string): Promise<Entitlement> {
   const user = await prisma.user.findUnique({ where: { id: userId }, select: userSelect });
   if (!user) {
-    return { tier: "FREE", modules: cleanModules(modulesForTier("FREE")), limits: limitsForTier("FREE") };
+    return { tier: "FREE", modules: cleanModules(modulesForTier("FREE")), limits: await limitsForTier("FREE") };
   }
   const sub = await prisma.subscription.findFirst({
     where: { userId, status: { in: ["ACTIVE", "TRIALING", "PAST_DUE"] } },
@@ -35,13 +35,13 @@ export async function loadEntitlement(userId: string): Promise<Entitlement> {
       return {
         tier,
         modules: cleanModules(sub.modules),
-        limits: parseLimits(sub.limits, limitsForTier(tier))
+        limits: parseLimits(sub.limits, await limitsForTier(tier))
       };
     }
-    return { tier, modules: cleanModules(modulesForTier(tier)), limits: limitsForTier(tier) };
+    return { tier, modules: cleanModules(modulesForTier(tier)), limits: await limitsForTier(tier) };
   }
   const tier = effectiveTier(user);
-  return { tier, modules: cleanModules(modulesForTier(tier)), limits: limitsForTier(tier) };
+  return { tier, modules: cleanModules(modulesForTier(tier)), limits: await limitsForTier(tier) };
 }
 
 export async function hasModule(userId: string, moduleId: ModuleId) {

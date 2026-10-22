@@ -51,7 +51,7 @@ describe("legacy upgrade credit", () => {
         userId: user.id,
         planId: "plan_legacy_starter",
         modules: ["REVIEWS", "MENU", "STORE"],
-        limits: limitsForTier("STARTER"),
+        limits: await limitsForTier("STARTER"),
         tier: "STARTER",
         duration: "YEAR_1",
         status: "ACTIVE",

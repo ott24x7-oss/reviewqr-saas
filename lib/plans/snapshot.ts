@@ -43,7 +43,7 @@ export async function applySubscriptionSnapshot(tx: Prisma.TransactionClient, in
       ? input.limits
       : open?.limits && typeof open.limits === "object"
         ? open.limits
-        : limitsForTier(input.tier);
+        : await limitsForTier(input.tier);
   const pricePaise =
     input.addPricePaise != null
       ? Math.max(0, (open?.pricePaise || 0) + Math.floor(input.addPricePaise))
@@ -107,6 +107,6 @@ export async function editUserSubscription(
     planId: legacyPlanId(input.tier),
     duration: input.tier === "FOUNDER" && input.status === "ACTIVE" ? "LIFETIME" : null,
     modules: modulesForTier(input.tier),
-    limits: limitsForTier(input.tier)
+    limits: await limitsForTier(input.tier)
   });
 }

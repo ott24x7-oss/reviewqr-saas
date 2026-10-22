@@ -162,7 +162,7 @@ export async function fulfillPaidShopOrder(input: FulfillInput): Promise<Fulfill
         planId: legacyPlanId(tier),
         duration: tier === "FOUNDER" ? "LIFETIME" : null,
         modules: modulesForTier(tier),
-        limits: limitsForTier(tier)
+        limits: await limitsForTier(tier)
       });
     }
     await tx.shopCartLine.deleteMany({ where: { cart: { userId: row.userId } } });

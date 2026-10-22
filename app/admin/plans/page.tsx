@@ -10,8 +10,8 @@ export default async function AdminPlansPage() {
     orderBy: { sortOrder: "asc" },
     include: { prices: true }
   });
-  const rows: AdminPlan[] = plans.map((plan) => {
-    const limits = parseLimits(plan.limits, limitsForTier(plan.legacyTier));
+  const rows: AdminPlan[] = await Promise.all(plans.map(async (plan) => {
+    const limits = parseLimits(plan.limits, await limitsForTier(plan.legacyTier));
     return {
       id: plan.id,
       nameEn: plan.nameEn,
@@ -41,7 +41,7 @@ export default async function AdminPlansPage() {
         };
       })
     };
-  });
+  }));
 
   return (
     <div className="space-y-5">

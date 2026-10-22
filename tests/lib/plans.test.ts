@@ -31,16 +31,17 @@ describe("plan modules and legacy tiers", () => {
     expect(pricingTab(["REVIEWS", "MENU", "STORE"])).toBe("all");
   });
 
-  it("maps old tiers onto modules without shrinking paid limits", () => {
+  it("maps old tiers onto modules without shrinking paid limits", async () => {
     for (const tier of ["FREE", "STARTER", "GROWTH", "AGENCY", "FOUNDER"] as const) {
       expect(modulesForTier(tier)).toEqual(["REVIEWS", "MENU", "STORE"]);
-      expect(limitsForTier(tier).products).toBe(100000);
-      expect(limitsForTier(tier).storeProducts).toBe(100000);
-      expect(limitsForTier(tier).storeOrders).toBe(100000);
+      const limits = await limitsForTier(tier);
+      expect(limits.products).toBe(100000);
+      expect(limits.storeProducts).toBe(100000);
+      expect(limits.storeOrders).toBe(100000);
     }
-    expect(limitsForTier("FREE").qrCodes).toBe(2);
-    expect(limitsForTier("FREE").businesses).toBe(1);
-    expect(limitsForTier("GROWTH").businesses).toBe(5);
+    expect((await limitsForTier("FREE")).qrCodes).toBe(2);
+    expect((await limitsForTier("FREE")).businesses).toBe(1);
+    expect((await limitsForTier("GROWTH")).businesses).toBe(5);
     expect(savingsPercent({ pricePaise: 999900, mrpPaise: 1198800 })).toBe(17);
   });
 
@@ -361,7 +362,7 @@ describe("entitlements per module", () => {
         userId: expired.id,
         planId: "plan_legacy_growth",
         modules: ["REVIEWS", "MENU", "STORE"],
-        limits: limitsForTier("GROWTH"),
+        limits: await limitsForTier("GROWTH"),
         tier: "GROWTH",
         status: "ACTIVE",
         endsAt: new Date(Date.now() - 86_400_000)
@@ -382,7 +383,7 @@ describe("entitlements per module", () => {
     created.push(finished.id);
     await ensureLegacySubscription(finished.id);
     expect(await hasModule(finished.id, "STORE")).toBe(true);
-    expect(await limit(finished.id, "qrCodes")).toBe(limitsForTier("FREE").qrCodes);
+    expect(await limit(finished.id, "qrCodes")).toBe((await limitsForTier("FREE")).qrCodes);
   });
 
   it("keeps a free owner's public menu, customer order, and store settings after migration", async () => {

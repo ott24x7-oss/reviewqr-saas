@@ -215,7 +215,7 @@ export async function activateCompletedPayment(input: ActivateInput): Promise<Ac
         rawLimits = null;
       }
     }
-    const limits = rawLimits && typeof rawLimits === "object" ? rawLimits : limitsForTier(row.tier);
+    const limits = rawLimits && typeof rawLimits === "object" ? rawLimits : await limitsForTier(row.tier);
     await grantPlanAccess(tx, {
       userId: user.id,
       tier: row.tier,

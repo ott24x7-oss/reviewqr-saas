@@ -43,7 +43,7 @@ describe("subscription snapshots from bundles, admin, and referrals", () => {
           userId: user.id,
           planId: "plan_legacy_starter",
           modules: ["REVIEWS", "MENU", "STORE"],
-          limits: limitsForTier("STARTER"),
+          limits: await limitsForTier("STARTER"),
           tier: "STARTER",
           status: "ACTIVE",
           endsAt: user.subscriptionEndsAt
@@ -130,7 +130,7 @@ describe("subscription snapshots from bundles, admin, and referrals", () => {
     const row = await prisma.subscription.findFirst({ where: { userId: user.id } });
     expect(row?.tier).toBe("GROWTH");
     expect(row?.modules).toEqual(["REVIEWS", "MENU", "STORE"]);
-    expect(row?.limits).toMatchObject({ businesses: limitsForTier("GROWTH").businesses });
+    expect(row?.limits).toMatchObject({ businesses: (await limitsForTier("GROWTH")).businesses });
     expect(row?.endsAt).toBeTruthy();
     expect(await limit(user.id, "businesses")).toBe(5);
     const saved = await prisma.user.findUnique({ where: { id: user.id } });
@@ -165,7 +165,7 @@ describe("subscription snapshots from bundles, admin, and referrals", () => {
         endsAt
       });
     });
-    expect(await limit(user.id, "businesses")).toBe(limitsForTier("AGENCY").businesses);
+    expect(await limit(user.id, "businesses")).toBe((await limitsForTier("AGENCY")).businesses);
     expect(await hasModule(user.id, "MENU")).toBe(true);
     const row = await prisma.subscription.findFirst({ where: { userId: user.id } });
     expect(row?.tier).toBe("AGENCY");
@@ -189,7 +189,7 @@ describe("subscription snapshots from bundles, admin, and referrals", () => {
         userId: referrer.id,
         planId: "plan_legacy_starter",
         modules: ["STORE"],
-        limits: limitsForTier("STARTER"),
+        limits: await limitsForTier("STARTER"),
         tier: "STARTER",
         status: "ACTIVE",
         endsAt: referrer.subscriptionEndsAt

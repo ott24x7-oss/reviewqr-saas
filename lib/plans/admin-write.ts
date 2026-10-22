@@ -48,8 +48,8 @@ async function uniqueSlug(base: string, ignoreId?: string) {
   }
 }
 
-function limitsFor(input: PlanWriteInput) {
-  const base = limitsForTier(input.legacyTier);
+async function limitsFor(input: PlanWriteInput) {
+  const base = await limitsForTier(input.legacyTier);
   return parseLimits(
     {
       ...base,
@@ -90,7 +90,7 @@ export async function createPlanRecord(input: PlanWriteInput) {
       descriptionEn: input.descriptionEn || "",
       descriptionHi: input.descriptionHi || "",
       modules,
-      limits: limitsFor(input),
+      limits: await limitsFor(input),
       badge: input.badge?.trim() || null,
       sortOrder: (sort._max.sortOrder ?? 0) + 1,
       active: input.active,
@@ -118,7 +118,7 @@ export async function updatePlanRecord(id: string, input: PlanWriteInput) {
       descriptionEn: input.descriptionEn || "",
       descriptionHi: input.descriptionHi || "",
       modules,
-      limits: limitsFor(input),
+      limits: await limitsFor(input),
       badge: input.badge?.trim() || null,
       active: input.active,
       visibleOnPricingPage: input.visibleOnPricingPage,
