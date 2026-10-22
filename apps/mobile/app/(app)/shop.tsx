@@ -2,7 +2,7 @@ import type { BillingSummary, ShopOrderDetail } from "@reviewqr/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as WebBrowser from "expo-web-browser";
 import { useLocalSearchParams } from "expo-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { apiData } from "../../src/api/data";
 import { ApiError } from "../../src/api/http";
@@ -10,6 +10,7 @@ import { useI18n } from "../../src/i18n";
 import { accountKey } from "../../src/query/keys";
 import { useBusiness } from "../../src/state/business";
 import { useSession } from "../../src/state/session";
+import { pollPayment } from "../../src/shop/poll";
 import { cartPaise } from "../../src/shop/totals";
 import { colors, fonts } from "../../src/theme";
 import { Field, PillButton } from "../../src/ui/controls";
@@ -61,6 +62,17 @@ export default function ShopScreen() {
   const [address, setAddress] = useState({ name: "", phone: "", line1: "", city: "", state: "", pincode: "" });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
+  const pollAbort = useRef<AbortController | null>(null);
+  const live = useRef(true);
+
+  useEffect(() => {
+    live.current = true;
+    return () => {
+      live.current = false;
+      pollAbort.current?.abort();
+    };
+  }, []);
 
   const userId = user?.id ?? "";
   const catalog = useQuery({
@@ -104,7 +116,27 @@ export default function ShopScreen() {
     });
   }
 
+  function sleepWhilePolling(ms: number, signal: AbortSignal) {
+    return new Promise<void>((resolve, reject) => {
+      if (signal.aborted) {
+        reject(new Error("aborted"));
+        return;
+      }
+      const timer = setTimeout(finish, ms);
+      function finish() {
+        signal.removeEventListener("abort", onAbort);
+        resolve();
+      }
+      function onAbort() {
+        clearTimeout(timer);
+        reject(new Error("aborted"));
+      }
+      signal.addEventListener("abort", onAbort, { once: true });
+    });
+  }
+
   async function pay() {
+    if (busy || pendingOrderId) return;
     setBusy(true);
     setError(null);
     try {
@@ -134,20 +166,33 @@ export default function ShopScreen() {
       const checkout = await apiData<{ orderId: string; paid: boolean; checkoutUrl: string | null }>("/api/v1/shop/checkout", {
         method: "POST"
       });
-      if (checkout.checkoutUrl) await WebBrowser.openBrowserAsync(checkout.checkoutUrl);
-      for (let attempt = 0; attempt < 8; attempt += 1) {
-        const order = await apiData<ShopOrderDetail>(`/api/v1/shop/orders/${checkout.orderId}`);
-        if (order.paymentStatus === "PAID" || checkout.paid) break;
-        await new Promise((resolve) => setTimeout(resolve, 3000));
+      setPendingOrderId(checkout.orderId);
+      if (checkout.checkoutUrl) {
+        await WebBrowser.openBrowserAsync(checkout.checkoutUrl).catch(() => undefined);
       }
+      pollAbort.current?.abort();
+      const controller = new AbortController();
+      pollAbort.current = controller;
+      const outcome = checkout.paid
+        ? "paid"
+        : await pollPayment({
+            orderId: checkout.orderId,
+            signal: controller.signal,
+            fetchOrder: (id) => apiData<ShopOrderDetail>(`/api/v1/shop/orders/${id}`),
+            sleep: (ms) => sleepWhilePolling(ms, controller.signal)
+          });
+      if (!live.current || outcome === "stopped") return;
       setLines([]);
       setOpenId(checkout.orderId);
       setTab("orders");
+      if (outcome === "pending") setError(t.paymentPending);
+      else setPendingOrderId(null);
       await client.invalidateQueries({ queryKey: accountKey(userId, "shop-orders") });
     } catch (err) {
+      if (!live.current) return;
       setError(err instanceof ApiError ? err.message : "Could not start payment");
     } finally {
-      setBusy(false);
+      if (live.current) setBusy(false);
     }
   }
 
@@ -192,7 +237,7 @@ export default function ShopScreen() {
               <Field label={t.pincode} tone="paper" value={address.pincode} onChangeText={(pincode) => setAddress({ ...address, pincode })} keyboardType="number-pad" />
             </View>
           ) : null}
-          <PillButton label={t.checkout} onPress={pay} disabled={busy || lines.length === 0} tone="dark" />
+          <PillButton label={t.checkout} onPress={pay} disabled={busy || lines.length === 0 || !!pendingOrderId} tone="dark" />
         </View>
       ) : null}
       {tab === "orders" ? (
