@@ -410,6 +410,18 @@ registry.registerPath({
   }
 });
 
+registry.registerPath({
+  method: "get",
+  path: "/api/v1/agent",
+  summary: "Agent businesses, earnings, and payouts",
+  security: [{ bearerAuth: [] }],
+  responses: {
+    200: jsonResponse("Agent home", dataSchema(z.object({ code: z.string(), link: z.string() }))),
+    401: unauthorized,
+    403: { description: "Not an agent", content: { "application/json": { schema: errorRef } } }
+  }
+});
+
 registerResourcePaths(registry, errorRef);
 
 let cached: ReturnType<OpenApiGeneratorV3["generateDocument"]> | null = null;
