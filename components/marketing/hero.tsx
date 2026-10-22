@@ -4,6 +4,7 @@ import { ArrowRight, Star, Play, ChevronRight, MessageCircle, Heart, ExternalLin
 import { Button } from "@/components/ui/button";
 import { AvatarInitials } from "@/components/ui/avatar-initials";
 import { RotatingReviewWord } from "@/components/marketing/rotating-word";
+import { DEFAULT_BRAND_TAGLINE } from "@/lib/brand-defaults";
 
 export function Hero() {
   return (
@@ -29,7 +30,8 @@ export function Hero() {
               2,500+ Indian SMBs
             </div>
 
-            <h1 className="mt-5 text-4xl sm:text-5xl lg:text-6xl font-bold font-display tracking-tight text-balance">
+            <p className="mt-4 text-sm font-semibold tracking-wide text-primary-700">{DEFAULT_BRAND_TAGLINE}</p>
+            <h1 className="mt-2 text-4xl sm:text-5xl lg:text-6xl font-bold font-display tracking-tight text-balance">
               Ask every customer for{" "}
               <RotatingReviewWord />
             </h1>
@@ -171,7 +173,7 @@ export function Hero() {
                       </div>
                     </div>
                     <div className="mt-3 flex items-center justify-center gap-1 text-[9px] text-muted-foreground">
-                      Powered by <span className="gradient-text font-semibold">ReviewQR</span>
+                      Powered by <span className="gradient-text font-semibold">QR24x7</span>
                     </div>
                   </div>
                 </div>

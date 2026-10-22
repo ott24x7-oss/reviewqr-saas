@@ -19,8 +19,8 @@ export async function sendVerificationEmail(user: { id: string; email: string; n
   const url = absoluteUrl(`/api/auth/verify-email?token=${token}`);
   await sendEmail({
     to: user.email,
-    subject: "Confirm your ReviewQR email",
-    html: `<p>Hi ${escapeHtml(user.name || "there")},</p><p>Confirm this email so we know the inbox is yours. You can keep using ReviewQR before you confirm.</p><p><a href="${escapeHtml(url)}">Confirm email</a></p><p>The link expires in 24 hours.</p>`
+    subject: "Confirm your QR24x7 email",
+    html: `<p>Hi ${escapeHtml(user.name || "there")},</p><p>Confirm this email so we know the inbox is yours. You can keep using QR24x7 before you confirm.</p><p><a href="${escapeHtml(url)}">Confirm email</a></p><p>The link expires in 24 hours.</p>`
   });
 }
 

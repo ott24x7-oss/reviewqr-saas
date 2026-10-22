@@ -107,7 +107,7 @@ export function DashboardShell({
   impersonation?: { exp: number } | null;
   children: React.ReactNode;
 }) {
-  const brandName = brand?.name || "ReviewQR";
+  const brandName = brand?.name || "QR24x7";
   const brandLogo = brand?.logoUrl || "";
   const pathname = usePathname();
   const router = useRouter();

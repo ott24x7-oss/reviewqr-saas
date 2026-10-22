@@ -6,6 +6,14 @@
 import { prisma } from "./db";
 import type { SubscriptionTier } from "@prisma/client";
 import { encryptSecret, decryptSecret } from "./crypto";
+import {
+  brandFromOrDefault,
+  brandNameOrDefault,
+  brandTaglineOrDefault,
+  DEFAULT_BRAND_NAME,
+  DEFAULT_BRAND_TAGLINE,
+  PREVIOUS_BRAND_NAME
+} from "./brand-defaults";
 import { normalizeShopCheckout, shopCheckoutError, type ShopCheckoutConfig } from "./shop/charge";
 import { DEFAULT_SHIPPING, pickupError, presetError, type ShippingConfig } from "./shop/shipping";
 
@@ -170,7 +178,7 @@ export const DEFAULT_PLANS: PricingConfig = {
   FREE: {
     tier: "FREE",
     name: "Free",
-    tagline: "Try ReviewQR risk-free",
+    tagline: `Try ${DEFAULT_BRAND_NAME} risk-free`,
     monthly: 0,
     yearly: 0,
     features: [
@@ -320,7 +328,7 @@ export const DEFAULT_PAYMENTS: PaymentsConfig = {
   stripePublishableKey: "",
   upiEnabled: false,
   upiId: "",
-  upiPayeeName: "ReviewQR",
+  upiPayeeName: DEFAULT_BRAND_NAME,
   upiQrDataUrl: "",
   usdtEnabled: false,
   usdtNetwork: "TRC20",
@@ -335,7 +343,7 @@ export const DEFAULT_PAYMENTS: PaymentsConfig = {
   youpiBaseUrl: "",
   youpiMerchantId: "",
   youpiWebhookSecret: "",
-  sellerLegalName: "ReviewQR",
+  sellerLegalName: DEFAULT_BRAND_NAME,
   sellerGstin: "",
   sellerState: "",
   gstRate: 18
@@ -348,7 +356,7 @@ export const DEFAULT_EMAIL: EmailConfig = {
   smtpPort: 587,
   smtpUser: "",
   smtpPass: "",
-  smtpFrom: "ReviewQR <noreply@reviewqr.in>"
+  smtpFrom: `${DEFAULT_BRAND_NAME} <noreply@reviewqr.in>`
 };
 
 export const DEFAULT_WHATSAPP: WhatsAppConfig = {
@@ -360,11 +368,11 @@ export const DEFAULT_WHATSAPP: WhatsAppConfig = {
 };
 
 export const DEFAULT_SITE: SiteConfig = {
-  appName: "ReviewQR",
+  appName: DEFAULT_BRAND_NAME,
   logoUrl: "",
   supportEmail: "hello@reviewqr.in",
   appUrl: "",
-  marketingTagline: "Every customer can leave a public review.",
+  marketingTagline: DEFAULT_BRAND_TAGLINE,
   signupsEnabled: true,
   maintenanceMode: false,
   maintenanceMessage: "We'll be back shortly."
@@ -437,7 +445,7 @@ export async function getPaymentsConfig(): Promise<PaymentsConfig> {
       stored.stripePublishableKey || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "",
     upiEnabled: stored.upiEnabled ?? false,
     upiId: stored.upiId || "",
-    upiPayeeName: stored.upiPayeeName || DEFAULT_PAYMENTS.upiPayeeName,
+    upiPayeeName: brandNameOrDefault(stored.upiPayeeName, DEFAULT_PAYMENTS.upiPayeeName),
     upiQrDataUrl: stored.upiQrDataUrl || "",
     usdtEnabled: stored.usdtEnabled ?? false,
     usdtNetwork: stored.usdtNetwork || DEFAULT_PAYMENTS.usdtNetwork,
@@ -452,7 +460,7 @@ export async function getPaymentsConfig(): Promise<PaymentsConfig> {
     youpiBaseUrl: stored.youpiBaseUrl || process.env.YOUPI_BASE_URL || "",
     youpiMerchantId: stored.youpiMerchantId || process.env.YOUPI_MERCHANT_ID || "",
     youpiWebhookSecret: stored.youpiWebhookSecret || process.env.YOUPI_WEBHOOK_SECRET || "",
-    sellerLegalName: stored.sellerLegalName || DEFAULT_PAYMENTS.sellerLegalName,
+    sellerLegalName: brandNameOrDefault(stored.sellerLegalName, DEFAULT_PAYMENTS.sellerLegalName),
     sellerGstin: stored.sellerGstin || process.env.SELLER_GSTIN || "",
     sellerState: stored.sellerState || "",
     gstRate: stored.gstRate && stored.gstRate > 0 ? stored.gstRate : DEFAULT_PAYMENTS.gstRate
@@ -525,12 +533,14 @@ export async function setShopCheckoutConfig(value: ShopCheckoutConfig, by?: stri
 
 /* ============== Pricing ============== */
 function mergePlan(base: PlanInfo, stored?: Partial<PlanInfo>): PlanInfo {
-  return {
+  const merged: PlanInfo = {
     ...base,
     ...(stored || {}),
     tier: base.tier,
     limits: { ...base.limits, ...(stored?.limits || {}) }
   };
+  if (merged.tagline === `Try ${PREVIOUS_BRAND_NAME} risk-free`) merged.tagline = base.tagline;
+  return merged;
 }
 
 export async function getPricingConfig(): Promise<PricingConfig> {
@@ -557,10 +567,10 @@ export async function getEmailConfig(): Promise<EmailConfig> {
     smtpPort: stored.smtpPort || Number(process.env.SMTP_PORT || 587),
     smtpUser: stored.smtpUser || process.env.SMTP_USER || "",
     smtpPass: stored.smtpPass || process.env.SMTP_PASS || "",
-    smtpFrom:
-      stored.smtpFrom ||
-      process.env.SMTP_FROM ||
-      `ReviewQR <${stored.smtpUser || process.env.SMTP_USER || "noreply@reviewqr.in"}>`
+    smtpFrom: brandFromOrDefault(
+      stored.smtpFrom || process.env.SMTP_FROM,
+      `${DEFAULT_BRAND_NAME} <${stored.smtpUser || process.env.SMTP_USER || "noreply@reviewqr.in"}>`
+    )
   };
 }
 export async function setEmailConfig(v: EmailConfig, by?: string) {
@@ -587,11 +597,11 @@ export async function setWhatsAppConfig(v: WhatsAppConfig, by?: string) {
 export async function getSiteConfig(): Promise<SiteConfig> {
   const stored = await readKey<Partial<SiteConfig>>(SETTING_KEYS.site, {});
   return {
-    appName: stored.appName || process.env.NEXT_PUBLIC_APP_NAME || DEFAULT_SITE.appName,
+    appName: brandNameOrDefault(stored.appName || process.env.NEXT_PUBLIC_APP_NAME, DEFAULT_SITE.appName),
     logoUrl: stored.logoUrl || DEFAULT_SITE.logoUrl,
     supportEmail: stored.supportEmail || DEFAULT_SITE.supportEmail,
     appUrl: stored.appUrl || process.env.NEXT_PUBLIC_APP_URL || "",
-    marketingTagline: stored.marketingTagline || DEFAULT_SITE.marketingTagline,
+    marketingTagline: brandTaglineOrDefault(stored.marketingTagline, DEFAULT_SITE.marketingTagline),
     signupsEnabled: stored.signupsEnabled ?? true,
     maintenanceMode: stored.maintenanceMode ?? false,
     maintenanceMessage: stored.maintenanceMessage || DEFAULT_SITE.maintenanceMessage

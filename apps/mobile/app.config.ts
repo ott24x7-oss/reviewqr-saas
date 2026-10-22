@@ -4,7 +4,7 @@ const packageName = "com.reviewqr.app";
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: "ReviewQR",
+  name: "QR24x7",
   slug: "reviewqr",
   scheme: "reviewqr",
   version: "1.0.0",
@@ -56,14 +56,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       "expo-camera",
       {
-        cameraPermission: "ReviewQR uses the camera to photograph a product so we can suggest a name and price.",
+        cameraPermission: "QR24x7 uses the camera to photograph a product so we can suggest a name and price.",
         recordAudioAndroid: false
       }
     ],
     [
       "expo-image-picker",
       {
-        photosPermission: "ReviewQR uses a photo you pick to suggest a product name and price."
+        photosPermission: "QR24x7 uses a photo you pick to suggest a product name and price."
       }
     ],
     [
@@ -76,7 +76,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       "react-native-nfc-manager",
       {
-        nfcPermission: "ReviewQR writes your tap-page link onto an NFC stand."
+        nfcPermission: "QR24x7 writes your tap-page link onto an NFC stand."
       }
     ]
   ],

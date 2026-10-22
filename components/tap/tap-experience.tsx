@@ -289,7 +289,7 @@ export function TapExperience(props: TapExperienceProps) {
         ) : null}
 
         <p className="tap-footer">
-          Powered by <a href="/">ReviewQR</a>
+          Powered by <a href="/">QR24x7</a>
         </p>
       </div>
     </div>

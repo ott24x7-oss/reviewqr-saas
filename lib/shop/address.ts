@@ -1,4 +1,4 @@
-/** Saved shipping address for a ReviewQR shop order. */
+/** Saved shipping address for a QR24x7 shop order. */
 
 export type AddressInput = {
   name: string;

@@ -155,7 +155,7 @@ export function ActivateForm({ businesses: initial, initialCode }: { businesses:
         const text = (event.message?.records || []).map(recordText).join(" ");
         const found = codeFromScan(text);
         if (!found) {
-          setMessage("The tag has no ReviewQR code");
+          setMessage("The tag has no QR24x7 code");
           return;
         }
         setCode(found);

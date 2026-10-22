@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { Menu, X, Star } from "lucide-react";
 import { pick, useLandingLang } from "@/components/marketing/landing-v2/lang";
+import { DEFAULT_BRAND_NAME } from "@/lib/brand-defaults";
 
 const primary = [
   { href: "/features", en: "Features", hi: "फ़ीचर" },
@@ -25,7 +26,7 @@ export function MarketingNavbar({
 }: {
   brand?: { name: string; logoUrl: string };
 }) {
-  const name = brand?.name || "ReviewQR";
+  const name = brand?.name || DEFAULT_BRAND_NAME;
   const logoUrl = brand?.logoUrl || "";
   const [open, setOpen] = React.useState(false);
   const { lang, setLang } = useLandingLang();

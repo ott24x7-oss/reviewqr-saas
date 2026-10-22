@@ -36,7 +36,7 @@ const faqs = [
   },
   {
     q: "Can I white-label this for my agency clients?",
-    a: "Absolutely — that's the Agency plan. Your logo, your domain, your colours. Your clients never see ReviewQR branding."
+    a: "Absolutely — that's the Agency plan. Your logo, your domain, your colours. Your clients never see QR24x7 branding."
   },
   {
     q: "What happens after my free trial?",

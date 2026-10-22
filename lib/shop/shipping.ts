@@ -1,5 +1,5 @@
 /**
- * ReviewQR shipping. The mock carrier is for development and tests.
+ * QR24x7 shipping. The mock carrier is for development and tests.
  * Production never books with the mock, and an empty carrier config does not call the network.
  */
 import { timingSafeEqualString } from "../timing-safe";

@@ -9,6 +9,7 @@ import { formatRupees } from "@/lib/landing/money";
 import type { LandingTrust } from "@/lib/landing/proof";
 import { LandingPicture } from "./picture";
 import { pick, useLandingLang } from "./lang";
+import { DEFAULT_BRAND_TAGLINE } from "@/lib/brand-defaults";
 
 export type HeroAnchor = {
   paise: number;
@@ -29,12 +30,14 @@ export function SellHero({
   anchor,
   trust,
   whatsapp,
-  freeHref
+  freeHref,
+  tagline = DEFAULT_BRAND_TAGLINE
 }: {
   anchor: HeroAnchor;
   trust: LandingTrust;
   whatsapp: string | null;
   freeHref?: string | null;
+  tagline?: string;
 }) {
   const { lang } = useLandingLang();
   const price = anchorLabel(anchor, lang);
@@ -67,6 +70,9 @@ export function SellHero({
         <div className="absolute inset-x-0 bottom-0 min-w-0 rounded-b-[28px] p-4 text-white lg:static lg:order-1 lg:rounded-none lg:p-0 lg:text-[var(--marketing-ink)]">
           <div className="pointer-events-none absolute inset-0 rounded-b-[28px] bg-gradient-to-t from-black/80 via-black/45 to-transparent lg:hidden" aria-hidden />
           <div className="relative min-w-0">
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/80 lg:text-[var(--marketing-muted)]">
+              {tagline}
+            </p>
             <h1 className="max-w-xl text-balance font-display text-[1.65rem] font-semibold leading-[1.02] tracking-[-0.045em] sm:text-5xl lg:text-6xl">
               {pick(lang, "One stand for reviews and orders.", "रिव्यू और ऑर्डर, एक स्टैंड से।")}
             </h1>

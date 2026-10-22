@@ -130,7 +130,7 @@ export async function bookShopShipment(orderId: string) {
   const line = order.lines.find((item) => item.ships) ?? order.lines[0];
   const draft: ShipmentDraft = {
     orderId: order.id,
-    name: address.name || order.buyerLegalName || "ReviewQR",
+    name: address.name || order.buyerLegalName || "QR24x7",
     phone: address.phone,
     line1: address.line1,
     city: address.city,
@@ -142,7 +142,7 @@ export async function bookShopShipment(orderId: string) {
     heightMm: box.heightMm,
     paymentMode: order.cod ? "COD" : "PREPAID",
     codPaise: order.cod ? order.balancePaise : 0,
-    itemName: line?.name || "ReviewQR",
+    itemName: line?.name || "QR24x7",
     sku: line?.sku || "SHOP",
     amountPaise: order.totalPaise
   };
@@ -344,7 +344,7 @@ export async function notifyShopStatus(orderId: string, status: string, ndr?: st
   const trackingUrl = absoluteUrl(`/dashboard/shop/orders/${order.id}`);
   const notice = shopStatusNotice({
     statusLabel: label,
-    businessName: order.business?.name || order.buyerLegalName || "ReviewQR",
+    businessName: order.business?.name || order.buyerLegalName || "QR24x7",
     trackingUrl,
     awb: order.shipment?.awb,
     ndr

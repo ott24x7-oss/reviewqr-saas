@@ -1,4 +1,4 @@
-# ReviewQR Android
+# QR24x7 Android
 
 The web app stays at the repository root. This folder is a separate Expo app. It is not an npm workspace, so `npm ci` on Railway does not install it.
 

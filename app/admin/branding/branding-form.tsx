@@ -133,7 +133,7 @@ export function BrandingForm({ initial }: { initial: Branding }) {
             <Input
               value={b.brandName}
               onChange={(e) => setB({ ...b, brandName: e.target.value })}
-              placeholder="WatShop Review"
+              placeholder="QR24x7"
               maxLength={80}
             />
           </div>
@@ -143,7 +143,7 @@ export function BrandingForm({ initial }: { initial: Branding }) {
               rows={2}
               value={b.tagline}
               onChange={(e) => setB({ ...b, tagline: e.target.value })}
-              placeholder="Every customer can leave a public review"
+              placeholder="Scan. Tap. Grow."
               maxLength={300}
             />
           </div>
@@ -153,7 +153,7 @@ export function BrandingForm({ initial }: { initial: Branding }) {
               rows={2}
               value={b.footerText}
               onChange={(e) => setB({ ...b, footerText: e.target.value })}
-              placeholder="© 2026 WatShop Review. Made in India."
+              placeholder="© 2026 QR24x7. Made in India."
               maxLength={500}
             />
           </div>

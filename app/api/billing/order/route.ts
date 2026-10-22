@@ -30,8 +30,8 @@ export async function POST(req: NextRequest) {
     const upiLink =
       method === "upi"
         ? `upi://pay?pa=${encodeURIComponent(cfg.upiId)}&pn=${encodeURIComponent(
-            cfg.upiPayeeName || "ReviewQR"
-          )}&am=${rupees}&cu=INR&tn=${encodeURIComponent("ReviewQR " + tier)}`
+            cfg.upiPayeeName || "QR24x7"
+          )}&am=${rupees}&cu=INR&tn=${encodeURIComponent("QR24x7 " + tier)}`
         : null;
 
     return NextResponse.json({

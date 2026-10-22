@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
       to: parsed.data.to,
       message:
         parsed.data.message ||
-        `🟢 ReviewQR test message — sent at ${new Date().toLocaleTimeString("en-IN")}.`
+        `🟢 QR24x7 test message — sent at ${new Date().toLocaleTimeString("en-IN")}.`
     });
     await logAudit({
       userId: guard.user.id,

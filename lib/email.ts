@@ -81,7 +81,7 @@ async function sendViaRelay(
   const fromMatch = String(payload.from || cfg.smtpFrom).match(/<([^>]+)>/);
   const fromEmail = fromMatch ? fromMatch[1] : cfg.smtpUser;
   const fromName =
-    String(payload.from || cfg.smtpFrom).split("<")[0].trim().replace(/"/g, "") || "ReviewQR";
+    String(payload.from || cfg.smtpFrom).split("<")[0].trim().replace(/"/g, "") || "QR24x7";
   const body = {
     secret: cfg.relaySecret,
     smtp_host: cfg.smtpHost,
@@ -193,7 +193,7 @@ export function negativeFeedbackEmail(opts: {
         <p style="margin-top:24px;text-align:center">
           <a href="${escapeHtml(opts.dashboardUrl)}" style="display:inline-block;background:#1a73e8;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600">Reply in Dashboard</a>
         </p>
-        <p style="color:#9ca3af;font-size:12px;text-align:center;margin-top:24px">— ReviewQR</p>
+        <p style="color:#9ca3af;font-size:12px;text-align:center;margin-top:24px">— QR24x7</p>
       </div>
     </div>
   </body></html>`;
@@ -203,7 +203,7 @@ export function welcomeEmail(opts: { name: string; email: string; loginUrl: stri
   return `<!doctype html><html><body style="font-family:Inter,Arial,sans-serif;background:#f4f6f8;padding:24px;color:#1f2937">
     <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb">
       <div style="background:linear-gradient(135deg,#1a73e8,#34a853);color:#fff;padding:24px">
-        <h2 style="margin:0;font-size:20px">Welcome to ReviewQR ${escapeHtml(opts.name.split(" ")[0])}!</h2>
+        <h2 style="margin:0;font-size:20px">Welcome to QR24x7 ${escapeHtml(opts.name.split(" ")[0])}!</h2>
       </div>
       <div style="padding:24px">
         <p style="font-size:15px;line-height:1.6">Your free trial is active. Add your public review link so every customer can post, and so private notes can reach you.</p>
@@ -253,7 +253,7 @@ export function dailyReportEmail(opts: {
 export function passwordResetEmail(opts: { resetUrl: string; email: string }) {
   return `<!doctype html><html><body style="font-family:Inter,Arial,sans-serif;background:#f4f6f8;padding:24px;color:#1f2937">
     <div style="max-width:520px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb">
-      <div style="background:linear-gradient(135deg,#1a73e8,#34a853);color:#fff;padding:18px 24px"><h2 style="margin:0;font-size:18px">Reset your ReviewQR password</h2></div>
+      <div style="background:linear-gradient(135deg,#1a73e8,#34a853);color:#fff;padding:18px 24px"><h2 style="margin:0;font-size:18px">Reset your QR24x7 password</h2></div>
       <div style="padding:24px">
         <p>Reset request for <b>${escapeHtml(opts.email)}</b>. The link is valid for 30 minutes.</p>
         <p style="text-align:center;margin:24px 0"><a href="${escapeHtml(opts.resetUrl)}" style="display:inline-block;background:#1a73e8;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600">Reset password</a></p>

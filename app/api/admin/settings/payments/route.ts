@@ -27,7 +27,7 @@ export async function PUT(req: NextRequest) {
     // UPI
     upiEnabled: typeof incoming.upiEnabled === "boolean" ? incoming.upiEnabled : current.upiEnabled,
     upiId: String(incoming.upiId ?? current.upiId).trim(),
-    upiPayeeName: String(incoming.upiPayeeName ?? current.upiPayeeName).trim() || "ReviewQR",
+    upiPayeeName: String(incoming.upiPayeeName ?? current.upiPayeeName).trim() || "QR24x7",
     upiQrDataUrl: String(incoming.upiQrDataUrl ?? current.upiQrDataUrl),
     // USDT
     usdtEnabled: typeof incoming.usdtEnabled === "boolean" ? incoming.usdtEnabled : current.usdtEnabled,
@@ -45,7 +45,7 @@ export async function PUT(req: NextRequest) {
     youpiBaseUrl: String(incoming.youpiBaseUrl ?? current.youpiBaseUrl).trim().replace(/\/$/, ""),
     youpiMerchantId: String(incoming.youpiMerchantId ?? current.youpiMerchantId).trim(),
     youpiWebhookSecret: secret(incoming.youpiWebhookSecret, current.youpiWebhookSecret),
-    sellerLegalName: String(incoming.sellerLegalName ?? current.sellerLegalName).trim() || "ReviewQR",
+    sellerLegalName: String(incoming.sellerLegalName ?? current.sellerLegalName).trim() || "QR24x7",
     sellerGstin: String(incoming.sellerGstin ?? current.sellerGstin).trim(),
     sellerState: String(incoming.sellerState ?? current.sellerState).trim(),
     gstRate: Number(incoming.gstRate) > 0 ? Number(incoming.gstRate) : current.gstRate

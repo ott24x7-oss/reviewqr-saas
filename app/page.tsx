@@ -20,9 +20,8 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
   const brand = await getBrand();
-  const title = `${brand.name} — Google reviews, menu and WhatsApp orders`;
-  const description =
-    "Google reviews, menu and WhatsApp orders from one QR + NFC stand. No commission. Setup in 10 minutes. Made in India.";
+  const title = `${brand.name} — ${brand.tagline}`;
+  const description = `${brand.tagline}. Google reviews, menu and WhatsApp orders from one QR + NFC stand. No commission. Setup in 10 minutes. Made in India.`;
   return {
     title: { absolute: title },
     description,
@@ -59,6 +58,7 @@ export default async function HomePage() {
         trust={trust}
         whatsapp={whatsapp}
         freeHref={free ? buyHref(free.slug, free.duration) : null}
+        tagline={brand.tagline}
       />
       <StickyBuy anchor={anchor} whatsapp={whatsapp} />
       <ProductGrid plans={catalog} hardware={hardware} />

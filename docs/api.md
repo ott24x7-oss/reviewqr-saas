@@ -1,4 +1,4 @@
-# ReviewQR API
+# QR24x7 API
 
 `/api/v1` is the JSON API for the mobile app and for new web calls. The OpenAPI document is `GET /api/v1/openapi.json`. Older `/api/*` routes keep their current JSON and URLs.
 

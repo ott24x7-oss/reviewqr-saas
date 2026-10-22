@@ -142,7 +142,7 @@ export function EmailConfigForm({ initial }: { initial: EmailConfig }) {
               <Input
                 value={cfg.smtpFrom}
                 onChange={(e) => update("smtpFrom", e.target.value)}
-                placeholder="ReviewQR <noreply@yourdomain.com>"
+                placeholder="QR24x7 <noreply@yourdomain.com>"
               />
             </div>
           </div>

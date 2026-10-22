@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 
 export const metadata = {
-  title: "Live Demo · ReviewQR",
+  title: "Live Demo · QR24x7",
   description:
     "Scan the QR or use the live preview. Every star shows the public review link and a private note."
 };
@@ -175,7 +175,7 @@ export default async function DemoPage() {
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 z-10 h-5 sm:h-6 w-20 sm:w-32 bg-slate-900 rounded-b-2xl" />
                   <iframe
                     src={DEMO_REVIEW_URL}
-                    title="ReviewQR live demo"
+                    title="QR24x7 live demo"
                     className="block w-full h-[78svh] min-h-[560px] max-h-[780px] sm:h-[720px] border-0"
                     loading="lazy"
                   />

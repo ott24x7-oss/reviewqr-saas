@@ -28,7 +28,7 @@ export async function noteBaileysDown(reason: string) {
 
     await sendEmail({
       to,
-      subject: "ReviewQR WhatsApp session disconnected",
+      subject: "QR24x7 WhatsApp session disconnected",
       html: `<p>The Baileys WhatsApp session is ${reason}. Login codes will use WhatsApp Cloud, then email, until you reconnect in Admin → WhatsApp.</p>`
     });
   } catch (err) {

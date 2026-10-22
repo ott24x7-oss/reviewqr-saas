@@ -1,14 +1,16 @@
 import Link from "next/link";
 import { Star, Mail, MapPin } from "lucide-react";
+import { DEFAULT_BRAND_NAME, DEFAULT_BRAND_TAGLINE } from "@/lib/brand-defaults";
 
 export function Footer({
   brand
 }: {
-  brand?: { name: string; logoUrl: string; supportEmail: string };
+  brand?: { name: string; logoUrl: string; supportEmail: string; tagline?: string };
 }) {
-  const name = brand?.name || "ReviewQR";
+  const name = brand?.name || DEFAULT_BRAND_NAME;
   const logoUrl = brand?.logoUrl || "";
   const supportEmail = brand?.supportEmail || "hello@reviewqr.in";
+  const tagline = brand?.tagline || DEFAULT_BRAND_TAGLINE;
   return (
     <footer className="marketing-footer border-t border-[var(--marketing-line)]">
       <div className="container max-w-6xl py-12">
@@ -29,7 +31,8 @@ export function Footer({
               )}
               <span className="font-display">{name}</span>
             </Link>
-            <p className="mt-3 text-sm text-muted-foreground max-w-xs leading-relaxed">
+            <p className="mt-3 text-sm font-medium text-foreground">{tagline}</p>
+            <p className="mt-2 text-sm text-muted-foreground max-w-xs leading-relaxed">
               Every customer can leave a public Google or Trustpilot review, and can also tell you privately.
             </p>
             <div className="mt-4 space-y-1.5 text-sm">

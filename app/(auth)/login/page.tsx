@@ -211,7 +211,7 @@ function LoginForm() {
             </button>
           </form>
         <div className="mt-6 text-center text-sm text-muted-foreground">
-          New to ReviewQR?{" "}
+          New to QR24x7?{" "}
           <Link href="/register" className="font-medium text-primary hover:underline">
             Create an account
           </Link>

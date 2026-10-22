@@ -3,7 +3,7 @@
  * can drive the fallback order with fakes.
  */
 
-export const OTP_BRAND_FALLBACK = "ReviewQR";
+export const OTP_BRAND_FALLBACK = "QR24x7";
 export const OTP_RESEND_AFTER_SEC = 30;
 export const LOGIN_OTP_NOTICE = "If this number is registered, a code was sent";
 export const OTP_INVALID = "Invalid code";

@@ -85,7 +85,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const url = absoluteUrl(`/invite/${token}`);
   await sendEmail({
     to: email,
-    subject: `Join ${business.name} on ReviewQR`,
+    subject: `Join ${business.name} on QR24x7`,
     html: `<p>${escapeHtml(user.name || user.email)} invited you to ${escapeHtml(business.name)} as ${parsed.data.role.toLowerCase()}.</p><p><a href="${url}">Accept invite</a></p><p>This link works once and expires in 7 days.</p>`
   }).catch(() => {});
 

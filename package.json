@@ -5,7 +5,7 @@
   "workspaces": [
     "packages/*"
   ],
-  "description": "ReviewQR - Turn happy customers into Google reviews. Indian SMB focused review management SaaS.",
+  "description": "QR24x7 - Turn happy customers into Google reviews. Indian SMB focused review management SaaS.",
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",

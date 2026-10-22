@@ -8,7 +8,7 @@ export function AuthFrame({ children }: { children: React.ReactNode }) {
       <div className="auth-glow" aria-hidden />
       <div className="auth-glow auth-glow-b" aria-hidden />
       <div className="relative z-10 flex w-full max-w-[400px] flex-col items-center px-4 py-8">
-        <Link href="/" className="auth-mark" aria-label="ReviewQR home">
+        <Link href="/" className="auth-mark" aria-label="QR24x7 home">
           <span>RQ</span>
         </Link>
         <div className="mt-4 w-full">{children}</div>

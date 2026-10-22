@@ -745,7 +745,7 @@ export function ReviewFlow(props: Props) {
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1 hover:rv-body"
         >
-          Powered by <b className="rv-body">{props.brand?.name || "ReviewQR"}</b>
+          Powered by <b className="rv-body">{props.brand?.name || "QR24x7"}</b>
         </a>
       </footer>
 

@@ -1,4 +1,4 @@
-// ReviewQR Prisma Schema
+// QR24x7 Prisma Schema
 // Production-ready schema for Indian SMB review management SaaS
 
 generator client {
@@ -1270,7 +1270,7 @@ model AppSetting {
   updatedBy String?
 }
 
-// ReviewQR's own hardware catalogue. This is not a business's WhatsApp store.
+// QR24x7's own hardware catalogue. This is not a business's WhatsApp store.
 model CatalogProduct {
   id                String           @id @default(cuid())
   slug              String           @unique
@@ -1324,7 +1324,7 @@ model CatalogVariant {
   @@index([active, stock])
 }
 
-// One open ReviewQR shop cart per owner. Not a business's WhatsApp menu cart.
+// One open QR24x7 shop cart per owner. Not a business's WhatsApp menu cart.
 model ShopCart {
   id             String         @id @default(cuid())
   userId         String         @unique
@@ -1355,7 +1355,7 @@ model ShopCartLine {
   @@index([variantId])
 }
 
-// Platform coupons for the ReviewQR shop. Not a business's store Coupon.
+// Platform coupons for the QR24x7 shop. Not a business's store Coupon.
 model ShopCoupon {
   id         String    @id @default(cuid())
   code       String    @unique
@@ -1403,7 +1403,7 @@ model ShippingAddress {
   @@index([userId])
 }
 
-// A ReviewQR shop order. Plan payments stay on Payment. This row is the hardware or bundle sale.
+// A QR24x7 shop order. Plan payments stay on Payment. This row is the hardware or bundle sale.
 enum ShopOrderStatus {
   PENDING_PAYMENT
   PAID
@@ -1818,9 +1818,8 @@ model AgentOnboarding {
   @@index([phone])
 }
 
-// Singleton: admin-overridable branding for the WatShop Review *platform*
-// marketing site (review.watshop.in). Per-tenant business branding lives on
-// the Business model — do not conflate the two.
+// Singleton: admin-overridable branding for the platform marketing site.
+// Per-tenant business branding lives on the Business model — do not conflate the two.
 model PlatformBranding {
   id           String   @id @default("singleton")
   logoDataUrl  String   @default("")

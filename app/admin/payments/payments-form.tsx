@@ -166,7 +166,7 @@ export function PaymentsConfigForm({ initial }: { initial: PaymentsConfig }) {
               <Input
                 value={cfg.upiPayeeName}
                 onChange={(e) => update("upiPayeeName", e.target.value)}
-                placeholder="ReviewQR"
+                placeholder="QR24x7"
               />
             </div>
           </div>

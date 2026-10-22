@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Terms of Service",
-  description: "The terms that govern your use of ReviewQR."
+  description: "The terms that govern your use of QR24x7."
 };
 
 export default function TermsPage() {
@@ -13,17 +13,17 @@ export default function TermsPage() {
     <LegalPage
       eyebrow="Legal"
       title="Terms of Service"
-      intro="These terms govern your access to and use of ReviewQR. Please read them carefully."
+      intro="These terms govern your access to and use of QR24x7. Please read them carefully."
       updated="21 October 2026"
     >
       <p>
-        By creating an account or using ReviewQR (the "Service"), you agree to these Terms of Service. If
+        By creating an account or using QR24x7 (the "Service"), you agree to these Terms of Service. If
         you do not agree, please do not use the Service.
       </p>
 
       <h2>1. The Service</h2>
       <p>
-        ReviewQR shows a public review link and a private feedback form on the same screen, plus analytics
+        QR24x7 shows a public review link and a private feedback form on the same screen, plus analytics
         and related tools for businesses. We may add, change, or remove features over time to improve the Service.
       </p>
 
@@ -43,7 +43,7 @@ export default function TermsPage() {
         <li>Use the Service to spam or harass customers.</li>
       </ul>
       <p>
-        <strong>Note on review platforms:</strong> ReviewQR helps you invite genuine feedback. You are
+        <strong>Note on review platforms:</strong> QR24x7 helps you invite genuine feedback. You are
         responsible for using it in line with the terms of Google and any other review platform you link to.
       </p>
 

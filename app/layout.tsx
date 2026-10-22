@@ -4,6 +4,7 @@ import { Providers } from "@/components/providers";
 import { Toaster } from "@/components/ui/toaster";
 import { ShapeGridGate } from "@/components/ui/shape-grid-gate";
 import { getBrand } from "@/lib/brand";
+import { DEFAULT_BRAND_NAME, DEFAULT_BRAND_TAGLINE } from "@/lib/brand-defaults";
 import "./globals.css";
 
 // Self-hosted (see scripts/build-fonts.py) so builds never depend on fonts.googleapis.com.
@@ -27,11 +28,11 @@ const poppins = localFont({
 
 export async function generateMetadata(): Promise<Metadata> {
   const brand = await getBrand().catch(() => ({
-    name: "ReviewQR",
+    name: DEFAULT_BRAND_NAME,
     logoUrl: "",
     appUrl: process.env.NEXT_PUBLIC_APP_URL || "",
     supportEmail: "hello@reviewqr.in",
-    tagline: "Every customer can leave a public Google or Trustpilot review."
+    tagline: DEFAULT_BRAND_TAGLINE
   }));
 
   const fullTitle = `${brand.name} — ${brand.tagline}`;

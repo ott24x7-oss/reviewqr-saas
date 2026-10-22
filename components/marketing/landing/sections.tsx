@@ -481,14 +481,14 @@ export function Comparison() {
     <SectionShell id="compare">
       <SectionHeading
         eyebrow={<span className="marketing-rupee">Why pay more than ₹200?</span>}
-        title="A normal QR sticker vs. ReviewQR"
-        sub={<span className="marketing-rupee">A ₹200 sticker opens one link. ReviewQR runs your counter.</span>}
+        title="A normal QR sticker vs. QR24x7"
+        sub={<span className="marketing-rupee">A ₹200 sticker opens one link. QR24x7 runs your counter.</span>}
       />
       <div className="mx-auto mt-8 max-w-2xl overflow-hidden rounded-2xl bg-white/90 ring-1 ring-white">
         <div className="grid grid-cols-[1fr_72px_88px] sm:grid-cols-[1fr_120px_120px] items-center border-b border-slate-100 px-4 py-3 text-xs sm:text-sm font-bold text-ink">
           <span>Feature</span>
           <span className="text-center text-muted-ink">QR sticker</span>
-          <span className="text-center text-primary-800">ReviewQR</span>
+          <span className="text-center text-primary-800">QR24x7</span>
         </div>
         {ROWS.map(([label, a, b]) => (
           <div
@@ -520,7 +520,7 @@ const FAQS = [
   },
   {
     q: "Can I change my links after the stand is printed?",
-    a: "Yes. The QR and NFC point to your ReviewQR page, so you can change your menu, links, offers or theme any time from your dashboard. The printed stand stays the same."
+    a: "Yes. The QR and NFC point to your QR24x7 page, so you can change your menu, links, offers or theme any time from your dashboard. The printed stand stays the same."
   },
   {
     q: "How does WhatsApp ordering work?",

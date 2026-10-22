@@ -34,7 +34,7 @@ export default async function ReferPage() {
     const reward = row.user.referralRewardReceived;
     return sum + (reward?.status === "APPLIED" ? reward.months : 0);
   }, 0);
-  const share = `https://wa.me/?text=${encodeURIComponent(`Get ReviewQR with my link: ${link}`)}`;
+  const share = `https://wa.me/?text=${encodeURIComponent(`Get QR24x7 with my link: ${link}`)}`;
 
   return (
     <div className="space-y-6">

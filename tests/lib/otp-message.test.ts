@@ -48,7 +48,7 @@ describe("OTP message and phone", () => {
     const text = otpLoginMessage("123456", " WatShop ");
     expect(text).toContain("123456 is your WatShop login code. Valid 5 minutes. Do not share it with anyone.");
     expect(text).toContain("123456 आपका WatShop लॉगिन कोड है। 5 मिनट तक वैध। किसी से शेयर न करें।");
-    expect(otpLoginMessage("123456", "  ")).toContain("your ReviewQR login code");
+    expect(otpLoginMessage("123456", "  ")).toContain("your QR24x7 login code");
   });
 
   it("normalises Indian numbers to +91 and rejects short input", () => {
