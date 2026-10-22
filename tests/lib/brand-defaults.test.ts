@@ -3,6 +3,7 @@ import {
   brandFromOrDefault,
   brandNameOrDefault,
   brandTaglineOrDefault,
+  planDescriptionOrDefault,
   DEFAULT_BRAND_NAME,
   DEFAULT_BRAND_TAGLINE,
   PREVIOUS_BRAND_NAME
@@ -24,5 +25,13 @@ describe("brand defaults", () => {
       "QR24x7 <noreply@reviewqr.in>"
     );
     expect(brandFromOrDefault("Desk <hi@example.com>", "fallback")).toBe("Desk <hi@example.com>");
+  });
+
+  it("maps the seeded free-plan line in English and Hindi", () => {
+    expect(planDescriptionOrDefault(`Try ${PREVIOUS_BRAND_NAME} risk-free`)).toBe("Try QR24x7 risk-free");
+    expect(planDescriptionOrDefault(`${PREVIOUS_BRAND_NAME} बिना जोखिम आज़माएँ`)).toBe(
+      "QR24x7 बिना जोखिम आज़माएँ"
+    );
+    expect(planDescriptionOrDefault("For a single counter")).toBe("For a single counter");
   });
 });

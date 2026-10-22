@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { BillingClient } from "./billing-client";
 import { prisma } from "@/lib/db";
 import { formatINR, formatDate } from "@/lib/utils";
+import { planDescriptionOrDefault } from "@/lib/brand-defaults";
 
 export const dynamic = "force-dynamic";
 
@@ -99,7 +100,7 @@ export default async function BillingPage({
         catalog={catalog.map((plan) => ({
           slug: plan.slug,
           name: plan.nameEn,
-          description: plan.descriptionEn,
+          description: planDescriptionOrDefault(plan.descriptionEn),
           badge: plan.badge,
           modules: plan.modules,
           prices: plan.prices.map((price) => ({

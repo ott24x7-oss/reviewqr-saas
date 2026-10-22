@@ -1,3 +1,4 @@
+import { planDescriptionOrDefault } from "@/lib/brand-defaults";
 import { prisma } from "@/lib/db";
 import { DURATIONS, parseLimits } from "@/lib/plans/catalog";
 import { limitsForTier } from "@/lib/plans/legacy";
@@ -17,8 +18,8 @@ export default async function AdminPlansPage() {
       nameEn: plan.nameEn,
       nameHi: plan.nameHi,
       slug: plan.slug,
-      descriptionEn: plan.descriptionEn,
-      descriptionHi: plan.descriptionHi,
+      descriptionEn: planDescriptionOrDefault(plan.descriptionEn),
+      descriptionHi: planDescriptionOrDefault(plan.descriptionHi),
       modules: plan.modules,
       limits: {
         businesses: limits.businesses,
