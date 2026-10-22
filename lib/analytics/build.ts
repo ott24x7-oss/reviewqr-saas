@@ -158,16 +158,29 @@ export async function rollupAllBusinesses(dayKey: string) {
   return businesses.length;
 }
 
+/** Missing days, plus yesterday, which may have received events after its first rollup. */
+export function daysNeedingRollup(wanted: string[], existing: string[], yesterday: string) {
+  const have = new Set(existing);
+  return wanted.filter((day) => day === yesterday || !have.has(day));
+}
+
+/** Today, and at IST midnight also the day that just closed. */
+export function rollupJobDays(today: string, hour: number) {
+  if (hour !== 0) return [today];
+  return [today, addIstDays(today, -1)];
+}
+
 /** Fill any missing IST days in the window, then return the stored rows in order. */
-export async function ensureRollups(businessId: string, fromKey: string, toKey: string) {
+export async function ensureRollups(businessId: string, fromKey: string, toKey: string, now = new Date()) {
   const wanted = istDaysEnding(toKey, daysBetween(fromKey, toKey));
+  const yesterday = addIstDays(istDayKey(now), -1);
   const existing = await prisma.analyticsDaily.findMany({
     where: { businessId, day: { gte: new Date(`${fromKey}T00:00:00.000Z`), lte: new Date(`${toKey}T00:00:00.000Z`) } },
     select: { day: true }
   });
-  const have = new Set(existing.map((row) => row.day.toISOString().slice(0, 10)));
-  for (const day of wanted) {
-    if (!have.has(day)) await rollupBusinessDay(businessId, day);
+  const have = existing.map((row) => row.day.toISOString().slice(0, 10));
+  for (const day of daysNeedingRollup(wanted, have, yesterday)) {
+    await rollupBusinessDay(businessId, day);
   }
   const rows = await prisma.analyticsDaily.findMany({
     where: { businessId, day: { gte: new Date(`${fromKey}T00:00:00.000Z`), lte: new Date(`${toKey}T00:00:00.000Z`) } },

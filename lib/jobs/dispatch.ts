@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client";
+import { rollupJobDays } from "../analytics/build";
 import { istDayKey, istParts } from "../analytics/ist";
 import { monthlyDue, weeklyDue } from "../reports/schedule";
 import { getInsightSettings } from "../reports/settings";
@@ -72,11 +73,20 @@ export async function enqueueBillingJobs() {
 export async function enqueueInsightJobs(now = new Date()) {
   const day = istDayKey(now);
   const hour = istParts(now).hour;
+  const days = rollupJobDays(day, hour);
   const rollup = await enqueueJob({
     type: "analytics.rollup",
     payload: { day },
     idempotencyKey: `analytics.rollup:${day}:${hour}`
   });
+  const late =
+    days.length > 1
+      ? await enqueueJob({
+          type: "analytics.rollup",
+          payload: { day: days[1] },
+          idempotencyKey: `analytics.rollup:${days[1]}:late`
+        })
+      : null;
   const backfill = await enqueueJob({
     type: "analytics.backfill",
     payload: { days: 90 },
@@ -109,5 +119,5 @@ export async function enqueueInsightJobs(now = new Date()) {
         idempotencyKey: `reports.monthly:${monthKey}`
       })
     : null;
-  return { rollup, backfill, growth, weekly, monthly };
+  return { rollup, late, backfill, growth, weekly, monthly };
 }

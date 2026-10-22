@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { isBotUserAgent } from "../../lib/analytics/bots";
 import { compareSummaries, foldDay, foldRange, percentChange, type StoredDay } from "../../lib/analytics/fold";
 import { addIstDays, istDayKey, istDayRange, istHour, istParts } from "../../lib/analytics/ist";
+import { daysNeedingRollup, rollupJobDays } from "../../lib/analytics/build";
 import { resolveRange } from "../../lib/analytics/range";
 import { hashVisitor } from "../../lib/analytics/visitor";
 
@@ -126,5 +127,15 @@ describe("analytics rollup", () => {
     expect(custom.from).toBe("2026-10-10");
     expect(custom.to).toBe("2026-10-20");
     expect(custom.days).toBe(11);
+  });
+
+  it("re-rolls yesterday and the midnight catch-up even when a row exists", () => {
+    expect(daysNeedingRollup(["2026-10-22", "2026-10-23"], ["2026-10-22", "2026-10-23"], "2026-10-22")).toEqual([
+      "2026-10-22"
+    ]);
+    expect(daysNeedingRollup(["2026-10-21"], ["2026-10-21"], "2026-10-22")).toEqual([]);
+    expect(daysNeedingRollup(["2026-10-23"], [], "2026-10-22")).toEqual(["2026-10-23"]);
+    expect(rollupJobDays("2026-10-23", 0)).toEqual(["2026-10-23", "2026-10-22"]);
+    expect(rollupJobDays("2026-10-23", 1)).toEqual(["2026-10-23"]);
   });
 });
