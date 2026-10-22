@@ -2,6 +2,7 @@ import type { OpenAPIRegistry } from "@asteasolutions/zod-to-openapi";
 import { z } from "zod";
 import {
   dataSchema,
+  billingSummarySchema,
   dashboardSchema,
   daySummarySchema,
   feedbackPatchSchema,
@@ -18,6 +19,7 @@ import {
   placesSearchSchema,
   menuSnapRequestSchema,
   productDraftSchema,
+  shopOrderDetailSchema,
   tapPageSchema,
   tapSaveSchema,
   qrClaimSchema,
@@ -461,6 +463,30 @@ export function registerResourcePaths(registry: OpenAPIRegistry, errorRef: JsonS
       401: unauthorized,
       404: notFound,
       429: rateLimit
+    }
+  });
+
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/shop/orders/{id}",
+    summary: "One hardware order, payment status, timeline, and reprint requests",
+    security: bearer,
+    request: { params: idParams },
+    responses: {
+      200: jsonResponse("Order", dataSchema(shopOrderDetailSchema)),
+      401: unauthorized,
+      404: notFound
+    }
+  });
+
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/billing/summary",
+    summary: "Current plan, expiry, and payment history. Does not start a purchase.",
+    security: bearer,
+    responses: {
+      200: jsonResponse("Billing", dataSchema(billingSummarySchema)),
+      401: unauthorized
     }
   });
 

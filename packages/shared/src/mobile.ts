@@ -93,7 +93,43 @@ export const tapSaveSchema = z.object({
   themeId: z.string().min(1).max(40).optional()
 });
 
+export const shopOrderDetailSchema = z.object({
+  id: z.string(),
+  status: z.string(),
+  statusLabel: z.string(),
+  paymentStatus: z.string(),
+  totalPaise: z.number().int(),
+  invoiceNumber: z.string().nullable(),
+  checkoutUrl: z.string().nullable(),
+  createdAt: z.string(),
+  lines: z.array(z.object({ sku: z.string(), name: z.string(), qty: z.number().int(), unitPaise: z.number().int() })),
+  timeline: z.array(z.object({ label: z.string(), at: z.string() })),
+  reprints: z.array(z.object({ id: z.string(), reason: z.string(), status: z.string(), createdAt: z.string() }))
+});
+
+export const billingSummarySchema = z.object({
+  plan: z.object({
+    tier: z.string(),
+    status: z.string(),
+    trialEndsAt: z.string().nullable(),
+    subscriptionEndsAt: z.string().nullable()
+  }),
+  history: z.array(
+    z.object({
+      id: z.string(),
+      amountPaise: z.number().int(),
+      currency: z.string(),
+      status: z.string(),
+      tier: z.string(),
+      invoiceNumber: z.string().nullable(),
+      createdAt: z.string()
+    })
+  )
+});
+
 export type Dashboard = z.infer<typeof dashboardSchema>;
+export type ShopOrderDetail = z.infer<typeof shopOrderDetailSchema>;
+export type BillingSummary = z.infer<typeof billingSummarySchema>;
 export type PlacesSearch = z.infer<typeof placesSearchSchema>;
 export type PlaceDetails = z.infer<typeof placeDetailsSchema>;
 export type TapPage = z.infer<typeof tapPageSchema>;

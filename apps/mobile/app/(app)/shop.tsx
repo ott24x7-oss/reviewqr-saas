@@ -1,15 +1,244 @@
-import { StyleSheet, Text, View } from "react-native";
+import type { BillingSummary, ShopOrderDetail } from "@reviewqr/shared";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import * as WebBrowser from "expo-web-browser";
+import { useState } from "react";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { apiData } from "../../src/api/data";
+import { ApiError } from "../../src/api/http";
+import { useI18n } from "../../src/i18n";
+import { useBusiness } from "../../src/state/business";
+import { cartPaise } from "../../src/shop/totals";
 import { colors, fonts } from "../../src/theme";
+import { Field, PillButton } from "../../src/ui/controls";
 
-export default function ShopPlaceholder() {
+type Tab = "catalogue" | "orders" | "plan";
+
+type Variant = { sku: string; name: string; salePaise: number; ships: boolean; minQty: number };
+type Product = {
+  name: string;
+  needsDesign: boolean;
+  defaultTemplateId: string | null;
+  variants: Variant[];
+};
+type LocalLine = { sku: string; name: string; qty: number; unitPaise: number; ships: boolean; templateId: string | null };
+type OrderRow = { id: string; status: string; statusLabel: string; paymentStatus: string; totalPaise: number };
+
+const sellPlans = process.env.EXPO_PUBLIC_SELL_PLANS === "1";
+
+function rupees(paise: number) {
+  return `₹${Math.round(paise / 100)}`;
+}
+
+export default function ShopScreen() {
+  const { t, lang } = useI18n();
+  const { business } = useBusiness();
+  const client = useQueryClient();
+  const [tab, setTab] = useState<Tab>("catalogue");
+  const [lines, setLines] = useState<LocalLine[]>([]);
+  const [address, setAddress] = useState({ name: "", phone: "", line1: "", city: "", state: "", pincode: "" });
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const catalog = useQuery({
+    queryKey: ["shop-catalog"],
+    queryFn: () => apiData<{ items: Product[] }>("/api/v1/shop/catalog")
+  });
+  const orders = useQuery({
+    queryKey: ["shop-orders"],
+    enabled: tab === "orders",
+    queryFn: () => apiData<{ items: OrderRow[] }>("/api/v1/shop/orders")
+  });
+  const detail = useQuery({
+    queryKey: ["shop-order", openId],
+    enabled: !!openId,
+    queryFn: () => apiData<ShopOrderDetail>(`/api/v1/shop/orders/${openId}`)
+  });
+  const billing = useQuery({
+    queryKey: ["billing"],
+    enabled: tab === "plan",
+    queryFn: () => apiData<BillingSummary>("/api/v1/billing/summary")
+  });
+
+  function add(product: Product) {
+    const variant = product.variants[0];
+    if (!variant) return;
+    setLines((current) => {
+      const found = current.find((line) => line.sku === variant.sku);
+      if (found) return current.map((line) => (line.sku === variant.sku ? { ...line, qty: line.qty + 1 } : line));
+      return [
+        ...current,
+        {
+          sku: variant.sku,
+          name: variant.name || product.name,
+          qty: Math.max(1, variant.minQty || 1),
+          unitPaise: variant.salePaise,
+          ships: variant.ships,
+          templateId: product.needsDesign ? product.defaultTemplateId : null
+        }
+      ];
+    });
+  }
+
+  async function pay() {
+    setBusy(true);
+    setError(null);
+    try {
+      let addressId: string | undefined;
+      if (lines.some((line) => line.ships)) {
+        const saved = await apiData<{ id: string }>("/api/v1/shop/addresses", {
+          method: "POST",
+          body: JSON.stringify({ ...address, isDefault: true })
+        });
+        addressId = saved.id;
+      }
+      await apiData("/api/v1/shop/cart", {
+        method: "PUT",
+        body: JSON.stringify({
+          businessId: business?.id ?? null,
+          addressId: addressId ?? null,
+          lines: lines.map((line) => ({
+            sku: line.sku,
+            qty: line.qty,
+            design:
+              line.templateId && business
+                ? { templateId: line.templateId, businessId: business.id }
+                : undefined
+          }))
+        })
+      });
+      const checkout = await apiData<{ orderId: string; paid: boolean; checkoutUrl: string | null }>("/api/v1/shop/checkout", {
+        method: "POST"
+      });
+      if (checkout.checkoutUrl) await WebBrowser.openBrowserAsync(checkout.checkoutUrl);
+      for (let attempt = 0; attempt < 8; attempt += 1) {
+        const order = await apiData<ShopOrderDetail>(`/api/v1/shop/orders/${checkout.orderId}`);
+        if (order.paymentStatus === "PAID" || checkout.paid) break;
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+      }
+      setLines([]);
+      setOpenId(checkout.orderId);
+      setTab("orders");
+      await client.invalidateQueries({ queryKey: ["shop-orders"] });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not start payment");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const plan = billing.data?.plan;
+  const needsAddress = lines.some((line) => line.ships);
+
   return (
-    <View style={styles.screen}>
-      <Text style={styles.title}>Shop</Text>
-    </View>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+      <View style={styles.row}>
+        {(["catalogue", "orders", "plan"] as const).map((item) => (
+          <Pressable key={item} onPress={() => setTab(item)} style={[styles.chip, tab === item && styles.chipOn]}>
+            <Text style={[styles.chipText, tab === item && styles.chipOnText, lang === "hi" && styles.hindi]}>
+              {item === "catalogue" ? t.catalogue : item === "orders" ? t.orders : t.plans}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {tab === "catalogue" ? (
+        <View style={styles.stack}>
+          {(catalog.data?.items ?? []).map((product) => (
+            <Pressable key={product.name} style={styles.card} onPress={() => add(product)}>
+              <Text style={styles.title}>{product.name}</Text>
+              <Text style={styles.note}>{product.variants[0] ? rupees(product.variants[0].salePaise) : ""}</Text>
+            </Pressable>
+          ))}
+          <Text style={[styles.title, lang === "hi" && styles.hindi]}>
+            {t.cart} · {rupees(cartPaise(lines))}
+          </Text>
+          {lines.map((line) => (
+            <Text key={line.sku} style={styles.note}>
+              {line.qty} × {line.name}
+            </Text>
+          ))}
+          {needsAddress ? (
+            <View style={styles.stack}>
+              <Field label={t.name} tone="paper" value={address.name} onChangeText={(name) => setAddress({ ...address, name })} />
+              <Field label={t.phone} tone="paper" value={address.phone} onChangeText={(phone) => setAddress({ ...address, phone })} keyboardType="phone-pad" />
+              <Field label={t.address} tone="paper" value={address.line1} onChangeText={(line1) => setAddress({ ...address, line1 })} />
+              <Field label={t.city} tone="paper" value={address.city} onChangeText={(city) => setAddress({ ...address, city })} />
+              <Field label="State" tone="paper" value={address.state} onChangeText={(state) => setAddress({ ...address, state })} />
+              <Field label={t.pincode} tone="paper" value={address.pincode} onChangeText={(pincode) => setAddress({ ...address, pincode })} keyboardType="number-pad" />
+            </View>
+          ) : null}
+          <PillButton label={t.checkout} onPress={pay} disabled={busy || lines.length === 0} tone="dark" />
+        </View>
+      ) : null}
+      {tab === "orders" ? (
+        <View style={styles.stack}>
+          {(orders.data?.items ?? []).map((order) => (
+            <Pressable key={order.id} style={styles.card} onPress={() => setOpenId(order.id)}>
+              <Text style={styles.title}>{order.statusLabel || order.status}</Text>
+              <Text style={styles.note}>
+                {rupees(order.totalPaise)} · {order.paymentStatus}
+              </Text>
+            </Pressable>
+          ))}
+          {detail.data ? (
+            <View style={styles.card}>
+              <Text style={[styles.title, lang === "hi" && styles.hindi]}>{t.tracking}</Text>
+              {detail.data.timeline.map((event) => (
+                <Text key={`${event.at}-${event.label}`} style={styles.note}>
+                  {event.at.slice(0, 16).replace("T", " ")} · {event.label}
+                </Text>
+              ))}
+              {detail.data.status === "DELIVERED" ? (
+                <PillButton
+                  label={t.reprint}
+                  tone="outline"
+                  onPress={() =>
+                    apiData(`/api/v1/shop/orders/${detail.data!.id}/reprint`, {
+                      method: "POST",
+                      body: JSON.stringify({ reason: "damage" })
+                    })
+                      .then(() => client.invalidateQueries({ queryKey: ["shop-order", detail.data!.id] }))
+                      .catch((err) => setError(err instanceof ApiError ? err.message : "Could not ask for a reprint"))
+                  }
+                />
+              ) : null}
+            </View>
+          ) : null}
+        </View>
+      ) : null}
+      {tab === "plan" ? (
+        <View style={styles.stack}>
+          <Text style={[styles.note, lang === "hi" && styles.hindi]}>{sellPlans ? t.plansFlag : t.plansWeb}</Text>
+          <View style={styles.card}>
+            <Text style={styles.title}>{plan?.tier || "…"}</Text>
+            <Text style={styles.note}>{plan?.status}</Text>
+            <Text style={styles.note}>{(plan?.subscriptionEndsAt || plan?.trialEndsAt || "").slice(0, 10)}</Text>
+          </View>
+          <Text style={[styles.title, lang === "hi" && styles.hindi]}>{t.planHistory}</Text>
+          {(billing.data?.history ?? []).map((row) => (
+            <Text key={row.id} style={styles.note}>
+              {row.createdAt.slice(0, 10)} · {row.tier} · {rupees(row.amountPaise)} · {row.status}
+            </Text>
+          ))}
+        </View>
+      ) : null}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.paper, padding: 20 },
-  title: { fontFamily: fonts.display, fontSize: 28, color: colors.ink }
+  screen: { flex: 1, backgroundColor: colors.paper },
+  content: { padding: 16, gap: 12 },
+  stack: { gap: 12 },
+  row: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  chip: { minHeight: 44, borderRadius: 999, paddingHorizontal: 14, justifyContent: "center", backgroundColor: colors.card },
+  chipOn: { backgroundColor: colors.ink },
+  chipText: { fontFamily: fonts.bodyStrong, color: colors.ink },
+  chipOnText: { color: colors.white },
+  card: { backgroundColor: colors.card, borderRadius: 20, padding: 14, gap: 6 },
+  title: { fontFamily: fonts.title, fontSize: 18, color: colors.ink },
+  note: { fontFamily: fonts.body, color: colors.inkSoft },
+  error: { color: colors.danger, fontFamily: fonts.body },
+  hindi: { fontFamily: fonts.hindi }
 });
