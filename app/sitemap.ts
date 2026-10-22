@@ -15,6 +15,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
   const routes = [
     "",
+    "/features",
     "/how-it-works",
     ...planPaths,
     "/about",

@@ -1,25 +1,8 @@
 import { MarketingNavbar } from "@/components/marketing/navbar";
-import { DashboardPreview } from "@/components/marketing/dashboard-preview";
-import { Pricing } from "@/components/marketing/pricing";
-import { PlanPricing } from "@/components/marketing/plan-pricing";
 import { Footer } from "@/components/marketing/footer";
-import { HeroV2 } from "@/components/marketing/landing/hero-v2";
-import { AnchorPill } from "@/components/marketing/landing/anchor-pill";
-import {
-  ProductSuite,
-  HowItWorksV2,
-  TapPageShowcase,
-  StoreShowcase,
-  ReviewsShowcase,
-  ProductsShowcase,
-  GrowthTools,
-  Industries,
-  Comparison,
-  FaqV2,
-  CtaV2
-} from "@/components/marketing/landing/sections";
+import { LegacyHashRedirect } from "@/components/marketing/landing/legacy-hash-redirect";
+import { Comparison, FaqV2, CtaV2 } from "@/components/marketing/landing/sections";
 import type { Metadata } from "next";
-import { getPricingConfig } from "@/lib/settings";
 import { listPublicPlans } from "@/lib/plans/public";
 import { getBrand } from "@/lib/brand";
 import { marketingFontClass } from "@/components/brand/fonts";
@@ -51,8 +34,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function HomePage() {
-  const [plans, catalog, brand, trust, hardware, quotes] = await Promise.all([
-    getPricingConfig(),
+  const [catalog, brand, trust, hardware, quotes] = await Promise.all([
     listPublicPlans(),
     getBrand(),
     landingTrust(),
@@ -67,6 +49,7 @@ export default async function HomePage() {
       <link rel="preload" as="image" href="/landing/hero-800.webp" media="(max-width: 767px)" fetchPriority="high" />
       <link rel="preload" as="image" href="/landing/hero-1600.webp" media="(min-width: 768px)" fetchPriority="high" />
       <MarketingNavbar brand={brand} />
+      <LegacyHashRedirect />
 
       <SellHero anchor={anchor} trust={trust} whatsapp={whatsapp} />
       <StickyBuy anchor={anchor} whatsapp={whatsapp} />
@@ -79,26 +62,7 @@ export default async function HomePage() {
       <FaqV2 />
       <CtaV2 />
 
-      <div id="story">
-        <HeroV2 />
-      </div>
-      <ProductSuite />
-      <HowItWorksV2 />
-      <TapPageShowcase />
-      <StoreShowcase />
-      <ReviewsShowcase />
-      <ProductsShowcase />
-      <GrowthTools />
-      <div className="marketing-band">
-        <DashboardPreview />
-      </div>
-      <Industries />
-      <div className="marketing-band">
-        {catalog.length > 0 ? <PlanPricing plans={catalog} sectionId="plans-list" /> : <Pricing plans={plans} sectionId="plans-list" />}
-      </div>
-
       <Footer brand={brand} />
-      <AnchorPill />
     </main>
     </LandingLangProvider>
   );

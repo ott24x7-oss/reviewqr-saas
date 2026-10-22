@@ -67,6 +67,33 @@ test("reduced motion shows the steps without hiding them", async ({ page }) => {
   expect(animated).toBe("none");
 });
 
+const moved = ["story", "features", "how", "profile", "store", "reviews", "products", "growth", "industries"];
+
+test("home at 375px stays under 9000px and old sections live on /features", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/#features");
+  await expect(page).toHaveURL(/\/features#features$/);
+  await expect(page.locator("#features")).toBeVisible();
+  for (const id of moved) {
+    await expect(page.locator(`#${id}`)).toHaveCount(1);
+  }
+  await expect(page.getByRole("heading", { name: /One smart stand/ })).toBeVisible();
+  await page.screenshot({ path: "docs/landing/features-375.png", fullPage: false });
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.screenshot({ path: "docs/landing/features-1280.png", fullPage: false });
+
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/");
+  await expect(page.locator("#sell-hero")).toBeVisible();
+  await expect(page.locator("#features")).toHaveCount(0);
+  await expect(page.locator("#story")).toHaveCount(0);
+  const height = await page.evaluate(() => document.documentElement.scrollHeight);
+  expect(height).toBeLessThan(9000);
+  await page.screenshot({ path: "docs/landing/home-375.png", fullPage: false });
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.screenshot({ path: "docs/landing/home-1280.png", fullPage: false });
+});
+
 test("a plan page keeps the buy bar on a phone", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/");

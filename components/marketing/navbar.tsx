@@ -6,16 +6,17 @@ import { Menu, X, Star } from "lucide-react";
 import { pick, useLandingLang } from "@/components/marketing/landing-v2/lang";
 
 const primary = [
+  { href: "/features", en: "Features", hi: "फ़ीचर" },
   { href: "/how-it-works", en: "How it works", hi: "कैसे काम करता है" },
   { href: "/#pricing", en: "Plans", hi: "प्लान" }
 ];
 
 const more = [
-  { href: "/#features", en: "Features", hi: "फ़ीचर" },
-  { href: "/#store", en: "WhatsApp store", hi: "WhatsApp स्टोर" },
-  { href: "/#products", en: "QR + NFC", hi: "QR + NFC" },
+  { href: "/features#features", en: "All features", hi: "सभी फ़ीचर" },
+  { href: "/features#store", en: "WhatsApp store", hi: "WhatsApp स्टोर" },
+  { href: "/features#products", en: "QR + NFC", hi: "QR + NFC" },
   { href: "/#faq", en: "FAQ", hi: "सवाल" },
-  { href: "/#how", en: "How it works on this page", hi: "इस पेज पर कदम" },
+  { href: "/features#how", en: "How it works on this page", hi: "इस पेज पर कदम" },
   { href: "/demo", en: "Live demo", hi: "लाइव डेमो" }
 ];
 
