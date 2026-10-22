@@ -2,13 +2,15 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { tapFontClass } from "@/components/brand/tap-font";
 import { getBrand } from "@/lib/brand";
+import { prisma } from "@/lib/db";
 import { generateQrDataUrl } from "@/lib/qr";
 import { getAiConfig, getTurnstileConfig } from "@/lib/settings";
 import { recordQrScan } from "@/lib/scans";
 import { remindExpiredOwner } from "@/lib/tap/expiry-notice";
 import { tapText } from "@/lib/tap/i18n";
 import { isLookupCode } from "@/lib/tap/ids";
-import { presentBusiness, type PublicLink } from "@/lib/tap/links";
+import { presentBusiness, whatsAppNumberUrl, type PublicLink } from "@/lib/tap/links";
+import { loadEntitlement } from "@/lib/plans/entitlements";
 import { orderedReviewTargets } from "@/lib/review-policy";
 import { loadPublicTap, type TapRecord } from "@/lib/tap/resolve";
 import { scanSource } from "@/lib/tap/source";
@@ -76,20 +78,32 @@ export async function PublicTap({
   };
   if (record.status === "limited") {
     await remindExpiredOwner(record.ownerId, view.name).catch(() => {});
+    const review = orderedReviewTargets(record.business)[0];
+    const chat = whatsAppNumberUrl(record.business.whatsappNumber);
     return (
-      <div className={`tap-page ${tapFontClass}`} style={themeProps.themeStyle} data-buttons={themeProps.buttons}>
+      <div className={`tap-page ${tapFontClass}`} style={themeProps.themeStyle} data-buttons={themeProps.buttons} data-testid="public-basic">
         <div className="tap-card">
           <h1>{view.name}</h1>
-          <p className="tap-bio">This page is limited until the business renews.</p>
+          {view.open === null ? null : <p className="tap-hours">{view.open ? "Open now" : "Closed now"}</p>}
           <div className="tap-actions">
             {view.call ? (
               <a className="tap-primary" href={view.call}>
                 Call
               </a>
             ) : null}
+            {chat ? (
+              <a className="tap-primary" href={chat} rel="noreferrer">
+                WhatsApp
+              </a>
+            ) : null}
+            {review ? (
+              <a className="tap-primary" href={review.href} rel="noreferrer">
+                {review.labelEn}
+              </a>
+            ) : null}
             {view.directions ? (
               <a className="tap-primary" href={view.directions} rel="noreferrer">
-                Directions
+                Map
               </a>
             ) : null}
           </div>
@@ -97,6 +111,24 @@ export async function PublicTap({
       </div>
     );
   }
+
+  const entitlement = await loadEntitlement(record.ownerId).catch(() => null);
+  const modules = entitlement?.modules ?? [];
+  const showMenu = modules.includes("MENU") || modules.includes("STORE");
+  const showStore = modules.includes("STORE");
+  const links = view.links.filter((item) => {
+    if (!showMenu && (item.type === "menu" || item.type === "whatsapp_order")) return false;
+    if (!showStore && item.type === "whatsapp_order") return false;
+    return true;
+  });
+  const menuItems = showMenu
+    ? await prisma.menuItem.findMany({
+        where: { businessId: record.businessId, available: true },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+        take: 12,
+        select: { id: true, name: true, pricePaise: true }
+      })
+    : [];
 
   const [turnstile, aiCfg] = await Promise.all([
     getTurnstileConfig().catch(() => ({ siteKey: "" })),
@@ -117,7 +149,7 @@ export async function PublicTap({
         bio={view.bio}
         bioHi={view.bioHi}
         open={view.open}
-        links={view.links}
+        links={links}
         gallery={view.gallery}
         upiQr={upiQr}
         locationSlug={record.locationSlug}
@@ -129,6 +161,20 @@ export async function PublicTap({
         aiEnabled={aiCfg.enabled === true && !!aiCfg.apiKey && record.business.aiReviewsEnabled === true}
         {...themeProps}
       />
+      {menuItems.length ? (
+        <section className="tap-page" data-testid="public-menu">
+          <div className="tap-card">
+            <h2>Menu</h2>
+            <ul>
+              {menuItems.map((item) => (
+                <li key={item.id}>
+                  {item.name} · ₹{Math.round(item.pricePaise / 100)}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }

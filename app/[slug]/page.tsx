@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PublicTap } from "@/components/tap/public-page";
+import { metadataForBusiness } from "@/lib/tap/meta";
 import { isReservedSlug } from "@/lib/tap/reserved-slugs";
 import { loadPublicSlug } from "@/lib/tap/resolve";
 
@@ -10,7 +11,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   if (isReservedSlug(params.slug)) return { title: "Not found" };
   const record = await loadPublicSlug(params.slug);
   if (record.status !== "active" && record.status !== "limited") return { title: "Not found" };
-  return { title: record.business.name };
+  return metadataForBusiness(record, true);
 }
 
 export default async function BusinessSlugPage({ params }: { params: { slug: string } }) {
