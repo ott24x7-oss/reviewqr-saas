@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
-import { rollupJobDays } from "../analytics/build";
+import { backfillIdempotencyKey, rollupJobDays } from "../analytics/build";
+import { prisma } from "../db";
 import { istDayKey, istParts } from "../analytics/ist";
 import { monthlyDue, weeklyDue } from "../reports/schedule";
 import { getInsightSettings } from "../reports/settings";
@@ -87,11 +88,17 @@ export async function enqueueInsightJobs(now = new Date()) {
           idempotencyKey: `analytics.rollup:${days[1]}:late`
         })
       : null;
-  const backfill = await enqueueJob({
-    type: "analytics.backfill",
-    payload: { days: 90 },
-    idempotencyKey: "analytics.backfill:90"
-  });
+  const businesses = await prisma.business.findMany({ where: { archived: false }, select: { id: true } });
+  const backfill = [];
+  for (const business of businesses) {
+    backfill.push(
+      await enqueueJob({
+        type: "analytics.backfill",
+        payload: { days: 90, businessId: business.id },
+        idempotencyKey: backfillIdempotencyKey(90, business.id)
+      })
+    );
+  }
   const growth = await enqueueJob({
     type: "growth.score",
     payload: { day },

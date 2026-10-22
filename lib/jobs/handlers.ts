@@ -1,5 +1,5 @@
 import type { Prisma } from "@prisma/client";
-import { backfillRollups, rollupAllBusinesses, rollupBusinessDay, rollupJobDays } from "../analytics/build";
+import { backfillBusiness, backfillRollups, rollupAllBusinesses, rollupBusinessDay, rollupJobDays } from "../analytics/build";
 import { istDayKey, istParts } from "../analytics/ist";
 import { scoreAllBusinesses } from "../growth/compute";
 import { enqueueMonthlySends, enqueueWeeklySends, sendMonthlyToUser, sendWeeklyToUser } from "../reports/run";
@@ -91,8 +91,12 @@ export async function handleJob(job: ClaimedJob) {
       for (const key of days) businesses = await rollupAllBusinesses(key);
       return { businesses, days };
     }
-    case "analytics.backfill":
-      return backfillRollups(Number(payload.days) || 90);
+    case "analytics.backfill": {
+      const days = Number(payload.days) || 90;
+      const businessId = text(payload.businessId);
+      if (!businessId) return backfillRollups(days);
+      return backfillBusiness(businessId, days);
+    }
     case "growth.score":
       return scoreAllBusinesses();
     case "reports.weekly":

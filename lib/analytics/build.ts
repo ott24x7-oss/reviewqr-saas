@@ -205,12 +205,28 @@ function daysBetween(fromKey: string, toKey: string) {
   return Math.max(1, Math.round((to - from) / 86400000) + 1);
 }
 
-export async function backfillRollups(days = 90, now = new Date()) {
+export function backfillWindow(days = 90, now = new Date()) {
   const end = istDayKey(now);
-  const start = addIstDays(end, -(Math.max(1, days) - 1));
+  const start = addIstDays(end, -(Math.max(1, Math.floor(days)) - 1));
+  return { from: start, to: end };
+}
+
+export function backfillIdempotencyKey(days: number, businessId: string) {
+  return `analytics.backfill:${Math.max(1, Math.floor(days))}:${businessId}`;
+}
+
+/** One business, safe to run again. A failed job retries the same window. */
+export async function backfillBusiness(businessId: string, days = 90, now = new Date()) {
+  const window = backfillWindow(days, now);
+  await rollupBusinessRange(businessId, window.from, window.to, now);
+  return { businessId, ...window };
+}
+
+export async function backfillRollups(days = 90, now = new Date()) {
+  const window = backfillWindow(days, now);
   const businesses = await prisma.business.findMany({ where: { archived: false }, select: { id: true } });
   for (const business of businesses) {
-    await rollupBusinessRange(business.id, start, end);
+    await rollupBusinessRange(business.id, window.from, window.to, now);
   }
-  return { businesses: businesses.length, from: start, to: end };
+  return { businesses: businesses.length, ...window };
 }

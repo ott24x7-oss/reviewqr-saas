@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { isBotUserAgent } from "../../lib/analytics/bots";
 import { compareSummaries, foldDay, foldRange, percentChange, type StoredDay } from "../../lib/analytics/fold";
 import { addIstDays, istDayKey, istDayRange, istHour, istParts } from "../../lib/analytics/ist";
-import { daysNeedingRollup, isFutureIstDay, rollupJobDays } from "../../lib/analytics/build";
+import { backfillIdempotencyKey, daysNeedingRollup, isFutureIstDay, rollupJobDays } from "../../lib/analytics/build";
 import { FutureRangeError, resolveRange } from "../../lib/analytics/range";
 import { hashVisitor } from "../../lib/analytics/visitor";
 
@@ -150,5 +150,11 @@ describe("analytics rollup", () => {
     expect(() => resolveRange({ preset: "custom", from: "2026-10-24", to: "2026-10-30", now })).toThrow(FutureRangeError);
     expect(isFutureIstDay("2026-10-24", now)).toBe(true);
     expect(isFutureIstDay("2026-10-23", now)).toBe(false);
+  });
+
+  it("gives each business its own resumable backfill key", () => {
+    expect(backfillIdempotencyKey(90, "biz_a")).toBe("analytics.backfill:90:biz_a");
+    expect(backfillIdempotencyKey(90, "biz_a")).toBe(backfillIdempotencyKey(90, "biz_a"));
+    expect(backfillIdempotencyKey(90, "biz_b")).not.toBe(backfillIdempotencyKey(90, "biz_a"));
   });
 });

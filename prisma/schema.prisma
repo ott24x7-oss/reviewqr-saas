@@ -906,6 +906,7 @@ model QrScan {
   createdAt  DateTime @default(now())
 
   @@index([qrCodeId, ipHash, createdAt])
+  @@index([qrCodeId, createdAt])
 }
 
 // Views and button clicks. The deduped visit counter stays on QrScan.
