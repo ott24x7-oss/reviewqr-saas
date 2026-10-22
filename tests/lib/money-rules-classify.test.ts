@@ -205,4 +205,69 @@ describe("upgrade, downgrade and renewal classification", () => {
     if (!saved?.endsAt) return;
     expect(Math.abs(saved.endsAt.getTime() - addMonths(endsAt, 1).getTime())).toBeLessThan(2 * DAY);
   });
+
+  async function migrated(input: { tier: "STARTER" | "GROWTH"; endsAt: Date; lastMonths: number; lastPaise: number }) {
+    const now = new Date();
+    const user = await prisma.user.create({
+      data: {
+        email: `migrated-${stamp()}@example.test`,
+        subscriptionTier: input.tier,
+        subscriptionStatus: "ACTIVE",
+        subscriptionEndsAt: input.endsAt,
+        createdAt: addDays(now, -400)
+      }
+    });
+    users.push(user.id);
+    // Same shape as the backfill: no duration, starts at account creation.
+    await prisma.subscription.create({
+      data: {
+        userId: user.id,
+        planId: input.tier === "STARTER" ? "plan_legacy_starter" : "plan_legacy_growth",
+        modules: ["REVIEWS", "MENU", "STORE"],
+        limits: await limitsForTier(input.tier),
+        tier: input.tier,
+        duration: null,
+        status: "ACTIVE",
+        startsAt: addDays(now, -400),
+        endsAt: input.endsAt,
+        pricePaise: 0
+      }
+    });
+    await prisma.payment.create({
+      data: {
+        userId: user.id,
+        amount: input.lastPaise,
+        status: "COMPLETED",
+        tier: input.tier,
+        periodMonths: input.lastMonths,
+        createdAt: addDays(now, -10)
+      }
+    });
+    return user;
+  }
+
+  it("lets a migrated monthly customer renew early instead of scheduling it", async () => {
+    const now = new Date();
+    const user = await migrated({ tier: "GROWTH", endsAt: addDays(now, 20), lastMonths: 1, lastPaise: 99900 });
+    const quoted = await quotePlanCheckout(user.id, "growth", "MONTH_1", now);
+    expect(quoted.ok).toBe(true);
+    if (!quoted.ok) return;
+    expect(quoted.quote.kind).toBe("renew");
+  });
+
+  it("renews a manual UPI tier payment from the paid end without losing days", async () => {
+    const now = new Date();
+    const endsAt = addDays(now, 100);
+    const user = await migrated({ tier: "STARTER", endsAt, lastMonths: 12, lastPaise: 499900 });
+    // Manual UPI / USDT / Razorpay rows name a tier, not a plan.
+    const row = await prisma.payment.create({
+      data: { userId: user.id, amount: 499900, status: "PENDING", tier: "STARTER", periodMonths: 12 }
+    });
+    const activated = await activateCompletedPayment({ paymentId: row.id, verifiedVia: "test" });
+    expect(activated.ok).toBe(true);
+    const saved = await prisma.subscription.findFirst({ where: { userId: user.id, status: "ACTIVE" } });
+    expect(saved?.endsAt).toBeTruthy();
+    if (!saved?.endsAt) return;
+    expect(Math.abs(saved.endsAt.getTime() - addMonths(endsAt, 12).getTime())).toBeLessThan(2 * DAY);
+  });
 });

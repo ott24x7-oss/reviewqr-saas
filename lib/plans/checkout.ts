@@ -2,7 +2,8 @@ import type { PlanDuration, SubscriptionTier } from "@prisma/client";
 import { prisma } from "../db";
 import { durationMonths } from "./catalog";
 import { legacyPlanId, snapshotGrants } from "./legacy";
-import { inferDuration, quotePlanChange, unusedPaidCredit, type PlanQuote } from "./quote";
+import { quotePlanChange, unusedPaidCredit, type PlanQuote } from "./quote";
+import { openDuration } from "./open-duration";
 
 export type CheckoutQuote =
   | {
@@ -42,7 +43,7 @@ export async function quotePlanCheckout(
   const granting = !!sub && snapshotGrants({ tier: sub.tier, status: sub.status, endsAt: sub.endsAt, now });
   // Compare catalogue list prices (monthly equivalent), never the amount paid.
   // A trial or an unknown current plan counts as no plan: the purchase starts now.
-  const currentDuration = granting ? sub.duration ?? inferDuration(sub.startsAt, sub.endsAt) : null;
+  const currentDuration = granting ? await openDuration(prisma, sub) : null;
   let currentPrice = 0;
   if (granting && sub.status !== "TRIALING" && sub.planId && currentDuration) {
     const listed = await prisma.planPrice.findUnique({

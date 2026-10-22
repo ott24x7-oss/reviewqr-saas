@@ -2,7 +2,7 @@
  * Plan activation. One transaction extends the subscription, issues the next
  * GST invoice number, and snapshots the invoice. A completed payment is a no-op.
  */
-import { inferDuration } from "./plans/quote";
+import { openDuration, paymentPlan } from "./plans/open-duration";
 import { addMonths } from "date-fns";
 import { Prisma, type PaymentStatus, type PlanDuration, type SubscriptionTier } from "@prisma/client";
 import { prisma } from "./db";
@@ -156,9 +156,10 @@ export async function activateCompletedPayment(input: ActivateInput): Promise<Ac
     const trialing = open?.status === "TRIALING";
     // Renew only when both sides name the same plan and the same duration.
     // Anything unknown (no plan id, legacy row, other duration) starts today.
-    const openDuration = open ? open.duration ?? inferDuration(open.startsAt, open.endsAt) : null;
-    const samePlanRow = !!(open?.planId && row.planId && open.planId === row.planId);
-    const sameDurationRow = !!(row.duration && openDuration === row.duration);
+    const currentDuration = open ? await openDuration(tx, open) : null;
+    const bought = paymentPlan(row);
+    const samePlanRow = !!(open?.planId && bought.planId && open.planId === bought.planId);
+    const sameDurationRow = !!(bought.duration && currentDuration === bought.duration);
     const renew = !!open && !trialing && samePlanRow && sameDurationRow && (row.creditPaise || 0) <= 0;
     const carriedBonus =
       open && !trialing ? remainingBonusDays({ endsAt: open.endsAt, bonusDays: open.bonusDays || 0, now }) : 0;
