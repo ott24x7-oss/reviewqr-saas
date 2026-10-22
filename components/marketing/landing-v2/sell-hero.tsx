@@ -60,69 +60,8 @@ export function SellHero({
   );
 
   return (
-    <section id="sell-hero" className="marketing-band px-4 pb-6 pt-4 sm:pt-8">
-      <div className="mx-auto grid max-w-6xl items-center gap-5 lg:grid-cols-[1.05fr_0.95fr] lg:gap-10">
-        <div>
-          <h1 className="max-w-xl text-balance font-display text-[1.75rem] font-semibold leading-[1.05] tracking-[-0.04em] text-[var(--marketing-ink)] sm:text-5xl lg:text-6xl">
-            {pick(lang, "One stand for reviews and orders.", "रिव्यू और ऑर्डर, एक स्टैंड से।")}
-          </h1>
-          <p className="mt-3 max-w-xl text-pretty text-sm leading-relaxed text-[var(--marketing-muted)] sm:text-base">
-            {pick(
-              lang,
-              "Google reviews, menu & WhatsApp orders from one QR + NFC stand",
-              "Google रिव्यू, मेनू और WhatsApp ऑर्डर, एक QR + NFC स्टैंड से"
-            )}
-          </p>
-          {price ? (
-            <p className="marketing-rupee mt-3 text-base font-semibold text-[var(--marketing-ink)]" data-price-anchor={anchor!.paise}>
-              {price}
-            </p>
-          ) : null}
-          {freeHref ? (
-            <Link href={freeHref} className="mt-1 inline-flex min-h-11 items-center text-sm font-semibold underline">
-              {pick(lang, "Start free", "मुफ़्त शुरू करें")}
-            </Link>
-          ) : null}
-          <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-            <a href="#pricing" className="marketing-cta inline-flex justify-center">
-              {pick(lang, "Buy now", "अभी खरीदें")}
-            </a>
-            {whatsapp ? (
-              <a
-                href={whatsapp}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-[var(--marketing-line)] px-4 text-sm font-semibold text-[var(--marketing-ink)]"
-              >
-                <MessageCircle className="h-4 w-4" aria-hidden />
-                {pick(lang, "Talk to us", "बात करें")}
-              </a>
-            ) : null}
-            <Link href="/how-it-works" className="inline-flex min-h-11 items-center justify-center px-2 text-sm font-semibold underline">
-              {pick(lang, "How it works", "कैसे काम करता है")}
-            </Link>
-          </div>
-          <ul className="mt-4 flex flex-wrap gap-2">
-            {facts.map((fact) => (
-              <li
-                key={fact.text}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[var(--marketing-line)] bg-white/70 px-2.5 py-1 text-xs font-medium text-[var(--marketing-ink)]"
-              >
-                {fact.image ? (
-                  <LandingPicture
-                    name={fact.image}
-                    alt={fact.alt || ""}
-                    width={800}
-                    height={800}
-                    sizes="20px"
-                    className="h-5 w-5 rounded-full object-cover"
-                  />
-                ) : null}
-                {fact.text}
-              </li>
-            ))}
-          </ul>
-        </div>
+    <section id="sell-hero" className="scroll-mt-24 px-4 pb-5 pt-3 sm:pt-6">
+      <div className="relative mx-auto min-w-0 max-w-6xl lg:grid lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:gap-10">
         <LandingPicture
           name="hero"
           alt={alt}
@@ -130,8 +69,78 @@ export function SellHero({
           height={900}
           priority
           sizes="(max-width: 1023px) 100vw, 46vw"
-          className="aspect-[16/9] w-full rounded-[20px] object-cover"
+          className="aspect-[5/4] w-full rounded-[28px] object-cover shadow-[0_22px_50px_rgba(28,27,24,0.16)] sm:aspect-[16/10] lg:order-2 lg:aspect-[4/5]"
         />
+        <div className="absolute inset-x-0 bottom-0 min-w-0 rounded-b-[28px] p-4 text-white lg:static lg:order-1 lg:rounded-none lg:p-0 lg:text-[var(--marketing-ink)]">
+          <div className="pointer-events-none absolute inset-0 rounded-b-[28px] bg-gradient-to-t from-black/80 via-black/45 to-transparent lg:hidden" aria-hidden />
+          <div className="relative min-w-0">
+            <h1 className="max-w-xl text-balance font-display text-[1.65rem] font-semibold leading-[1.02] tracking-[-0.045em] sm:text-5xl lg:text-6xl">
+              {pick(lang, "One stand for reviews and orders.", "रिव्यू और ऑर्डर, एक स्टैंड से।")}
+            </h1>
+            <p className="mt-2 max-w-xl text-pretty text-sm leading-snug text-white/90 lg:text-[var(--marketing-muted)] sm:text-base">
+              {pick(
+                lang,
+                "Google reviews, menu & WhatsApp orders from one QR + NFC stand",
+                "Google रिव्यू, मेनू और WhatsApp ऑर्डर, एक QR + NFC स्टैंड से"
+              )}
+            </p>
+            <div className="mt-2 flex items-center justify-between gap-3">
+              {price ? (
+                <p className="marketing-rupee text-base font-semibold" data-price-anchor={anchor!.paise}>
+                  {price}
+                </p>
+              ) : (
+                <span />
+              )}
+              {freeHref ? (
+                <Link href={freeHref} className="shrink-0 text-sm font-semibold underline">
+                  {pick(lang, "Start free", "मुफ़्त शुरू करें")}
+                </Link>
+              ) : null}
+            </div>
+            <div className={`mt-3 grid gap-2 ${whatsapp ? "grid-cols-2" : "grid-cols-1"}`}>
+              <a href="#pricing" className="marketing-cta inline-flex justify-center px-3">
+                {pick(lang, "Buy now", "अभी खरीदें")}
+              </a>
+              {whatsapp ? (
+                <a
+                  href={whatsapp}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full border border-white/55 bg-white/15 px-3 text-sm font-semibold text-white lg:border-[var(--marketing-line)] lg:bg-transparent lg:text-[var(--marketing-ink)]"
+                >
+                  <MessageCircle className="h-4 w-4" aria-hidden />
+                  WhatsApp
+                </a>
+              ) : null}
+            </div>
+            <Link href="/how-it-works" className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold underline">
+              {pick(lang, "How it works", "कैसे काम करता है")}
+            </Link>
+            <ul className="mt-1 flex max-w-full flex-nowrap items-center gap-2 overflow-x-auto text-[11px] font-medium text-white/90 [scrollbar-width:none] lg:text-[var(--marketing-muted)]">
+              {facts.map((fact, index) => (
+                <li key={fact.text} className="inline-flex shrink-0 items-center gap-1">
+                  {fact.image ? (
+                    <LandingPicture
+                      name={fact.image}
+                      alt={fact.alt || ""}
+                      width={800}
+                      height={800}
+                      sizes="16px"
+                      className="h-4 w-4 rounded-full object-cover"
+                    />
+                  ) : null}
+                  <span>{fact.text}</span>
+                  {index < facts.length - 1 ? (
+                    <span aria-hidden className="pl-1">
+                      ·
+                    </span>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
       </div>
     </section>
   );
