@@ -8,6 +8,7 @@ import {
   apiErrorSchema,
   dataSchema,
   listSchema,
+  accountDeletionSchema,
   deleteAccountSchema,
   loginSchema,
   logoutSchema,
@@ -183,6 +184,22 @@ registry.registerPath({
     400: validation,
     401: unauthorized,
     403: { description: "Admin accounts cannot be deleted here", content: { "application/json": { schema: errorRef } } }
+  }
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/v1/me/deletion",
+  summary: "Send a deletion code, or anonymize the account after the code matches",
+  security: [{ bearerAuth: [] }],
+  request: jsonBody(accountDeletionSchema),
+  responses: {
+    200: jsonResponse("Code sent, or the account was anonymized", dataSchema(z.union([otpSentSchema, okSchema]))),
+    400: validation,
+    401: unauthorized,
+    403: { description: "Admin accounts cannot be deleted here", content: { "application/json": { schema: errorRef } } },
+    429: rateLimit,
+    503: { description: "The code could not be sent", content: { "application/json": { schema: errorRef } } }
   }
 });
 

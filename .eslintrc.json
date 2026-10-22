@@ -1,4 +1,5 @@
 {
+  "ignorePatterns": ["apps/mobile/**"],
   "extends": ["next/core-web-vitals"],
   "rules": {
     "react/no-unescaped-entities": "off",

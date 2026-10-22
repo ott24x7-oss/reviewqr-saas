@@ -12,6 +12,19 @@ export function nfcUrl(origin: string, code: string) {
   return `${origin.replace(/\/$/, "")}/t/${code}?src=nfc`;
 }
 
+/** Public site origin for a tag. Missing or unparseable config stays empty. */
+export function publicAppOrigin(appUrl: string | undefined) {
+  const raw = (appUrl || "").trim();
+  if (!raw) return null;
+  try {
+    const url = new URL(raw);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+    return url.origin;
+  } catch {
+    return null;
+  }
+}
+
 export function nfcLinkMatches(value: string, code: string) {
   return value.includes(`/t/${code}`) && value.includes("src=nfc");
 }

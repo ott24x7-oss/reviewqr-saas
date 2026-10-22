@@ -15,8 +15,8 @@ import { JOIN_COOKIE, applySignupAttribution } from "@/lib/plans/attribution";
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req.headers);
-  // One local browser run signs up several accounts from one IP.
-  const rl = await rateLimitDb({ key: `register:${ip}`, limit: 30, windowSeconds: 600 });
+  // 5 per IP in production. Browser tests raise it with REGISTER_IP_LIMIT.
+  const rl = await rateLimitDb({ key: `register:${ip}`, limit: registerIpLimit(), windowSeconds: 600 });
   if (!rl.ok) {
     return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
   }
@@ -110,4 +110,9 @@ export async function POST(req: NextRequest) {
   sendVerificationEmail({ id: user.id, email, name: data.name }).catch(() => {});
 
   return NextResponse.json({ ok: true, userId: user.id });
+}
+
+function registerIpLimit() {
+  const value = Number(process.env.REGISTER_IP_LIMIT);
+  return Number.isInteger(value) && value > 0 ? value : 5;
 }

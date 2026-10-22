@@ -2,7 +2,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { enterSession } from "@/components/auth/enter-session";
 import { Loader2, UserPlus, Check } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -78,19 +78,17 @@ export default function RegisterPage() {
         setLoading(false);
         return;
       }
-      const sign = await signIn("credentials", {
-        email: form.email.trim().toLowerCase(),
-        password: form.password,
-        redirect: false
-      });
-      if (sign?.error) {
+      const entered = await enterSession(
+        { email: form.email.trim().toLowerCase(), password: form.password },
+        planCheckoutPath() || "/dashboard"
+      );
+      if (!entered.ok) {
         toast.error("Account created — please log in");
         router.push("/login");
         return;
       }
       toast.success("Welcome to ReviewQR!");
-      router.push(planCheckoutPath() || "/dashboard");
-      router.refresh();
+      window.location.assign(entered.path);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -159,15 +157,16 @@ export default function RegisterPage() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error || "Could not create the account");
-      const sign = await signIn("credentials", {
-        otpToken: json.otpToken,
-        email: "otp-login@invalid.local",
-        password: "unused",
-        redirect: false
-      });
-      if (sign?.error) throw new Error("Account created — please sign in");
-      router.push(planCheckoutPath() || "/dashboard/onboarding");
-      router.refresh();
+      const entered = await enterSession(
+        {
+          otpToken: String(json.otpToken || ""),
+          email: "otp-login@invalid.local",
+          password: "unused"
+        },
+        planCheckoutPath() || "/dashboard/onboarding"
+      );
+      if (!entered.ok) throw new Error("Account created — please sign in");
+      window.location.assign(entered.path);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not create the account");
     } finally {

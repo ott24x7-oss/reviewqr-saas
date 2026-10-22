@@ -59,5 +59,7 @@ function continueWithRequestId(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"]
+  // Keep /api/auth outside middleware. Next.js 14 can consume the POST body
+  // before the credentials handler reads the CSRF token, so sign-in sets no cookie.
+  matcher: ["/((?!api/auth|_next/static|_next/image|favicon.ico).*)"]
 };
