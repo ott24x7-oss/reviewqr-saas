@@ -116,7 +116,7 @@ export async function editUserSubscription(
     endsAt: Date | null;
   }
 ) {
-  return applySubscriptionSnapshot(tx, {
+  const saved = await applySubscriptionSnapshot(tx, {
     userId: input.userId,
     tier: input.tier,
     status: input.status,
@@ -124,6 +124,9 @@ export async function editUserSubscription(
     planId: legacyPlanId(input.tier),
     duration: input.tier === "FOUNDER" && input.status === "ACTIVE" ? "LIFETIME" : null,
     modules: modulesForTier(input.tier),
-    limits: await limitsForTier(input.tier)
+    limits: await limitsForTier(input.tier),
+    clearPending: input.status === "CANCELED"
   });
+  if (input.status === "CANCELED") await clearUserPending(tx, input.userId);
+  return saved;
 }
