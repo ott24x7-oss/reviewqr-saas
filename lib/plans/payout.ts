@@ -1,4 +1,6 @@
 import { prisma } from "../db";
+import { notifyUser } from "./notify";
+import { formatINR } from "../utils";
 
 export async function payApprovedCommissions(input: {
   agentId: string;
@@ -27,6 +29,11 @@ export async function payApprovedCommissions(input: {
     where: { id: { in: rows.map((row) => row.id) }, status: "APPROVED" },
     data: { status: "PAID", paidAt: input.paidAt, payoutId: payout.id }
   });
+  await notifyUser(
+    input.agentId,
+    "Payout sent",
+    `${formatINR(amountPaise)} was paid. UTR ${utr.slice(0, 120)}.`
+  );
   return { ok: true as const, payoutId: payout.id, amountPaise, count: rows.length };
 }
 

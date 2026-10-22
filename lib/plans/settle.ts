@@ -1,5 +1,6 @@
 import { prisma } from "../db";
 import { creditRenewalCommission } from "../shop/renewal-commission";
+import { queueReferralReward } from "./rewards";
 
 /** Runs after a plan payment is confirmed. A repeat call does not create a second commission. */
 export async function settleConfirmedPayment(paymentId: string) {
@@ -9,4 +10,5 @@ export async function settleConfirmedPayment(paymentId: string) {
   });
   if (!payment || payment.status !== "COMPLETED") return;
   await creditRenewalCommission(payment.userId, payment.id, payment.amount);
+  await queueReferralReward(payment.id);
 }

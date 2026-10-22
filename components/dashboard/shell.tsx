@@ -24,7 +24,8 @@ import {
   ShoppingBag,
   Package,
   Users,
-  BadgePercent
+  BadgePercent,
+  Gift
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { VerifyEmailBanner } from "@/components/dashboard/verify-email-banner";
@@ -88,6 +89,7 @@ const nav = [
   { href: "/dashboard/ai", label: "AI Reviews", icon: Sparkles },
   { href: "/dashboard/campaigns", label: "Campaigns", icon: Send },
   { href: "/dashboard/billing", label: "Billing", icon: CreditCard },
+  { href: "/dashboard/refer", label: "Refer & earn", icon: Gift },
   { href: "/dashboard/help", label: "Help", icon: LifeBuoy },
   { href: "/dashboard/settings", label: "Settings", icon: Settings }
 ];
