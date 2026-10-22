@@ -6,7 +6,7 @@ import { apiBaseUrl } from "../../src/api/instance";
 import { apiData } from "../../src/api/data";
 import { useI18n } from "../../src/i18n";
 import { readUriPayload } from "../../src/nfc/read";
-import { nfcPayloadMatches, nfcTapUrl } from "../../src/nfc/url";
+import { nfcPayloadMatches, nfcUrlIsPublicHttps } from "../../src/nfc/url";
 import { useBusiness } from "../../src/state/business";
 import { colors, fonts } from "../../src/theme";
 import { PillButton } from "../../src/ui/controls";
@@ -32,7 +32,8 @@ export default function NfcScreen() {
   const [busy, setBusy] = useState(false);
   const base = apiBaseUrl();
   const path = tap.data?.publicPath ?? "";
-  const url = path && base ? nfcTapUrl(base, path) : "";
+  const url = tap.data?.tapUrl ?? "";
+  const safe = nfcUrlIsPublicHttps(url);
 
   async function session<T>(run: (nfc: NonNullable<Awaited<ReturnType<typeof loadNfc>>>) => Promise<T>) {
     const nfc = await loadNfc();
@@ -57,7 +58,7 @@ export default function NfcScreen() {
   }
 
   async function write() {
-    if (!url || !path) return;
+    if (!safe || !path) return;
     setBusy(true);
     setVerified(false);
     setStatus(t.nfcHold);
@@ -87,6 +88,7 @@ export default function NfcScreen() {
   }
 
   async function lock() {
+    if (!safe) return;
     setBusy(true);
     setStatus(t.nfcHold);
     try {
@@ -105,9 +107,10 @@ export default function NfcScreen() {
       <Text style={[styles.title, lang === "hi" && styles.hindi]}>{t.nfc}</Text>
       {!base ? <Text style={styles.note}>{t.missingApi}</Text> : null}
       {business && !tap.isLoading && !path ? <Text style={styles.note}>{t.noQr}</Text> : null}
-      {url ? <Text style={styles.url}>{url}</Text> : null}
+      {path && !safe ? <Text style={[styles.note, lang === "hi" && styles.hindi]}>{t.nfcUnsafeUrl}</Text> : null}
+      {safe ? <Text style={styles.url}>{url}</Text> : null}
       {status ? <Text style={[styles.note, lang === "hi" && styles.hindi]}>{status}</Text> : null}
-      <PillButton label={t.nfc} onPress={() => { void write(); }} disabled={busy || !url} tone="dark" />
+      <PillButton label={t.nfc} onPress={() => { void write(); }} disabled={busy || !safe} tone="dark" />
       {verified ? <PillButton label={t.lockTag} onPress={askLock} disabled={busy} tone="outline" /> : null}
     </ScrollView>
   );

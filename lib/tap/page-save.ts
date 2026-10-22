@@ -7,6 +7,7 @@ import { effectiveTier } from "../payments";
 import { sanitizeText } from "../sanitize";
 import { planOwner, requireBusinessRole } from "../tenant";
 import { hoursFromPublished, safeImageSrc } from "./links";
+import { nfcUrl, publicAppOrigin } from "./nfc";
 import { normalizeLinks } from "./page-draft";
 import { canonicalThemeId, findTheme, FREE_THEME_ID, THEME_PRESETS } from "./themes";
 import { jsonObject, readAdminThemes, revalidateBusinessTap } from "./theme-store";
@@ -48,9 +49,11 @@ export async function readTapPage(userId: string, businessId: string) {
     name: theme.name,
     premium: theme.premium
   }));
+  const origin = publicAppOrigin(process.env.NEXT_PUBLIC_APP_URL);
   return ok({
     code: qr?.shortCode ?? null,
     publicPath: qr ? `/t/${qr.shortCode}` : null,
+    tapUrl: qr && origin ? nfcUrl(origin, qr.shortCode) : null,
     bio: textField(source.bio),
     bioHi: textField(source.bioHi),
     themeId: canonicalThemeId(textField(source.theme) || FREE_THEME_ID),

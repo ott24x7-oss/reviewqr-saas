@@ -36,6 +36,9 @@ describe("v1 tap page", () => {
     const qr = await prisma.qRCode.create({
       data: { businessId: business.id, label: "Counter", shortCode: `t${Date.now().toString(36)}` }
     });
+    const previousAppUrl = process.env.NEXT_PUBLIC_APP_URL;
+    process.env.NEXT_PUBLIC_APP_URL = "https://reviewqr.example";
+    try {
     const saved = await tapPatch(
       await authed(user, `/api/v1/businesses/${business.id}/tap`, {
         method: "PATCH",
@@ -57,10 +60,15 @@ describe("v1 tap page", () => {
     const json = await res.json();
     expect(json.data.code).toBe(qr.shortCode);
     expect(json.data.publicPath).toBe(`/t/${qr.shortCode}`);
+    expect(json.data.tapUrl).toBe(`https://reviewqr.example/t/${qr.shortCode}?src=nfc`);
     expect(json.data.bio).toBe("Open late");
     expect(json.data.themeId).toBe("monochrome-luxe");
     expect(json.data.links[0].type).toBe("menu");
     expect(json.data.themes.some((theme: { id: string }) => theme.id === "monochrome-luxe")).toBe(true);
+    } finally {
+      if (previousAppUrl === undefined) delete process.env.NEXT_PUBLIC_APP_URL;
+      else process.env.NEXT_PUBLIC_APP_URL = previousAppUrl;
+    }
   });
 
   it("hides another owner's tap page", async () => {

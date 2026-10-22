@@ -60,6 +60,7 @@ export const tapThemeSchema = z.object({
 export const tapPageSchema = z.object({
   code: z.string().nullable(),
   publicPath: z.string().nullable(),
+  tapUrl: z.string().nullable(),
   bio: z.string(),
   bioHi: z.string(),
   themeId: z.string(),
