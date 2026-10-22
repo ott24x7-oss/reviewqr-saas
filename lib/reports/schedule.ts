@@ -21,13 +21,13 @@ export function weeklyDue(now: Date, hour = 9, minute = 0) {
   return monday;
 }
 
-/** `YYYY-MM` once 09:00 IST on the 1st has passed. */
+/** `YYYY-MM` of the previous IST month, once 09:00 IST on the 1st has passed. */
 export function monthlyDue(now: Date, hour = 9, minute = 0) {
   const parts = istParts(now);
   const key = `${parts.year}-${String(parts.month).padStart(2, "0")}`;
   const first = `${key}-01`;
   if (now.getTime() < clockOnDay(first, hour, minute).getTime()) return null;
-  return key;
+  return addIstDays(first, -1).slice(0, 7);
 }
 
 export type ReportChannelPref = {

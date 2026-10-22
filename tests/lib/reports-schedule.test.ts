@@ -14,7 +14,8 @@ describe("report schedule", () => {
     expect(weeklyDue(new Date(dueAt.getTime() + 3 * 86400000), 9, 0)).toBe(monday);
     const month = monthlyDue(new Date("2026-11-01T03:29:00.000Z"), 9, 0);
     expect(month).toBeNull();
-    expect(monthlyDue(new Date("2026-11-01T03:30:00.000Z"), 9, 0)).toBe("2026-11");
+    expect(monthlyDue(new Date("2026-11-01T03:30:00.000Z"), 9, 0)).toBe("2026-10");
+    expect(monthlyDue(new Date("2026-12-01T04:00:00.000Z"), 9, 0)).toBe("2026-11");
   });
 
   it("keeps email on by default and honours unsubscribe", () => {
