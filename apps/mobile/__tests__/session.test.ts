@@ -98,6 +98,50 @@ describe("mobile API refresh", () => {
     expect(await attempt("bad")).toBe("refresh-1");
   });
 
+  it("notifies the session once when the refresh token is rejected", async () => {
+    const store = memoryStore();
+    await store.set("reviewqr.refresh", "refresh-1");
+    let lost = 0;
+    const rejected = createMobileApi({
+      baseUrl: "https://api.test",
+      store,
+      fetchImpl: async (url) => {
+        if (String(url).endsWith("/api/v1/auth/refresh")) return json({ error: { message: "no" } }, 401);
+        return json({ error: { message: "Sign in required" } }, 401);
+      }
+    });
+    rejected.setSessionListener(() => {
+      lost += 1;
+    });
+    expect(await rejected.restore()).toBe(false);
+    expect(lost).toBe(1);
+
+    lost = 0;
+    await store.set("reviewqr.refresh", "refresh-1");
+    const down = createMobileApi({
+      baseUrl: "https://api.test",
+      store,
+      fetchImpl: async () => json({ error: { message: "down" } }, 503)
+    });
+    down.setSessionListener(() => {
+      lost += 1;
+    });
+    expect(await down.restore()).toBe(false);
+    expect(lost).toBe(0);
+    expect(await store.get("reviewqr.refresh")).toBe("refresh-1");
+
+    const signedOut = createMobileApi({
+      baseUrl: "https://api.test",
+      store: memoryStore(),
+      fetchImpl: async () => json({ error: { message: "no" } }, 401)
+    });
+    signedOut.setSessionListener(() => {
+      lost += 1;
+    });
+    expect(await signedOut.restore()).toBe(false);
+    expect(lost).toBe(0);
+  });
+
   it("sends the refresh token on logout and then forgets it", async () => {
     const store = memoryStore();
     let logoutBody = "";

@@ -1,4 +1,5 @@
 import type { Me, TokenPair } from "@reviewqr/shared";
+import { router } from "expo-router";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { apiData } from "../api/data";
 import { mobileApi } from "../api/instance";
@@ -37,6 +38,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let live = true;
+    mobileApi.setSessionListener(() => {
+      if (!live) return;
+      setUser(null);
+      router.replace("/(auth)/login");
+    });
     mobileApi
       .restore()
       .then(async (ok) => {
@@ -49,6 +55,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       });
     return () => {
       live = false;
+      mobileApi.setSessionListener(null);
     };
   }, [refreshUser]);
 

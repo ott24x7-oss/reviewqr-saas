@@ -21,6 +21,7 @@ export function createMobileApi(options: {
   deviceName?: string;
 }) {
   let accessToken: string | null = null;
+  let sessionLost: (() => void) | null = null;
   const baseUrl = options.baseUrl.replace(/\/$/, "");
 
   async function refreshAccessToken() {
@@ -40,6 +41,7 @@ export function createMobileApi(options: {
     if (res.status === 400 || res.status === 401) {
       accessToken = null;
       await options.store.remove(REFRESH_KEY);
+      sessionLost?.();
       return null;
     }
     if (!res.ok) return null;
@@ -69,6 +71,9 @@ export function createMobileApi(options: {
   return {
     request,
     getAccessToken: () => accessToken,
+    setSessionListener(listener: (() => void) | null) {
+      sessionLost = listener;
+    },
     async saveSession(pair: TokenPair) {
       accessToken = pair.accessToken;
       await options.store.set(REFRESH_KEY, pair.refreshToken);
