@@ -38,6 +38,7 @@ export default function MoreScreen() {
       {canWriteNfc(user?.role, owns) ? (
         <PillButton label={t.nfc} onPress={() => router.push("/(app)/nfc")} tone="outline" />
       ) : null}
+      <PillButton label={t.deleteAccount} onPress={() => router.push("/(app)/delete-account")} tone="outline" />
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <PillButton label={t.signOut} onPress={() => logout()} tone="outline" />
     </View>

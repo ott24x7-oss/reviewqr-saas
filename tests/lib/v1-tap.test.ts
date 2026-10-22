@@ -16,11 +16,12 @@ describe("v1 tap page", () => {
     await prisma.user.deleteMany({ where: { id: { in: users } } });
   });
 
-  async function authed(user: { id: string; role: string }, path: string, init: RequestInit = {}) {
+  async function authed(user: { id: string; role: string }, path: string, init: { method?: string; body?: string } = {}) {
     const pair = await issueTokenPair(user, { deviceName: "test" });
     return new NextRequest(`http://127.0.0.1${path}`, {
-      ...init,
-      headers: { ...(init.headers || {}), authorization: `Bearer ${pair.accessToken}` }
+      method: init.method,
+      body: init.body,
+      headers: { authorization: `Bearer ${pair.accessToken}` }
     });
   }
 

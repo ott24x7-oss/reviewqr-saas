@@ -32,6 +32,7 @@ export default function AppLayout() {
       <Tabs.Screen name="business-edit" options={{ href: null, title: t.businesses }} />
       <Tabs.Screen name="tap" options={{ href: null, title: t.preview }} />
       <Tabs.Screen name="nfc" options={{ href: null, title: t.nfc }} />
+      <Tabs.Screen name="delete-account" options={{ href: null, title: t.deleteAccount }} />
     </Tabs>
     </BusinessProvider>
   );

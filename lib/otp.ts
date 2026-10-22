@@ -271,7 +271,7 @@ export async function requestPurposeOtp(opts: { identifier: string; phone: strin
   });
   const channel = await deliverCode({ phone: opts.phone, email: opts.email, code });
   if (channel === "none") return { ok: false as const, error: "We could not send a code right now" };
-  return { ok: true as const, phone: key, channel };
+  return { ok: true as const, phone: key, channel, issuedCode: code };
 }
 
 export async function verifyPurposeOtp(identifier: string, purpose: string, code: string) {

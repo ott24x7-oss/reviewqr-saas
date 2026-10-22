@@ -92,6 +92,14 @@ export const deleteAccountSchema = z.object({
   confirm: z.literal("DELETE", { errorMap: () => ({ message: "Type DELETE to confirm." }) })
 });
 
+export const accountDeletionSchema = z.discriminatedUnion("action", [
+  z.object({ action: z.literal("request") }),
+  z.object({
+    action: z.literal("confirm"),
+    code: z.string().regex(/^\d{6}$/, "Invalid code")
+  })
+]);
+
 export const pushRegisterSchema = z.object({
   token: z
     .string()
@@ -124,4 +132,5 @@ export type LogoutInput = z.infer<typeof logoutSchema>;
 export type TokenPair = z.infer<typeof tokenPairSchema>;
 export type Me = z.infer<typeof meSchema>;
 export type MePatch = z.infer<typeof mePatchSchema>;
+export type AccountDeletionInput = z.infer<typeof accountDeletionSchema>;
 export type DeviceSession = z.infer<typeof sessionSchema>;

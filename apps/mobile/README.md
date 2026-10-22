@@ -16,6 +16,10 @@ npx expo start
 
 OTP, the dashboard, and the shop work against that API. The camera, push notifications, and NFC writer need a development build. Expo Go does not include `react-native-nfc-manager`.
 
+Push registration also needs `EXPO_PUBLIC_EAS_PROJECT_ID`. Leave it empty until `npx eas login` has created the project. The app stays quiet without it.
+
+Account deletion is under More in the app, and on the web at `/account/delete`.
+
 On an Android phone with USB debugging:
 
 ```
@@ -28,4 +32,12 @@ Build the dev client once (Android Studio and a device or emulator):
 npx expo run:android
 ```
 
-Cloud builds are documented in `docs/play-store.md`. Do not put private keys in `.env`. Only `EXPO_PUBLIC_` values belong here, and they are bundled into the app.
+Cloud builds are documented in [docs/play-store.md](../../docs/play-store.md). From this folder, after `npx eas login`:
+
+```
+npx eas build --profile development --platform android
+npx eas build --profile preview --platform android
+npx eas build --profile production --platform android
+```
+
+`development` and `preview` produce an APK. `production` produces an AAB. Do not put private keys in `.env`. Only `EXPO_PUBLIC_` values belong here, and they are bundled into the app. The package name `com.reviewqr.app` is a placeholder until you confirm it.

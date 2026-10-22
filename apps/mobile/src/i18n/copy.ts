@@ -93,7 +93,11 @@ const en = {
   nfcRetry: "Hold the phone on the tag and try again.",
   nfcLocked: "This tag is locked.",
   lockConfirm: "A locked tag cannot be written again.",
-  cancel: "Cancel"
+  cancel: "Cancel",
+  deleteHint: "We send a code, then remove the account. Invoices stay.",
+  deleteSend: "Send deletion code",
+  deleteDone: "This account is deleted.",
+  deleteWeb: "You can also use the website."
 };
 
 const hi: typeof en = {
@@ -189,7 +193,11 @@ const hi: typeof en = {
   nfcRetry: "फोन को टैग पर रखें और फिर कोशिश करें।",
   nfcLocked: "यह टैग लॉक हो गया।",
   lockConfirm: "लॉक टैग पर दोबारा नहीं लिखा जा सकता।",
-  cancel: "रद्द करें"
+  cancel: "रद्द करें",
+  deleteHint: "हम कोड भेजेंगे, फिर खाता हटाएँगे। बिल रहेंगे।",
+  deleteSend: "हटाने का कोड भेजें",
+  deleteDone: "यह खाता हट गया।",
+  deleteWeb: "वेबसाइट से भी हटा सकते हैं।"
 };
 
 export const copy = { en, hi };
