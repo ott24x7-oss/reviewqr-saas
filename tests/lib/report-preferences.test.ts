@@ -15,7 +15,8 @@ describe("report preference updates", () => {
   });
 
   it("changes only the fields that were sent", () => {
-    expect(preferenceUpdate({}).empty).toBe(true);
+    const empty = preferenceUpdate({});
+    expect(empty.ok && empty.empty).toBe(true);
     expect(preferenceUpdate({ emailOptIn: true })).toMatchObject({
       empty: false,
       patch: { emailOptIn: true, clearUnsubscribed: true }

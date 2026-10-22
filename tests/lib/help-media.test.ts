@@ -15,7 +15,7 @@ describe("help media urls", () => {
     expect(helpVideoToStore("https://evil.example/watch.mp4", env)).toBeNull();
     expect(helpVideoToStore("javascript:alert(1)", env)).toBeNull();
     expect(videoEmbed("https://evil.example/?u=https://www.youtube.com/watch?v=abcdefgh", env).kind).toBe("none");
-    expect(videoEmbed("https://cdn.example.test/files/help/clip.mp4", { S3_PUBLIC_BASE_URL: "" } as NodeJS.ProcessEnv).kind).toBe("none");
+    expect(videoEmbed("https://cdn.example.test/files/help/clip.mp4", { S3_PUBLIC_BASE_URL: "" } as unknown as NodeJS.ProcessEnv).kind).toBe("none");
   });
 
   it("allows https and site paths for announcement links", () => {
