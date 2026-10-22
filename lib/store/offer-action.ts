@@ -5,13 +5,21 @@ import { takePage } from "../api/page";
 import { fail, ok, type Fail } from "../api/result";
 import { endOfKolkataDay, normalizeCouponCode } from "./coupons";
 import { revalidateBusinessTap } from "../tap/theme-store";
+import { moduleBlock } from "../plans/entitlements";
 import { requireBusinessRole } from "../tenant";
 
 type OfferBody = ReturnType<typeof offerActionSchema.parse>;
 
+async function storeLocked(ownerId: string) {
+  const locked = await moduleBlock(ownerId, "STORE");
+  return locked ? fail(403, locked) : null;
+}
+
 export async function listCoupons(userId: string, businessId: string, page: PageQuery) {
   const business = await requireBusinessRole(userId, businessId, "read");
   if (!business) return fail(404, "Not found");
+  const locked = await storeLocked(business.ownerId);
+  if (locked) return locked;
   return takePage(
     () =>
       prisma.coupon.findMany({
@@ -26,6 +34,8 @@ export async function listCoupons(userId: string, businessId: string, page: Page
 export async function listOfferBanners(userId: string, businessId: string, page: PageQuery) {
   const business = await requireBusinessRole(userId, businessId, "read");
   if (!business) return fail(404, "Not found");
+  const locked = await storeLocked(business.ownerId);
+  if (locked) return locked;
   return takePage(
     () =>
       prisma.offerBanner.findMany({
@@ -40,6 +50,8 @@ export async function listOfferBanners(userId: string, businessId: string, page:
 export async function applyOfferAction(userId: string, businessId: string, raw: unknown) {
   const business = await requireBusinessRole(userId, businessId, "manage");
   if (!business) return fail(404, "Not found");
+  const locked = await storeLocked(business.ownerId);
+  if (locked) return locked;
   const parsed = offerActionSchema.safeParse(raw);
   if (!parsed.success) {
     return fail(400, parsed.error.issues[0]?.message || "Invalid input");

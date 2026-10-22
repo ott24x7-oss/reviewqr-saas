@@ -112,20 +112,28 @@ export async function PublicMenu({
         rules={rules}
         closed={isOrderForLater(rules)}
         tableLabel={hideTable ? "" : qr?.label || ""}
-        banners={banners.map((banner) => ({
-          id: banner.id,
-          title: banner.title,
-          body: banner.body,
-          expiresAt: banner.expiresAt ? banner.expiresAt.toISOString() : null
-        }))}
-        coupons={coupons.map((coupon) => ({
-          id: coupon.id,
-          code: coupon.code,
-          kind: coupon.kind,
-          amount: coupon.amount,
-          active: coupon.active,
-          expiresAt: coupon.expiresAt ? coupon.expiresAt.toISOString() : null
-        }))}
+        banners={
+          canOrder
+            ? banners.map((banner) => ({
+                id: banner.id,
+                title: banner.title,
+                body: banner.body,
+                expiresAt: banner.expiresAt ? banner.expiresAt.toISOString() : null
+              }))
+            : []
+        }
+        coupons={
+          canOrder
+            ? coupons.map((coupon) => ({
+                id: coupon.id,
+                code: coupon.code,
+                kind: coupon.kind,
+                amount: coupon.amount,
+                active: coupon.active,
+                expiresAt: coupon.expiresAt ? coupon.expiresAt.toISOString() : null
+              }))
+            : []
+        }
         upiId={normalizeUpiId(settings?.upiId || "") || ""}
         themeStyle={themeStyle as CSSProperties | undefined}
         layout={resolveLayout(settings?.layout, profile?.industry)}

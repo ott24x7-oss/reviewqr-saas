@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
-import { requireBusinessRole } from "@/lib/tenant";
+import { menuAiAccess } from "@/lib/store/menu-access";
 import { rateLimitDb } from "@/lib/rate-limit";
 import { getAiConfig } from "@/lib/settings";
 import { cleanPastedItems } from "@/lib/ai";
@@ -14,8 +14,10 @@ const schema = z.object({
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await requireUser().catch(() => null);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const business = await requireBusinessRole(user.id, params.id, "manage");
-  if (!business) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const access = await menuAiAccess(user.id, params.id);
+  if (!access) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if ("blocked" in access) return NextResponse.json({ error: access.blocked }, { status: 403 });
+  const business = access.business;
 
   const cfg = await getAiConfig();
   if (!cfg.enabled || !cfg.apiKey) {

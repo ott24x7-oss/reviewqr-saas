@@ -1,19 +1,43 @@
 import { cursorQuery, type PageQuery } from "../api/cursor";
 import { takePage } from "../api/page";
-import { ok } from "../api/result";
+import { fail, ok } from "../api/result";
 import { prisma } from "../db";
+import { moduleBlock } from "../plans/entitlements";
 import { accessRole, allows, readableBusinessWhere } from "../tenant";
 import { kolkataDayWindow, type DaySummary } from "./day";
 import { toOrderCard, type OrderCard } from "./order-status";
 
 export type { DaySummary };
 
+/** An owner without Store cannot open the order list. Staff follow each business owner. */
+export async function ownedStoreBlock(userId: string) {
+  const owned = await prisma.business.findFirst({
+    where: { ownerId: userId, archived: false },
+    select: { id: true }
+  });
+  if (!owned) return null;
+  return moduleBlock(userId, "STORE");
+}
+
+async function storeReadableWhere(userId: string) {
+  const rows = await prisma.business.findMany({
+    where: readableBusinessWhere(userId),
+    select: { ownerId: true },
+    distinct: ["ownerId"]
+  });
+  const ownerIds: string[] = [];
+  for (const row of rows) {
+    if (!(await moduleBlock(row.ownerId, "STORE"))) ownerIds.push(row.ownerId);
+  }
+  return { ...readableBusinessWhere(userId), ownerId: { in: ownerIds } };
+}
+
 /** Today's paid-or-open orders in Asia/Kolkata. Rejected orders are left out. */
 export async function loadDaySummary(userId: string, now = new Date()): Promise<DaySummary> {
   const { start, end } = kolkataDayWindow(now);
   const totals = await prisma.menuOrder.aggregate({
     where: {
-      business: readableBusinessWhere(userId),
+      business: await storeReadableWhere(userId),
       status: { not: "REJECTED" },
       createdAt: { gte: start, lt: end }
     },
@@ -27,7 +51,7 @@ export async function loadDaySummary(userId: string, now = new Date()): Promise<
 export async function loadOrderCards(userId: string, orderId?: string): Promise<OrderCard[]> {
   const orders = await prisma.menuOrder.findMany({
     where: {
-      business: readableBusinessWhere(userId),
+      business: await storeReadableWhere(userId),
       ...(orderId ? { id: orderId } : {})
     },
     orderBy: { createdAt: "desc" },
@@ -85,12 +109,15 @@ export async function loadOrderCardPage(
   userId: string,
   page: PageQuery & { businessId?: string | null }
 ) {
+  const locked = await ownedStoreBlock(userId);
+  if (locked) return fail(403, locked);
+  const readable = await storeReadableWhere(userId);
   const summary = await loadDaySummary(userId);
   const paged = await takePage(async () => {
     const orders = await prisma.menuOrder.findMany({
       where: {
         business: {
-          ...readableBusinessWhere(userId),
+          ...readable,
           ...(page.businessId ? { id: page.businessId } : {})
         }
       },

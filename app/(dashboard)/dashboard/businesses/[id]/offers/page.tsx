@@ -2,6 +2,8 @@ import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { requireBusinessRole } from "@/lib/tenant";
+import { moduleBlock, upsellOffer } from "@/lib/plans/entitlements";
+import { ModuleUpsell } from "@/components/plans/module-upsell";
 import { OffersEditor, type OfferBannerRow, type OfferCoupon } from "./offers-editor";
 
 export const dynamic = "force-dynamic";
@@ -11,6 +13,11 @@ export default async function OffersPage({ params }: { params: { id: string } })
   if (!user) redirect("/login");
   const access = await requireBusinessRole(user.id, params.id, "read");
   if (!access) notFound();
+  const locked = await moduleBlock(access.ownerId, "STORE");
+  if (locked) {
+    const offer = await upsellOffer("STORE");
+    return <ModuleUpsell title={offer.title} body={locked} href={offer.href} />;
+  }
   const [coupons, banners] = await Promise.all([
     prisma.coupon.findMany({ where: { businessId: access.id }, orderBy: { createdAt: "desc" } }),
     prisma.offerBanner.findMany({
