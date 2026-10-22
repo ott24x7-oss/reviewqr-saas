@@ -57,7 +57,7 @@ describe("mobile API refresh", () => {
     expect(api.getAccessToken()).toBe("new-access");
   });
 
-  it("clears the refresh token when refresh fails", async () => {
+  it("clears the refresh token when refresh is rejected", async () => {
     const store = memoryStore();
     await store.set("reviewqr.refresh", "refresh-1");
     const api = createMobileApi({
@@ -71,6 +71,31 @@ describe("mobile API refresh", () => {
     const res = await api.request("/api/v1/me");
     expect(res.status).toBe(401);
     expect(await store.get("reviewqr.refresh")).toBeNull();
+  });
+
+  it("clears the refresh token only for 400 or 401, and keeps it when refresh can be retried", async () => {
+    async function attempt(status: number | "throw" | "bad") {
+      const store = memoryStore();
+      await store.set("reviewqr.refresh", "refresh-1");
+      const api = createMobileApi({
+        baseUrl: "https://api.test",
+        store,
+        fetchImpl: async (url) => {
+          if (!String(url).endsWith("/api/v1/auth/refresh")) return json({ error: { message: "Sign in required" } }, 401);
+          if (status === "throw") throw new Error("offline");
+          if (status === "bad") return json({ data: {} }, 200);
+          return json({ error: { message: "later" } }, status);
+        }
+      });
+      await api.request("/api/v1/me");
+      return store.get("reviewqr.refresh");
+    }
+
+    expect(await attempt(400)).toBeNull();
+    expect(await attempt(500)).toBe("refresh-1");
+    expect(await attempt(429)).toBe("refresh-1");
+    expect(await attempt("throw")).toBe("refresh-1");
+    expect(await attempt("bad")).toBe("refresh-1");
   });
 
   it("sends the refresh token on logout and then forgets it", async () => {

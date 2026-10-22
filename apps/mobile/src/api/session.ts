@@ -27,22 +27,29 @@ export function createMobileApi(options: {
     const refreshToken = await options.store.get(REFRESH_KEY);
     if (!refreshToken) return null;
     const fetchImpl = options.fetchImpl || fetch;
-    const res = await fetchImpl(`${baseUrl}/api/v1/auth/refresh`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ refreshToken, deviceName: options.deviceName || "Android" })
-    });
-    if (!res.ok) {
+    let res: Response;
+    try {
+      res = await fetchImpl(`${baseUrl}/api/v1/auth/refresh`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ refreshToken, deviceName: options.deviceName || "Android" })
+      });
+    } catch {
+      return null;
+    }
+    if (res.status === 400 || res.status === 401) {
       accessToken = null;
       await options.store.remove(REFRESH_KEY);
       return null;
     }
-    const json = (await res.json()) as { data?: TokenPair };
-    if (!json.data?.accessToken || !json.data.refreshToken) {
-      accessToken = null;
-      await options.store.remove(REFRESH_KEY);
+    if (!res.ok) return null;
+    let json: { data?: TokenPair };
+    try {
+      json = (await res.json()) as { data?: TokenPair };
+    } catch {
       return null;
     }
+    if (!json.data?.accessToken || !json.data.refreshToken) return null;
     accessToken = json.data.accessToken;
     await options.store.set(REFRESH_KEY, json.data.refreshToken);
     return accessToken;
