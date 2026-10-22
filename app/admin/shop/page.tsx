@@ -54,6 +54,7 @@ export default async function AdminShopPage() {
             stock: variant.stock,
             lowStockAt: variant.lowStockAt,
             minQty: variant.minQty,
+            imageUrl: variant.imageUrl,
             active: variant.active,
             low: isLowStock(variant.stock, variant.lowStockAt)
           }))

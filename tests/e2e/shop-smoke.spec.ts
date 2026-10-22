@@ -119,3 +119,62 @@ test("owner buys a combo, approves the proof, and the board shows Printing", asy
     await prisma.$disconnect();
   }
 });
+
+test("owner adds products from the shop grid and the cart count follows", async ({ page }) => {
+  test.setTimeout(120_000);
+  const stamp = Date.now();
+  await page.goto("/register");
+  await page.getByLabel("Your name").fill("Grid Owner");
+  await page.getByLabel("Business name").fill(`Grid Cafe ${stamp}`);
+  await page.getByLabel("Email").fill(`shop-grid-${stamp}@example.com`);
+  await page.getByLabel("Password").fill("ShopTest1");
+  await page.getByRole("button", { name: "Create account" }).click();
+  await page.waitForURL("**/dashboard**");
+
+  await page.goto("/dashboard/shop");
+  const count = page.getByTestId("shop-cart-count");
+  await expect(count).toHaveText("0");
+
+  // Single-variant product: the card button adds straight away.
+  const stand = page.getByRole("article", { name: "QR table stand" });
+  await expect(stand.getByText(/% off/)).toBeVisible();
+  await stand.getByRole("button", { name: "Add to cart" }).click();
+  await expect(stand.getByRole("button", { name: "Added" })).toBeVisible();
+  await expect(count).toHaveText("1");
+
+  // Product with options: Choose opens the sheet, pick a pack, add.
+  await page.getByRole("article", { name: "Table stickers" }).getByRole("button", { name: "Choose" }).click();
+  const sheet = page.getByRole("dialog");
+  await sheet.getByRole("radio", { name: /Pack of 10/ }).click();
+  await sheet.getByRole("button", { name: /^Add to cart/ }).click();
+  await expect(sheet.getByRole("link", { name: "View cart" })).toBeVisible();
+  await expect(count).toHaveText("2");
+
+  if (process.env.SHOP_SCREENSHOTS) {
+    await page.keyboard.press("Escape");
+    for (const width of [360, 1280]) {
+      await page.setViewportSize({ width, height: width === 360 ? 800 : 900 });
+      await page.reload();
+      await expect(count).toHaveText("2");
+      await page.screenshot({ path: `docs/shop/shop-grid-${width}.png`, fullPage: true });
+    }
+    await page.getByRole("article", { name: "Table stickers" }).getByRole("button", { name: "Choose" }).click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await page.waitForTimeout(400); // let the sheet finish its open animation
+    await page.screenshot({ path: "docs/shop/choose-sheet-1280.png" });
+    await page.keyboard.press("Escape");
+    await page.setViewportSize({ width: 360, height: 800 });
+    await page.getByRole("button", { name: "हिंदी" }).click();
+    await page.getByRole("article", { name: "टेबल स्टिकर" }).getByRole("button", { name: "चुनें" }).click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await page.waitForTimeout(400);
+    await page.screenshot({ path: "docs/shop/choose-sheet-hi-360.png" });
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "English" }).click();
+  }
+
+  await page.getByTestId("shop-cart-link").click();
+  await page.waitForURL("**/dashboard/shop/cart");
+  await expect(page.getByText("QR table stand").first()).toBeVisible();
+  await expect(page.getByText("Pack of 10").first()).toBeVisible();
+});

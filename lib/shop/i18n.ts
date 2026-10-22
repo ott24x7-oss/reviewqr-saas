@@ -46,7 +46,21 @@ const STRINGS = {
     damage: "Damage",
     misprint: "Misprint",
     reprintNote: "What happened?",
-    reprintPending: "Reprint requested"
+    reprintPending: "Reprint requested",
+    choose: "Choose",
+    added: "Added",
+    adding: "Adding…",
+    addFailed: "Could not add this item",
+    chooseOption: "Choose an option",
+    designInCart: "You pick the design, QR code and NFC tag in the cart.",
+    viewCart: "View cart",
+    items: "items",
+    minQty: "Minimum",
+    yourBusiness: "Your business",
+    artTagline: "Scan · Tap · Review",
+    artLifetime: "∞ LIFETIME",
+    plan: "Plan",
+    nfcBadge: "NFC"
   },
   hi: {
     shop: "दुकान",
@@ -93,7 +107,21 @@ const STRINGS = {
     damage: "नुकसान",
     misprint: "गलत छपाई",
     reprintNote: "क्या हुआ?",
-    reprintPending: "दोबारा छपाई माँगी गई"
+    reprintPending: "दोबारा छपाई माँगी गई",
+    choose: "चुनें",
+    added: "जुड़ गया",
+    adding: "जोड़ रहे हैं…",
+    addFailed: "यह आइटम नहीं जुड़ सका",
+    chooseOption: "विकल्प चुनें",
+    designInCart: "डिज़ाइन, क्यूआर कोड और एनएफसी टैग कार्ट में चुनें।",
+    viewCart: "कार्ट देखें",
+    items: "आइटम",
+    minQty: "कम से कम",
+    yourBusiness: "आपका व्यापार",
+    artTagline: "स्कैन · टैप · रिव्यू",
+    artLifetime: "∞ लाइफटाइम",
+    plan: "प्लान",
+    nfcBadge: "एनएफसी"
   }
 } as const;
 
