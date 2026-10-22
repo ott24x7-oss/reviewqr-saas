@@ -17,6 +17,7 @@ function serverEnv(url: string, portNumber: number, revealOtp: boolean) {
   env.NEXTAUTH_URL = url;
   env.NEXT_PUBLIC_APP_URL = url;
   env.NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET || "e2e-secret-not-for-production";
+  env.REGISTER_IP_LIMIT = "50";
   env.YOUPI_BASE_URL = process.env.YOUPI_BASE_URL || "https://pay.example.test";
   env.YOUPI_MERCHANT_ID = process.env.YOUPI_MERCHANT_ID || "merchant_test";
   env.PAYMENTS_RAZORPAY_ENABLED = "false";
