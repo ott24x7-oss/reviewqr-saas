@@ -321,6 +321,33 @@ export async function consumeSignupProof(rawPhone: string, proof: string) {
   return key;
 }
 
+export async function otpDeliveryStats() {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const [last, grouped] = await Promise.all([
+    prisma.otpDelivery.findFirst({
+      orderBy: { createdAt: "desc" },
+      select: { createdAt: true, channel: true }
+    }),
+    prisma.otpDelivery.groupBy({
+      by: ["channel"],
+      where: { createdAt: { gte: start } },
+      _count: { _all: true }
+    })
+  ]);
+  const counts = { whatsapp: 0, email: 0, dev: 0 };
+  for (const row of grouped) {
+    if (row.channel === "whatsapp" || row.channel === "email" || row.channel === "dev") {
+      counts[row.channel] = row._count._all;
+    }
+  }
+  return {
+    lastAt: last?.createdAt.toISOString() ?? null,
+    lastChannel: last?.channel ?? null,
+    counts
+  };
+}
+
 /** Single use. Returns the user id or null. */
 export async function consumeOtpSession(otpToken: string) {
   if (!otpToken) return null;

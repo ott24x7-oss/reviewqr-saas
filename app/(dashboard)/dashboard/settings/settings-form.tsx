@@ -12,6 +12,116 @@ import { createApiClient } from "@reviewqr/shared";
 
 const api = createApiClient();
 
+function WhatsAppChange({ current, onChanged }: { current: string; onChanged: (phone: string) => void }) {
+  const [open, setOpen] = React.useState(false);
+  const [phone, setPhone] = React.useState("");
+  const [code, setCode] = React.useState("");
+  const [sent, setSent] = React.useState(false);
+  const [error, setError] = React.useState("");
+  const [busy, setBusy] = React.useState(false);
+
+  async function requestCode() {
+    setBusy(true);
+    setError("");
+    try {
+      const res = await fetch("/api/settings/phone", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "request", phone })
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || "Could not send a code");
+      setSent(true);
+      toast.success(json.channel === "email" ? "Code sent by email." : "Code sent on WhatsApp.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not send a code");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function confirm() {
+    setBusy(true);
+    setError("");
+    try {
+      const res = await fetch("/api/settings/phone", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "verify", phone, code })
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || "Invalid code");
+      onChanged(json.phone || phone);
+      setOpen(false);
+      setSent(false);
+      setCode("");
+      setPhone("");
+      toast.success("WhatsApp number updated");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Invalid code");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>
+        Change WhatsApp number
+      </Button>
+    );
+  }
+
+  return (
+    <div className="space-y-2 rounded-xl border p-3">
+      <p className="text-xs text-muted-foreground">
+        Current: {current || "Not set"}. We send a code to the new number.
+      </p>
+      {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
+      <Input
+        value={phone}
+        inputMode="tel"
+        autoComplete="tel"
+        placeholder="98xxxxxxxx"
+        onChange={(event) => setPhone(event.target.value)}
+        disabled={sent}
+      />
+      {sent ? (
+        <div className="space-y-2">
+          <Input
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={6}
+            value={code}
+            aria-label="6-digit code"
+            onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+          />
+          <Button type="button" size="sm" disabled={busy || code.length !== 6} onClick={() => void confirm()}>
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            Confirm new number
+          </Button>
+        </div>
+      ) : (
+        <Button type="button" size="sm" disabled={busy || phone.replace(/\D/g, "").length < 10} onClick={() => void requestCode()}>
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+          Send code
+        </Button>
+      )}
+      <button
+        type="button"
+        className="text-xs text-muted-foreground"
+        onClick={() => {
+          setOpen(false);
+          setError("");
+          setSent(false);
+        }}
+      >
+        Cancel
+      </button>
+    </div>
+  );
+}
+
 type Props = {
   user: {
     id: string;
@@ -98,8 +208,12 @@ export function SettingsForm({ user }: Props) {
               <Input id="name" value={form.name} onChange={(e) => update("name", e.target.value)} />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="phone">Phone</Label>
-              <Input id="phone" value={form.phone} onChange={(e) => update("phone", e.target.value)} />
+              <Label htmlFor="phone">WhatsApp</Label>
+              <Input id="phone" value={form.phone || "Not set"} disabled readOnly />
+              <WhatsAppChange
+                current={form.phone}
+                onChanged={(phone) => update("phone", phone)}
+              />
             </div>
           </div>
           <div className="flex items-center gap-3 pt-1">

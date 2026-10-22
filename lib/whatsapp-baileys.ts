@@ -209,6 +209,7 @@ class BaileysManager {
         const code = (lastDisconnect?.error as any)?.output?.statusCode;
         this._connectedAt = null;
         this._phoneNumber = null;
+        const reason = code === DisconnectReason.loggedOut ? "logged-out" : "disconnected";
         if (code === DisconnectReason.loggedOut) {
           this._status = "logged-out";
           // Clear stored creds so a fresh QR appears next time.
@@ -220,6 +221,9 @@ class BaileysManager {
             if (this._status === "disconnected") this.start().catch(() => {});
           }, 5000);
         }
+        import("./baileys-alert")
+          .then((mod) => mod.noteBaileysDown(reason))
+          .catch(() => {});
       }
     });
   }
