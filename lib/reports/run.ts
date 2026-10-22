@@ -9,6 +9,7 @@ import { addIstDays } from "../analytics/ist";
 import { hasModule } from "../plans/entitlements";
 import { buildMonthlyPdf } from "./pdf";
 import { getInsightSettings } from "./settings";
+import { claimDeliveries, releaseDeliveries } from "./delivery";
 import { sendSlots, wantsReport } from "./schedule";
 import { reportToken } from "./token";
 
@@ -87,56 +88,76 @@ export async function sendWeeklyToUser(userId: string, weekKey: string) {
   const emailOn = wantsReport(user.reportPreference, "email");
   const whatsappOn = wantsReport(user.reportPreference, "whatsapp");
   if (!emailOn && !whatsappOn) return { skipped: true as const };
-  const end = addIstDays(weekKey, -1);
-  const start = addIstDays(end, -6);
-  let scans = 0;
-  let taps = 0;
-  let pageViews = 0;
-  let orders = 0;
-  let orderPaise = 0;
-  let feedback = 0;
-  let ratingSum = 0;
-  let ratingCount = 0;
-  let store = false;
-  for (const business of user.businesses) {
-    const summary = await folded(business.id, start, end);
-    const storeOn = await hasModule(user.id, "STORE");
-    store = store || storeOn;
-    scans += summary.scans;
-    taps += summary.tapsNfc + summary.tapsQr;
-    pageViews += summary.pageViews;
-    feedback += summary.feedbackCount;
-    ratingSum += summary.ratingSum;
-    ratingCount += summary.ratingCount;
-    if (storeOn) {
-      orders += summary.orderCount;
-      orderPaise += summary.orderPaise;
+  const ids = user.businesses.map((business) => business.id);
+  const whatsappIds = whatsappOn && user.phone ? await claimDeliveries(ids, weekKey, "whatsapp") : [];
+  const emailIds = emailOn && user.email ? await claimDeliveries(ids, weekKey, "email") : [];
+  if (!whatsappIds.length && !emailIds.length) return { skipped: true as const, whatsapp: "skipped" as const };
+
+  async function summarize(businessIds: string[]) {
+    const end = addIstDays(weekKey, -1);
+    const start = addIstDays(end, -6);
+    let scans = 0;
+    let taps = 0;
+    let pageViews = 0;
+    let orders = 0;
+    let orderPaise = 0;
+    let feedback = 0;
+    let ratingSum = 0;
+    let ratingCount = 0;
+    let store = false;
+    const chosen = user!.businesses.filter((business) => businessIds.includes(business.id));
+    for (const business of chosen) {
+      const summary = await folded(business.id, start, end);
+      const storeOn = await hasModule(user!.id, "STORE");
+      store = store || storeOn;
+      scans += summary.scans;
+      taps += summary.tapsNfc + summary.tapsQr;
+      pageViews += summary.pageViews;
+      feedback += summary.feedbackCount;
+      ratingSum += summary.ratingSum;
+      ratingCount += summary.ratingCount;
+      if (storeOn) {
+        orders += summary.orderCount;
+        orderPaise += summary.orderPaise;
+      }
+    }
+    return weeklyText({
+      name: chosen[0]?.name || user!.name || "your business",
+      scans,
+      taps,
+      pageViews,
+      orders: store ? orders : null,
+      orderPaise: store ? orderPaise : null,
+      feedback,
+      avgRating: ratingCount ? Math.round((ratingSum / ratingCount) * 10) / 10 : null,
+      unsubscribeUrl: absoluteUrl(`/api/reports/unsubscribe?token=${encodeURIComponent(reportToken(user!.id))}`)
+    });
+  }
+
+  let whatsapp: "sent" | "failed" | "skipped" = "skipped";
+  if (whatsappIds.length && user.phone) {
+    const sent = await sendWhatsAppReport({ to: user.phone, message: await summarize(whatsappIds) });
+    if (sent.ok) whatsapp = "sent";
+    else {
+      whatsapp = "failed";
+      await releaseDeliveries(whatsappIds, weekKey, "whatsapp");
     }
   }
-  const text = weeklyText({
-    name: user.businesses[0]?.name || user.name || "your business",
-    scans,
-    taps,
-    pageViews,
-    orders: store ? orders : null,
-    orderPaise: store ? orderPaise : null,
-    feedback,
-    avgRating: ratingCount ? Math.round((ratingSum / ratingCount) * 10) / 10 : null,
-    unsubscribeUrl: absoluteUrl(`/api/reports/unsubscribe?token=${encodeURIComponent(reportToken(user.id))}`)
-  });
-  let whatsapp: "sent" | "failed" | "skipped" = "skipped";
-  if (whatsappOn && user.phone) {
-    const sent = await sendWhatsAppReport({ to: user.phone, message: text });
-    whatsapp = sent.ok ? "sent" : "failed";
-  }
-  const emailFallback = whatsappOn && whatsapp !== "sent";
-  if ((emailOn || emailFallback) && user.email) {
-    await sendEmail({
-      to: user.email,
-      subject: `ReviewQR week of ${weekKey}`,
-      text,
-      html: `<pre style="font-family:sans-serif">${escapeHtml(text)}</pre>`
-    });
+  const emailFallback = whatsapp === "failed" && !!user.email;
+  const emailTargets = emailIds.length ? emailIds : emailFallback ? await claimDeliveries(ids, weekKey, "email") : [];
+  if (emailTargets.length && user.email) {
+    try {
+      const text = await summarize(emailTargets);
+      await sendEmail({
+        to: user.email,
+        subject: `ReviewQR week of ${weekKey}`,
+        text,
+        html: `<pre style="font-family:sans-serif">${escapeHtml(text)}</pre>`
+      });
+    } catch (error) {
+      await releaseDeliveries(emailTargets, weekKey, "email");
+      throw error;
+    }
   }
   return { skipped: false as const, whatsapp };
 }
