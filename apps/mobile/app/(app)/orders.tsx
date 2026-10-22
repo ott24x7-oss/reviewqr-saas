@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as ImagePicker from "expo-image-picker";
+import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { apiData } from "../../src/api/data";
@@ -41,7 +42,14 @@ export default function OrdersScreen() {
   const { t, lang } = useI18n();
   const { business } = useBusiness();
   const client = useQueryClient();
-  const [tab, setTab] = useState<Tab>("products");
+  const params = useLocalSearchParams<{ tab?: string }>();
+  const requested = params.tab === "orders" || params.tab === "feedback" || params.tab === "products" ? params.tab : null;
+  const linkKey = requested ?? "";
+  const [picked, setPicked] = useState<{ key: string; tab: Tab } | null>(null);
+  const tab = picked?.key === linkKey ? picked.tab : (requested ?? "products");
+  function setTab(next: Tab) {
+    setPicked({ key: linkKey, tab: next });
+  }
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [error, setError] = useState<string | null>(null);

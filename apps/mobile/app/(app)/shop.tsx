@@ -1,6 +1,7 @@
 import type { BillingSummary, ShopOrderDetail } from "@reviewqr/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as WebBrowser from "expo-web-browser";
+import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { apiData } from "../../src/api/data";
@@ -25,6 +26,12 @@ type OrderRow = { id: string; status: string; statusLabel: string; paymentStatus
 
 const sellPlans = process.env.EXPO_PUBLIC_SELL_PLANS === "1";
 
+function linkedTab(tab: string | undefined, order: string | undefined): Tab {
+  if (order) return "orders";
+  if (tab === "plan" || tab === "orders" || tab === "catalogue") return tab;
+  return "catalogue";
+}
+
 function rupees(paise: number) {
   return `₹${Math.round(paise / 100)}`;
 }
@@ -33,10 +40,22 @@ export default function ShopScreen() {
   const { t, lang } = useI18n();
   const { business } = useBusiness();
   const client = useQueryClient();
-  const [tab, setTab] = useState<Tab>("catalogue");
+  const params = useLocalSearchParams<{ tab?: string; order?: string }>();
+  const tabParam = typeof params.tab === "string" ? params.tab : undefined;
+  const orderParam = typeof params.order === "string" ? params.order : "";
+  const linkKey = `${tabParam ?? ""}|${orderParam}`;
+  const [pickedTab, setPickedTab] = useState<{ key: string; tab: Tab } | null>(null);
+  const [pickedOrder, setPickedOrder] = useState<{ key: string; id: string | null } | null>(null);
+  const tab = pickedTab?.key === linkKey ? pickedTab.tab : linkedTab(tabParam, orderParam || undefined);
+  const openId = pickedOrder?.key === linkKey ? pickedOrder.id : orderParam || null;
+  function setTab(next: Tab) {
+    setPickedTab({ key: linkKey, tab: next });
+  }
+  function setOpenId(id: string | null) {
+    setPickedOrder({ key: linkKey, id });
+  }
   const [lines, setLines] = useState<LocalLine[]>([]);
   const [address, setAddress] = useState({ name: "", phone: "", line1: "", city: "", state: "", pincode: "" });
-  const [openId, setOpenId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 

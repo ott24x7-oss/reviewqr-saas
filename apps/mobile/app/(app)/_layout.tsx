@@ -1,4 +1,5 @@
 import { Redirect, Tabs } from "expo-router";
+import { PushBridge } from "../../src/push/register";
 import { BusinessProvider } from "../../src/state/business";
 import { useSession } from "../../src/state/session";
 import { useI18n } from "../../src/i18n";
@@ -11,6 +12,7 @@ export default function AppLayout() {
   const label = lang === "hi" ? fonts.hindiStrong : fonts.bodyStrong;
   return (
     <BusinessProvider>
+    <PushBridge />
     <Tabs
       screenOptions={{
         headerStyle: { backgroundColor: colors.paper },

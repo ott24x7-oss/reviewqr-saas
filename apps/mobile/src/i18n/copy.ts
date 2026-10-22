@@ -84,7 +84,9 @@ const en = {
   deleteAccount: "Delete account",
   noNfc: "This phone has no NFC.",
   lockTag: "Lock this tag",
-  push: "Push notifications"
+  push: "Push notifications",
+  pushOn: "Push is on",
+  pushOff: "Push is off"
 };
 
 const hi: typeof en = {
@@ -171,7 +173,9 @@ const hi: typeof en = {
   deleteAccount: "खाता हटाएँ",
   noNfc: "इस फोन में NFC नहीं है।",
   lockTag: "इस टैग को लॉक करें",
-  push: "पुश सूचनाएँ"
+  push: "पुश सूचनाएँ",
+  pushOn: "पुश चालू है",
+  pushOff: "पुश बंद है"
 };
 
 export const copy = { en, hi };
