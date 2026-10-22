@@ -7,6 +7,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   name: "QR24x7",
   slug: "reviewqr",
   scheme: ["qr24x7", "reviewqr"],
+  primaryColor: "#16A34A",
   version: "1.0.0",
   orientation: "portrait",
   icon: "./assets/icon.png",
@@ -28,7 +29,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       "android.permission.CAMERA",
       "android.permission.POST_NOTIFICATIONS",
       "android.permission.NFC"
-    ]
+    ],
+    // Added by plugins but never used: no audio recording, no overlay windows.
+    blockedPermissions: ["android.permission.RECORD_AUDIO", "android.permission.SYSTEM_ALERT_WINDOW"]
   },
   plugins: [
     "expo-router",

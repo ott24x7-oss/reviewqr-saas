@@ -15,12 +15,20 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://qr24x7.in",
+        "EXPO_PUBLIC_SELL_PLANS": "0"
       }
     },
     "production": {
       "autoIncrement": false,
       "android": {
         "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://qr24x7.in",
+        "EXPO_PUBLIC_SELL_PLANS": "0"
       }
     }
   },
