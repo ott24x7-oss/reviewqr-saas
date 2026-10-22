@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { announcementLinkToStore } from "@/lib/help/video";
 
 type Item = { id: string; title: string; titleHi: string; body: string; bodyHi: string; link: string };
 
@@ -33,14 +34,16 @@ export function AnnouncementBanner() {
   if (!items.length) return null;
   return (
     <div className="space-y-2">
-      {items.map((item) => (
+      {items.map((item) => {
+        const link = announcementLinkToStore(item.link);
+        return (
         <div key={item.id} className="flex flex-wrap items-start justify-between gap-2 rounded-xl border bg-amber-50 px-3 py-2" data-testid="announcement-banner">
           <div>
             <p className="text-sm font-semibold">{lang === "hi" && item.titleHi ? item.titleHi : item.title}</p>
             <p className="text-sm">{lang === "hi" && item.bodyHi ? item.bodyHi : item.body}</p>
-            {item.link ? (
-              <a className="text-sm underline" href={item.link}>
-                {item.link}
+            {link ? (
+              <a className="text-sm underline" href={link}>
+                {link}
               </a>
             ) : null}
           </div>
@@ -48,7 +51,8 @@ export function AnnouncementBanner() {
             Dismiss
           </button>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
