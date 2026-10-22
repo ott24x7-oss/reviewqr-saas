@@ -1,0 +1,77 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useQuery } from "@tanstack/react-query";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { apiData } from "../api/data";
+
+const KEY = "reviewqr.businessId";
+
+export type BusinessCard = {
+  id: string;
+  name: string;
+  slug: string;
+  phone: string | null;
+  city: string | null;
+  address: string | null;
+  googlePlaceId: string | null;
+  googleReviewUrl: string | null;
+  whatsappNumber: string | null;
+};
+
+type BusinessValue = {
+  businesses: BusinessCard[];
+  businessId: string | null;
+  business: BusinessCard | null;
+  choose: (id: string) => void;
+  loading: boolean;
+  reload: () => void;
+};
+
+const BusinessContext = createContext<BusinessValue | null>(null);
+
+export function BusinessProvider({ children }: { children: ReactNode }) {
+  const [businessId, setBusinessId] = useState<string | null>(null);
+  const [stored, setStored] = useState(false);
+  const query = useQuery({
+    queryKey: ["businesses"],
+    queryFn: () => apiData<{ items: BusinessCard[] }>("/api/v1/businesses?limit=50")
+  });
+
+  useEffect(() => {
+    AsyncStorage.getItem(KEY)
+      .then((value) => setBusinessId(value))
+      .finally(() => setStored(true));
+  }, []);
+
+  const businesses = useMemo(() => query.data?.items ?? [], [query.data?.items]);
+  const selected = businesses.find((item) => item.id === businessId) ?? businesses[0] ?? null;
+
+  useEffect(() => {
+    if (!stored || !selected) return;
+    AsyncStorage.setItem(KEY, selected.id).catch(() => undefined);
+  }, [stored, selected]);
+
+  const value = useMemo<BusinessValue>(
+    () => ({
+      businesses,
+      businessId: selected?.id ?? null,
+      business: selected,
+      choose: (id: string) => {
+        setBusinessId(id);
+        AsyncStorage.setItem(KEY, id).catch(() => undefined);
+      },
+      loading: query.isLoading,
+      reload: () => {
+        query.refetch().catch(() => undefined);
+      }
+    }),
+    [businesses, selected, query]
+  );
+
+  return <BusinessContext.Provider value={value}>{children}</BusinessContext.Provider>;
+}
+
+export function useBusiness() {
+  const value = useContext(BusinessContext);
+  if (!value) throw new Error("useBusiness outside provider");
+  return value;
+}

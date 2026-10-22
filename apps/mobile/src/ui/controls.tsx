@@ -2,12 +2,16 @@ import { Pressable, StyleSheet, Text, TextInput, View, type TextInputProps } fro
 import { fonts, colors } from "../theme";
 import { useI18n } from "../i18n";
 
-export function Field({ label, ...props }: TextInputProps & { label: string }) {
+export function Field({ label, tone = "dark", ...props }: TextInputProps & { label: string; tone?: "dark" | "paper" }) {
   const { lang } = useI18n();
   return (
     <View style={styles.field}>
-      <Text style={[styles.label, lang === "hi" && styles.hindi]}>{label}</Text>
-      <TextInput placeholderTextColor={colors.muted} style={styles.input} {...props} />
+      <Text style={[styles.label, tone === "paper" && styles.paperLabel, lang === "hi" && styles.hindi]}>{label}</Text>
+      <TextInput
+        placeholderTextColor={tone === "paper" ? colors.inkSoft : colors.muted}
+        style={[styles.input, tone === "paper" && styles.paperInput]}
+        {...props}
+      />
     </View>
   );
 }
@@ -21,7 +25,7 @@ export function PillButton({
   label: string;
   onPress: () => void;
   disabled?: boolean;
-  tone?: "primary" | "ghost" | "dark";
+  tone?: "primary" | "ghost" | "dark" | "outline";
 }) {
   const { lang } = useI18n();
   return (
@@ -29,9 +33,9 @@ export function PillButton({
       accessibilityRole="button"
       disabled={disabled}
       onPress={onPress}
-      style={[styles.button, tone === "ghost" && styles.ghost, tone === "dark" && styles.dark, disabled && styles.disabled]}
+      style={[styles.button, tone === "ghost" && styles.ghost, tone === "dark" && styles.dark, tone === "outline" && styles.outline, disabled && styles.disabled]}
     >
-      <Text style={[styles.buttonText, tone === "ghost" && styles.ghostText, lang === "hi" && styles.hindiStrong]}>{label}</Text>
+      <Text style={[styles.buttonText, tone === "ghost" && styles.ghostText, tone === "dark" && styles.darkText, tone === "outline" && styles.outlineText, lang === "hi" && styles.hindiStrong]}>{label}</Text>
     </Pressable>
   );
 }
@@ -55,6 +59,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: fonts.body
   },
+  paperInput: {
+    borderColor: "#DDD6C8",
+    backgroundColor: colors.white,
+    color: colors.ink
+  },
+  paperLabel: { color: colors.inkSoft },
   button: {
     minHeight: 52,
     borderRadius: 999,
@@ -65,9 +75,12 @@ const styles = StyleSheet.create({
   },
   dark: { backgroundColor: colors.ink },
   ghost: { backgroundColor: "transparent", borderWidth: 1, borderColor: colors.line },
+  outline: { backgroundColor: colors.card, borderWidth: 1, borderColor: "#DDD6C8" },
   disabled: { opacity: 0.5 },
   buttonText: { color: colors.navy, fontFamily: fonts.bodyStrong, fontSize: 16 },
+  darkText: { color: colors.white },
   ghostText: { color: colors.cyanSoft },
+  outlineText: { color: colors.ink },
   muted: { color: colors.muted, fontFamily: fonts.body, fontSize: 15, lineHeight: 22 },
   hindi: { fontFamily: fonts.hindi },
   hindiStrong: { fontFamily: fonts.hindiStrong }

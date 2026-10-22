@@ -2,6 +2,7 @@ import type { OpenAPIRegistry } from "@asteasolutions/zod-to-openapi";
 import { z } from "zod";
 import {
   dataSchema,
+  dashboardSchema,
   daySummarySchema,
   feedbackPatchSchema,
   listSchema,
@@ -13,6 +14,8 @@ import {
   orderCardSchema,
   orderStatusSchema,
   pageQuerySchema,
+  placeDetailsSchema,
+  placesSearchSchema,
   qrClaimSchema,
   qrPatchSchema,
   storeSettingsSchema,
@@ -369,6 +372,46 @@ export function registerResourcePaths(registry: OpenAPIRegistry, errorRef: JsonS
       200: jsonResponse("Marked read", dataSchema(okSchema)),
       400: validation,
       401: unauthorized
+    }
+  });
+
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/dashboard",
+    summary: "Today's orders, feedback, scans, and the current plan",
+    security: bearer,
+    request: { query: z.object({ businessId: z.string().optional() }) },
+    responses: {
+      200: jsonResponse("Home", dataSchema(dashboardSchema)),
+      401: unauthorized,
+      404: notFound
+    }
+  });
+
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/places/search",
+    summary: "Search Google Places through the server. enabled is false when the key is unset.",
+    security: bearer,
+    request: { query: z.object({ q: z.string().optional() }) },
+    responses: {
+      200: jsonResponse("Predictions", dataSchema(placesSearchSchema)),
+      401: unauthorized,
+      429: rateLimit
+    }
+  });
+
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/places/details",
+    summary: "Place details for a new business. enabled is false when the key is unset.",
+    security: bearer,
+    request: { query: z.object({ placeId: z.string().optional() }) },
+    responses: {
+      200: jsonResponse("Place", dataSchema(placeDetailsSchema)),
+      401: unauthorized,
+      404: notFound,
+      429: rateLimit
     }
   });
 
