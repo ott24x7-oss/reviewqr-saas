@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { ShapeGridGate } from "@/components/ui/shape-grid-gate";
 import { getBrand } from "@/lib/brand";
 import { DEFAULT_BRAND_NAME, DEFAULT_BRAND_TAGLINE } from "@/lib/brand-defaults";
+import { BRAND_APPLE, BRAND_FAVICON, BRAND_OG } from "@/lib/brand-assets";
 import "./globals.css";
 
 // Self-hosted (see scripts/build-fonts.py) so builds never depend on fonts.googleapis.com.
@@ -36,7 +37,10 @@ export async function generateMetadata(): Promise<Metadata> {
   }));
 
   const fullTitle = `${brand.name} — ${brand.tagline}`;
-  const ogImages = brand.logoUrl && brand.logoUrl.startsWith("http") ? [brand.logoUrl] : undefined;
+  const ogImages =
+    brand.logoUrl && brand.logoUrl.startsWith("http")
+      ? [brand.logoUrl]
+      : [{ url: BRAND_OG, width: 1200, height: 630, alt: brand.name }];
 
   return {
     metadataBase: new URL(brand.appUrl || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
@@ -62,9 +66,13 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     robots: { index: true, follow: true },
     icons: {
-      icon: brand.logoUrl
-        ? [{ url: brand.logoUrl }]
-        : [{ url: "/favicon.svg", type: "image/svg+xml" }]
+      icon: [
+        { url: BRAND_FAVICON },
+        { url: "/brand/favicon-16.png", sizes: "16x16", type: "image/png" },
+        { url: "/brand/favicon-32.png", sizes: "32x32", type: "image/png" },
+        { url: "/brand/favicon-48.png", sizes: "48x48", type: "image/png" }
+      ],
+      apple: [{ url: BRAND_APPLE, sizes: "180x180", type: "image/png" }]
     }
   };
 }

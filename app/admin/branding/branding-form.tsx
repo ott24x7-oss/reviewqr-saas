@@ -90,7 +90,7 @@ export function BrandingForm({ initial }: { initial: Branding }) {
               <img src={b.logoDataUrl} alt="Logo preview" className="max-h-24 max-w-full" />
             ) : (
               <span className="text-xs text-muted-foreground">
-                No custom logo (using default <code>/watshop-review-lockup.svg</code>)
+                No custom logo (using default <code>/brand/logo-horizontal.png</code>)
               </span>
             )}
           </div>

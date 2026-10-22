@@ -62,7 +62,7 @@ export function SiteForm({
             value={site.logoUrl || null}
             onChange={(v) => setSite({ ...site, logoUrl: v || "" })}
             label="App logo"
-            hint="Square image, replaces the default star icon across the site, dashboard, and emails."
+            hint="Square image. Leave this empty to keep the QR24x7 icon."
           />
           <div>
             <Label className="text-xs">App name</Label>

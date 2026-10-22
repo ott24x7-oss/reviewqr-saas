@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { Star, Mail, MapPin } from "lucide-react";
+import { Mail, MapPin } from "lucide-react";
 import { DEFAULT_BRAND_NAME, DEFAULT_BRAND_TAGLINE } from "@/lib/brand-defaults";
+import { BRAND_ICON, BRAND_LOGO } from "@/lib/brand-assets";
 
 export function Footer({
   brand
@@ -11,24 +12,20 @@ export function Footer({
   const logoUrl = brand?.logoUrl || "";
   const supportEmail = brand?.supportEmail || "hello@reviewqr.in";
   const tagline = brand?.tagline || DEFAULT_BRAND_TAGLINE;
+  const customLogo = logoUrl && logoUrl !== BRAND_ICON ? logoUrl : "";
+  const mark = customLogo || BRAND_LOGO;
   return (
     <footer className="marketing-footer border-t border-[var(--marketing-line)]">
       <div className="container max-w-6xl py-12">
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
           <div className="sm:col-span-2">
             <Link href="/" className="flex items-center gap-2 font-bold text-xl">
-              {logoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={logoUrl}
-                  alt={name}
-                  className="h-9 w-9 rounded-lg object-cover"
-                />
-              ) : (
-                <span className="flex h-9 w-9 items-center justify-center rounded-lg gradient-brand">
-                  <Star className="h-5 w-5 fill-white text-white" />
-                </span>
-              )}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={mark}
+                alt={name}
+                className={customLogo ? "h-9 w-9 rounded-lg object-cover" : "h-9 w-auto max-w-[160px] object-contain"}
+              />
               <span className="font-display">{name}</span>
             </Link>
             <p className="mt-3 text-sm font-medium text-foreground">{tagline}</p>

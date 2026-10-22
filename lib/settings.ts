@@ -14,6 +14,7 @@ import {
   DEFAULT_BRAND_TAGLINE,
   PREVIOUS_BRAND_NAME
 } from "./brand-defaults";
+import { BRAND_ICON } from "./brand-assets";
 import { normalizeShopCheckout, shopCheckoutError, type ShopCheckoutConfig } from "./shop/charge";
 import { DEFAULT_SHIPPING, pickupError, presetError, type ShippingConfig } from "./shop/shipping";
 
@@ -369,7 +370,7 @@ export const DEFAULT_WHATSAPP: WhatsAppConfig = {
 
 export const DEFAULT_SITE: SiteConfig = {
   appName: DEFAULT_BRAND_NAME,
-  logoUrl: "",
+  logoUrl: BRAND_ICON,
   supportEmail: "hello@reviewqr.in",
   appUrl: "",
   marketingTagline: DEFAULT_BRAND_TAGLINE,

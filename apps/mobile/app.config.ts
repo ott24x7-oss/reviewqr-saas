@@ -20,6 +20,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     versionCode: 1,
     adaptiveIcon: {
       foregroundImage: "./assets/adaptive-icon.png",
+      backgroundImage: "./assets/adaptive-icon-background.png",
       backgroundColor: "#070B12"
     },
     permissions: [
@@ -69,7 +70,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       "expo-notifications",
       {
-        color: "#35C8F0"
+        color: "#35C8F0",
+        icon: "./assets/notification-icon.png"
       }
     ],
     "expo-sharing",

@@ -20,6 +20,7 @@
     "db:reset": "prisma migrate reset --force",
     "seed:admin": "tsx prisma/seed-admin.ts",
     "worker": "tsx scripts/worker.ts",
+    "brand:icons": "tsx scripts/brand-icons.ts",
     "test": "vitest run",
     "test:e2e": "playwright test"
   },

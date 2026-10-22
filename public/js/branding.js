@@ -1,7 +1,7 @@
 /* branding.js — applies admin-overridable branding to every public page.
  *
  * Mark elements that should be patched:
- *   <img data-brand-logo src="/watshop-review-lockup.svg">     → src + alt
+ *   <img data-brand-logo src="/brand/logo-horizontal.png">      → src + alt
  *   <span data-brand-name>QR24x7</span>                         → textContent
  *   <p   data-brand-tagline>...</p>                             → textContent
  *   <p   data-brand-footer>...</p>                              → textContent

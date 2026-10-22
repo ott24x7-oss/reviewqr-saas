@@ -108,7 +108,7 @@ export function DashboardShell({
   children: React.ReactNode;
 }) {
   const brandName = brand?.name || "QR24x7";
-  const brandLogo = brand?.logoUrl || "";
+  const brandLogo = brand?.logoUrl || "/brand/icon-192.png";
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = React.useState(false);
