@@ -2,6 +2,7 @@
  * Plan activation. One transaction extends the subscription, issues the next
  * GST invoice number, and snapshots the invoice. A completed payment is a no-op.
  */
+import { inferDuration } from "./plans/quote";
 import { addMonths } from "date-fns";
 import { Prisma, type PaymentStatus, type PlanDuration, type SubscriptionTier } from "@prisma/client";
 import { prisma } from "./db";
@@ -153,13 +154,12 @@ export async function activateCompletedPayment(input: ActivateInput): Promise<Ac
     });
     const months = Math.max(1, row.periodMonths || 1);
     const trialing = open?.status === "TRIALING";
-    const differentPlan = !!(open?.planId && row.planId && open.planId !== row.planId);
-    const explicitDifferentDuration =
-      !!open && open.duration != null && row.duration != null && open.duration !== row.duration;
-    // Same plan and same duration renews from the paid end. A trial, a different
-    // plan, or a credit against the price starts the purchased months today.
-    const renew =
-      !!open && !trialing && !differentPlan && !explicitDifferentDuration && (row.creditPaise || 0) <= 0;
+    // Renew only when both sides name the same plan and the same duration.
+    // Anything unknown (no plan id, legacy row, other duration) starts today.
+    const openDuration = open ? open.duration ?? inferDuration(open.startsAt, open.endsAt) : null;
+    const samePlanRow = !!(open?.planId && row.planId && open.planId === row.planId);
+    const sameDurationRow = !!(row.duration && openDuration === row.duration);
+    const renew = !!open && !trialing && samePlanRow && sameDurationRow && (row.creditPaise || 0) <= 0;
     const carriedBonus =
       open && !trialing ? remainingBonusDays({ endsAt: open.endsAt, bonusDays: open.bonusDays || 0, now }) : 0;
     const paidOpenEnd = open?.endsAt && !trialing ? paidEndsAt(open.endsAt, open.bonusDays || 0) : null;
