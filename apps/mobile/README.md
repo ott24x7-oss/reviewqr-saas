@@ -40,4 +40,4 @@ npx eas build --profile preview --platform android
 npx eas build --profile production --platform android
 ```
 
-`development` and `preview` produce an APK. `production` produces an AAB. Do not put private keys in `.env`. Only `EXPO_PUBLIC_` values belong here, and they are bundled into the app. The package name `com.reviewqr.app` is a placeholder until you confirm it.
+`development` and `preview` produce an APK. `production` produces an AAB. Do not put private keys in `.env`. Only `EXPO_PUBLIC_` values belong here, and they are bundled into the app. The application id is `com.qr24x7.app`. Set `EXPO_PUBLIC_API_URL` to the same origin as `NEXT_PUBLIC_APP_URL`. Privacy is that origin plus `/privacy`. Account deletion is that origin plus `/account/delete`.

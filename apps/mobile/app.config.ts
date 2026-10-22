@@ -1,12 +1,12 @@
 import type { ConfigContext, ExpoConfig } from "expo/config";
 
-const packageName = "com.reviewqr.app";
+const packageName = "com.qr24x7.app";
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: "QR24x7",
   slug: "reviewqr",
-  scheme: "reviewqr",
+  scheme: ["qr24x7", "reviewqr"],
   version: "1.0.0",
   orientation: "portrait",
   icon: "./assets/icon.png",

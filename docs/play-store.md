@@ -1,6 +1,6 @@
 # Play Store readiness
 
-The Android package name in `apps/mobile/app.config.ts` is the placeholder `com.reviewqr.app`. Confirm that name before you create the Play Console app. Changing it later means a new listing.
+The Android application id in `apps/mobile/app.config.ts` is `com.qr24x7.app`. The app name is QR24x7. Deep links use `qr24x7://`, and `reviewqr://` still opens the same screens. Changing the application id later means a new Play listing. The Expo project slug stays `reviewqr` so an existing EAS project id keeps working.
 
 `versionCode` is `1`. `compileSdkVersion` and `targetSdkVersion` are `36` (Android 16). From 31 August 2026, new apps and updates must target API 36. `minSdkVersion` is `24`. The splash image is the `expo-splash-screen` plugin. Icons are in `apps/mobile/assets`.
 
@@ -24,8 +24,10 @@ npx eas submit --profile production --platform android
 
 ## Privacy and deletion
 
-- Privacy policy: `https://<your-domain>/privacy`
-- Account deletion: `https://<your-domain>/account/delete`
+Use the origin in `NEXT_PUBLIC_APP_URL` for the website, and the same origin in `EXPO_PUBLIC_API_URL` for the app. Do not hardcode a host.
+
+- Privacy policy: `{NEXT_PUBLIC_APP_URL}/privacy`
+- Account deletion: `{NEXT_PUBLIC_APP_URL}/account/delete`
 - The same deletion is in the app under More → Delete account. It calls `POST /api/v1/me/deletion` (`request`, then `confirm` with the 6-digit code). The account row is anonymized. Payment rows and GST invoices stay. `DELETE /api/v1/me` with `{ "confirm": "DELETE" }` still works.
 
 ## Data safety
@@ -53,7 +55,7 @@ Users can request deletion in the app and at `/account/delete`. Data is encrypte
 
 Google asks a personal Play Console account to run a closed test before production.
 
-1. Create the app with the confirmed package name.
+1. Create the app with application id `com.qr24x7.app`.
 2. Fill the store listing, the privacy policy URL, Data safety, the content rating, and the target audience.
 3. Upload the production AAB to the Closed testing track.
 4. Create an email list of at least 12 testers and send them the opt-in link.

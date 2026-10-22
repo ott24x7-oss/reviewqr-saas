@@ -13,7 +13,7 @@ export function shopOrderRoute(value: string) {
 }
 
 function orderFromDeepLink(url: string) {
-  const match = url.match(/^reviewqr:\/\/shop\?order=([^&#]*)$/);
+  const match = url.match(/^(?:qr24x7|reviewqr):\/\/shop\?order=([^&#]*)$/);
   if (!match) return null;
   try {
     return decodeURIComponent(match[1]);
