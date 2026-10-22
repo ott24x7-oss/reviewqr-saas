@@ -39,6 +39,7 @@ export async function applyDuePlanChanges(now = new Date()) {
         modules: sub.pendingModules.length ? sub.pendingModules : plan.modules,
         limits,
         pricePaise: price?.pricePaise ?? 0,
+        bonusDays: 0,
         clearPending: true
       })
     );

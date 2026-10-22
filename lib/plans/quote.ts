@@ -125,6 +125,42 @@ export function upgradeEndsAt(input: {
   return addDays(base, extraDays);
 }
 
+/** Paid end is the stored end with the free suffix removed. */
+export function paidEndsAt(endsAt: Date | null, bonusDays: number) {
+  if (!endsAt) return null;
+  const bonus = Math.max(0, Math.floor(bonusDays));
+  if (!bonus) return endsAt;
+  return addDays(endsAt, -bonus);
+}
+
+/** Free days still left on an open plan. Days already used are not carried. */
+export function remainingBonusDays(input: { endsAt: Date | null; bonusDays: number; now: Date }) {
+  const granted = Math.max(0, Math.floor(input.bonusDays));
+  if (!input.endsAt || granted <= 0) return 0;
+  if (input.now.getTime() >= input.endsAt.getTime()) return 0;
+  const bonusStart = addDays(input.endsAt, -granted);
+  if (input.now.getTime() <= bonusStart.getTime()) return granted;
+  return Math.max(0, differenceInCalendarDays(input.endsAt, input.now));
+}
+
+/**
+ * Referral credit lengthens the paid end. Carried free days stay after that.
+ * The stored bonus is the whole free suffix.
+ */
+export function bonusCarry(input: {
+  paidEndsAt: Date | null;
+  carriedDays: number;
+  rewardMonths: number;
+  rewardDays: number;
+}) {
+  const carried = Math.max(0, Math.floor(input.carriedDays));
+  const rewarded = extendByReward(input.paidEndsAt, input.rewardMonths, input.rewardDays);
+  const rewardSpan =
+    input.paidEndsAt && rewarded ? Math.max(0, differenceInCalendarDays(rewarded, input.paidEndsAt)) : 0;
+  const endsAt = rewarded ? addDays(rewarded, carried) : null;
+  return { endsAt, bonusDays: carried + rewardSpan };
+}
+
 export function extendByReward(endsAt: Date | null, months: number, days: number) {
   if (!endsAt) return null;
   let next = endsAt;

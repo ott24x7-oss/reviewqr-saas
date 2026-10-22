@@ -1,3 +1,4 @@
+import { differenceInCalendarDays } from "date-fns";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../db";
 import { holdUntil } from "./commission-rules";
@@ -32,11 +33,17 @@ export async function pushRewardEnd(userId: string, endsAt: Date) {
       select: { subscriptionTier: true, subscriptionStatus: true }
     });
     if (!user) return;
+    const open = await tx.subscription.findFirst({
+      where: { userId, status: { in: ["ACTIVE", "TRIALING", "PAST_DUE"] } },
+      orderBy: { createdAt: "desc" }
+    });
+    const added = open?.endsAt ? Math.max(0, differenceInCalendarDays(endsAt, open.endsAt)) : 0;
     await grantPlanAccess(tx, {
       userId,
       tier: user.subscriptionTier,
       status: user.subscriptionStatus,
-      endsAt
+      endsAt,
+      bonusDays: (open?.bonusDays || 0) + added
     });
   });
 }

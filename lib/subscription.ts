@@ -8,7 +8,7 @@ import { prisma } from "./db";
 import { getPaymentsConfig } from "./settings";
 import { absoluteUrl } from "./utils";
 import { limitsForTier, modulesForTier } from "./plans/legacy";
-import { carriedRenewalPaise, extendByReward, upgradeEndsAt } from "./plans/quote";
+import { bonusCarry, carriedRenewalPaise, paidEndsAt, remainingBonusDays, upgradeEndsAt } from "./plans/quote";
 import { grantPlanAccess } from "./plans/snapshot";
 
 export function financialYearLabel(date: Date): string {
@@ -153,28 +153,43 @@ export async function activateCompletedPayment(input: ActivateInput): Promise<Ac
     });
     const differentPlan = !!(open?.planId && row.planId && open.planId !== row.planId);
     const months = Math.max(1, row.periodMonths || 1);
-    let expiresAt: Date | null = null;
+    const openBonus = open?.bonusDays || 0;
+    const carriedBonus = remainingBonusDays({ endsAt: open?.endsAt ?? null, bonusDays: openBonus, now });
+    const paidOpenEnd = open?.endsAt ? paidEndsAt(open.endsAt, openBonus) : null;
+    let paidExpiresAt: Date | null = null;
     let carriedPaise = 0;
     if (lifetime) {
-      expiresAt = null;
+      paidExpiresAt = null;
     } else if (differentPlan) {
-      expiresAt = upgradeEndsAt({
+      paidExpiresAt = upgradeEndsAt({
         now,
         months,
         creditPaise: row.creditPaise || 0,
         pricePaise: row.amount + Math.max(0, row.creditPaise || 0)
       });
     } else if (row.creditPaise > 0) {
-      expiresAt = addMonths(now, months);
+      paidExpiresAt = addMonths(now, months);
     } else {
-      const openStillRunning = !!(open?.endsAt && open.endsAt.getTime() > now.getTime());
-      const baseEnd = openStillRunning ? open?.endsAt : user.subscriptionEndsAt;
-      expiresAt = extendSubscriptionEnd(baseEnd, months, now);
-      if (openStillRunning) carriedPaise = carriedRenewalPaise({ now, open });
+      const openStillRunning = !!(paidOpenEnd && paidOpenEnd.getTime() > now.getTime());
+      const bonusStillRunning = !!(open?.endsAt && open.endsAt.getTime() > now.getTime());
+      const baseEnd = openStillRunning ? paidOpenEnd : bonusStillRunning ? null : user.subscriptionEndsAt;
+      paidExpiresAt = extendSubscriptionEnd(baseEnd, months, now);
+      if (openStillRunning && paidOpenEnd) {
+        carriedPaise = carriedRenewalPaise({
+          now,
+          open: { pricePaise: open.pricePaise, startsAt: open.startsAt, endsAt: paidOpenEnd }
+        });
+      }
     }
     const credit = await tx.referralCredit.findUnique({ where: { userId: user.id } });
-    if (expiresAt && credit && (credit.months > 0 || credit.days > 0)) {
-      expiresAt = extendByReward(expiresAt, credit.months, credit.days);
+    const carried = bonusCarry({
+      paidEndsAt: paidExpiresAt,
+      carriedDays: lifetime ? 0 : carriedBonus,
+      rewardMonths: credit?.months || 0,
+      rewardDays: credit?.days || 0
+    });
+    const expiresAt = carried.endsAt;
+    if (credit && (credit.months > 0 || credit.days > 0)) {
       await tx.referralCredit.update({ where: { userId: user.id }, data: { months: 0, days: 0 } });
     }
     const invoiceNumber = row.invoiceNumber ?? (await nextInvoiceNumber(tx, now));
@@ -227,6 +242,7 @@ export async function activateCompletedPayment(input: ActivateInput): Promise<Ac
       modules,
       limits,
       pricePaise: carriedPaise + row.amount + Math.max(0, row.creditPaise || 0),
+      bonusDays: carried.bonusDays,
       clearPending: true
     });
 

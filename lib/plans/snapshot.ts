@@ -16,6 +16,8 @@ export type SnapshotWrite = {
   modules?: string[] | null;
   limits?: unknown;
   pricePaise?: number;
+  /** Free days at the end of endsAt. Omit to keep the open snapshot's value. */
+  bonusDays?: number;
   /** Add to the stored price instead of replacing it. */
   addPricePaise?: number;
   clearPending?: boolean;
@@ -60,6 +62,8 @@ export async function applySubscriptionSnapshot(tx: Prisma.TransactionClient, in
     startsAt: input.startsAt ?? open?.startsAt ?? new Date(),
     endsAt: input.endsAt,
     pricePaise,
+    bonusDays:
+      input.bonusDays == null ? open?.bonusDays || 0 : Math.max(0, Math.floor(input.bonusDays)),
     ...(input.clearPending
       ? {
           pendingPlanId: null,

@@ -1669,6 +1669,8 @@ model Subscription {
   status          SubscriptionStatus
   startsAt        DateTime           @default(now())
   endsAt          DateTime?
+  /// Free days at the end of endsAt. An upgrade carries whatever is left.
+  bonusDays       Int                @default(0)
   pricePaise      Int                @default(0)
   pendingPlanId   String?
   pendingDuration PlanDuration?
