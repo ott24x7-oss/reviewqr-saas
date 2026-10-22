@@ -56,7 +56,9 @@ async function square(input: Buffer, size: number) {
   return sharp(input).resize(size, size, { fit: "cover" }).png().toBuffer();
 }
 
-async function padded(input: Buffer, size: number, scale: number, background: sharp.Color) {
+type Rgba = { r: number; g: number; b: number; alpha: number };
+
+async function padded(input: Buffer, size: number, scale: number, background: Rgba | string) {
   const inner = Math.max(1, Math.round(size * scale));
   const glyph = await sharp(input)
     .resize(inner, inner, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
