@@ -541,7 +541,9 @@ export function BillingClient({
   upiEnabled,
   usdtEnabled,
   youpiEnabled,
-  catalog = []
+  catalog = [],
+  initialDuration,
+  initialSlug
 }: {
   currentTier: SubscriptionTier;
   plans: PricingConfig;
@@ -549,11 +551,22 @@ export function BillingClient({
   usdtEnabled: boolean;
   youpiEnabled: boolean;
   catalog?: CatalogPlan[];
+  initialDuration?: string;
+  initialSlug?: string;
 }) {
   const [annual, setAnnual] = React.useState(true);
-  const [duration, setDuration] = React.useState("YEAR_1");
+  const [duration, setDuration] = React.useState(
+    initialDuration === "MONTH_1" || initialDuration === "MONTH_6" || initialDuration === "YEAR_1" || initialDuration === "LIFETIME"
+      ? initialDuration
+      : "YEAR_1"
+  );
   const [modalTier, setModalTier] = React.useState<SubscriptionTier | null>(null);
   const [modalPlan, setModalPlan] = React.useState<CatalogPlan | null>(null);
+  React.useEffect(() => {
+    if (!initialSlug) return;
+    const match = catalog.find((plan) => plan.slug === initialSlug);
+    if (match) setModalPlan(match);
+  }, [catalog, initialSlug]);
 
   const tiers = (["FREE", "STARTER", "GROWTH", "AGENCY"] as const).filter(
     (k) => plans[k].visible
@@ -627,7 +640,7 @@ export function BillingClient({
               {catalog.map((plan) => {
                 const price = plan.prices.find((row) => row.duration === duration);
                 return (
-                  <div key={plan.slug} className="rounded-xl border p-4 flex flex-col">
+                  <div key={plan.slug} data-plan={plan.slug} className="rounded-xl border p-4 flex flex-col">
                     <h3 className="font-semibold">{plan.name}</h3>
                     {plan.badge && <p className="text-xs font-medium text-primary">{plan.badge}</p>}
                     <p className="text-xs text-muted-foreground">{plan.description}</p>

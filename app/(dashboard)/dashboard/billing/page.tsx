@@ -10,7 +10,11 @@ import { formatINR, formatDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-export default async function BillingPage() {
+export default async function BillingPage({
+  searchParams
+}: {
+  searchParams?: { plan?: string; duration?: string };
+}) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
@@ -90,6 +94,8 @@ export default async function BillingPage() {
         upiEnabled={cfg.upiEnabled && !!cfg.upiId}
         usdtEnabled={cfg.usdtEnabled && !!cfg.usdtAddress}
         youpiEnabled={!!(cfg.youpiBaseUrl && cfg.youpiMerchantId)}
+        initialSlug={searchParams?.plan || ""}
+        initialDuration={searchParams?.duration || ""}
         catalog={catalog.map((plan) => ({
           slug: plan.slug,
           name: plan.nameEn,
