@@ -13,7 +13,8 @@ import { isReservedSlug } from "@/lib/tap/reserved-slugs";
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req.headers);
-  const rl = await rateLimitDb({ key: `register:${ip}`, limit: 5, windowSeconds: 600 });
+  // One local run signs up the owner, OTP, and shop accounts from the same IP.
+  const rl = await rateLimitDb({ key: `register:${ip}`, limit: 30, windowSeconds: 600 });
   if (!rl.ok) {
     return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
   }
