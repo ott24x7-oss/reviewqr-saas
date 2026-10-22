@@ -70,6 +70,11 @@ export default defineConfig({
       name: "direct",
       testMatch: /direct-link\.spec\.ts/,
       use: { ...devices["Desktop Chrome"], baseURL }
+    },
+    {
+      name: "free-store",
+      testMatch: /free-store\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"], baseURL: devURL }
     }
   ],
   webServer: [
