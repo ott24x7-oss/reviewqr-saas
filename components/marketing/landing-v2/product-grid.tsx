@@ -130,7 +130,7 @@ export function ProductGrid({ plans, hardware }: { plans: PublicPlan[]; hardware
 
   return (
     <section id="pricing" className="px-4 py-8 sm:py-14">
-      <div className="mx-auto max-w-6xl">
+      <div className="mx-auto min-w-0 max-w-6xl">
         <h2 className="font-display text-3xl font-semibold tracking-[-0.03em] text-[var(--marketing-ink)] sm:text-4xl">
           {pick(lang, "Choose your plan", "अपना प्लान चुनें")}
         </h2>

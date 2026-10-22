@@ -1,5 +1,22 @@
 import { prisma } from "../db";
 
+export type LandingQuote = {
+  id: string;
+  authorName: string;
+  authorRole: string | null;
+  message: string;
+  rating: number;
+};
+
+export async function landingQuotes(): Promise<LandingQuote[]> {
+  return prisma.testimonial.findMany({
+    where: { isPublic: true, isApproved: true },
+    orderBy: { createdAt: "desc" },
+    take: 6,
+    select: { id: true, authorName: true, authorRole: true, message: true, rating: true }
+  });
+}
+
 export type LandingTrust = {
   businesses: number | null;
   reviewCount: number | null;
