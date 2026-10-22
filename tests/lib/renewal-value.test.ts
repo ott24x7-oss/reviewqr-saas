@@ -17,7 +17,7 @@ describe("early renewal paid value", () => {
     }
   });
 
-  it("keeps leftover value in the new price so the next credit matches the longer end", async () => {
+  it("extends a same-plan renewal from the current end and stores only the amount paid", async () => {
     const now = new Date();
     const startsAt = new Date(now.getTime() - 30 * 86_400_000);
     const endsAt = new Date(now.getTime() + 30 * 86_400_000);
@@ -76,15 +76,13 @@ describe("early renewal paid value", () => {
     expect(saved.startsAt.getTime()).toBeLessThan(now.getTime() + 60_000);
     const extended = addMonths(endsAt, 1).getTime();
     expect(Math.abs(saved.endsAt.getTime() - extended)).toBeLessThan(5_000);
-    expect(saved.pricePaise).toBeGreaterThan(14000);
-    expect(saved.pricePaise).toBeLessThan(16000);
-    expect(saved.pricePaise).not.toBe(10000);
+    expect(saved.pricePaise).toBe(10000);
 
     const again = prorateCredit({
       pricePaidPaise: saved.pricePaise,
       startsAt: saved.startsAt,
       endsAt: saved.endsAt
     });
-    expect(Math.abs(again - saved.pricePaise)).toBeLessThan(500);
+    expect(Math.abs(again - 10000)).toBeLessThan(500);
   });
 });

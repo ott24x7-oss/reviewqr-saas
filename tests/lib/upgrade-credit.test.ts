@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, it } from "vitest";
-import { addMonths, differenceInCalendarDays } from "date-fns";
+import { addMonths } from "date-fns";
 import { prisma } from "../../lib/db";
 import { quotePlanCheckout } from "../../lib/plans/checkout";
 import { creditBasePaise, upgradeEndsAt } from "../../lib/plans/quote";
@@ -18,19 +18,11 @@ describe("legacy upgrade credit", () => {
     }
   });
 
-  it("turns unused value into days on the new plan instead of stacking the old end", () => {
-    expect(creditBasePaise({ snapshotPaise: 0, cataloguePaise: 499900, lastPaymentPaise: 100 })).toBe(499900);
-    expect(creditBasePaise({ snapshotPaise: 0, cataloguePaise: 0, lastPaymentPaise: 25000 })).toBe(25000);
+  it("credits only money that was paid and does not turn that credit into days", () => {
+    expect(creditBasePaise(0)).toBe(0);
+    expect(creditBasePaise(25000)).toBe(25000);
     const now = new Date("2026-06-01T00:00:00.000Z");
-    const end = upgradeEndsAt({
-      now,
-      months: 1,
-      creditPaise: Math.round((499900 * 11) / 12),
-      pricePaise: 99900
-    });
-    const days = differenceInCalendarDays(end, now);
-    expect(days).toBeGreaterThan(40);
-    expect(days).toBeLessThan(300);
+    expect(upgradeEndsAt({ now, months: 1 }).toISOString()).toBe(addMonths(now, 1).toISOString());
   });
 
   it("does not give 12 months of Growth for one paid month after 11 months of Starter", async () => {
@@ -64,7 +56,8 @@ describe("legacy upgrade credit", () => {
     expect(quoted.ok).toBe(true);
     if (!quoted.ok) return;
     expect(quoted.quote.kind).toBe("upgrade");
-    expect(quoted.quote.creditPaise).toBeGreaterThan(0);
+    expect(quoted.quote.creditPaise).toBe(0);
+    expect(quoted.quote.duePaise).toBe(99900);
     const payment = await prisma.payment.create({
       data: {
         userId: user.id,
@@ -80,14 +73,17 @@ describe("legacy upgrade credit", () => {
       }
     });
     payments.push(payment.id);
+    const before = new Date();
     const activated = await activateCompletedPayment({ paymentId: payment.id, verifiedVia: "test" });
+    const after = new Date();
     expect(activated.ok).toBe(true);
     const saved = await prisma.user.findUnique({ where: { id: user.id } });
     const next = saved?.subscriptionEndsAt;
     expect(next).toBeTruthy();
     if (!next) return;
-    expect(next.getTime()).toBeLessThan(addMonths(now, 12).getTime() - 20 * 86_400_000);
-    expect(next.getTime()).toBeLessThan(addMonths(endsAt, 1).getTime() - 20 * 86_400_000);
+    expect(next.getTime()).toBeGreaterThan(addMonths(before, 1).getTime() - 5_000);
+    expect(next.getTime()).toBeLessThan(addMonths(after, 1).getTime() + 5_000);
+    expect(next.getTime()).toBeLessThan(addMonths(now, 2).getTime());
     expect(saved?.subscriptionTier).toBe("GROWTH");
   });
 });

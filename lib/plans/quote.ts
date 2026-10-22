@@ -85,15 +85,31 @@ export function periodEnd(input: {
   return addMonths(base, months);
 }
 
-/** Snapshot price, else the catalogue price for that tier and duration, else the last real payment. */
-export function creditBasePaise(input: {
-  snapshotPaise: number;
-  cataloguePaise: number;
-  lastPaymentPaise: number;
+/** Only money that was actually paid. A catalogue price is not a payment. */
+export function creditBasePaise(lastPaymentPaise: number) {
+  return Math.max(0, Math.floor(lastPaymentPaise || 0));
+}
+
+/**
+ * Unused part of the last real payment.
+ * Bonus days sit after the paid end and are not credited.
+ */
+export function unusedPaidCredit(input: {
+  paidPaise: number;
+  startsAt: Date;
+  endsAt: Date | null;
+  bonusDays: number;
+  duration: PlanDuration | null;
+  now?: Date;
 }) {
-  if (input.snapshotPaise > 0) return Math.floor(input.snapshotPaise);
-  if (input.cataloguePaise > 0) return Math.floor(input.cataloguePaise);
-  return Math.max(0, Math.floor(input.lastPaymentPaise));
+  const paid = creditBasePaise(input.paidPaise);
+  if (paid <= 0) return 0;
+  const paidEnd = paidEndsAt(input.endsAt, input.bonusDays);
+  if (!paidEnd) return paid;
+  const months = durationMonths(input.duration ?? inferDuration(input.startsAt, paidEnd)) ?? 1;
+  const coveredStart = addMonths(paidEnd, -Math.max(1, months));
+  const startsAt = coveredStart.getTime() > input.startsAt.getTime() ? coveredStart : input.startsAt;
+  return prorateCredit({ pricePaidPaise: paid, startsAt, endsAt: paidEnd, now: input.now });
 }
 
 /** Pick the catalogue duration closest to the stored period when the snapshot has none. */
@@ -106,23 +122,12 @@ export function inferDuration(startsAt: Date, endsAt: Date | null): PlanDuration
 }
 
 /**
- * An upgrade starts today. Unused value becomes extra days on the new plan.
- * It is never added on top of the old end date.
+ * An upgrade starts today and lasts the purchased months.
+ * Credit reduces the price. It does not add days.
  */
-export function upgradeEndsAt(input: {
-  now: Date;
-  months: number;
-  creditPaise: number;
-  pricePaise: number;
-}) {
+export function upgradeEndsAt(input: { now: Date; months: number }) {
   const months = Math.max(1, Math.floor(input.months) || 1);
-  const base = addMonths(input.now, months);
-  const price = Math.max(0, Math.floor(input.pricePaise));
-  const credit = Math.max(0, Math.floor(input.creditPaise));
-  if (price <= 0 || credit <= 0) return base;
-  const periodDays = Math.max(1, differenceInCalendarDays(base, input.now));
-  const extraDays = Math.round((credit / price) * periodDays);
-  return addDays(base, extraDays);
+  return addMonths(input.now, months);
 }
 
 /** Paid end is the stored end with the free suffix removed. */

@@ -79,6 +79,19 @@ export async function applySubscriptionSnapshot(tx: Prisma.TransactionClient, in
   });
 }
 
+/** A paid, cancelled, or abandoned change must not stay pending on an older row. */
+export async function clearUserPending(tx: Prisma.TransactionClient, userId: string) {
+  await tx.subscription.updateMany({
+    where: { userId, pendingPlanId: { not: null } },
+    data: {
+      pendingPlanId: null,
+      pendingDuration: null,
+      pendingModules: [],
+      pendingLimits: Prisma.DbNull
+    }
+  });
+}
+
 /** Updates the user columns and the open snapshot together. */
 export async function grantPlanAccess(tx: Prisma.TransactionClient, input: SnapshotWrite) {
   await tx.user.update({
