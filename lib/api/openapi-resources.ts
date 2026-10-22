@@ -16,6 +16,8 @@ import {
   pageQuerySchema,
   placeDetailsSchema,
   placesSearchSchema,
+  menuSnapRequestSchema,
+  productDraftSchema,
   tapPageSchema,
   tapSaveSchema,
   qrClaimSchema,
@@ -374,6 +376,23 @@ export function registerResourcePaths(registry: OpenAPIRegistry, errorRef: JsonS
       200: jsonResponse("Marked read", dataSchema(okSchema)),
       400: validation,
       401: unauthorized
+    }
+  });
+
+  registry.registerPath({
+    method: "post",
+    path: "/api/v1/businesses/{id}/menu/snap",
+    summary: "Read a product photo and suggest a name. The owner still types the price.",
+    security: bearer,
+    request: { params: idParams, ...jsonBody(menuSnapRequestSchema) },
+    responses: {
+      200: jsonResponse("Suggestion", dataSchema(z.object({ item: productDraftSchema }))),
+      400: validation,
+      401: unauthorized,
+      402: planLimit,
+      404: notFound,
+      429: rateLimit,
+      503: jsonResponse("Reader unavailable", errorRef)
     }
   });
 

@@ -67,6 +67,22 @@ export const tapPageSchema = z.object({
   themes: z.array(tapThemeSchema)
 });
 
+export const menuSnapRequestSchema = z.object({
+  image: z.string().min(32).max(6_000_000)
+});
+
+export const productDraftSchema = z
+  .object({
+    name: z.string(),
+    category: z.string().optional(),
+    description: z.string().optional(),
+    veg: z.string().optional(),
+    brand: z.string().optional(),
+    colour: z.string().optional(),
+    durationMinutes: z.number().nullable().optional()
+  })
+  .passthrough();
+
 export const tapSaveSchema = z.object({
   action: z.enum(["draft", "publish"]),
   bio: z.string().max(800).optional(),
