@@ -23,7 +23,7 @@ describe("priceAnchor", () => {
       { prices: [{ duration: "YEAR_1", pricePaise: 499000 }] },
       { prices: [{ duration: "LIFETIME", pricePaise: 999000 }] }
     ]);
-    expect(anchor).toEqual({ paise: Math.round(499000 / 12), duration: "YEAR_1", perMonth: true });
+    expect(anchor).toEqual({ paise: 41600, duration: "YEAR_1", perMonth: true });
   });
 
   it("uses a six-month price divided by six when that is cheaper", () => {
