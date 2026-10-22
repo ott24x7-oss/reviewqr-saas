@@ -1,7 +1,8 @@
 import { observe } from "@/lib/api/observe";
 import { NextRequest } from "next/server";
-import { requireV1User, v1Data } from "@/lib/api/v1";
+import { requireV1User, v1Data, v1Error } from "@/lib/api/v1";
 import { prisma } from "@/lib/db";
+import { preferenceUpdate } from "@/lib/reports/preferences";
 
 export const dynamic = "force-dynamic";
 
@@ -23,19 +24,26 @@ async function getHandler(req: NextRequest) {
 async function putHandler(req: NextRequest) {
   const auth = await requireV1User(req);
   if (!auth.ok) return auth.response;
-  const body = (await req.json().catch(() => ({}))) as { emailOptIn?: boolean; whatsappOptIn?: boolean };
+  const parsed = preferenceUpdate(await req.json().catch(() => ({})));
+  if (!parsed.ok) return v1Error(400, "VALIDATION", "Preferences must be true or false");
+  if (parsed.empty) {
+    const row = await prisma.reportPreference.findUnique({ where: { userId: auth.user.id } });
+    return v1Data(present(row));
+  }
+  const email = parsed.patch.emailOptIn;
+  const whatsapp = parsed.patch.whatsappOptIn;
   const row = await prisma.reportPreference.upsert({
     where: { userId: auth.user.id },
     create: {
       userId: auth.user.id,
-      emailOptIn: body.emailOptIn === true,
-      whatsappOptIn: body.whatsappOptIn === true,
+      emailOptIn: email === true,
+      whatsappOptIn: whatsapp === true,
       unsubscribedAt: null
     },
     update: {
-      emailOptIn: body.emailOptIn === true,
-      whatsappOptIn: body.whatsappOptIn === true,
-      unsubscribedAt: null
+      ...(email !== undefined ? { emailOptIn: email } : {}),
+      ...(whatsapp !== undefined ? { whatsappOptIn: whatsapp } : {}),
+      ...(parsed.patch.clearUnsubscribed ? { unsubscribedAt: null } : {})
     }
   });
   return v1Data(present(row));
