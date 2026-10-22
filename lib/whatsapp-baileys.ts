@@ -252,6 +252,21 @@ class BaileysManager {
     const jid = toJid(to);
     return this.socket.sendMessage(jid, { text });
   }
+
+  /** OTP path. Rejects after 10s so the caller can try the next channel. */
+  async sendText(toE164: string, message: string) {
+    if (!this.isConnected()) throw new Error("Baileys not connected");
+    const jid = toJid(toE164);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error("Baileys send timed out")), 10_000);
+    });
+    try {
+      return await Promise.race([this.socket.sendMessage(jid, { text: message }), timeout]);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  }
 }
 
 function toJid(phone: string) {
