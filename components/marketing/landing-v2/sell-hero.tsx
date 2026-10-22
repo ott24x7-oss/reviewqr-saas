@@ -42,17 +42,20 @@ export function SellHero({
     "भारतीय कैफ़े काउंटर पर एक्रिलिक QR और NFC स्टैंड, जिसे फ़ोन स्कैन कर रहा है"
   );
 
-  const facts = [
-    trust.rating != null && trust.reviewCount != null
-      ? pick(lang, `${trust.rating} from ${trust.reviewCount} reviews`, `${trust.reviewCount} रिव्यू पर ${trust.rating}`)
-      : null,
-    trust.businesses != null
-      ? pick(lang, `${trust.businesses} businesses`, `${trust.businesses} बिज़नेस`)
-      : null,
-    pick(lang, "No commission", "कोई कमीशन नहीं"),
-    pick(lang, "Setup in 10 minutes", "10 मिनट में सेटअप"),
-    pick(lang, "Made in India", "मेड इन इंडिया")
-  ].filter((item): item is string => Boolean(item));
+  const facts: Array<{ text: string; image?: string; alt?: string }> = [];
+  if (trust.rating != null && trust.reviewCount != null) {
+    facts.push({
+      text: pick(lang, `${trust.rating} from ${trust.reviewCount} reviews`, `${trust.reviewCount} रिव्यू पर ${trust.rating}`)
+    });
+  }
+  if (trust.businesses != null) {
+    facts.push({ text: pick(lang, `${trust.businesses} businesses`, `${trust.businesses} बिज़नेस`) });
+  }
+  facts.push(
+    { text: pick(lang, "No commission", "कोई कमीशन नहीं"), image: "spot-shield", alt: pick(lang, "Shield", "ढाल") },
+    { text: pick(lang, "Setup in 10 minutes", "10 मिनट में सेटअप"), image: "spot-time", alt: pick(lang, "Hourglass", "घड़ी") },
+    { text: pick(lang, "Made in India", "मेड इन इंडिया"), image: "spot-india", alt: pick(lang, "Marigold", "गेंदा") }
+  );
 
   return (
     <section id="sell-hero" className="marketing-band px-4 pb-6 pt-4 sm:pt-8">
@@ -91,10 +94,20 @@ export function SellHero({
           <ul className="mt-4 flex flex-wrap gap-2">
             {facts.map((fact) => (
               <li
-                key={fact}
-                className="rounded-full border border-[var(--marketing-line)] bg-white/70 px-3 py-1 text-xs font-medium text-[var(--marketing-ink)]"
+                key={fact.text}
+                className="inline-flex items-center gap-1.5 rounded-full border border-[var(--marketing-line)] bg-white/70 px-2.5 py-1 text-xs font-medium text-[var(--marketing-ink)]"
               >
-                {fact}
+                {fact.image ? (
+                  <LandingPicture
+                    name={fact.image}
+                    alt={fact.alt || ""}
+                    width={800}
+                    height={800}
+                    sizes="20px"
+                    className="h-5 w-5 rounded-full object-cover"
+                  />
+                ) : null}
+                {fact.text}
               </li>
             ))}
           </ul>

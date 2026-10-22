@@ -18,21 +18,37 @@ import {
   FaqV2,
   CtaV2
 } from "@/components/marketing/landing/sections";
+import type { Metadata } from "next";
 import { getPricingConfig } from "@/lib/settings";
 import { listPublicPlans } from "@/lib/plans/public";
 import { getBrand } from "@/lib/brand";
 import { marketingFontClass } from "@/components/brand/fonts";
 import { priceAnchor } from "@/lib/landing/anchor";
 import { talkToUsHref } from "@/lib/landing/money";
-import { landingTrust } from "@/lib/landing/proof";
+import { landingQuotes, landingTrust } from "@/lib/landing/proof";
 import { LandingLangProvider } from "@/components/marketing/landing-v2/lang";
 import { SellHero, StickyBuy } from "@/components/marketing/landing-v2/sell-hero";
 import { ProductGrid } from "@/components/marketing/landing-v2/product-grid";
 import { HowTeaser, LiveDemo, RealTestimonials, UseCases } from "@/components/marketing/landing-v2/story";
 import { listStandAddons } from "@/lib/landing/hardware";
-import { landingQuotes } from "@/lib/landing/proof";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const brand = await getBrand();
+  const title = `${brand.name} — Google reviews, menu and WhatsApp orders`;
+  const description =
+    "Google reviews, menu and WhatsApp orders from one QR + NFC stand. No commission. Setup in 10 minutes. Made in India.";
+  return {
+    title: { absolute: title },
+    description,
+    openGraph: {
+      title,
+      description,
+      images: [{ url: "/landing/og-1600.webp", width: 1200, height: 630, alt: "QR and NFC stand on a café counter" }]
+    }
+  };
+}
 
 export default async function HomePage() {
   const [plans, catalog, brand, trust, hardware, quotes] = await Promise.all([

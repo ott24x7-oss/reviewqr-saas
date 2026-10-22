@@ -65,6 +65,11 @@ export default defineConfig({
       name: "plans",
       testMatch: /plans-agents\.spec\.ts/,
       use: { ...devices["Desktop Chrome"], baseURL: devURL }
+    },
+    {
+      name: "landing",
+      testMatch: /landing-v2\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"], baseURL }
     }
   ],
   webServer: [
