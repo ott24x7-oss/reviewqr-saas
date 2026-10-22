@@ -177,4 +177,15 @@ describe("menu and store module gates", () => {
     );
     expect(coupon.status).not.toBe(403);
   });
+
+  it("does not block staff who can read a store business they do not own", async () => {
+    const storeOwner = await owner("free");
+    const locked = await owner("reviews");
+    await prisma.businessMember.create({
+      data: { businessId: storeOwner.business.id, userId: locked.user.id, role: "STAFF" }
+    });
+    sessionUser.id = locked.user.id;
+    const orders = await ordersGet();
+    expect(orders.status).toBe(200);
+  });
 });

@@ -9,14 +9,24 @@ import { toOrderCard, type OrderCard } from "./order-status";
 
 export type { DaySummary };
 
-/** An owner without Store cannot open the order list. Staff follow each business owner. */
+/**
+ * Block the order list only when this person can read no Store business.
+ * Owning one locked business does not hide a Store business they can already read.
+ */
 export async function ownedStoreBlock(userId: string) {
+  const locked = await moduleBlock(userId, "STORE");
+  if (!locked) return null;
+  const readable = await prisma.business.findFirst({
+    where: await storeReadableWhere(userId),
+    select: { id: true }
+  });
+  if (readable) return null;
   const owned = await prisma.business.findFirst({
     where: { ownerId: userId, archived: false },
     select: { id: true }
   });
   if (!owned) return null;
-  return moduleBlock(userId, "STORE");
+  return locked;
 }
 
 async function storeReadableWhere(userId: string) {
