@@ -23,6 +23,26 @@ function databaseUrl() {
   throw new Error("DATABASE_URL is missing");
 }
 
+async function registerWithEmail(
+  page: import("@playwright/test").Page,
+  input: { name: string; business: string; email: string; password: string }
+) {
+  await page.goto("/register");
+  await page.getByRole("button", { name: "Use email instead" }).click();
+  await page.getByLabel("Your name").fill(input.name);
+  await page.getByLabel("Business name").fill(input.business);
+  await page.getByLabel("Email").fill(input.email);
+  await page.getByLabel("Password").fill(input.password);
+  await page.getByRole("button", { name: "Create account" }).click();
+  await page.waitForURL(/\/(dashboard|login)(?:\?|$)/);
+  if (!page.url().includes("/login")) return;
+  await page.getByRole("button", { name: "Use email instead" }).click();
+  await page.getByLabel("Email").fill(input.email);
+  await page.getByLabel("Password").fill(input.password);
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.waitForURL("**/dashboard**");
+}
+
 test("owner buys a combo, approves the proof, and the board shows Printing", async ({ page }) => {
   test.setTimeout(180_000);
   const stamp = Date.now();
@@ -31,14 +51,12 @@ test("owner buys a combo, approves the proof, and the board shows Printing", asy
   const prisma = new PrismaClient({ datasources: { db: { url: databaseUrl() } } });
 
   try {
-    await page.goto("/register");
-    await page.getByRole("button", { name: "Use email instead" }).click();
-    await page.getByLabel("Your name").fill("Shop Owner");
-    await page.getByLabel("Business name").fill(businessName);
-    await page.getByLabel("Email").fill(email);
-    await page.getByLabel("Password").fill("ShopTest1");
-    await page.getByRole("button", { name: "Create account" }).click();
-    await page.waitForURL("**/dashboard**");
+    await registerWithEmail(page, {
+      name: "Shop Owner",
+      business: businessName,
+      email,
+      password: "ShopTest1"
+    });
 
     await page.goto("/dashboard/businesses");
     const manage = page.getByRole("link", { name: "Manage", exact: true });
@@ -125,14 +143,12 @@ test("owner buys a combo, approves the proof, and the board shows Printing", asy
 test("owner adds products from the shop grid and the cart count follows", async ({ page }) => {
   test.setTimeout(120_000);
   const stamp = Date.now();
-  await page.goto("/register");
-  await page.getByRole("button", { name: "Use email instead" }).click();
-  await page.getByLabel("Your name").fill("Grid Owner");
-  await page.getByLabel("Business name").fill(`Grid Cafe ${stamp}`);
-  await page.getByLabel("Email").fill(`shop-grid-${stamp}@example.com`);
-  await page.getByLabel("Password").fill("ShopTest1");
-  await page.getByRole("button", { name: "Create account" }).click();
-  await page.waitForURL("**/dashboard**");
+  await registerWithEmail(page, {
+    name: "Grid Owner",
+    business: `Grid Cafe ${stamp}`,
+    email: `shop-grid-${stamp}@example.com`,
+    password: "ShopTest1"
+  });
 
   await page.goto("/dashboard/shop");
   const count = page.getByTestId("shop-cart-count");
@@ -176,6 +192,8 @@ test("owner adds products from the shop grid and the cart count follows", async 
     await page.getByRole("button", { name: "English" }).click();
   }
 
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.getByTestId("shop-cart-link").click();
   await page.waitForURL("**/dashboard/shop/cart");
   await expect(page.getByText("QR table stand").first()).toBeVisible();
