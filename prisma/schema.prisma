@@ -1616,6 +1616,8 @@ model Plan {
   modules              String[]
   limits               Json
   badge                String?
+  category             String           @default("reviews")
+  imageUrl             String           @default("")
   sortOrder            Int              @default(0)
   active               Boolean          @default(true)
   visibleOnPricingPage Boolean          @default(true)

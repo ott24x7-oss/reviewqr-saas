@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PriceCard } from "@/components/plans/price-card";
 import { DURATIONS, DURATION_LABELS, MODULES, savingsPercent, type ModuleId } from "@/lib/plans/catalog";
+import { PLAN_CATEGORIES } from "@/lib/plans/categories";
+import { ImageUpload } from "@/components/ui/image-upload";
 
 type Price = { duration: string; pricePaise: number; mrpPaise: number | null; active: boolean };
 export type AdminPlan = {
@@ -20,6 +22,8 @@ export type AdminPlan = {
   modules: string[];
   limits: { businesses: number; qrCodes: number; products: number; staff: number; aiCalls: number };
   badge: string | null;
+  category: string;
+  imageUrl: string;
   active: boolean;
   visibleOnPricingPage: boolean;
   legacyTier: string;
@@ -40,6 +44,8 @@ function blank(): AdminPlan {
     modules: ["REVIEWS"],
     limits: { ...emptyLimits },
     badge: "",
+    category: "reviews",
+    imageUrl: "",
     active: true,
     visibleOnPricingPage: true,
     legacyTier: "STARTER",
@@ -198,9 +204,31 @@ export function PlansBoard({ plans }: { plans: AdminPlan[] }) {
               </div>
               <div>
                 <Label htmlFor="badge">Badge</Label>
-                <Input id="badge" value={editing.badge || ""} onChange={(event) => setEditing({ ...editing, badge: event.target.value })} placeholder="Best value" />
+                <Input id="badge" value={editing.badge || ""} onChange={(event) => setEditing({ ...editing, badge: event.target.value })} placeholder="Best seller" />
+              </div>
+              <div>
+                <Label htmlFor="category">Category</Label>
+                <select
+                  id="category"
+                  className="mt-1 h-10 w-full rounded-md border bg-background px-2 text-sm"
+                  value={editing.category}
+                  onChange={(event) => setEditing({ ...editing, category: event.target.value })}
+                >
+                  {PLAN_CATEGORIES.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.en}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
+            <ImageUpload
+              label="Product image"
+              hint="Shown on the landing cards. Leave empty to use the category default."
+              variant="cover"
+              value={editing.imageUrl || null}
+              onChange={(value) => setEditing({ ...editing, imageUrl: value || "" })}
+            />
             <div>
               <Label htmlFor="descriptionEn">Description (English)</Label>
               <Input id="descriptionEn" value={editing.descriptionEn} onChange={(event) => setEditing({ ...editing, descriptionEn: event.target.value })} />

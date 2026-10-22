@@ -2,6 +2,7 @@ import type { PlanDuration, SubscriptionTier } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../db";
 import { DURATIONS, cleanModules, parseLimits, slugifyPlan } from "./catalog";
+import { planCategory } from "./categories";
 import { limitsForTier } from "./legacy";
 
 const tiers = ["FREE", "STARTER", "GROWTH", "AGENCY", "FOUNDER"] as const;
@@ -28,6 +29,8 @@ export const planWriteSchema = z.object({
     aiCalls: z.number().int().min(0)
   }),
   badge: z.string().max(40).nullable().optional(),
+  category: z.enum(["reviews", "menu", "store", "profile", "combo"]).default("reviews"),
+  imageUrl: z.string().max(2_000_000).optional().default(""),
   active: z.boolean(),
   visibleOnPricingPage: z.boolean(),
   legacyTier: z.enum(tiers),
@@ -92,6 +95,8 @@ export async function createPlanRecord(input: PlanWriteInput) {
       modules,
       limits: limitsFor(input),
       badge: input.badge?.trim() || null,
+      category: planCategory(input.category),
+      imageUrl: input.imageUrl.trim(),
       sortOrder: (sort._max.sortOrder ?? 0) + 1,
       active: input.active,
       visibleOnPricingPage: input.visibleOnPricingPage,
@@ -120,6 +125,8 @@ export async function updatePlanRecord(id: string, input: PlanWriteInput) {
       modules,
       limits: limitsFor(input),
       badge: input.badge?.trim() || null,
+      category: planCategory(input.category),
+      imageUrl: input.imageUrl.trim(),
       active: input.active,
       visibleOnPricingPage: input.visibleOnPricingPage,
       legacyTier: input.legacyTier as SubscriptionTier
@@ -158,6 +165,8 @@ export async function duplicatePlan(id: string) {
       modules: source.modules,
       limits: source.limits as object,
       badge: source.badge,
+      category: source.category,
+      imageUrl: source.imageUrl,
       sortOrder: (sort._max.sortOrder ?? 0) + 1,
       active: true,
       visibleOnPricingPage: false,

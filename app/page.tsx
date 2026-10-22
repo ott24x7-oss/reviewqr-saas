@@ -27,15 +27,18 @@ import { talkToUsHref } from "@/lib/landing/money";
 import { landingTrust } from "@/lib/landing/proof";
 import { LandingLangProvider } from "@/components/marketing/landing-v2/lang";
 import { SellHero, StickyBuy } from "@/components/marketing/landing-v2/sell-hero";
+import { ProductGrid } from "@/components/marketing/landing-v2/product-grid";
+import { listStandAddons } from "@/lib/landing/hardware";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const [plans, catalog, brand, trust] = await Promise.all([
+  const [plans, catalog, brand, trust, hardware] = await Promise.all([
     getPricingConfig(),
     listPublicPlans(),
     getBrand(),
-    landingTrust()
+    landingTrust(),
+    listStandAddons()
   ]);
   const anchor = priceAnchor(catalog);
   const whatsapp = talkToUsHref();
@@ -48,6 +51,7 @@ export default async function HomePage() {
 
       <SellHero anchor={anchor} trust={trust} whatsapp={whatsapp} />
       <StickyBuy anchor={anchor} whatsapp={whatsapp} />
+      <ProductGrid plans={catalog} hardware={hardware} />
       <HeroV2 />
       <ProductSuite />
       <HowItWorksV2 />
@@ -62,7 +66,7 @@ export default async function HomePage() {
       <Industries />
       <Comparison />
       <div className="marketing-band">
-        {catalog.length > 0 ? <PlanPricing plans={catalog} /> : <Pricing plans={plans} />}
+        {catalog.length > 0 ? <PlanPricing plans={catalog} sectionId="plans-list" /> : <Pricing plans={plans} sectionId="plans-list" />}
       </div>
       <FaqV2 />
       <CtaV2 />

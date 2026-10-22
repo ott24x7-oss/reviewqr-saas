@@ -8,6 +8,8 @@ export type PublicPlan = {
   descriptionEn: string;
   descriptionHi: string;
   badge: string | null;
+  category: string;
+  imageUrl: string;
   modules: string[];
   tab: PricingTab;
   prices: Array<{
@@ -31,6 +33,8 @@ export async function listPublicPlans(): Promise<PublicPlan[]> {
     descriptionEn: plan.descriptionEn,
     descriptionHi: plan.descriptionHi,
     badge: plan.badge,
+    category: plan.category,
+    imageUrl: plan.imageUrl,
     modules: plan.modules,
     tab: pricingTab(plan.modules),
     prices: DURATIONS.flatMap((duration) => {
