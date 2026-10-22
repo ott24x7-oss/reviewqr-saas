@@ -33,6 +33,7 @@ enum SubscriptionTier {
   STARTER
   GROWTH
   AGENCY
+  FOUNDER
 }
 
 enum SubscriptionStatus {
@@ -89,6 +90,12 @@ model User {
   printBatches    PrintBatch[]
   refreshSessions RefreshSession[]
   pushDevices     PushDevice[]
+  shippingAddresses ShippingAddress[]
+  referralCodes   ReferralCode[]
+  shopCart        ShopCart?
+  shopOrders      ShopOrder[] @relation("ShopOrderBuyer")
+  agentShopOrders ShopOrder[] @relation("ShopOrderAgent")
+  shopCommissions ShopCommission[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -267,6 +274,7 @@ model Business {
   coupons      Coupon[]
   offerBanners OfferBanner[]
   devices      Device[]
+  shopOrders   ShopOrder[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1180,6 +1188,349 @@ model AppSetting {
   value     String   @db.Text
   updatedAt DateTime @updatedAt
   updatedBy String?
+}
+
+// ReviewQR's own hardware catalogue. This is not a business's WhatsApp store.
+model CatalogProduct {
+  id                String           @id @default(cuid())
+  slug              String           @unique
+  name              String
+  nameHi            String?
+  description       String           @db.Text
+  descriptionHi     String?          @db.Text
+  needsNfc          Boolean          @default(false)
+  needsDesign       Boolean          @default(true)
+  defaultTemplateId String?
+  active            Boolean          @default(true)
+  sortOrder         Int              @default(0)
+  variants          CatalogVariant[]
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+}
+
+model CatalogVariant {
+  id         String         @id @default(cuid())
+  productId  String
+  product    CatalogProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sku        String         @unique
+  name       String
+  nameHi     String?
+  costPaise  Int
+  mrpPaise   Int
+  salePaise  Int
+  hsn        String
+  gstPercent Int
+  weightGrams Int
+  lengthMm   Int
+  widthMm    Int
+  heightMm   Int
+  stock      Int            @default(0)
+  lowStockAt Int            @default(10)
+  minQty     Int            @default(1)
+  imageUrl   String?        @db.Text
+  active     Boolean        @default(true)
+  // Set together on a plan bundle. Lifetime is the Founder SKU only.
+  includedTier     SubscriptionTier?
+  includedMonths   Int?
+  includedLifetime Boolean          @default(false)
+  // Digital SKUs (the Founder plan) do not ship and may use a zero box.
+  ships      Boolean        @default(true)
+  cartLines  ShopCartLine[]
+  orderLines ShopOrderLine[]
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  @@index([productId])
+  @@index([active, stock])
+}
+
+// One open ReviewQR shop cart per owner. Not a business's WhatsApp menu cart.
+model ShopCart {
+  id             String         @id @default(cuid())
+  userId         String         @unique
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessId     String?
+  couponCode     String?
+  referralCode   String?
+  buyerGstin     String?
+  buyerLegalName String?
+  addressId      String?
+  lines          ShopCartLine[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model ShopCartLine {
+  id        String         @id @default(cuid())
+  cartId    String
+  cart      ShopCart       @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  variantId String
+  variant   CatalogVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  qty       Int
+  design    Json?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@unique([cartId, variantId])
+  @@index([variantId])
+}
+
+// Platform coupons for the ReviewQR shop. Not a business's store Coupon.
+model ShopCoupon {
+  id         String    @id @default(cuid())
+  code       String    @unique
+  percentOff Int?
+  flatPaise  Int?
+  active     Boolean   @default(true)
+  expiresAt  DateTime?
+  maxUses    Int?
+  usedCount  Int       @default(0)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}
+
+model ReferralCode {
+  id         String    @id @default(cuid())
+  code       String    @unique
+  userId     String?
+  user       User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  percentOff Int?
+  flatPaise  Int?
+  active     Boolean   @default(true)
+  expiresAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model ShippingAddress {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label     String?
+  name      String
+  phone     String
+  line1     String
+  line2     String?
+  city      String
+  state     String
+  pincode   String
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// A ReviewQR shop order. Plan payments stay on Payment. This row is the hardware or bundle sale.
+enum ShopOrderStatus {
+  PENDING_PAYMENT
+  PAID
+  PROOF_SENT
+  CHANGES_REQUESTED
+  APPROVED
+  PRINTING
+  NFC_WRITTEN
+  PACKED
+  PICKUP_SCHEDULED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  RTO
+  REPRINT
+}
+
+enum ShopPayStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+model ShopOrder {
+  id                String          @id @default(cuid())
+  userId            String
+  user              User            @relation("ShopOrderBuyer", fields: [userId], references: [id], onDelete: Restrict)
+  agentId           String?
+  agent             User?           @relation("ShopOrderAgent", fields: [agentId], references: [id], onDelete: SetNull)
+  commissionPercent Int?
+  commissionPaise   Int             @default(0)
+  businessId        String?
+  business          Business?       @relation(fields: [businessId], references: [id], onDelete: SetNull)
+  status            ShopOrderStatus @default(PENDING_PAYMENT)
+  paymentStatus     ShopPayStatus   @default(PENDING)
+  subtotalPaise     Int
+  discountPaise     Int
+  totalPaise        Int
+  taxablePaise      Int
+  cgstPaise         Int
+  sgstPaise         Int
+  igstPaise         Int
+  advancePaise      Int
+  balancePaise      Int
+  cod               Boolean         @default(false)
+  couponCode        String?
+  referralCode      String?
+  buyerGstin        String?
+  buyerLegalName    String?
+  buyerState        String?
+  sellerName        String?
+  sellerGstin       String?
+  sellerState       String?
+  addressJson       Json?
+  providerPaymentId String?         @unique
+  checkoutUrl       String?         @db.Text
+  utr               String?
+  verifiedVia       String?
+  invoiceNumber     String?         @unique
+  invoiceIssuedAt   DateTime?
+  paidAt            DateTime?
+  fingerprint       String?         @db.Text
+  lines             ShopOrderLine[]
+  deliveries        ShopPaymentDelivery[]
+  shipment          ShopShipment?
+  commissions       ShopCommission[]
+  reprintRequests   ShopReprintRequest[]
+  creditNotes       ShopCreditNote[]
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([businessId])
+  @@index([agentId])
+}
+
+model ShopOrderLine {
+  id               String            @id @default(cuid())
+  orderId          String
+  order            ShopOrder         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variantId        String?
+  variant          CatalogVariant?   @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  sku              String
+  name             String
+  qty              Int
+  unitPaise        Int
+  hsn              String
+  gstPercent       Int
+  discountPaise    Int
+  netPaise         Int
+  taxablePaise     Int
+  cgstPaise        Int
+  sgstPaise        Int
+  igstPaise        Int
+  ships            Boolean
+  needsDesign      Boolean
+  needsNfc         Boolean
+  weightGrams      Int
+  includedTier     SubscriptionTier?
+  includedMonths   Int?
+  includedLifetime Boolean           @default(false)
+  design           Json?
+  proofUrl         String?           @db.Text
+  changeComment    String?           @db.Text
+  createdAt        DateTime          @default(now())
+
+  @@index([orderId])
+  @@index([variantId])
+}
+
+// One gateway delivery may settle a shop order once. Plan deliveries stay on PaymentDelivery.
+model ShopPaymentDelivery {
+  id         String    @id @default(cuid())
+  deliveryId String    @unique
+  orderId    String
+  order      ShopOrder @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  createdAt  DateTime  @default(now())
+}
+
+// One carrier booking for a shop order. The label is stored here so a later job
+// does not need the mock carrier's in-memory booking.
+model ShopShipment {
+  id          String    @id @default(cuid())
+  orderId     String    @unique
+  order       ShopOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  provider    String
+  shipmentId  String?
+  awb         String?
+  courierName String?
+  pickupId    String?
+  labelName   String?
+  labelBase64 String?   @db.Text
+  ndrNote     String?   @db.Text
+  lastError   String?   @db.Text
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([awb])
+}
+
+// One carrier webhook delivery. The key is event id + AWB + status.
+model ShopCarrierEvent {
+  id        String   @id @default(cuid())
+  eventKey  String   @unique
+  awb       String
+  status    String
+  orderId   String?
+  createdAt DateTime @default(now())
+
+  @@index([awb])
+}
+
+enum ShopCommissionKind {
+  ORDER
+  RENEWAL
+}
+
+// One credit per agent, kind, and source. An order and a renewal never share a source.
+model ShopCommission {
+  id          String             @id @default(cuid())
+  agentId     String
+  agent       User               @relation(fields: [agentId], references: [id], onDelete: Restrict)
+  kind        ShopCommissionKind
+  sourceId    String
+  orderId     String?
+  order       ShopOrder?         @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  amountPaise Int
+  percent     Int
+  createdAt   DateTime           @default(now())
+
+  @@unique([agentId, kind, sourceId])
+  @@index([agentId, createdAt])
+  @@index([orderId])
+}
+
+// Damage or misprint after delivery. Approval is what allows Delivered → Reprint.
+model ShopReprintRequest {
+  id        String    @id @default(cuid())
+  orderId   String
+  order     ShopOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  userId    String
+  reason    String
+  note      String?   @db.Text
+  status    String    @default("PENDING")
+  createdAt DateTime  @default(now())
+
+  @@index([orderId])
+}
+
+// A refund document. The number uses the invoice counter with a CN- prefix.
+model ShopCreditNote {
+  id           String    @id @default(cuid())
+  orderId      String
+  order        ShopOrder @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  number       String    @unique
+  reason       String
+  amountPaise  Int
+  taxablePaise Int
+  cgstPaise    Int
+  sgstPaise    Int
+  igstPaise    Int
+  createdAt    DateTime  @default(now())
+
+  @@index([orderId])
 }
 
 // Singleton: admin-overridable branding for the WatShop Review *platform*

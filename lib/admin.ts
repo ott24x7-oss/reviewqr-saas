@@ -69,7 +69,15 @@ export type AuditAction =
   | "device.disable"
   | "device.lost"
   | "device.uid"
-  | "print.batch";
+  | "print.batch"
+  | "catalog.update"
+  | "settings.shipping.update"
+  | "settings.shop.update"
+  | "shop.order.pay"
+  | "shop.order.move"
+  | "shop.order.ndr"
+  | "shop.reprint"
+  | "shop.credit";
 
 export async function logAudit(opts: {
   userId?: string;

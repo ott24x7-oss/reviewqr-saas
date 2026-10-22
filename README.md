@@ -144,7 +144,18 @@ The QR image itself encodes `https://<your-domain>/q/<code>?src=qr`.
    ```
    Point a daily Railway cron `POST` at `/api/billing/reconcile` with header `x-cron-secret`. The secret is compared with `timingSafeEqual` and must match `CRON_SECRET`. Manual UPI/USDT stays as the fallback. Razorpay checkout is not shown. This repo does not create the cron service.
 
-6. **Object storage** (optional, Cloudflare R2 or any S3-compatible bucket). Leave these blank and uploads stay as resized data URLs.
+6. **Shop checkout and shipping.** Shop orders use the same YouPI webhook. `SHOP_PAYMENT_STUB` confirms a shop payment without YouPI only when `NODE_ENV` is not `production` and the variable is non-empty. In production the flag is ignored and a stub cannot issue an invoice number. Startup logs `[shop] SHOP_PAYMENT_STUB is set but ignored because NODE_ENV is production` when it is set there.
+   Carrier credentials are saved encrypted under Admin → Shipping. These env values are optional fallbacks when the saved field is empty. The provider (mock, Shiprocket, or Delhivery) is still chosen in that screen. Mock plus production shows "Not configured" and does not call a carrier. Tests use the mock provider only.
+   ```
+   SHOP_PAYMENT_STUB=
+   SHIPROCKET_EMAIL=
+   SHIPROCKET_PASSWORD=
+   DELHIVERY_TOKEN=
+   SHIPPING_WEBHOOK_SECRET=
+   ```
+   Point carrier status posts at `POST /api/shipping/webhook`. Send the shared secret as `x-shipping-token` or `Authorization: Bearer`. An empty secret answers 401.
+
+7. **Object storage** (optional, Cloudflare R2 or any S3-compatible bucket). Leave these blank and uploads stay as resized data URLs.
    ```
    S3_ENDPOINT=https://<account>.r2.cloudflarestorage.com
    S3_BUCKET=reviewqr
@@ -159,14 +170,14 @@ The QR image itself encodes `https://<your-domain>/q/<code>?src=qr`.
    npx tsx scripts/migrate-images.ts
    ```
 
-7. **Razorpay** (optional, off unless `PAYMENTS_RAZORPAY_ENABLED=true`):
+8. **Razorpay** (optional, off unless `PAYMENTS_RAZORPAY_ENABLED=true`):
    ```
    RAZORPAY_KEY_ID=rzp_live_...
    RAZORPAY_KEY_SECRET=...
    RAZORPAY_WEBHOOK_SECRET=...
    ```
 
-8. **WhatsApp Cloud API** (optional — auto-send instead of click-to-chat):
+9. **WhatsApp Cloud API** (optional — auto-send instead of click-to-chat):
    ```
    WHATSAPP_API_URL=https://graph.facebook.com/v20.0
    WHATSAPP_API_TOKEN=EAAxxxxxxx

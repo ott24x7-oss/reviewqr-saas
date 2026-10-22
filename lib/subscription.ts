@@ -14,8 +14,9 @@ export function financialYearLabel(date: Date): string {
   return `${start}-${end}`;
 }
 
-export function formatInvoiceNumber(fy: string, sequence: number): string {
-  return `INV-${fy}-${String(sequence).padStart(4, "0")}`;
+export function formatInvoiceNumber(fy: string, sequence: number, prefix = "INV"): string {
+  const safe = /^[A-Z]{2,4}$/.test(prefix) ? prefix : "INV";
+  return `${safe}-${fy}-${String(sequence).padStart(4, "0")}`;
 }
 
 /** Extend from the later of now and the current end, by whole calendar months. */
@@ -40,7 +41,8 @@ export function splitGst(amountPaise: number, ratePercent: number, sameState: bo
 
 export async function nextInvoiceNumber(
   tx: Prisma.TransactionClient,
-  now = new Date()
+  now = new Date(),
+  prefix = "INV"
 ): Promise<string> {
   const fy = financialYearLabel(now);
   await tx.$executeRaw`
@@ -52,7 +54,7 @@ export async function nextInvoiceNumber(
   `;
   const next = (rows[0]?.lastNumber ?? 0) + 1;
   await tx.invoiceSequence.update({ where: { fy }, data: { lastNumber: next } });
-  return formatInvoiceNumber(fy, next);
+  return formatInvoiceNumber(fy, next, prefix);
 }
 
 export type ActivateInput = {

@@ -24,6 +24,8 @@ describe("subscription dates and invoices", () => {
   it("formats sequential invoice numbers", () => {
     expect(formatInvoiceNumber("2026-27", 1)).toBe("INV-2026-27-0001");
     expect(formatInvoiceNumber("2026-27", 2)).toBe("INV-2026-27-0002");
+    expect(formatInvoiceNumber("2026-27", 3, "CN")).toBe("CN-2026-27-0003");
+    expect(formatInvoiceNumber("2026-27", 4, "inv")).toBe("INV-2026-27-0004");
   });
 
   it("extends a live plan from its current end by calendar months", () => {

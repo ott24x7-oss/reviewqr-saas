@@ -6,6 +6,8 @@
 import { prisma } from "./db";
 import type { SubscriptionTier } from "@prisma/client";
 import { encryptSecret, decryptSecret } from "./crypto";
+import { normalizeShopCheckout, shopCheckoutError, type ShopCheckoutConfig } from "./shop/charge";
+import { DEFAULT_SHIPPING, pickupError, presetError, type ShippingConfig } from "./shop/shipping";
 
 const TTL_MS = 30_000;
 const cache = new Map<string, { value: any; expiresAt: number }>();
@@ -17,7 +19,9 @@ export const SETTING_KEYS = {
   whatsapp: "whatsapp",
   site: "site",
   turnstile: "turnstile",
-  ai: "ai"
+  ai: "ai",
+  shipping: "shipping",
+  shop: "shop"
 } as const;
 
 // Which fields inside each settings blob are secrets encrypted at rest.
@@ -33,7 +37,8 @@ const SECRET_FIELDS: Record<string, string[]> = {
   [SETTING_KEYS.email]: ["relaySecret", "smtpPass"],
   [SETTING_KEYS.whatsapp]: ["apiToken"],
   [SETTING_KEYS.turnstile]: ["secretKey"],
-  [SETTING_KEYS.ai]: ["apiKey"]
+  [SETTING_KEYS.ai]: ["apiKey"],
+  [SETTING_KEYS.shipping]: ["shiprocketPassword", "delhiveryToken", "webhookSecret"]
 };
 
 function transformSecrets(
@@ -273,6 +278,35 @@ export const DEFAULT_PLANS: PricingConfig = {
       storeProducts: 100000,
       storeOrders: 100000
     }
+  },
+  // Sold only as the capped catalogue SKU. Hidden from the public pricing page.
+  FOUNDER: {
+    tier: "FOUNDER",
+    name: "Founder",
+    tagline: "Lifetime access, limited quantity",
+    monthly: 0,
+    yearly: 0,
+    features: [
+      "5 businesses, 25 locations",
+      "Staff-wise review tracking",
+      "Campaign tracking",
+      "PDF monthly reports",
+      "Custom branding",
+      "Does not lapse while active"
+    ],
+    visible: false,
+    limits: {
+      businesses: 5,
+      locations: 25,
+      staff: 100,
+      qrCodes: 500,
+      reviews: 10000,
+      aiCallsPerMonth: 2000,
+      campaigns: 50,
+      reviewTemplates: 1000,
+      storeProducts: 100000,
+      storeOrders: 100000
+    }
   }
 };
 
@@ -428,6 +462,67 @@ export async function setPaymentsConfig(v: PaymentsConfig, by?: string) {
   await writeKey(SETTING_KEYS.payments, v, by);
 }
 
+function cleanPresets(value: unknown): ShippingConfig["presets"] {
+  if (!Array.isArray(value)) return DEFAULT_SHIPPING.presets.map((preset) => ({ ...preset }));
+  const presets = value
+    .map((row) => {
+      const preset = row && typeof row === "object" ? (row as ShippingConfig["presets"][number]) : null;
+      if (!preset) return null;
+      const next = {
+        id: String(preset.id || ""),
+        name: String(preset.name || ""),
+        lengthMm: Math.floor(Number(preset.lengthMm)),
+        widthMm: Math.floor(Number(preset.widthMm)),
+        heightMm: Math.floor(Number(preset.heightMm)),
+        weightGrams: Math.floor(Number(preset.weightGrams))
+      };
+      return presetError(next) ? null : next;
+    })
+    .filter((preset): preset is ShippingConfig["presets"][number] => preset != null);
+  return presets.length ? presets : DEFAULT_SHIPPING.presets.map((preset) => ({ ...preset }));
+}
+
+export async function getShippingConfig(): Promise<ShippingConfig> {
+  const stored = await readKey<Partial<ShippingConfig>>(SETTING_KEYS.shipping, {});
+  const pickup = { ...DEFAULT_SHIPPING.pickup, ...(stored.pickup || {}) };
+  const provider = stored.provider === "shiprocket" || stored.provider === "delhivery" || stored.provider === "mock"
+    ? stored.provider
+    : DEFAULT_SHIPPING.provider;
+  return {
+    provider,
+    shiprocketEmail: stored.shiprocketEmail || process.env.SHIPROCKET_EMAIL || "",
+    shiprocketPassword: stored.shiprocketPassword || process.env.SHIPROCKET_PASSWORD || "",
+    delhiveryToken: stored.delhiveryToken || process.env.DELHIVERY_TOKEN || "",
+    webhookSecret: stored.webhookSecret || process.env.SHIPPING_WEBHOOK_SECRET || "",
+    pickup: {
+      name: pickup.name || "",
+      phone: pickup.phone || "",
+      line1: pickup.line1 || "",
+      city: pickup.city || "",
+      state: pickup.state || "",
+      pincode: pickup.pincode || ""
+    },
+    presets: cleanPresets(stored.presets)
+  };
+}
+
+export async function setShippingConfig(value: ShippingConfig, by?: string) {
+  const pickupProblem = pickupError(value.pickup);
+  if (pickupProblem) throw new Error(pickupProblem);
+  await writeKey(SETTING_KEYS.shipping, value, by);
+}
+
+export async function getShopCheckoutConfig(): Promise<ShopCheckoutConfig> {
+  const stored = await readKey<Partial<ShopCheckoutConfig>>(SETTING_KEYS.shop, {});
+  return normalizeShopCheckout(stored);
+}
+
+export async function setShopCheckoutConfig(value: ShopCheckoutConfig, by?: string) {
+  const problem = shopCheckoutError(value);
+  if (problem) throw new Error(problem);
+  await writeKey(SETTING_KEYS.shop, normalizeShopCheckout(value), by);
+}
+
 /* ============== Pricing ============== */
 function mergePlan(base: PlanInfo, stored?: Partial<PlanInfo>): PlanInfo {
   return {
@@ -444,7 +539,8 @@ export async function getPricingConfig(): Promise<PricingConfig> {
     FREE: mergePlan(DEFAULT_PLANS.FREE, stored.FREE),
     STARTER: mergePlan(DEFAULT_PLANS.STARTER, stored.STARTER),
     GROWTH: mergePlan(DEFAULT_PLANS.GROWTH, stored.GROWTH),
-    AGENCY: mergePlan(DEFAULT_PLANS.AGENCY, stored.AGENCY)
+    AGENCY: mergePlan(DEFAULT_PLANS.AGENCY, stored.AGENCY),
+    FOUNDER: mergePlan(DEFAULT_PLANS.FOUNDER, stored.FOUNDER)
   };
 }
 export async function setPricingConfig(v: PricingConfig, by?: string) {

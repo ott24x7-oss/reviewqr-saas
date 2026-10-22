@@ -24,9 +24,11 @@ function serverEnv(url: string, portNumber: number, revealOtp: boolean) {
   env.TURNSTILE_SECRET_KEY = "";
   if (revealOtp) {
     env.OTP_DEV_REVEAL = "1";
+    env.SHOP_PAYMENT_STUB = "1";
     env.NEXT_DIST_DIR = ".next-e2e-dev";
   } else {
     delete env.OTP_DEV_REVEAL;
+    delete env.SHOP_PAYMENT_STUB;
     delete env.NEXT_DIST_DIR;
   }
   env.AUTH_TOKEN_SECRET = process.env.AUTH_TOKEN_SECRET || "e2e-auth-token-secret-16";
@@ -51,6 +53,11 @@ export default defineConfig({
     {
       name: "otp-api",
       testMatch: /otp-smoke\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"], baseURL: devURL }
+    },
+    {
+      name: "shop",
+      testMatch: /shop-smoke\.spec\.ts/,
       use: { ...devices["Desktop Chrome"], baseURL: devURL }
     }
   ],

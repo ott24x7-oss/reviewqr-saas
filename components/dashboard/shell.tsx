@@ -22,6 +22,7 @@ import {
   ShieldCheck,
   LifeBuoy,
   ShoppingBag,
+  Package,
   Users
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -80,6 +81,7 @@ const nav = [
   { href: "/dashboard/reviews", label: "Reviews", icon: Star },
   { href: "/dashboard/feedback", label: "Feedback", icon: MessageSquare, badge: true },
   { href: "/dashboard/qr-codes", label: "QR Codes", icon: QrCode },
+  { href: "/dashboard/shop", label: "Shop", icon: Package },
   { href: "/dashboard/orders", label: "Orders", icon: ShoppingBag },
   { href: "/dashboard/customers", label: "Customers", icon: Users },
   { href: "/dashboard/ai", label: "AI Reviews", icon: Sparkles },

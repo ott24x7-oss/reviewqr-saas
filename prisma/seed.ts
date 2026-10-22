@@ -7,6 +7,7 @@
  */
 import { PrismaClient, ReviewSentiment, FeedbackStatus } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { ensureCatalogWith } from "../lib/shop/catalog-ensure";
 
 const prisma = new PrismaClient();
 
@@ -367,6 +368,9 @@ async function main() {
     }
     console.log(`  ✓ ${count} reviews + feedbacks`);
   }
+
+  await ensureCatalogWith(prisma);
+  console.log("  ✓ Hardware catalogue");
 
   console.log("\n✅ Seed complete!");
   console.log(`\n   Admin: ${ADMIN_EMAIL} (password is ADMIN_PASSWORD; unchanged if the user already existed)`);
