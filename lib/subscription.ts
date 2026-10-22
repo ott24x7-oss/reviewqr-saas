@@ -8,7 +8,7 @@ import { prisma } from "./db";
 import { getPaymentsConfig } from "./settings";
 import { absoluteUrl } from "./utils";
 import { limitsForTier, modulesForTier } from "./plans/legacy";
-import { extendByReward, upgradeEndsAt } from "./plans/quote";
+import { carriedRenewalPaise, extendByReward, upgradeEndsAt } from "./plans/quote";
 import { grantPlanAccess } from "./plans/snapshot";
 
 export function financialYearLabel(date: Date): string {
@@ -152,20 +152,25 @@ export async function activateCompletedPayment(input: ActivateInput): Promise<Ac
       orderBy: { createdAt: "desc" }
     });
     const differentPlan = !!(open?.planId && row.planId && open.planId !== row.planId);
+    const months = Math.max(1, row.periodMonths || 1);
     let expiresAt: Date | null = null;
+    let carriedPaise = 0;
     if (lifetime) {
       expiresAt = null;
     } else if (differentPlan) {
       expiresAt = upgradeEndsAt({
         now,
-        months: row.periodMonths || 1,
+        months,
         creditPaise: row.creditPaise || 0,
         pricePaise: row.amount + Math.max(0, row.creditPaise || 0)
       });
     } else if (row.creditPaise > 0) {
-      expiresAt = addMonths(now, Math.max(1, row.periodMonths || 1));
+      expiresAt = addMonths(now, months);
     } else {
-      expiresAt = extendSubscriptionEnd(user.subscriptionEndsAt, row.periodMonths || 1, now);
+      const openStillRunning = !!(open?.endsAt && open.endsAt.getTime() > now.getTime());
+      const baseEnd = openStillRunning ? open?.endsAt : user.subscriptionEndsAt;
+      expiresAt = extendSubscriptionEnd(baseEnd, months, now);
+      if (openStillRunning) carriedPaise = carriedRenewalPaise({ now, open });
     }
     const credit = await tx.referralCredit.findUnique({ where: { userId: user.id } });
     if (expiresAt && credit && (credit.months > 0 || credit.days > 0)) {
@@ -221,7 +226,7 @@ export async function activateCompletedPayment(input: ActivateInput): Promise<Ac
       duration: row.duration,
       modules,
       limits,
-      pricePaise: row.amount + Math.max(0, row.creditPaise || 0),
+      pricePaise: carriedPaise + row.amount + Math.max(0, row.creditPaise || 0),
       clearPending: true
     });
 

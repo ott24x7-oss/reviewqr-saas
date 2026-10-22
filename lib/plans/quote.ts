@@ -2,6 +2,24 @@ import { addDays, addMonths, differenceInCalendarDays } from "date-fns";
 import type { PlanDuration } from "@prisma/client";
 import { durationMonths } from "./catalog";
 
+/**
+ * Leftover value on an open same-plan period.
+ * A finished or missing period carries nothing.
+ */
+export function carriedRenewalPaise(input: {
+  now: Date;
+  open: { pricePaise: number; startsAt: Date; endsAt: Date | null } | null;
+}) {
+  const open = input.open;
+  if (!open?.endsAt || open.endsAt.getTime() <= input.now.getTime()) return 0;
+  return prorateCredit({
+    pricePaidPaise: open.pricePaise,
+    startsAt: open.startsAt,
+    endsAt: open.endsAt,
+    now: input.now
+  });
+}
+
 /** Unused portion of the price already paid. A lifetime plan credits the full price. */
 export function prorateCredit(input: {
   pricePaidPaise: number;
