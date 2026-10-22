@@ -1,6 +1,9 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../db";
+import { sendEmail } from "../email";
+import { absoluteUrl } from "../utils";
 import { durationMonths } from "./catalog";
+import { invoicePayPath, invoiceReminderText } from "./invoice-link";
 
 /**
  * A scheduled downgrade does not grant the next plan.
@@ -27,6 +30,7 @@ export async function applyDuePlanChanges(now = new Date(), userId?: string) {
     const duration = sub.pendingDuration ?? "MONTH_1";
     const price = plan.prices.find((row) => row.duration === duration && row.active);
     const amount = price?.pricePaise ?? 0;
+    let paymentId = "";
     if (amount > 0) {
       const existing = await prisma.payment.findFirst({
         where: {
@@ -38,13 +42,15 @@ export async function applyDuePlanChanges(now = new Date(), userId?: string) {
         },
         select: { id: true }
       });
-      if (!existing) {
+      if (existing) {
+        paymentId = existing.id;
+      } else {
         const months = durationMonths(duration);
         const limits =
           sub.pendingLimits && typeof sub.pendingLimits === "object" && !Array.isArray(sub.pendingLimits)
             ? sub.pendingLimits
             : plan.limits;
-        await prisma.payment.create({
+        const created = await prisma.payment.create({
           data: {
             userId: sub.userId,
             amount,
@@ -60,8 +66,10 @@ export async function applyDuePlanChanges(now = new Date(), userId?: string) {
             creditPaise: 0,
             // Same window as the pending plan itself: 30 days after the period ended.
             expiresAt: new Date(sub.endsAt.getTime() + 30 * 24 * 60 * 60 * 1000)
-          }
+          },
+          select: { id: true }
         });
+        paymentId = created.id;
         issued += 1;
       }
     }
@@ -69,6 +77,22 @@ export async function applyDuePlanChanges(now = new Date(), userId?: string) {
       await prisma.subscriptionReminder.create({
         data: { userId: sub.userId, kind: `pending:${plan.id}`, periodEnd: sub.endsAt }
       });
+      if (paymentId) {
+        const owner = await prisma.user.findUnique({
+          where: { id: sub.userId },
+          select: { email: true }
+        });
+        if (owner?.email) {
+          const payUrl = absoluteUrl(invoicePayPath(paymentId));
+          const text = invoiceReminderText({ planName: plan.nameEn, payUrl });
+          await sendEmail({
+            to: owner.email,
+            subject: `Pay to switch to ${plan.nameEn}`,
+            text,
+            html: `<p>${text.replace(/</g, "")}</p>`
+          }).catch(() => {});
+        }
+      }
     } catch {
       // One reminder per period. A second cron run keeps the first row.
     }

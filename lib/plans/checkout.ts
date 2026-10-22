@@ -2,7 +2,7 @@ import type { PlanDuration, SubscriptionTier } from "@prisma/client";
 import { prisma } from "../db";
 import { durationMonths } from "./catalog";
 import { legacyPlanId, snapshotGrants } from "./legacy";
-import { quotePlanChange, unusedPaidCredit, type PlanQuote } from "./quote";
+import { lifetimeChangeError, quotePlanChange, unusedPaidCredit, type PlanQuote } from "./quote";
 import { openDuration } from "./open-duration";
 
 export type CheckoutQuote =
@@ -52,6 +52,17 @@ export async function quotePlanCheckout(
     currentPrice = listed?.pricePaise ?? 0;
   }
   const credit = granting ? await paidValuePaise(sub, userId, now) : 0;
+  const currentLifetime = granting && sub.status !== "TRIALING" && currentDuration === "LIFETIME";
+  if (
+    lifetimeChangeError({
+      currentLifetime,
+      targetLifetime: duration === "LIFETIME",
+      currentPricePaise: currentPrice,
+      targetPricePaise: price.pricePaise
+    })
+  ) {
+    return { ok: false, error: "You have a lifetime plan" };
+  }
   const onPlan = granting && sub.status !== "TRIALING" && sub.planId === plan.id;
   const samePlan = onPlan && currentDuration === duration;
   const currentMonths = durationMonths(currentDuration) ?? 1;

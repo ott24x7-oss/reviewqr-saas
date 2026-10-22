@@ -5,6 +5,8 @@ import { getPaymentsConfig } from "@/lib/settings";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BillingClient } from "./billing-client";
+import { HelpLink } from "@/components/help/help-link";
+import { PayNowButton } from "@/components/billing/pay-now";
 import { prisma } from "@/lib/db";
 import { formatINR, formatDate } from "@/lib/utils";
 
@@ -47,11 +49,14 @@ export default async function BillingPage({
 
   return (
     <div className="space-y-5">
-      <div>
+      <div className="flex items-start justify-between gap-3">
+        <div>
         <h1 className="text-2xl sm:text-3xl font-bold font-display">Billing</h1>
         <p className="text-sm text-muted-foreground">
           Manage your plan, view invoices, and upgrade
         </p>
+        </div>
+        <HelpLink context="billing" page="Billing" />
       </div>
 
       <Card>
@@ -102,6 +107,7 @@ export default async function BillingPage({
           description: plan.descriptionEn,
           badge: plan.badge,
           modules: plan.modules,
+          legacyTier: plan.legacyTier,
           prices: plan.prices.map((price) => ({
             duration: price.duration,
             pricePaise: price.pricePaise,
@@ -109,6 +115,27 @@ export default async function BillingPage({
           }))
         }))}
       />
+
+      {payments.some((payment) => (payment.status === "PENDING" || payment.status === "QUEUED") && payment.provider === "YOUPI" && payment.amount > 0) ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Invoice to pay</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {payments
+              .filter((payment) => (payment.status === "PENDING" || payment.status === "QUEUED") && payment.provider === "YOUPI" && payment.amount > 0)
+              .map((payment) => (
+                <div key={payment.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3" data-testid="pending-invoice">
+                  <div>
+                    <p className="font-medium">{formatINR(payment.amount)}</p>
+                    <p className="text-xs text-muted-foreground">{payment.status}</p>
+                  </div>
+                  <PayNowButton paymentId={payment.id} />
+                </div>
+              ))}
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader>
