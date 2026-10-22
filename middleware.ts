@@ -39,5 +39,7 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/q/:code", "/t/:code"]
+  // The segment pattern has to be written out. A bare :code makes Next append
+  // (.json) to that name, and then /q/<code> never matches.
+  matcher: ["/q/:code([^/]+)", "/t/:code([^/]+)"]
 };
