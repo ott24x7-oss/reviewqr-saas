@@ -253,6 +253,7 @@ export function StoreMenu({
         setPicking(item.id);
         return;
       }
+      recordMenuView(code, item.id);
       addConfigured(item.id, "", []);
       return;
     }
@@ -712,6 +713,7 @@ export function StoreMenu({
       ) : null}
       {pickingItem ? (
         <OptionSheet
+          code={code}
           item={pickingItem}
           lang={lang}
           text={text}
@@ -723,19 +725,52 @@ export function StoreMenu({
   );
 }
 
+function visitorId() {
+  const key = "reviewqr.visitor";
+  let id = window.localStorage.getItem(key) || "";
+  if (id.trim().length < 8) {
+    const random = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}x${Math.random()}`;
+    id = random.replace(/-/g, "");
+    window.localStorage.setItem(key, id);
+  }
+  return id;
+}
+
+function recordMenuView(code: string, itemId: string) {
+  if (!code || !itemId) return;
+  try {
+    const payload = JSON.stringify({ code, itemId, visitor: visitorId() });
+    const blob = new Blob([payload], { type: "application/json" });
+    if (navigator.sendBeacon && navigator.sendBeacon("/api/public/menu-view", blob)) return;
+    void fetch("/api/public/menu-view", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: payload,
+      keepalive: true
+    });
+  } catch {
+    /* A missed view must not block the menu. */
+  }
+}
+
 function OptionSheet({
+  code,
   item,
   lang,
   text,
   onClose,
   onAdd
 }: {
+  code: string;
   item: StoreItem;
   lang: TapLang;
   text: (key: Parameters<typeof tapText>[1]) => string;
   onClose: () => void;
   onAdd: (variantId: string, addonIds: string[]) => void;
 }) {
+  React.useEffect(() => {
+    recordMenuView(code, item.id);
+  }, [code, item.id]);
   const paired = usesSizeColour(item.variants);
   const stocked = item.variants.find((row) => row.inStock) || item.variants[0];
   const [size, setSize] = React.useState(paired ? stocked?.size.trim() || "" : "");

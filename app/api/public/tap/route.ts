@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { rateLimitDb } from "@/lib/rate-limit";
+import { isBotUserAgent } from "@/lib/analytics/bots";
 import { deviceTypeFromUa, hashIp, recordQrScan } from "@/lib/scans";
 import { isLookupCode } from "@/lib/tap/ids";
 import { getClientIp } from "@/lib/utils";
@@ -26,6 +27,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }
   const data = parsed.data;
+  if (isBotUserAgent(req.headers.get("user-agent"))) {
+    return NextResponse.json({ ok: true, ignored: true });
+  }
   const qr = await prisma.qRCode.findUnique({
     where: { shortCode: data.code },
     select: { id: true, businessId: true }
