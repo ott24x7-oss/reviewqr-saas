@@ -22,15 +22,32 @@ import { getPricingConfig } from "@/lib/settings";
 import { listPublicPlans } from "@/lib/plans/public";
 import { getBrand } from "@/lib/brand";
 import { marketingFontClass } from "@/components/brand/fonts";
+import { priceAnchor } from "@/lib/landing/anchor";
+import { talkToUsHref } from "@/lib/landing/money";
+import { landingTrust } from "@/lib/landing/proof";
+import { LandingLangProvider } from "@/components/marketing/landing-v2/lang";
+import { SellHero, StickyBuy } from "@/components/marketing/landing-v2/sell-hero";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const [plans, catalog, brand] = await Promise.all([getPricingConfig(), listPublicPlans(), getBrand()]);
+  const [plans, catalog, brand, trust] = await Promise.all([
+    getPricingConfig(),
+    listPublicPlans(),
+    getBrand(),
+    landingTrust()
+  ]);
+  const anchor = priceAnchor(catalog);
+  const whatsapp = talkToUsHref();
   return (
+    <LandingLangProvider>
     <main className={`marketing-page relative min-h-screen overflow-x-hidden pb-24 ${marketingFontClass}`}>
+      <link rel="preload" as="image" href="/landing/hero-800.webp" media="(max-width: 767px)" fetchPriority="high" />
+      <link rel="preload" as="image" href="/landing/hero-1600.webp" media="(min-width: 768px)" fetchPriority="high" />
       <MarketingNavbar brand={brand} />
 
+      <SellHero anchor={anchor} trust={trust} whatsapp={whatsapp} />
+      <StickyBuy anchor={anchor} whatsapp={whatsapp} />
       <HeroV2 />
       <ProductSuite />
       <HowItWorksV2 />
@@ -53,5 +70,6 @@ export default async function HomePage() {
       <Footer brand={brand} />
       <AnchorPill />
     </main>
+    </LandingLangProvider>
   );
 }

@@ -608,6 +608,9 @@
 @media (min-width: 360px) {
   .marketing-anchor { display: flex; }
 }
+@media (max-width: 767px) {
+  .marketing-anchor { bottom: 76px; }
+}
 .marketing-footer {
   background: transparent;
   color: var(--marketing-ink);
