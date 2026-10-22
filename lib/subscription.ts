@@ -8,7 +8,7 @@ import { prisma } from "./db";
 import { getPaymentsConfig } from "./settings";
 import { absoluteUrl } from "./utils";
 import { limitsForTier, modulesForTier } from "./plans/legacy";
-import { extendByReward } from "./plans/quote";
+import { extendByReward, upgradeEndsAt } from "./plans/quote";
 import { grantPlanAccess } from "./plans/snapshot";
 
 export function financialYearLabel(date: Date): string {
@@ -147,11 +147,26 @@ export async function activateCompletedPayment(input: ActivateInput): Promise<Ac
 
     const now = new Date();
     const lifetime = row.duration === "LIFETIME" || row.periodMonths === 0;
-    let expiresAt: Date | null = lifetime
-      ? null
-      : row.creditPaise > 0
-        ? addMonths(now, Math.max(1, row.periodMonths || 1))
-        : extendSubscriptionEnd(user.subscriptionEndsAt, row.periodMonths || 1, now);
+    const open = await tx.subscription.findFirst({
+      where: { userId: user.id, status: { in: ["ACTIVE", "TRIALING", "PAST_DUE"] } },
+      orderBy: { createdAt: "desc" }
+    });
+    const differentPlan = !!(open?.planId && row.planId && open.planId !== row.planId);
+    let expiresAt: Date | null = null;
+    if (lifetime) {
+      expiresAt = null;
+    } else if (differentPlan) {
+      expiresAt = upgradeEndsAt({
+        now,
+        months: row.periodMonths || 1,
+        creditPaise: row.creditPaise || 0,
+        pricePaise: row.amount + Math.max(0, row.creditPaise || 0)
+      });
+    } else if (row.creditPaise > 0) {
+      expiresAt = addMonths(now, Math.max(1, row.periodMonths || 1));
+    } else {
+      expiresAt = extendSubscriptionEnd(user.subscriptionEndsAt, row.periodMonths || 1, now);
+    }
     const credit = await tx.referralCredit.findUnique({ where: { userId: user.id } });
     if (expiresAt && credit && (credit.months > 0 || credit.days > 0)) {
       expiresAt = extendByReward(expiresAt, credit.months, credit.days);

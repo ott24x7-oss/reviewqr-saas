@@ -1,4 +1,4 @@
-import { addDays, addMonths } from "date-fns";
+import { addDays, addMonths, differenceInCalendarDays } from "date-fns";
 import type { PlanDuration } from "@prisma/client";
 import { durationMonths } from "./catalog";
 
@@ -56,6 +56,46 @@ export function periodEnd(input: {
   const now = input.now ?? new Date();
   const base = input.extend && input.currentEnd && input.currentEnd.getTime() > now.getTime() ? input.currentEnd : now;
   return addMonths(base, months);
+}
+
+/** Snapshot price, else the catalogue price for that tier and duration, else the last real payment. */
+export function creditBasePaise(input: {
+  snapshotPaise: number;
+  cataloguePaise: number;
+  lastPaymentPaise: number;
+}) {
+  if (input.snapshotPaise > 0) return Math.floor(input.snapshotPaise);
+  if (input.cataloguePaise > 0) return Math.floor(input.cataloguePaise);
+  return Math.max(0, Math.floor(input.lastPaymentPaise));
+}
+
+/** Pick the catalogue duration closest to the stored period when the snapshot has none. */
+export function inferDuration(startsAt: Date, endsAt: Date | null): PlanDuration {
+  if (!endsAt) return "YEAR_1";
+  const days = (endsAt.getTime() - startsAt.getTime()) / 86_400_000;
+  if (days >= 300) return "YEAR_1";
+  if (days >= 150) return "MONTH_6";
+  return "MONTH_1";
+}
+
+/**
+ * An upgrade starts today. Unused value becomes extra days on the new plan.
+ * It is never added on top of the old end date.
+ */
+export function upgradeEndsAt(input: {
+  now: Date;
+  months: number;
+  creditPaise: number;
+  pricePaise: number;
+}) {
+  const months = Math.max(1, Math.floor(input.months) || 1);
+  const base = addMonths(input.now, months);
+  const price = Math.max(0, Math.floor(input.pricePaise));
+  const credit = Math.max(0, Math.floor(input.creditPaise));
+  if (price <= 0 || credit <= 0) return base;
+  const periodDays = Math.max(1, differenceInCalendarDays(base, input.now));
+  const extraDays = Math.round((credit / price) * periodDays);
+  return addDays(base, extraDays);
 }
 
 export function extendByReward(endsAt: Date | null, months: number, days: number) {
