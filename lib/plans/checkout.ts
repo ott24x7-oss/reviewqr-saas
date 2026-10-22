@@ -2,7 +2,7 @@ import type { PlanDuration, SubscriptionTier } from "@prisma/client";
 import { prisma } from "../db";
 import { durationMonths } from "./catalog";
 import { legacyPlanId, snapshotGrants } from "./legacy";
-import { creditBasePaise, inferDuration, prorateCredit, quotePlanChange, type PlanQuote } from "./quote";
+import { inferDuration, quotePlanChange, unusedPaidCredit, type PlanQuote } from "./quote";
 
 export type CheckoutQuote =
   | {
@@ -20,7 +20,12 @@ export type CheckoutQuote =
     }
   | { ok: false; error: string };
 
-export async function quotePlanCheckout(userId: string, slug: string, duration: PlanDuration): Promise<CheckoutQuote> {
+export async function quotePlanCheckout(
+  userId: string,
+  slug: string,
+  duration: PlanDuration,
+  now = new Date()
+): Promise<CheckoutQuote> {
   const plan = await prisma.plan.findUnique({
     where: { slug },
     include: { prices: true }
@@ -34,7 +39,7 @@ export async function quotePlanCheckout(userId: string, slug: string, duration: 
     where: { userId, status: { in: ["ACTIVE", "TRIALING", "PAST_DUE"] } },
     orderBy: { createdAt: "desc" }
   });
-  const granting = !!sub && snapshotGrants({ tier: sub.tier, status: sub.status, endsAt: sub.endsAt });
+  const granting = !!sub && snapshotGrants({ tier: sub.tier, status: sub.status, endsAt: sub.endsAt, now });
   let currentPrice = granting ? sub.pricePaise : 0;
   if (granting && currentPrice <= 0 && sub.planId) {
     const sameDuration = await prisma.planPrice.findUnique({
@@ -42,11 +47,9 @@ export async function quotePlanCheckout(userId: string, slug: string, duration: 
     });
     currentPrice = sameDuration?.active ? sameDuration.pricePaise : 0;
   }
-  const basis = granting ? await paidValuePaise(sub, userId) : 0;
-  const credit = granting
-    ? prorateCredit({ pricePaidPaise: basis, startsAt: sub.startsAt, endsAt: sub.endsAt })
-    : 0;
-  const samePlan = granting && sub.planId === plan.id && sub.duration === duration;
+  const credit = granting ? await paidValuePaise(sub, userId, now) : 0;
+  const samePlan =
+    granting && sub.status !== "TRIALING" && sub.planId === plan.id && sub.duration === duration;
   const currentMonths = granting ? durationMonths(sub.duration ?? inferDuration(sub.startsAt, sub.endsAt)) ?? 1 : 1;
   const quote = quotePlanChange({
     samePlan,
@@ -74,37 +77,38 @@ export async function quotePlanCheckout(userId: string, slug: string, duration: 
 
 async function paidValuePaise(
   sub: {
-    pricePaise: number;
     planId: string | null;
     tier: SubscriptionTier;
+    status: "ACTIVE" | "TRIALING" | "PAST_DUE" | "CANCELED" | "EXPIRED";
     duration: PlanDuration | null;
     startsAt: Date;
     endsAt: Date | null;
+    bonusDays: number;
   },
-  userId: string
+  userId: string,
+  now: Date
 ) {
-  const duration = sub.duration ?? inferDuration(sub.startsAt, sub.endsAt);
-  const planId = sub.planId || legacyPlanId(sub.tier);
-  const price = await prisma.planPrice.findUnique({
-    where: { planId_duration: { planId, duration } }
-  });
-  let catalogue = price?.active ? price.pricePaise : 0;
-  if (catalogue <= 0) {
-    const monthly = await prisma.planPrice.findUnique({
-      where: { planId_duration: { planId, duration: "MONTH_1" } }
-    });
-    const months = durationMonths(duration) ?? 1;
-    catalogue = (monthly?.active ? monthly.pricePaise : 0) * months;
-  }
+  if (sub.status === "TRIALING" || sub.tier === "FREE") return 0;
+  const since = new Date(sub.startsAt.getTime() - 3 * 60 * 60 * 1000);
   const last = await prisma.payment.findFirst({
-    where: { userId, status: "COMPLETED", amount: { gt: 0 } },
+    where: {
+      userId,
+      status: "COMPLETED",
+      amount: { gt: 0 },
+      createdAt: { gte: since },
+      OR: sub.planId ? [{ planId: sub.planId }, { planId: null, tier: sub.tier }] : [{ tier: sub.tier }]
+    },
     orderBy: { createdAt: "desc" },
     select: { amount: true }
   });
-  return creditBasePaise({
-    snapshotPaise: sub.pricePaise,
-    cataloguePaise: catalogue,
-    lastPaymentPaise: last?.amount || 0
+  if (!last) return 0;
+  return unusedPaidCredit({
+    paidPaise: last.amount,
+    startsAt: sub.startsAt,
+    endsAt: sub.endsAt,
+    bonusDays: sub.bonusDays,
+    duration: sub.duration,
+    now
   });
 }
 

@@ -79,6 +79,19 @@ export async function applySubscriptionSnapshot(tx: Prisma.TransactionClient, in
   });
 }
 
+/** A paid, cancelled, or abandoned change must not stay pending on an older row. */
+export async function clearUserPending(tx: Prisma.TransactionClient, userId: string) {
+  await tx.subscription.updateMany({
+    where: { userId, pendingPlanId: { not: null } },
+    data: {
+      pendingPlanId: null,
+      pendingDuration: null,
+      pendingModules: [],
+      pendingLimits: Prisma.DbNull
+    }
+  });
+}
+
 /** Updates the user columns and the open snapshot together. */
 export async function grantPlanAccess(tx: Prisma.TransactionClient, input: SnapshotWrite) {
   await tx.user.update({
@@ -103,7 +116,7 @@ export async function editUserSubscription(
     endsAt: Date | null;
   }
 ) {
-  return applySubscriptionSnapshot(tx, {
+  const saved = await applySubscriptionSnapshot(tx, {
     userId: input.userId,
     tier: input.tier,
     status: input.status,
@@ -111,6 +124,10 @@ export async function editUserSubscription(
     planId: legacyPlanId(input.tier),
     duration: input.tier === "FOUNDER" && input.status === "ACTIVE" ? "LIFETIME" : null,
     modules: modulesForTier(input.tier),
-    limits: await limitsForTier(input.tier)
+    limits: await limitsForTier(input.tier),
+    pricePaise: 0,
+    clearPending: input.status === "CANCELED"
   });
+  if (input.status === "CANCELED") await clearUserPending(tx, input.userId);
+  return saved;
 }

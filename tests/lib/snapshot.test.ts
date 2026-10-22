@@ -1,4 +1,5 @@
 import { afterAll, describe, expect, it } from "vitest";
+import { differenceInCalendarDays } from "date-fns";
 import { prisma } from "../../lib/db";
 import { fulfillPaidShopOrder } from "../../lib/shop/fulfill";
 import { limitsForTier } from "../../lib/plans/legacy";
@@ -131,6 +132,9 @@ describe("subscription snapshots from bundles, admin, and referrals", () => {
     expect(row?.tier).toBe("GROWTH");
     expect(row?.modules).toEqual(["REVIEWS", "MENU", "STORE"]);
     expect(row?.limits).toMatchObject({ businesses: (await limitsForTier("GROWTH")).businesses });
+    expect(row?.pricePaise).toBe(0);
+    expect(row?.bonusDays).toBeGreaterThan(27);
+    expect(row?.bonusDays).toBeLessThan(32);
     expect(row?.endsAt).toBeTruthy();
     expect(await limit(user.id, "businesses")).toBe(5);
     const saved = await prisma.user.findUnique({ where: { id: user.id } });
@@ -140,6 +144,12 @@ describe("subscription snapshots from bundles, admin, and referrals", () => {
   it("switches a Starter buyer to Growth immediately", async () => {
     const user = await buyer("STARTER");
     expect(await limit(user.id, "businesses")).toBe(1);
+    const before = await prisma.subscription.findFirst({ where: { userId: user.id } });
+    expect(before?.endsAt).toBeTruthy();
+    await prisma.subscription.update({
+      where: { id: before!.id },
+      data: { pricePaise: 49900, bonusDays: 12 }
+    });
     await buyGrowth(user.id);
     expect(await limit(user.id, "businesses")).toBe(5);
     expect(await hasModule(user.id, "STORE")).toBe(true);
@@ -148,11 +158,28 @@ describe("subscription snapshots from bundles, admin, and referrals", () => {
     const row = await prisma.subscription.findFirst({ where: { userId: user.id, status: "ACTIVE" } });
     expect(row?.tier).toBe("GROWTH");
     expect(row?.planId).toBe("plan_legacy_growth");
+    expect(row?.pricePaise).toBe(0);
+    expect(row?.endsAt).toBeTruthy();
+    if (!before?.endsAt || !row?.endsAt) return;
+    expect(row.bonusDays).toBe(12 + differenceInCalendarDays(row.endsAt, before.endsAt));
   });
 
   it("applies an admin Agency edit to the snapshot", async () => {
     const user = await buyer("FREE");
     const endsAt = new Date(Date.now() + 40 * 86_400_000);
+    await prisma.subscription.create({
+      data: {
+        userId: user.id,
+        planId: "plan_legacy_starter",
+        modules: ["REVIEWS", "MENU", "STORE"],
+        limits: await limitsForTier("STARTER"),
+        tier: "STARTER",
+        status: "ACTIVE",
+        endsAt,
+        pricePaise: 49900,
+        bonusDays: 12
+      }
+    });
     await prisma.$transaction(async (tx) => {
       await tx.user.update({
         where: { id: user.id },
@@ -171,6 +198,8 @@ describe("subscription snapshots from bundles, admin, and referrals", () => {
     expect(row?.tier).toBe("AGENCY");
     expect(row?.planId).toBe("plan_legacy_agency");
     expect(row?.endsAt?.toISOString()).toBe(endsAt.toISOString());
+    expect(row?.pricePaise).toBe(0);
+    expect(row?.bonusDays).toBe(12);
   });
 
   it("moves the snapshot end when a referral reward extends the plan", async () => {

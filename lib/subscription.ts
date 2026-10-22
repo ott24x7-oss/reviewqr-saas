@@ -8,8 +8,8 @@ import { prisma } from "./db";
 import { getPaymentsConfig } from "./settings";
 import { absoluteUrl } from "./utils";
 import { limitsForTier, modulesForTier } from "./plans/legacy";
-import { bonusCarry, carriedRenewalPaise, paidEndsAt, remainingBonusDays, upgradeEndsAt } from "./plans/quote";
-import { grantPlanAccess } from "./plans/snapshot";
+import { bonusCarry, paidEndsAt, remainingBonusDays, upgradeEndsAt } from "./plans/quote";
+import { clearUserPending, grantPlanAccess } from "./plans/snapshot";
 
 export function financialYearLabel(date: Date): string {
   const start = date.getMonth() >= 3 ? date.getFullYear() : date.getFullYear() - 1;
@@ -151,35 +151,27 @@ export async function activateCompletedPayment(input: ActivateInput): Promise<Ac
       where: { userId: user.id, status: { in: ["ACTIVE", "TRIALING", "PAST_DUE"] } },
       orderBy: { createdAt: "desc" }
     });
-    const differentPlan = !!(open?.planId && row.planId && open.planId !== row.planId);
     const months = Math.max(1, row.periodMonths || 1);
-    const openBonus = open?.bonusDays || 0;
-    const carriedBonus = remainingBonusDays({ endsAt: open?.endsAt ?? null, bonusDays: openBonus, now });
-    const paidOpenEnd = open?.endsAt ? paidEndsAt(open.endsAt, openBonus) : null;
+    const trialing = open?.status === "TRIALING";
+    const differentPlan = !!(open?.planId && row.planId && open.planId !== row.planId);
+    const explicitDifferentDuration =
+      !!open && open.duration != null && row.duration != null && open.duration !== row.duration;
+    // Same plan and same duration renews from the paid end. A trial, a different
+    // plan, or a credit against the price starts the purchased months today.
+    const renew =
+      !!open && !trialing && !differentPlan && !explicitDifferentDuration && (row.creditPaise || 0) <= 0;
+    const carriedBonus =
+      open && !trialing ? remainingBonusDays({ endsAt: open.endsAt, bonusDays: open.bonusDays || 0, now }) : 0;
+    const paidOpenEnd = open?.endsAt && !trialing ? paidEndsAt(open.endsAt, open.bonusDays || 0) : null;
     let paidExpiresAt: Date | null = null;
-    let carriedPaise = 0;
     if (lifetime) {
       paidExpiresAt = null;
-    } else if (differentPlan) {
-      paidExpiresAt = upgradeEndsAt({
-        now,
-        months,
-        creditPaise: row.creditPaise || 0,
-        pricePaise: row.amount + Math.max(0, row.creditPaise || 0)
-      });
-    } else if (row.creditPaise > 0) {
-      paidExpiresAt = addMonths(now, months);
+    } else if (renew && paidOpenEnd && paidOpenEnd.getTime() > now.getTime()) {
+      paidExpiresAt = extendSubscriptionEnd(paidOpenEnd, months, now);
+    } else if (renew) {
+      paidExpiresAt = extendSubscriptionEnd(null, months, now);
     } else {
-      const openStillRunning = !!(paidOpenEnd && paidOpenEnd.getTime() > now.getTime());
-      const bonusStillRunning = !!(open?.endsAt && open.endsAt.getTime() > now.getTime());
-      const baseEnd = openStillRunning ? paidOpenEnd : bonusStillRunning ? null : user.subscriptionEndsAt;
-      paidExpiresAt = extendSubscriptionEnd(baseEnd, months, now);
-      if (open && openStillRunning && paidOpenEnd) {
-        carriedPaise = carriedRenewalPaise({
-          now,
-          open: { pricePaise: open.pricePaise, startsAt: open.startsAt, endsAt: paidOpenEnd }
-        });
-      }
+      paidExpiresAt = upgradeEndsAt({ now, months });
     }
     const credit = await tx.referralCredit.findUnique({ where: { userId: user.id } });
     const carried = bonusCarry({
@@ -241,10 +233,11 @@ export async function activateCompletedPayment(input: ActivateInput): Promise<Ac
       duration: row.duration,
       modules,
       limits,
-      pricePaise: carriedPaise + row.amount + Math.max(0, row.creditPaise || 0),
+      pricePaise: Math.max(0, row.amount),
       bonusDays: carried.bonusDays,
       clearPending: true
     });
+    await clearUserPending(tx, user.id);
 
     return { ok: true, already: false, expiresAt: expiresAt ?? now, invoiceNumber };
   });

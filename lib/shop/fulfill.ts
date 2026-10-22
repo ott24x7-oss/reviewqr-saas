@@ -3,6 +3,7 @@
  * A second call for the same order does not take another number or another month.
  */
 import type { Prisma, SubscriptionTier } from "@prisma/client";
+import { differenceInCalendarDays } from "date-fns";
 import { logAudit } from "../admin";
 import { prisma } from "../db";
 import { extendSubscriptionEnd, nextInvoiceNumber } from "../subscription";
@@ -153,6 +154,12 @@ export async function fulfillPaidShopOrder(input: FulfillInput): Promise<Fulfill
       });
     }
     if (grant) {
+      const open = await tx.subscription.findFirst({
+        where: { userId: user.id, status: { in: ["ACTIVE", "TRIALING", "PAST_DUE"] } },
+        orderBy: { createdAt: "desc" }
+      });
+      const base = open?.endsAt && open.endsAt.getTime() > now.getTime() ? open.endsAt : now;
+      const added = endsAt ? Math.max(0, differenceInCalendarDays(endsAt, base)) : 0;
       await grantPlanAccess(tx, {
         userId: user.id,
         tier,
@@ -162,7 +169,9 @@ export async function fulfillPaidShopOrder(input: FulfillInput): Promise<Fulfill
         planId: legacyPlanId(tier),
         duration: tier === "FOUNDER" ? "LIFETIME" : null,
         modules: modulesForTier(tier),
-        limits: await limitsForTier(tier)
+        limits: await limitsForTier(tier),
+        pricePaise: 0,
+        bonusDays: (open?.bonusDays || 0) + added
       });
     }
     await tx.shopCartLine.deleteMany({ where: { cart: { userId: row.userId } } });
