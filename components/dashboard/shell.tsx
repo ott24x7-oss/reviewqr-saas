@@ -21,6 +21,7 @@ import {
   Plus,
   ShieldCheck,
   LifeBuoy,
+  BarChart3,
   ShoppingBag,
   Package,
   Users,
@@ -29,6 +30,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { VerifyEmailBanner } from "@/components/dashboard/verify-email-banner";
+import { AnnouncementBanner } from "@/components/dashboard/announcement-banner";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -79,6 +81,7 @@ type User = {
 
 const nav = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard, exact: true },
+  { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/dashboard/businesses", label: "Businesses", icon: Building2 },
   { href: "/dashboard/reviews", label: "Reviews", icon: Star },
   { href: "/dashboard/feedback", label: "Feedback", icon: MessageSquare, badge: true },
@@ -382,6 +385,7 @@ export function DashboardShell({
               </div>
             )}
             {user.emailVerified === false && <VerifyEmailBanner />}
+            <AnnouncementBanner />
             {children}
           </div>
         </main>

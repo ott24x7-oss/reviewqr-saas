@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { HelpCenter } from "@/components/help/help-center";
 
 type Ticket = {
   id: string;
@@ -71,6 +72,7 @@ export default function HelpPage() {
         <h1 className="text-2xl font-bold font-display">Help</h1>
         <p className="text-sm text-muted-foreground">We reply in this thread. It is not a live chat.</p>
       </div>
+      <HelpCenter />
       <Card>
         <CardHeader>
           <CardTitle>New message</CardTitle>

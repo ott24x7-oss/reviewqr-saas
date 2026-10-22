@@ -18,6 +18,7 @@ import {
   Globe,
   History,
   LifeBuoy,
+  CircleHelp,
   Palette,
   Link2,
   QrCode,
@@ -60,6 +61,7 @@ const nav = [
   { href: "/admin/themes", label: "Tap themes", icon: Palette },
   { href: "/admin/presets", label: "Page presets", icon: Link2 },
   { href: "/admin/audit", label: "Audit Log", icon: History },
+  { href: "/admin/help", label: "Help", icon: CircleHelp },
   { href: "/admin/support", label: "Support", icon: LifeBuoy }
 ];
 
