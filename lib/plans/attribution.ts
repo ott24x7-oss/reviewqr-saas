@@ -112,6 +112,51 @@ export async function applySignupAttribution(input: {
   }
 }
 
+/** A typed agent or owner code. An agent code wins. The first saved row stays. */
+export async function applyManualReferralCode(input: {
+  userId: string;
+  code: string;
+  phone?: string | null;
+  email?: string | null;
+  businessId?: string | null;
+}) {
+  const code = normalizeCode(input.code);
+  if (!code) return { ok: false as const, error: "That code is not valid" };
+  const existing = await prisma.signupAttribution.findUnique({ where: { userId: input.userId } });
+  if (existing) return { ok: true as const, already: true };
+
+  const person = { select: { id: true, phone: true, email: true } } as const;
+  const [agent, owner] = await Promise.all([
+    prisma.agentProfile.findUnique({ where: { code }, include: { user: person } }),
+    prisma.ownerReferral.findUnique({ where: { code }, include: { user: person } })
+  ]);
+  const agentOk = Boolean(agent?.active && agent.user && !samePerson(agent.user, input));
+  const ownerOk = Boolean(owner?.user && !samePerson(owner.user, input));
+  const choice = chooseAttribution({ agentCode: agentOk, ownerCode: ownerOk });
+  if (!choice || (choice === "agent" && !agent) || (choice === "owner" && !owner)) {
+    return { ok: false as const, error: "That code is not valid" };
+  }
+  try {
+    const row = await prisma.signupAttribution.create({
+      data: {
+        userId: input.userId,
+        agentId: choice === "agent" ? agent!.userId : null,
+        referrerUserId: choice === "owner" ? owner!.userId : null,
+        code
+      }
+    });
+    if (input.businessId && row.agentId) {
+      await prisma.business.updateMany({
+        where: { id: input.businessId, agentId: null },
+        data: { agentId: row.agentId }
+      });
+    }
+    return { ok: true as const, already: false };
+  } catch {
+    return { ok: true as const, already: true };
+  }
+}
+
 export async function reassignBusinessAgent(businessId: string, agentUserId: string) {
   const [business, profile] = await Promise.all([
     prisma.business.findUnique({ where: { id: businessId }, select: { id: true, ownerId: true } }),

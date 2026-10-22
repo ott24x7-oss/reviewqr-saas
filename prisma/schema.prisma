@@ -112,6 +112,7 @@ model User {
   supportTickets  SupportTicket[]
   supportMessages SupportMessage[] @relation("SupportMessageAuthor")
   onboardingMarks OnboardingMark[]
+  onboardingDraft OnboardingDraft?
   printBatches    PrintBatch[]
   refreshSessions RefreshSession[]
   pushDevices     PushDevice[]
@@ -1160,6 +1161,19 @@ model OnboardingMark {
 
   @@unique([userId, kind])
   @@index([userId])
+}
+
+// Wizard progress for the Android app. One row per owner. The payload is the draft.
+model OnboardingDraft {
+  userId         String    @id
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  step           Int       @default(0)
+  referralAsked  Boolean   @default(false)
+  referralCode   String?
+  payload        Json      @default("{}")
+  businessId     String?
+  completedAt    DateTime?
+  updatedAt      DateTime  @updatedAt
 }
 
 // Per-business AI calls for a calendar month (Asia/Kolkata), key YYYY-MM.
