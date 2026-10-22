@@ -44,17 +44,13 @@ export function SellHero({
     "भारतीय कैफ़े काउंटर पर एक्रिलिक QR और NFC स्टैंड, जिसे फ़ोन स्कैन कर रहा है"
   );
 
-  const trustLine = [
-    trust.rating != null && trust.reviewCount != null
-      ? pick(lang, `${trust.rating}★ (${trust.reviewCount})`, `${trust.rating}★ (${trust.reviewCount})`)
-      : null,
+  const trustFacts = [
+    trust.rating != null ? `${trust.rating}★` : null,
     trust.businesses != null ? pick(lang, `${trust.businesses} shops`, `${trust.businesses} दुकान`) : null,
-    pick(lang, "No commission", "कोई कमीशन नहीं"),
-    pick(lang, "10 min setup", "10 मिनट सेटअप"),
+    pick(lang, "No commission", "0% कमीशन"),
+    pick(lang, "10 min", "10 मिनट"),
     pick(lang, "Made in India", "मेड इन इंडिया")
-  ]
-    .filter((item): item is string => Boolean(item))
-    .join(" · ");
+  ].filter((item): item is string => Boolean(item));
 
   return (
     <section id="sell-hero" className="scroll-mt-24 px-4 pb-5 pt-3 sm:pt-6">
@@ -114,8 +110,12 @@ export function SellHero({
             <Link href="/how-it-works" className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold underline">
               {pick(lang, "How it works", "कैसे काम करता है")}
             </Link>
-            <p className="mt-1 truncate text-[10px] font-medium leading-4 text-white/90 sm:text-xs lg:text-[var(--marketing-muted)]">
-              {trustLine}
+            <p className="mt-1 flex min-w-0 items-center gap-1.5 whitespace-nowrap text-[10px] font-medium leading-4 text-white/90 sm:gap-2 sm:text-xs lg:text-[var(--marketing-muted)]">
+              {trustFacts.map((fact) => (
+                <span key={fact} className="shrink-0">
+                  {fact}
+                </span>
+              ))}
             </p>
           </div>
         </div>
