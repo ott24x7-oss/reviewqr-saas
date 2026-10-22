@@ -86,7 +86,14 @@ const en = {
   lockTag: "Lock this tag",
   push: "Push notifications",
   pushOn: "Push is on",
-  pushOff: "Push is off"
+  pushOff: "Push is off",
+  nfcHold: "Hold the phone on the tag.",
+  nfcVerified: "The tag matches this tap page.",
+  nfcMismatch: "The tag does not match this tap page.",
+  nfcRetry: "Hold the phone on the tag and try again.",
+  nfcLocked: "This tag is locked.",
+  lockConfirm: "A locked tag cannot be written again.",
+  cancel: "Cancel"
 };
 
 const hi: typeof en = {
@@ -175,7 +182,14 @@ const hi: typeof en = {
   lockTag: "इस टैग को लॉक करें",
   push: "पुश सूचनाएँ",
   pushOn: "पुश चालू है",
-  pushOff: "पुश बंद है"
+  pushOff: "पुश बंद है",
+  nfcHold: "फोन को टैग पर रखें।",
+  nfcVerified: "टैग इस टैप पेज से मेल खाता है।",
+  nfcMismatch: "टैग इस टैप पेज से मेल नहीं खाता।",
+  nfcRetry: "फोन को टैग पर रखें और फिर कोशिश करें।",
+  nfcLocked: "यह टैग लॉक हो गया।",
+  lockConfirm: "लॉक टैग पर दोबारा नहीं लिखा जा सकता।",
+  cancel: "रद्द करें"
 };
 
 export const copy = { en, hi };

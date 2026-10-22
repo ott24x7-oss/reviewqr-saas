@@ -1,8 +1,11 @@
+import { router } from "expo-router";
 import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { apiData } from "../../src/api/data";
 import { ApiError } from "../../src/api/http";
 import { useI18n } from "../../src/i18n";
+import { canWriteNfc } from "../../src/nfc/access";
+import { useBusiness } from "../../src/state/business";
 import { useSession } from "../../src/state/session";
 import { colors, fonts } from "../../src/theme";
 import { PillButton } from "../../src/ui/controls";
@@ -10,6 +13,8 @@ import { PillButton } from "../../src/ui/controls";
 export default function MoreScreen() {
   const { t, lang } = useI18n();
   const { user, logout, refreshUser } = useSession();
+  const { businesses } = useBusiness();
+  const owns = businesses.some((item) => item.ownerId === user?.id);
   const [error, setError] = useState<string | null>(null);
 
   async function togglePush() {
@@ -30,6 +35,9 @@ export default function MoreScreen() {
     <View style={styles.screen}>
       <Text style={[styles.title, lang === "hi" && styles.hindi]}>{t.more}</Text>
       <PillButton label={user?.pushEnabled ? t.pushOn : t.pushOff} onPress={togglePush} tone="dark" />
+      {canWriteNfc(user?.role, owns) ? (
+        <PillButton label={t.nfc} onPress={() => router.push("/(app)/nfc")} tone="outline" />
+      ) : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <PillButton label={t.signOut} onPress={() => logout()} tone="outline" />
     </View>
