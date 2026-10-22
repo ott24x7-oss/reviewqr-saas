@@ -24,7 +24,7 @@ async function postHandler(req: NextRequest) {
   }
 
   const verified = await verifyLoginOtp(parsed.data.phone, parsed.data.code);
-  if (!verified.ok) return v1Error(401, "UNAUTHORIZED", "Invalid code");
+  if (!verified.ok) return v1Error(401, "UNAUTHORIZED", verified.error);
 
   const user = await consumeOtpSession(verified.otpToken);
   if (!user) return v1Error(401, "UNAUTHORIZED", "Invalid code");

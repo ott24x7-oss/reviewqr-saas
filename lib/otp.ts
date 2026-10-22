@@ -14,6 +14,7 @@ import {
   otpBrandName,
   otpGateError,
   otpWrongCodeError,
+  phoneKeyFromRaw,
   type OtpChannel
 } from "./otp-message";
 
@@ -28,9 +29,7 @@ export function otpStillValid(expires: Date, attempts: number, now = Date.now())
 }
 
 export function phoneKey(raw: string) {
-  const digits = raw.replace(/\D/g, "");
-  if (digits.length < 10) return "";
-  return digits.slice(-10);
+  return phoneKeyFromRaw(raw);
 }
 
 export async function findUserByPhone(raw: string) {

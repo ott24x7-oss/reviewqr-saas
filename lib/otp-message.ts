@@ -28,6 +28,59 @@ export function otpWrongCodeError(nextAttempts: number, maxAttempts: number) {
   return nextAttempts >= maxAttempts ? OTP_TOO_MANY : OTP_INVALID;
 }
 
+export type OtpLimit = { key: string; limit: number; windowSeconds: number };
+
+/** Existing windows stay. The 15-minute and 30-second keys are extra. */
+export function otpIpLimits(ip: string, scope: "login" | "signup"): OtpLimit[] {
+  const first =
+    scope === "signup"
+      ? { key: `otp-signup:${ip}`, limit: 8, windowSeconds: 600 }
+      : { key: `otp-req:${ip}`, limit: 8, windowSeconds: 600 };
+  return [first, { key: `otp-req-15:${ip}`, limit: 20, windowSeconds: 900 }];
+}
+
+export function otpPhoneLimits(phoneKey: string): OtpLimit[] {
+  return [
+    { key: `otp-phone:${phoneKey}`, limit: 5, windowSeconds: 600 },
+    { key: `otp-phone-15:${phoneKey}`, limit: 5, windowSeconds: 900 },
+    { key: `otp-cooldown:${phoneKey}`, limit: 1, windowSeconds: 30 }
+  ];
+}
+
+export async function enforceOtpLimits(
+  limits: OtpLimit[],
+  limiter: (limit: OtpLimit) => Promise<{ ok: boolean }>
+) {
+  for (const limit of limits) {
+    const result = await limiter(limit);
+    if (!result.ok) return { ok: false as const, key: limit.key };
+  }
+  return { ok: true as const };
+}
+
+export function otpLimitMessage(key: string) {
+  if (key.startsWith("otp-cooldown:")) return "Please wait 30 seconds before requesting another code.";
+  return "Too many attempts";
+}
+
+/** Same last-10 rule as phoneKey. Kept here so limit checks do not import the database. */
+export function phoneKeyFromRaw(raw: string) {
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length < 10) return "";
+  return digits.slice(-10);
+}
+
+export function phoneKeyFromBody(body: unknown) {
+  if (!body || typeof body !== "object") return "";
+  const phone = (body as { phone?: unknown }).phone;
+  if (typeof phone !== "string") return "";
+  return phoneKeyFromRaw(phone);
+}
+
+export function isSignupRequest(body: unknown) {
+  return !!body && typeof body === "object" && (body as { action?: unknown }).action === "request";
+}
+
 export function otpBrandName(raw: string | null | undefined) {
   const name = (raw ?? "").trim();
   return name || OTP_BRAND_FALLBACK;
