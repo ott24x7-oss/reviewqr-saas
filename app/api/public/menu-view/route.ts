@@ -5,6 +5,12 @@ import { hashVisitor } from "@/lib/analytics/visitor";
 import { prisma } from "@/lib/db";
 import { rateLimitDb } from "@/lib/rate-limit";
 import { isLookupCode } from "@/lib/tap/ids";
+import { getClientIp } from "@/lib/utils";
+
+/** One bucket per caller and printed code. The visitor id is not a limit key. */
+export function menuViewLimitKey(ip: string, shortCode: string) {
+  return `menu-view:${ip || "unknown"}:${shortCode}`;
+}
 
 const bodySchema = z.object({
   code: z.string().min(4).max(32),
@@ -29,7 +35,12 @@ export async function POST(req: NextRequest) {
   const visitorHash = hashVisitor(parsed.data.visitor);
   if (!visitorHash) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
 
-  const limit = await rateLimitDb({ key: `menu-view:${visitorHash.slice(0, 16)}`, limit: 60, windowSeconds: 60 });
+  const ip = getClientIp(req.headers);
+  const limit = await rateLimitDb({
+    key: menuViewLimitKey(ip, parsed.data.code),
+    limit: 60,
+    windowSeconds: 60
+  });
   if (!limit.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const qr = await prisma.qRCode.findUnique({
