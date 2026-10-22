@@ -28,11 +28,13 @@ function anchorLabel(anchor: HeroAnchor, lang: "en" | "hi") {
 export function SellHero({
   anchor,
   trust,
-  whatsapp
+  whatsapp,
+  freeHref
 }: {
   anchor: HeroAnchor;
   trust: LandingTrust;
   whatsapp: string | null;
+  freeHref?: string | null;
 }) {
   const { lang } = useLandingLang();
   const price = anchorLabel(anchor, lang);
@@ -71,7 +73,16 @@ export function SellHero({
               "Google रिव्यू, मेनू और WhatsApp ऑर्डर, एक QR + NFC स्टैंड से"
             )}
           </p>
-          {price ? <p className="marketing-rupee mt-3 text-base font-semibold text-[var(--marketing-ink)]">{price}</p> : null}
+          {price ? (
+            <p className="marketing-rupee mt-3 text-base font-semibold text-[var(--marketing-ink)]" data-price-anchor={anchor!.paise}>
+              {price}
+            </p>
+          ) : null}
+          {freeHref ? (
+            <Link href={freeHref} className="mt-1 inline-flex min-h-11 items-center text-sm font-semibold underline">
+              {pick(lang, "Start free", "मुफ़्त शुरू करें")}
+            </Link>
+          ) : null}
           <div className="mt-4 flex flex-col gap-2 sm:flex-row">
             <a href="#pricing" className="marketing-cta inline-flex justify-center">
               {pick(lang, "Buy now", "अभी खरीदें")}
@@ -152,7 +163,11 @@ export function StickyBuy({ anchor, whatsapp }: { anchor: HeroAnchor; whatsapp: 
       aria-hidden={!show}
     >
       <div className="mx-auto flex max-w-lg items-center gap-2">
-        {price ? <p className="marketing-rupee min-w-0 flex-1 truncate text-sm font-semibold">{pick(lang, `Starting ${formatRupees(anchor!.paise)}`, `${formatRupees(anchor!.paise)} से`)}</p> : <span className="flex-1" />}
+        {price ? (
+          <p className="marketing-rupee min-w-0 flex-1 truncate text-sm font-semibold">{price}</p>
+        ) : (
+          <span className="flex-1" />
+        )}
         <a href="#pricing" className="marketing-cta inline-flex justify-center" tabIndex={show ? 0 : -1}>
           {pick(lang, "Buy now", "अभी खरीदें")}
         </a>

@@ -3,10 +3,11 @@ import { Footer } from "@/components/marketing/footer";
 import { LegacyHashRedirect } from "@/components/marketing/landing/legacy-hash-redirect";
 import { Comparison, FaqV2, CtaV2 } from "@/components/marketing/landing/sections";
 import type { Metadata } from "next";
-import { listPublicPlans } from "@/lib/plans/public";
+import { listActivePlanPrices, listPublicPlans } from "@/lib/plans/public";
+import { buyHref } from "@/lib/plans/categories";
+import { freePlanOffer, priceAnchor } from "@/lib/landing/anchor";
 import { getBrand } from "@/lib/brand";
 import { marketingFontClass } from "@/components/brand/fonts";
-import { priceAnchor } from "@/lib/landing/anchor";
 import { talkToUsHref } from "@/lib/landing/money";
 import { landingQuotes, landingTrust } from "@/lib/landing/proof";
 import { LandingLangProvider } from "@/components/marketing/landing-v2/lang";
@@ -34,14 +35,16 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function HomePage() {
-  const [catalog, brand, trust, hardware, quotes] = await Promise.all([
+  const [catalog, priced, brand, trust, hardware, quotes] = await Promise.all([
     listPublicPlans(),
+    listActivePlanPrices(),
     getBrand(),
     landingTrust(),
     listStandAddons(),
     landingQuotes()
   ]);
   const anchor = priceAnchor(catalog);
+  const free = freePlanOffer(priced);
   const whatsapp = talkToUsHref();
   return (
     <LandingLangProvider>
@@ -51,7 +54,12 @@ export default async function HomePage() {
       <MarketingNavbar brand={brand} />
       <LegacyHashRedirect />
 
-      <SellHero anchor={anchor} trust={trust} whatsapp={whatsapp} />
+      <SellHero
+        anchor={anchor}
+        trust={trust}
+        whatsapp={whatsapp}
+        freeHref={free ? buyHref(free.slug, free.duration) : null}
+      />
       <StickyBuy anchor={anchor} whatsapp={whatsapp} />
       <ProductGrid plans={catalog} hardware={hardware} />
       <LiveDemo />

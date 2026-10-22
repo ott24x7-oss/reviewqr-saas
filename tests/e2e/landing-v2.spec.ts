@@ -17,6 +17,17 @@ test("landing at 360px shows the hero buy button on the first screen", async ({ 
   await page.screenshot({ path: "docs/landing/home-1280.png" });
 });
 
+test("the home price anchor is a paid monthly price", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/");
+  const anchor = page.locator("#sell-hero [data-price-anchor]");
+  await expect(anchor).toBeVisible();
+  const paise = Number(await anchor.getAttribute("data-price-anchor"));
+  expect(paise).toBeGreaterThan(0);
+  await expect(anchor).not.toContainText(/₹\s*0(?:\D|$)/);
+  await expect(page.locator("#sell-hero").getByRole("link", { name: "Start free" })).toBeVisible();
+});
+
 test("a duration chip changes the price and Buy now opens signup", async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 800 });
   await page.goto("/");

@@ -20,6 +20,18 @@ export type PublicPlan = {
   }>;
 };
 
+/** Active plans, including ones hidden from the pricing grid, so a free plan can still be offered. */
+export async function listActivePlanPrices() {
+  return prisma.plan.findMany({
+    where: { active: true },
+    orderBy: { sortOrder: "asc" },
+    select: {
+      slug: true,
+      prices: { where: { active: true }, select: { duration: true, pricePaise: true } }
+    }
+  });
+}
+
 export async function listPublicPlans(): Promise<PublicPlan[]> {
   const plans = await prisma.plan.findMany({
     where: { active: true, visibleOnPricingPage: true },
