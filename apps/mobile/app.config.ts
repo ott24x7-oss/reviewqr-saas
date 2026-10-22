@@ -1,11 +1,14 @@
 import type { ConfigContext, ExpoConfig } from "expo/config";
 
 const packageName = "com.qr24x7.app";
+// Expo project @ott24x7/reviewqr. Not a secret.
+const easProjectId = "00c6693d-9ab5-4dce-9de6-e24889f469fa";
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: "QR24x7",
   slug: "reviewqr",
+  owner: "ott24x7",
   scheme: ["qr24x7", "reviewqr"],
   primaryColor: "#16A34A",
   version: "1.0.0",
@@ -91,7 +94,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   extra: {
     eas: {
-      projectId: process.env.EXPO_PUBLIC_EAS_PROJECT_ID || ""
+      projectId: process.env.EXPO_PUBLIC_EAS_PROJECT_ID || easProjectId
     }
   }
 });

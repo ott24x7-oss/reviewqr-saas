@@ -18,7 +18,8 @@
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://qr24x7.in",
-        "EXPO_PUBLIC_SELL_PLANS": "0"
+        "EXPO_PUBLIC_SELL_PLANS": "0",
+        "EXPO_PUBLIC_EAS_PROJECT_ID": "00c6693d-9ab5-4dce-9de6-e24889f469fa"
       }
     },
     "production": {
@@ -28,7 +29,8 @@
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://qr24x7.in",
-        "EXPO_PUBLIC_SELL_PLANS": "0"
+        "EXPO_PUBLIC_SELL_PLANS": "0",
+        "EXPO_PUBLIC_EAS_PROJECT_ID": "00c6693d-9ab5-4dce-9de6-e24889f469fa"
       }
     }
   },
