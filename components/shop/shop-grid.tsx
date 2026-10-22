@@ -196,8 +196,13 @@ function ChooseSheet({
 
   const min = Math.max(1, variant?.minQty ?? 1);
   return (
-    <Dialog open={Boolean(product)} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="gap-4 bg-card text-ink">
+    <Dialog open={Boolean(product)} onOpenChange={(open) => !open && onClose()} modal={false}>
+      <DialogContent
+        className="gap-4 bg-card text-ink"
+        overlayClassName="pointer-events-none"
+        onPointerDownOutside={(event) => event.preventDefault()}
+        onInteractOutside={(event) => event.preventDefault()}
+      >
         {product && variant && (
           <>
             <div className="flex gap-3 pr-6">
@@ -312,7 +317,7 @@ export function ShopGrid({
             href="/dashboard/shop/cart"
             aria-label={`${copy.cart}, ${count} ${copy.items}`}
             data-testid="shop-cart-link"
-            className="inline-flex min-h-11 items-center gap-2 rounded-full bg-ink px-4 text-sm font-semibold text-background"
+            className="relative z-[70] inline-flex min-h-11 items-center gap-2 rounded-full bg-ink px-4 text-sm font-semibold text-background pointer-events-auto"
           >
             <ShoppingBag className="h-4 w-4" aria-hidden="true" />
             {copy.cart}

@@ -2,6 +2,8 @@ import type { OpenAPIRegistry } from "@asteasolutions/zod-to-openapi";
 import { z } from "zod";
 import {
   dataSchema,
+  billingSummarySchema,
+  dashboardSchema,
   daySummarySchema,
   feedbackPatchSchema,
   listSchema,
@@ -13,6 +15,13 @@ import {
   orderCardSchema,
   orderStatusSchema,
   pageQuerySchema,
+  placeDetailsSchema,
+  placesSearchSchema,
+  menuSnapRequestSchema,
+  productDraftSchema,
+  shopOrderDetailSchema,
+  tapPageSchema,
+  tapSaveSchema,
   qrClaimSchema,
   qrPatchSchema,
   storeSettingsSchema,
@@ -368,6 +377,115 @@ export function registerResourcePaths(registry: OpenAPIRegistry, errorRef: JsonS
     responses: {
       200: jsonResponse("Marked read", dataSchema(okSchema)),
       400: validation,
+      401: unauthorized
+    }
+  });
+
+  registry.registerPath({
+    method: "post",
+    path: "/api/v1/businesses/{id}/menu/snap",
+    summary: "Read a product photo and suggest a name. The owner still types the price.",
+    security: bearer,
+    request: { params: idParams, ...jsonBody(menuSnapRequestSchema) },
+    responses: {
+      200: jsonResponse("Suggestion", dataSchema(z.object({ item: productDraftSchema }))),
+      400: validation,
+      401: unauthorized,
+      402: planLimit,
+      404: notFound,
+      429: rateLimit,
+      503: jsonResponse("Reader unavailable", errorRef)
+    }
+  });
+
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/businesses/{id}/tap",
+    summary: "Tap page buttons, theme, and the public QR code",
+    security: bearer,
+    request: { params: idParams },
+    responses: {
+      200: jsonResponse("Tap page", dataSchema(tapPageSchema)),
+      401: unauthorized,
+      404: notFound
+    }
+  });
+
+  registry.registerPath({
+    method: "patch",
+    path: "/api/v1/businesses/{id}/tap",
+    summary: "Save tap page buttons and an optional preset theme",
+    security: bearer,
+    request: { params: idParams, ...jsonBody(tapSaveSchema) },
+    responses: {
+      200: jsonResponse("Saved", dataSchema(z.object({ published: z.boolean() }))),
+      400: validation,
+      401: unauthorized,
+      402: planLimit,
+      404: notFound
+    }
+  });
+
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/dashboard",
+    summary: "Today's orders, feedback, scans, and the current plan",
+    security: bearer,
+    request: { query: z.object({ businessId: z.string().optional() }) },
+    responses: {
+      200: jsonResponse("Home", dataSchema(dashboardSchema)),
+      401: unauthorized,
+      404: notFound
+    }
+  });
+
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/places/search",
+    summary: "Search Google Places through the server. enabled is false when the key is unset.",
+    security: bearer,
+    request: { query: z.object({ q: z.string().optional() }) },
+    responses: {
+      200: jsonResponse("Predictions", dataSchema(placesSearchSchema)),
+      401: unauthorized,
+      429: rateLimit
+    }
+  });
+
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/places/details",
+    summary: "Place details for a new business. enabled is false when the key is unset.",
+    security: bearer,
+    request: { query: z.object({ placeId: z.string().optional() }) },
+    responses: {
+      200: jsonResponse("Place", dataSchema(placeDetailsSchema)),
+      401: unauthorized,
+      404: notFound,
+      429: rateLimit
+    }
+  });
+
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/shop/orders/{id}",
+    summary: "One hardware order, payment status, timeline, and reprint requests",
+    security: bearer,
+    request: { params: idParams },
+    responses: {
+      200: jsonResponse("Order", dataSchema(shopOrderDetailSchema)),
+      401: unauthorized,
+      404: notFound
+    }
+  });
+
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/billing/summary",
+    summary: "Current plan, expiry, and payment history. Does not start a purchase.",
+    security: bearer,
+    responses: {
+      200: jsonResponse("Billing", dataSchema(billingSummarySchema)),
       401: unauthorized
     }
   });

@@ -1,8 +1,8 @@
 "use client";
 import * as React from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
+import { enterSession } from "@/components/auth/enter-session";
 import { Loader2, LogIn } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -20,10 +20,8 @@ import {
 } from "@/components/auth/otp-ui";
 
 function LoginForm() {
-  const router = useRouter();
   const search = useSearchParams();
   const { lang, choose, t } = useAuthLang();
-  const [method, setMethod] = React.useState<"whatsapp" | "email">("whatsapp");
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [loading, setLoading] = React.useState(false);
@@ -45,20 +43,18 @@ function LoginForm() {
     if (!email || !password) return;
     setLoading(true);
     setError("");
-    const res = await signIn("credentials", {
-      email: email.trim().toLowerCase(),
-      password,
-      redirect: false
-    });
+    const entered = await enterSession(
+      { email: email.trim().toLowerCase(), password },
+      search.get("callbackUrl")
+    );
     setLoading(false);
-    if (res?.error) {
+    if (!entered.ok) {
       setError("Invalid email or password");
       toast.error("Invalid email or password");
       return;
     }
     toast.success("Welcome back!");
-    router.push(search.get("callbackUrl") || "/dashboard");
-    router.refresh();
+    window.location.assign(entered.path);
   }
 
   async function sendCode() {
@@ -95,16 +91,17 @@ function LoginForm() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error || "Invalid code");
-      const signed = await signIn("credentials", {
-        otpToken: json.otpToken,
-        email: "otp-login@invalid.local",
-        password: "unused",
-        redirect: false
-      });
-      if (signed?.error) throw new Error("Could not sign in");
+      const entered = await enterSession(
+        {
+          otpToken: String(json.otpToken || ""),
+          email: "otp-login@invalid.local",
+          password: "unused"
+        },
+        search.get("callbackUrl")
+      );
+      if (!entered.ok) throw new Error("Could not sign in");
       toast.success("Welcome back!");
-      router.push(search.get("callbackUrl") || "/dashboard");
-      router.refresh();
+      window.location.assign(entered.path);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Invalid code");
     } finally {
@@ -123,17 +120,12 @@ function LoginForm() {
     <Card className="shadow-card">
       <CardHeader className="text-center">
         <LangToggle lang={lang} choose={choose} />
-        <CardTitle className="text-2xl font-display">
-          {method === "whatsapp" ? t.loginTitle : "Welcome back"}
-        </CardTitle>
-        <CardDescription>
-          {method === "whatsapp" ? t.loginSubtitle : "Sign in to manage your reviews"}
-        </CardDescription>
+        <CardTitle className="text-2xl font-display">{t.loginTitle}</CardTitle>
+        <CardDescription>{t.loginSubtitle}</CardDescription>
       </CardHeader>
-      <CardContent>
-        {method === "whatsapp" ? (
-          <form onSubmit={otpSent ? verifyCode : (event) => { event.preventDefault(); void sendCode(); }} className="space-y-4">
-            {error ? <p role="alert" className="auth-error text-sm">{error}</p> : null}
+      <CardContent className="space-y-6">
+        {error ? <p role="alert" className="auth-error text-sm">{error}</p> : null}
+        <form onSubmit={otpSent ? verifyCode : (event) => { event.preventDefault(); void sendCode(); }} className="space-y-4">
             {!otpSent ? (
               <div className="space-y-1.5">
                 <Label htmlFor="phone">{t.phone}</Label>
@@ -168,13 +160,15 @@ function LoginForm() {
                 </button>
               </div>
             ) : null}
-            <button type="button" className="w-full text-sm" onClick={() => { setMethod("email"); setError(""); }}>
+            <button
+              type="button"
+              className="w-full text-sm"
+              onClick={() => document.getElementById("email")?.focus()}
+            >
               {t.emailInstead}
             </button>
           </form>
-        ) : (
-          <form onSubmit={signInWithPassword} className="space-y-4">
-            {error ? <p role="alert" className="auth-error text-sm">{error}</p> : null}
+          <form onSubmit={signInWithPassword} className="space-y-4 border-t pt-6">
             <div className="space-y-1.5">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -208,11 +202,14 @@ function LoginForm() {
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
               Sign in
             </Button>
-            <button type="button" className="w-full text-sm" onClick={() => { setMethod("whatsapp"); setError(""); }}>
+            <button
+              type="button"
+              className="w-full text-sm"
+              onClick={() => document.getElementById("phone")?.focus()}
+            >
               {t.whatsappInstead}
             </button>
           </form>
-        )}
         <div className="mt-6 text-center text-sm text-muted-foreground">
           New to ReviewQR?{" "}
           <Link href="/register" className="font-medium text-primary hover:underline">

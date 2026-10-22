@@ -14,7 +14,7 @@ export default function PrivacyPage() {
       eyebrow="Legal"
       title="Privacy Policy"
       intro="Your data belongs to you. This policy explains what we collect, why, and the choices you have."
-      updated="21 October 2026"
+      updated="22 October 2026"
     >
       <p>
         This Privacy Policy describes how ReviewQR ("we", "us", "the Service") collects, uses, and
@@ -65,6 +65,14 @@ export default function PrivacyPage() {
       <p>
         A business owner can erase a customer's name, email, and phone from a feedback row. That action
         is written to the audit log.
+      </p>
+      <p>
+        You can delete the account in the Android app under More, or on the web at the{" "}
+        <a href="/account/delete" className="underline">
+          account deletion page
+        </a>
+        . That page asks for a one-time code sent to the mobile number on the account. The invoice
+        exception above still applies.
       </p>
 
       <h2>6. Security</h2>
