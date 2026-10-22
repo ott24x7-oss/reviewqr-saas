@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { apiData } from "../api/data";
 import { useSession } from "../state/session";
 import { rememberPushToken } from "./stored-token";
@@ -8,6 +8,23 @@ import { routeForPush } from "./routes";
 /** Registers this Android device when the owner allows push, and opens the screen a tap names. */
 export function PushBridge() {
   const { user } = useSession();
+  const openedColdStart = useRef(false);
+
+  useEffect(() => {
+    let live = true;
+    if (openedColdStart.current) return undefined;
+    openedColdStart.current = true;
+    (async () => {
+      const Notifications = await import("expo-notifications");
+      const last = await Notifications.getLastNotificationResponseAsync();
+      if (!live || !last) return;
+      const data = last.notification.request.content.data as Record<string, unknown>;
+      router.push(routeForPush(data));
+    })().catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, []);
 
   useEffect(() => {
     let remove = () => {};
