@@ -1,12 +1,3 @@
 {
-  "plugins": [
-    "expo-router",
-    "expo-secure-store",
-    "expo-web-browser",
-    "expo-status-bar",
-    "expo-splash-screen",
-    "expo-font",
-    "expo-image",
-    "expo-build-properties"
-  ]
+  "plugins": []
 }

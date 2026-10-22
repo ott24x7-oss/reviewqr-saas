@@ -31,7 +31,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   plugins: [
     "expo-router",
     "expo-secure-store",
+    "expo-web-browser",
+    "expo-status-bar",
     "expo-font",
+    "expo-image",
     [
       "expo-splash-screen",
       {
@@ -53,7 +56,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       "expo-camera",
       {
-        cameraPermission: "ReviewQR uses the camera to photograph a product so we can suggest a name and price."
+        cameraPermission: "ReviewQR uses the camera to photograph a product so we can suggest a name and price.",
+        recordAudioAndroid: false
       }
     ],
     [
