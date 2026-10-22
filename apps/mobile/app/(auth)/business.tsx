@@ -1,6 +1,7 @@
 import type { TokenPair } from "@reviewqr/shared";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { apiData } from "../../src/api/data";
@@ -21,7 +22,9 @@ export default function BusinessNameScreen() {
   const [busy, setBusy] = useState(false);
 
   const challenge = pending?.signupToken ? pending : null;
+  const leaving = useRef(false);
   useEffect(() => {
+    if (leaving.current) return;
     if (!challenge?.signupToken) router.replace("/(auth)/signup");
   }, [challenge?.signupToken]);
   if (!challenge?.signupToken) return null;
@@ -39,13 +42,14 @@ export default function BusinessNameScreen() {
           phone,
           signupToken,
           name,
-          businessName,
           deviceName: "Android"
         })
       });
+      if (businessName.trim()) await AsyncStorage.setItem("reviewqr.prefillBusiness", businessName.trim());
+      leaving.current = true;
       clearPendingOtp();
       await saveSession(pair);
-      router.replace("/(app)");
+      router.replace("/(onboard)/referral");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not create the account");
     } finally {
@@ -60,7 +64,7 @@ export default function BusinessNameScreen() {
         <Field label={t.name} value={name} onChangeText={setName} />
         <Field label={t.businessName} value={businessName} onChangeText={setBusinessName} />
         {error ? <Text style={styles.error}>{error}</Text> : null}
-        <PillButton label={t.finish} onPress={finish} disabled={busy || name.trim().length < 2 || businessName.trim().length < 2} />
+        <PillButton label={t.finish} onPress={finish} disabled={busy || name.trim().length < 2} />
       </View>
     </SafeAreaView>
   );
