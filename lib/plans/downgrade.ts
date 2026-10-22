@@ -3,6 +3,7 @@ import { prisma } from "../db";
 import { sendEmail } from "../email";
 import { absoluteUrl } from "../utils";
 import { durationMonths } from "./catalog";
+import { pendingForInvoice, refuseInvoice, statusForRefuse } from "./invoice-guard";
 import { invoicePayPath, invoiceReminderText } from "./invoice-link";
 
 /**
@@ -102,6 +103,48 @@ export async function applyDuePlanChanges(now = new Date(), userId?: string) {
 
 /** Drop a pending change that was cancelled or left unpaid for 30 days after the period ended. */
 export async function clearStalePendingPlans(now = new Date(), userId?: string) {
+  const open = await prisma.payment.findMany({
+    where: {
+      ...(userId ? { userId } : {}),
+      provider: "YOUPI",
+      status: { in: ["PENDING", "QUEUED"] }
+    },
+    select: {
+      id: true,
+      userId: true,
+      status: true,
+      expiresAt: true,
+      checkoutUrl: true,
+      planId: true,
+      createdAt: true
+    }
+  });
+  const ownerIds = [...new Set(open.map((payment) => payment.userId))];
+  const subs = ownerIds.length
+    ? await prisma.subscription.findMany({
+        where: { userId: { in: ownerIds } },
+        select: { userId: true, status: true, pendingPlanId: true }
+      })
+    : [];
+  const expiredIds: string[] = [];
+  const cancelledIds: string[] = [];
+  for (const payment of open) {
+    const pending = pendingForInvoice(
+      subs.filter((row) => row.userId === payment.userId),
+      payment.planId
+    );
+    const reason = refuseInvoice(payment, pending, now);
+    if (!reason) continue;
+    if (statusForRefuse(reason) === "CANCELLED") cancelledIds.push(payment.id);
+    else expiredIds.push(payment.id);
+  }
+  if (expiredIds.length) {
+    await prisma.payment.updateMany({ where: { id: { in: expiredIds } }, data: { status: "EXPIRED" } });
+  }
+  if (cancelledIds.length) {
+    await prisma.payment.updateMany({ where: { id: { in: cancelledIds } }, data: { status: "CANCELLED" } });
+  }
+
   const cutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   const result = await prisma.subscription.updateMany({
     where: {

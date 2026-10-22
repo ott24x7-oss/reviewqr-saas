@@ -10,6 +10,7 @@ import { PayNowButton } from "@/components/billing/pay-now";
 import { prisma } from "@/lib/db";
 import { formatINR, formatDate } from "@/lib/utils";
 import { planDescriptionOrDefault } from "@/lib/brand-defaults";
+import { billingPaymentWhere } from "@/lib/plans/invoice-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,7 @@ export default async function BillingPage({
   if (!user) redirect("/login");
 
   const payments = await prisma.payment.findMany({
-    where: { userId: user.id },
+    where: billingPaymentWhere(user.id),
     orderBy: { createdAt: "desc" },
     take: 20
   });

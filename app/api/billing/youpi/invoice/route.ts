@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { rateLimitDb } from "@/lib/rate-limit";
 import { absoluteUrl } from "@/lib/utils";
 import { getYoupiConfig, youpiConfigured, youpiCreatePayment } from "@/lib/payments/youpi";
+import { pendingForInvoice, refuseInvoice, statusForRefuse } from "@/lib/plans/invoice-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,15 @@ export async function POST(req: NextRequest) {
     }
   });
   if (!payment) return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+  const subs = await prisma.subscription.findMany({
+    where: { userId: user.id },
+    select: { status: true, pendingPlanId: true }
+  });
+  const reason = refuseInvoice(payment, pendingForInvoice(subs, payment.planId), new Date());
+  if (reason) {
+    await prisma.payment.update({ where: { id: payment.id }, data: { status: statusForRefuse(reason) } });
+    return NextResponse.json({ error: "This invoice is no longer payable." }, { status: 409 });
+  }
   if (payment.checkoutUrl) return NextResponse.json({ id: payment.id, checkoutUrl: payment.checkoutUrl });
 
   try {
