@@ -57,7 +57,9 @@ export async function applyDuePlanChanges(now = new Date(), userId?: string) {
             duration,
             modules: sub.pendingModules.length ? sub.pendingModules : plan.modules,
             limits: limits as Prisma.InputJsonValue,
-            creditPaise: 0
+            creditPaise: 0,
+            // Same window as the pending plan itself: 30 days after the period ended.
+            expiresAt: new Date(sub.endsAt.getTime() + 30 * 24 * 60 * 60 * 1000)
           }
         });
         issued += 1;

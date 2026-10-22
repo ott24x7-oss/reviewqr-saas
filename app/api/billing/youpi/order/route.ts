@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import type { PlanDuration, SubscriptionTier } from "@prisma/client";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { getPlan } from "@/lib/payments";
 import { rateLimitDb } from "@/lib/rate-limit";
 import { absoluteUrl } from "@/lib/utils";
 import { getYoupiConfig, youpiConfigured, youpiCreatePayment } from "@/lib/payments/youpi";
 import { DURATIONS } from "@/lib/plans/catalog";
 import { quotePlanCheckout, scheduleDowngrade } from "@/lib/plans/checkout";
+import { legacyPlanId } from "@/lib/plans/legacy";
 import { activateCompletedPayment } from "@/lib/subscription";
 import { shopStubHonoured } from "@/lib/shop/payment-stub";
 
@@ -31,10 +31,21 @@ export async function POST(req: NextRequest) {
     planSlug?: string;
     duration?: string;
   };
-  const slug = String(body.planSlug || "").trim().toLowerCase();
-  const duration = String(body.duration || "") as PlanDuration;
+  let slug = String(body.planSlug || "").trim().toLowerCase();
+  let duration = String(body.duration || "") as PlanDuration;
   let tier = String(body.tier || "").toUpperCase() as SubscriptionTier;
   let months = Number(body.months) === 12 ? 12 : 1;
+  // The old tier checkout goes through the same catalogue quote as a plan,
+  // so renewal, upgrade and downgrade rules are the same for everyone.
+  if (!slug) {
+    if (!["STARTER", "GROWTH", "AGENCY"].includes(tier)) {
+      return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
+    }
+    const legacy = await prisma.plan.findUnique({ where: { id: legacyPlanId(tier) }, select: { slug: true } });
+    if (!legacy) return NextResponse.json({ error: "Choose a plan on the Plans page" }, { status: 400 });
+    slug = legacy.slug;
+    duration = months >= 12 ? "YEAR_1" : "MONTH_1";
+  }
   let amount = 0;
   let planFields: {
     planId: string;
@@ -65,13 +76,6 @@ export async function POST(req: NextRequest) {
       limits: quoted.limits,
       creditPaise: quoted.quote.creditPaise
     };
-  } else {
-    if (!["STARTER", "GROWTH", "AGENCY"].includes(tier)) {
-      return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
-    }
-    const plan = await getPlan(tier);
-    amount = months >= 12 ? plan.yearly : plan.monthly;
-    if (!amount || amount <= 0) return NextResponse.json({ error: "This plan is free" }, { status: 400 });
   }
 
   if (amount <= 0 && planFields) {
@@ -103,7 +107,15 @@ export async function POST(req: NextRequest) {
   }
 
   const ownPending = await prisma.payment.findFirst({
-    where: { userId: user.id, provider: "YOUPI", status: "PENDING" },
+    where: {
+      userId: user.id,
+      provider: "YOUPI",
+      status: "PENDING",
+      amount,
+      planId: planFields?.planId ?? null,
+      duration: planFields?.duration ?? null,
+      OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }]
+    },
     orderBy: { createdAt: "desc" }
   });
   if (ownPending?.checkoutUrl) {

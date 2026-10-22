@@ -2,7 +2,8 @@ import type { PlanDuration, SubscriptionTier } from "@prisma/client";
 import { prisma } from "../db";
 import { durationMonths } from "./catalog";
 import { legacyPlanId, snapshotGrants } from "./legacy";
-import { inferDuration, quotePlanChange, unusedPaidCredit, type PlanQuote } from "./quote";
+import { quotePlanChange, unusedPaidCredit, type PlanQuote } from "./quote";
+import { openDuration } from "./open-duration";
 
 export type CheckoutQuote =
   | {
@@ -40,17 +41,20 @@ export async function quotePlanCheckout(
     orderBy: { createdAt: "desc" }
   });
   const granting = !!sub && snapshotGrants({ tier: sub.tier, status: sub.status, endsAt: sub.endsAt, now });
-  let currentPrice = granting ? sub.pricePaise : 0;
-  if (granting && currentPrice <= 0 && sub.planId) {
-    const sameDuration = await prisma.planPrice.findUnique({
-      where: { planId_duration: { planId: sub.planId, duration } }
+  // Compare catalogue list prices (monthly equivalent), never the amount paid.
+  // A trial or an unknown current plan counts as no plan: the purchase starts now.
+  const currentDuration = granting ? await openDuration(prisma, sub) : null;
+  let currentPrice = 0;
+  if (granting && sub.status !== "TRIALING" && sub.planId && currentDuration) {
+    const listed = await prisma.planPrice.findUnique({
+      where: { planId_duration: { planId: sub.planId, duration: currentDuration } }
     });
-    currentPrice = sameDuration?.active ? sameDuration.pricePaise : 0;
+    currentPrice = listed?.pricePaise ?? 0;
   }
   const credit = granting ? await paidValuePaise(sub, userId, now) : 0;
-  const samePlan =
-    granting && sub.status !== "TRIALING" && sub.planId === plan.id && sub.duration === duration;
-  const currentMonths = granting ? durationMonths(sub.duration ?? inferDuration(sub.startsAt, sub.endsAt)) ?? 1 : 1;
+  const onPlan = granting && sub.status !== "TRIALING" && sub.planId === plan.id;
+  const samePlan = onPlan && currentDuration === duration;
+  const currentMonths = durationMonths(currentDuration) ?? 1;
   const quote = quotePlanChange({
     samePlan,
     currentPricePaise: currentPrice,
@@ -60,6 +64,8 @@ export async function quotePlanCheckout(
     targetMonths: durationMonths(duration) ?? 1
   });
   const months = durationMonths(duration) ?? 0;
+  // Same plan, other duration: switch at the end of the paid period.
+  const switchDuration = onPlan && !samePlan;
   return {
     ok: true,
     planId: plan.id,
@@ -71,7 +77,7 @@ export async function quotePlanCheckout(
     modules: plan.modules,
     limits: plan.limits,
     pricePaise: price.pricePaise,
-    quote
+    quote: switchDuration ? { kind: "downgrade" as const, duePaise: 0, creditPaise: 0 } : quote
   };
 }
 

@@ -41,15 +41,14 @@ describe("scheduled downgrade", () => {
     expect(growthMonthToStarterYear.kind).toBe("downgrade");
   });
 
-  it("invoices a trial downgrade to starter yearly and activates it only when paid", async () => {
+  it("invoices a paid downgrade to starter yearly and activates it only when paid", async () => {
     const openUntil = new Date(Date.now() + 14 * 86_400_000);
     const user = await prisma.user.create({
       data: {
-        email: `down-trial-${Date.now()}@example.test`,
+        email: `down-paid-${Date.now()}@example.test`,
         subscriptionTier: "GROWTH",
-        subscriptionStatus: "TRIALING",
-        subscriptionEndsAt: openUntil,
-        trialEndsAt: openUntil
+        subscriptionStatus: "ACTIVE",
+        subscriptionEndsAt: openUntil
       }
     });
     users.push(user.id);
@@ -61,9 +60,9 @@ describe("scheduled downgrade", () => {
         limits: await limitsForTier("GROWTH"),
         tier: "GROWTH",
         duration: "MONTH_1",
-        status: "TRIALING",
+        status: "ACTIVE",
         endsAt: openUntil,
-        pricePaise: 0
+        pricePaise: 99900
       }
     });
     const quoted = await quotePlanCheckout(user.id, "starter", "YEAR_1");
@@ -75,7 +74,7 @@ describe("scheduled downgrade", () => {
     const periodEnd = new Date(Date.now() - 60_000);
     await prisma.user.update({
       where: { id: user.id },
-      data: { subscriptionEndsAt: periodEnd, trialEndsAt: periodEnd }
+      data: { subscriptionEndsAt: periodEnd }
     });
     await prisma.subscription.updateMany({ where: { userId: user.id }, data: { endsAt: periodEnd } });
     await expireLapsedSubscriptions(user.id);
