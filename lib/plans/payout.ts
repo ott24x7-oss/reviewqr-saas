@@ -24,11 +24,15 @@ export async function payApprovedCommissions(input: {
     const created = await prisma.$transaction(async (tx) => {
       const again = await findPayout(input.agentId, utr, idempotencyKey, tx);
       if (again) return { kind: "again" as const, payout: again };
-      const rows = await tx.shopCommission.findMany({
-        where: { agentId: input.agentId, status: "APPROVED" },
-        select: { id: true, amountPaise: true }
-      });
-      const amountPaise = rows.reduce((sum, row) => sum + row.amountPaise, 0);
+      const rows = await tx.$queryRaw<Array<{ id: string; amountPaise: number }>>`
+        SELECT "id", "amountPaise"
+        FROM "ShopCommission"
+        WHERE "agentId" = ${input.agentId}
+          AND "status" = 'APPROVED'::"CommissionStatus"
+        ORDER BY "id"
+        FOR UPDATE
+      `;
+      const amountPaise = rows.reduce((sum, row) => sum + Number(row.amountPaise), 0);
       if (!rows.length || amountPaise <= 0) return { kind: "empty" as const };
       const payout = await tx.commissionPayout.create({
         data: {
