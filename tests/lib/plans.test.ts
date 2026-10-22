@@ -1,5 +1,9 @@
 import { afterAll, describe, expect, it } from "vitest";
+import { NextRequest } from "next/server";
 import { prisma } from "../../lib/db";
+import { POST as postPublicOrder } from "../../app/api/public/orders/route";
+import { publicCatalogue } from "../../lib/store/public-catalogue";
+import { saveStoreSettings } from "../../lib/store/store-settings";
 import { isCombo, pricingTab, savingsPercent } from "../../lib/plans/catalog";
 import { limitsForTier, modulesForTier, snapshotGrants } from "../../lib/plans/legacy";
 import { ensureLegacySubscription } from "../../lib/plans/backfill";
@@ -28,13 +32,14 @@ describe("plan modules and legacy tiers", () => {
   });
 
   it("maps old tiers onto modules without shrinking paid limits", () => {
-    expect(modulesForTier("FREE")).toEqual(["REVIEWS"]);
-    for (const tier of ["STARTER", "GROWTH", "AGENCY", "FOUNDER"] as const) {
+    for (const tier of ["FREE", "STARTER", "GROWTH", "AGENCY", "FOUNDER"] as const) {
       expect(modulesForTier(tier)).toEqual(["REVIEWS", "MENU", "STORE"]);
-      expect(limitsForTier(tier).businesses).toBeGreaterThan(0);
       expect(limitsForTier(tier).products).toBe(100000);
+      expect(limitsForTier(tier).storeProducts).toBe(100000);
+      expect(limitsForTier(tier).storeOrders).toBe(100000);
     }
     expect(limitsForTier("FREE").qrCodes).toBe(2);
+    expect(limitsForTier("FREE").businesses).toBe(1);
     expect(limitsForTier("GROWTH").businesses).toBe(5);
     expect(savingsPercent({ pricePaise: 999900, mrpPaise: 1198800 })).toBe(17);
   });
@@ -78,7 +83,7 @@ describe("old-tier users on a database", () => {
     expect(again?.id).toBe(row?.id);
   });
 
-  it("copies a free user as reviews only", async () => {
+  it("copies a free user with today's menu and store", async () => {
     const user = await prisma.user.create({
       data: {
         email: `old-free-${Date.now()}@example.test`,
@@ -88,8 +93,9 @@ describe("old-tier users on a database", () => {
     });
     created.push(user.id);
     const row = await ensureLegacySubscription(user.id);
-    expect(row?.modules).toEqual(["REVIEWS"]);
+    expect(row?.modules).toEqual(["REVIEWS", "MENU", "STORE"]);
     expect(row?.planId).toBe("plan_legacy_free");
+    expect(row?.limits).toMatchObject({ storeProducts: 100000, storeOrders: 100000, qrCodes: 2 });
   });
 });
 
@@ -249,10 +255,18 @@ describe("referral rewards", () => {
 
 describe("entitlements per module", () => {
   const created: string[] = [];
+  const plans: string[] = [];
   afterAll(async () => {
-    if (!created.length) return;
-    await prisma.subscription.deleteMany({ where: { userId: { in: created } } });
-    await prisma.user.deleteMany({ where: { id: { in: created } } });
+    if (created.length) {
+      await prisma.menuOrder.deleteMany({ where: { business: { ownerId: { in: created } } } });
+      await prisma.menuItem.deleteMany({ where: { business: { ownerId: { in: created } } } });
+      await prisma.storeSettings.deleteMany({ where: { business: { ownerId: { in: created } } } });
+      await prisma.qRCode.deleteMany({ where: { business: { ownerId: { in: created } } } });
+      await prisma.business.deleteMany({ where: { ownerId: { in: created } } });
+      await prisma.subscription.deleteMany({ where: { userId: { in: created } } });
+      await prisma.user.deleteMany({ where: { id: { in: created } } });
+    }
+    if (plans.length) await prisma.plan.deleteMany({ where: { id: { in: plans } } });
   });
 
   it("keeps reviews on a free account and the snapshot modules on a paid account", async () => {
@@ -265,8 +279,10 @@ describe("entitlements per module", () => {
     });
     created.push(free.id);
     expect(await hasModule(free.id, "REVIEWS")).toBe(true);
-    expect(await hasModule(free.id, "STORE")).toBe(false);
+    expect(await hasModule(free.id, "MENU")).toBe(true);
+    expect(await hasModule(free.id, "STORE")).toBe(true);
     expect(await limit(free.id, "qrCodes")).toBe(2);
+    expect(await limit(free.id, "storeProducts")).toBe(100000);
 
     const trial = await prisma.user.create({
       data: {
@@ -290,9 +306,21 @@ describe("entitlements per module", () => {
       }
     });
     created.push(paid.id);
+    const catalogue = await prisma.plan.create({
+      data: {
+        nameEn: "Store only",
+        nameHi: "सिर्फ़ स्टोर",
+        slug: `store-only-${Date.now()}`,
+        modules: ["STORE"],
+        limits: { businesses: 1, qrCodes: 4, products: 12 },
+        legacyTier: "STARTER"
+      }
+    });
+    plans.push(catalogue.id);
     await prisma.subscription.create({
       data: {
         userId: paid.id,
+        planId: catalogue.id,
         modules: ["STORE"],
         limits: {
           businesses: 1,
@@ -316,5 +344,113 @@ describe("entitlements per module", () => {
     expect(await hasModule(paid.id, "STORE")).toBe(true);
     expect(await hasModule(paid.id, "MENU")).toBe(false);
     expect(await limit(paid.id, "products")).toBe(12);
+  });
+
+  it("falls expired paid plans and finished trials back to today's free access", async () => {
+    const expired = await prisma.user.create({
+      data: {
+        email: `ent-expired-${Date.now()}@example.test`,
+        subscriptionTier: "GROWTH",
+        subscriptionStatus: "ACTIVE",
+        subscriptionEndsAt: new Date(Date.now() - 86_400_000)
+      }
+    });
+    created.push(expired.id);
+    await prisma.subscription.create({
+      data: {
+        userId: expired.id,
+        planId: "plan_legacy_growth",
+        modules: ["REVIEWS", "MENU", "STORE"],
+        limits: limitsForTier("GROWTH"),
+        tier: "GROWTH",
+        status: "ACTIVE",
+        endsAt: new Date(Date.now() - 86_400_000)
+      }
+    });
+    expect(await hasModule(expired.id, "MENU")).toBe(true);
+    expect(await hasModule(expired.id, "STORE")).toBe(true);
+    expect(await limit(expired.id, "qrCodes")).toBe(2);
+
+    const finished = await prisma.user.create({
+      data: {
+        email: `ent-trial-done-${Date.now()}@example.test`,
+        subscriptionTier: "STARTER",
+        subscriptionStatus: "TRIALING",
+        trialEndsAt: new Date(Date.now() - 86_400_000)
+      }
+    });
+    created.push(finished.id);
+    await ensureLegacySubscription(finished.id);
+    expect(await hasModule(finished.id, "STORE")).toBe(true);
+    expect(await limit(finished.id, "qrCodes")).toBe(limitsForTier("FREE").qrCodes);
+  });
+
+  it("keeps a free owner's public menu, customer order, and store settings after migration", async () => {
+    const stamp = `${Date.now().toString(36)}${Math.floor(Math.random() * 1000).toString(36)}`;
+    const user = await prisma.user.create({
+      data: {
+        email: `free-store-${stamp}@example.test`,
+        subscriptionTier: "FREE",
+        subscriptionStatus: "ACTIVE"
+      }
+    });
+    created.push(user.id);
+    const legacy = await ensureLegacySubscription(user.id);
+    expect(legacy?.modules).toEqual(["REVIEWS", "MENU", "STORE"]);
+    await prisma.subscription.update({
+      where: { id: legacy!.id },
+      data: { modules: ["REVIEWS"] }
+    });
+    expect(await hasModule(user.id, "MENU")).toBe(true);
+    expect(await hasModule(user.id, "STORE")).toBe(true);
+    expect(await limit(user.id, "storeOrders")).toBe(100000);
+
+    const business = await prisma.business.create({
+      data: { ownerId: user.id, name: "Free Cafe", slug: `free-cafe-${stamp}`, whatsappNumber: "919800000000" }
+    });
+    const code = `F${stamp}`.slice(0, 12).toUpperCase();
+    await prisma.qRCode.create({
+      data: { businessId: business.id, label: "Counter", shortCode: code }
+    });
+    const item = await prisma.menuItem.create({
+      data: { businessId: business.id, name: "Tea", pricePaise: 2000 }
+    });
+    const hours = { sun: null, mon: null, tue: null, wed: null, thu: null, fri: null, sat: null };
+    const saved = await saveStoreSettings(user.id, business.id, {
+      holiday: false,
+      hours,
+      dineIn: true,
+      takeaway: true,
+      delivery: false,
+      deliveryPincodes: "",
+      deliveryChargeRupees: 0,
+      freeDeliveryAboveRupees: null,
+      minOrderRupees: 0,
+      packingChargeRupees: 0,
+      gstEnabled: false,
+      gstPercent: 5,
+      pricesIncludeGst: true,
+      prepMinutes: 15,
+      upiId: "",
+      layout: "FOOD",
+      design: "CLASSIC"
+    });
+    expect(saved.ok).toBe(true);
+
+    const catalogue = await publicCatalogue(user.id);
+    expect(catalogue).toEqual({ showCatalogue: true, canOrder: true });
+    const published = await prisma.menuItem.findMany({ where: { businessId: business.id, available: true } });
+    expect(published.map((row) => row.name)).toEqual(["Tea"]);
+
+    const res = await postPublicOrder(
+      new NextRequest("http://127.0.0.1/api/public/orders", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-forwarded-for": `203.0.113.${stamp.length % 200}` },
+        body: JSON.stringify({ code, orderType: "TAKEAWAY", items: [{ id: item.id, qty: 1 }] })
+      })
+    );
+    const body = await res.json();
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    expect(body.orderId || body.number || body.whatsappUrl || body.ok).toBeTruthy();
   });
 });
