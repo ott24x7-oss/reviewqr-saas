@@ -17,6 +17,23 @@ test("landing at 360px shows the hero buy button on the first screen", async ({ 
   await page.screenshot({ path: "docs/landing/home-1280.png" });
 });
 
+test("a phone shows at most six plan cards until See all plans", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/");
+  const cards = page.locator("[data-plan-card]");
+  await expect(cards.first()).toBeVisible();
+  const count = await cards.count();
+  let shown = 0;
+  for (let index = 0; index < count; index += 1) {
+    if (await cards.nth(index).isVisible()) shown += 1;
+  }
+  expect(shown).toBeLessThanOrEqual(6);
+  if (count > 6) {
+    await page.getByRole("button", { name: "See all plans" }).click();
+    await expect(cards.nth(6)).toBeVisible();
+  }
+});
+
 test("adjacent plan cards do not share an image", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("/");

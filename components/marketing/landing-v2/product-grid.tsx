@@ -33,7 +33,7 @@ function PlanPhoto({ src, alt, sizes }: { src: string; alt: string; sizes: strin
   );
 }
 
-function ProductCard({ plan, imageSrc }: { plan: PublicPlan; imageSrc: string }) {
+function ProductCard({ plan, imageSrc, className = "" }: { plan: PublicPlan; imageSrc: string; className?: string }) {
   const { lang } = useLandingLang();
   const initial = (plan.prices.find((price) => price.duration === "MONTH_1") || plan.prices[0])?.duration;
   const [duration, setDuration] = React.useState<PlanDuration | undefined>(initial);
@@ -48,7 +48,7 @@ function ProductCard({ plan, imageSrc }: { plan: PublicPlan; imageSrc: string })
     <article
       data-plan-card={plan.slug}
       data-card-image={imageSrc}
-      className="flex min-w-0 flex-col overflow-hidden rounded-[20px] border border-[var(--marketing-line)] bg-white/80"
+      className={`flex min-w-0 flex-col overflow-hidden rounded-[20px] border border-[var(--marketing-line)] bg-white/80 ${className}`}
     >
       <Link href={`/plans/${plan.slug}`} className="relative block aspect-square bg-[var(--marketing-sand)]">
         <PlanPhoto src={imageSrc} alt={alt} sizes="(max-width: 768px) 50vw, 25vw" />
@@ -114,6 +114,7 @@ function ProductCard({ plan, imageSrc }: { plan: PublicPlan; imageSrc: string })
 export function ProductGrid({ plans, hardware }: { plans: PublicPlan[]; hardware: StandAddon[] }) {
   const { lang } = useLandingLang();
   const [filter, setFilter] = React.useState<"all" | PlanCategory>("all");
+  const [expanded, setExpanded] = React.useState(false);
   const [columns, setColumns] = React.useState(2);
   const visible = plans.filter((plan) => filter === "all" || planCategory(plan.category) === filter);
   const images = assignCardImages(
@@ -143,7 +144,10 @@ export function ProductGrid({ plans, hardware }: { plans: PublicPlan[]; hardware
           <button
             type="button"
             aria-pressed={filter === "all"}
-            onClick={() => setFilter("all")}
+            onClick={() => {
+              setFilter("all");
+              setExpanded(false);
+            }}
             className={`inline-flex min-h-11 shrink-0 items-center rounded-full px-3 text-sm font-semibold ${filter === "all" ? "bg-[var(--marketing-ink)] text-[var(--marketing-bg)]" : "border border-[var(--marketing-line)]"}`}
           >
             {pick(lang, "All", "सभी")}
@@ -153,7 +157,10 @@ export function ProductGrid({ plans, hardware }: { plans: PublicPlan[]; hardware
               key={item.id}
               type="button"
               aria-pressed={filter === item.id}
-              onClick={() => setFilter(item.id)}
+              onClick={() => {
+                setFilter(item.id);
+                setExpanded(false);
+              }}
               className={`inline-flex min-h-11 shrink-0 items-center rounded-full px-3 text-sm font-semibold ${filter === item.id ? "bg-[var(--marketing-ink)] text-[var(--marketing-bg)]" : "border border-[var(--marketing-line)]"}`}
             >
               {lang === "hi" ? item.hi : item.en}
@@ -167,10 +174,24 @@ export function ProductGrid({ plans, hardware }: { plans: PublicPlan[]; hardware
         ) : (
           <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
             {visible.map((plan, index) => (
-              <ProductCard key={plan.slug} plan={plan} imageSrc={images[index]} />
+              <ProductCard
+                key={plan.slug}
+                plan={plan}
+                imageSrc={images[index]}
+                className={index >= 6 && !expanded ? "max-lg:hidden" : ""}
+              />
             ))}
           </div>
         )}
+        {visible.length > 6 && !expanded ? (
+          <button
+            type="button"
+            className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-full border border-[var(--marketing-line)] text-sm font-semibold lg:hidden"
+            onClick={() => setExpanded(true)}
+          >
+            {pick(lang, "See all plans", "सभी प्लान देखें")}
+          </button>
+        ) : null}
         {hardware.length > 0 ? (
           <div className="mt-8">
             <h3 className="text-lg font-semibold">{pick(lang, "Add a stand", "स्टैंड जोड़ें")}</h3>
