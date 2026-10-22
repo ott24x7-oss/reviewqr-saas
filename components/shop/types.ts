@@ -25,5 +25,6 @@ export type ShopProduct = {
   fromPaise: number;
   mrpPaise: number;
   ships: boolean;
+  imageUrl: string | null;
   variants: ShopVariant[];
 };

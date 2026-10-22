@@ -1976,3 +1976,14 @@
   justify-content: center;
   text-decoration: none;
 }
+
+/* Owner hardware shop: add-to-cart confirmation and cart badge pop. */
+@keyframes shop-pop {
+  0% { transform: scale(0.85); }
+  60% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+.shop-pop { animation: shop-pop 250ms ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .shop-pop { animation: none; }
+}

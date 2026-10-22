@@ -6,11 +6,13 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { artKind } from "@/lib/shop/card";
 import { formatINR } from "@/lib/utils";
 import { ShopLangToggle, useShopLang } from "./lang";
+import { ProductArt } from "./product-art";
 import type { ShopProduct } from "./types";
 
-export function ProductBuy({ product }: { product: ShopProduct }) {
+export function ProductBuy({ product, businessName = null }: { product: ShopProduct; businessName?: string | null }) {
   const { lang, choose, copy } = useShopLang();
   const [sku, setSku] = React.useState(product.variants[0]?.sku ?? "");
   const variant = product.variants.find((item) => item.sku === sku) ?? product.variants[0];
@@ -20,6 +22,7 @@ export function ProductBuy({ product }: { product: ShopProduct }) {
   const [adding, setAdding] = React.useState(false);
   const name = lang === "hi" && product.nameHi ? product.nameHi : product.name;
   const description = lang === "hi" && product.descriptionHi ? product.descriptionHi : product.description;
+  const photo = variant?.imageUrl || product.imageUrl;
 
   async function add() {
     setAdding(true);
@@ -68,6 +71,19 @@ export function ProductBuy({ product }: { product: ShopProduct }) {
         <ShopLangToggle lang={lang} choose={choose} />
       </div>
       <article className="space-y-4 rounded-[20px] bg-white p-4 text-ink shadow-sm sm:p-6">
+        <div className="relative aspect-square overflow-hidden rounded-2xl bg-secondary sm:aspect-[4/3]">
+          {photo ? (
+            // eslint-disable-next-line @next/next/no-img-element -- uploads may be data URLs or any storage host
+            <img src={photo} alt={name} className="absolute inset-0 h-full w-full object-cover" />
+          ) : (
+            <ProductArt
+              kind={artKind(product)}
+              businessName={businessName || copy.yourBusiness}
+              words={{ tagline: copy.artTagline, lifetime: copy.artLifetime }}
+              className="absolute inset-0 h-full w-full"
+            />
+          )}
+        </div>
         <h1 className="font-display text-2xl font-bold">{name}</h1>
         <p className="text-sm leading-relaxed">{description}</p>
         {product.variants.length > 1 && (

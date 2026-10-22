@@ -65,6 +65,14 @@ Services are rows: name, duration, price, then Book and Enquire. Book adds the s
 
 The words follow the layout: Menu and Order on WhatsApp, Products and Buy on WhatsApp, Services and Book on WhatsApp. The owner picks the layout in store settings, or leaves it automatic from the business type. `/<slug>/store` is the same storefront without a table label. The one-page poster QR encodes that link.
 
+### Owner hardware shop
+
+`/dashboard/shop` follows the same shop grid: two columns at 360px, three from 768px, four from 1280px. Each card has a square image, a "% off" badge, the title, the price with a crossed MRP, and one button. A product with one variant shows Add to cart, which changes to Added. A product with more than one variant shows Choose, which opens the variant sheet (a bottom sheet on phones). The header cart pill shows the item count. Admins upload a square photo for each variant in Admin → Shop. Until there is a photo, the card draws an illustrated preview of the piece on a pastel tile with the owner's business name. Every string has English and Hindi.
+
+![Owner shop at 360px](docs/shop/shop-grid-360.png)
+
+![Owner shop at 1280px](docs/shop/shop-grid-1280.png)
+
 ## 6. Storefront designs
 
 The owner picks a design in store settings, separate from the food, shop, or services layout and from the 20 colour themes. The colour theme still paints the accent. The default is Classic. All four designs share the same menu, cart, coupons, charges, and WhatsApp order. Food keeps the veg mark and a Rows control inside the design. Services show the duration and Book.

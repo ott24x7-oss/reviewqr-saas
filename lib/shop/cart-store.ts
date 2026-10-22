@@ -81,6 +81,8 @@ function productCard(product: {
     fromPaise: variant?.salePaise ?? 0,
     mrpPaise: variant?.mrpPaise ?? 0,
     ships: variant?.ships ?? true,
+    // The cover is the first variant photo the admin uploaded; the grid draws a preview when there is none.
+    imageUrl: product.variants.find((item) => item.imageUrl)?.imageUrl ?? null,
     variants: product.variants
   };
 }
@@ -103,6 +105,18 @@ export async function shopProduct(slug: string) {
   });
   if (!product || product.variants.length === 0) return null;
   return productCard(product);
+}
+
+/** Units in the owner's cart, for the shop header badge. */
+export async function shopCartCount(userId: string) {
+  const cart = await prisma.shopCart.findUnique({ where: { userId }, select: { lines: { select: { qty: true } } } });
+  return cart?.lines.reduce((sum, line) => sum + line.qty, 0) ?? 0;
+}
+
+/** The first business the owner can manage, named on the product previews. */
+export async function shopPreviewBusinessName(userId: string) {
+  const [first] = await businessesFor(userId);
+  return first?.name ?? null;
 }
 
 async function businessesFor(userId: string) {

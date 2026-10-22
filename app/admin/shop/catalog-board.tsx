@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ImageUpload } from "@/components/ui/image-upload";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -24,6 +25,7 @@ type VariantRow = {
   stock: number;
   lowStockAt: number;
   minQty: number;
+  imageUrl: string | null;
   active: boolean;
   low: boolean;
 };
@@ -133,6 +135,14 @@ function VariantEditor({
           Cost {rupees(variant.costPaise)} · HSN {variant.hsn} · GST {variant.gstPercent}% · {variant.weightGrams} g ·{" "}
           {variant.lengthMm}×{variant.widthMm}×{variant.heightMm} mm
         </p>
+      </div>
+      <div className="sm:col-span-2">
+        <ImageUpload
+          label="Product photo"
+          hint="Square photo, shown on the owner shop card. Until one is uploaded the shop draws a preview."
+          value={variant.imageUrl}
+          onChange={(imageUrl) => void onSave(variant.id, { imageUrl })}
+        />
       </div>
       <Field id={`${variant.sku}-sale`} label="Sale price (₹)" value={sale} onChange={setSale} />
       <Field id={`${variant.sku}-mrp`} label="MRP (₹)" value={mrp} onChange={setMrp} />
