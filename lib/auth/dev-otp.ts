@@ -24,8 +24,21 @@ export function warnDevOtpInProduction(
   }
 }
 
-export function otpRequestBody(issuedCode: string | null, env: EnvLike = process.env) {
+export function otpRequestBody(
+  issuedCode: string | null,
+  env: EnvLike = process.env,
+  extra?: { channel: "whatsapp" | "email" | "dev"; resendAfterSec?: number; message?: string }
+) {
   const devCode = issuedCode ? devOtpCode(issuedCode, env) : undefined;
-  if (!devCode) return { sent: true as const };
-  return { sent: true as const, devCode };
+  if (!extra) {
+    if (!devCode) return { sent: true as const };
+    return { sent: true as const, devCode };
+  }
+  return {
+    sent: true as const,
+    channel: extra.channel,
+    resendAfterSec: extra.resendAfterSec ?? 30,
+    ...(extra.message ? { message: extra.message } : {}),
+    ...(devCode ? { devCode } : {})
+  };
 }
