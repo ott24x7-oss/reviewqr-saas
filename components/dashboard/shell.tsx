@@ -31,6 +31,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { VerifyEmailBanner } from "@/components/dashboard/verify-email-banner";
 import { AnnouncementBanner } from "@/components/dashboard/announcement-banner";
+import { ReportPrompt } from "@/components/dashboard/report-prompt";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -386,6 +387,7 @@ export function DashboardShell({
             )}
             {user.emailVerified === false && <VerifyEmailBanner />}
             <AnnouncementBanner />
+            <ReportPrompt />
             {children}
           </div>
         </main>

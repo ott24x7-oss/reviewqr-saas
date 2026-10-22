@@ -103,7 +103,7 @@ export function AnalyticsBoard({ businesses }: { businesses: Business[] }) {
   const [from, setFrom] = React.useState("");
   const [to, setTo] = React.useState("");
   const [data, setData] = React.useState<Payload | null>(null);
-  const [emailOn, setEmailOn] = React.useState(true);
+  const [emailOn, setEmailOn] = React.useState(false);
   const [whatsappOn, setWhatsappOn] = React.useState(false);
   const text = copy[lang];
 
@@ -114,7 +114,7 @@ export function AnalyticsBoard({ businesses }: { businesses: Business[] }) {
       .then((res) => res.json())
       .then((json) => {
         if (!json.data) return;
-        setEmailOn(json.data.emailOptIn !== false);
+        setEmailOn(json.data.emailOptIn === true);
         setWhatsappOn(json.data.whatsappOptIn === true);
       })
       .catch(() => undefined);

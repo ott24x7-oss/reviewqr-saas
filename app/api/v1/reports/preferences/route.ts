@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 function present(row: { emailOptIn: boolean; whatsappOptIn: boolean; unsubscribedAt: Date | null } | null) {
   return {
-    emailOptIn: row ? row.emailOptIn && !row.unsubscribedAt : true,
+    emailOptIn: row ? row.emailOptIn && !row.unsubscribedAt : false,
     whatsappOptIn: row ? row.whatsappOptIn && !row.unsubscribedAt : false,
     unsubscribedAt: row?.unsubscribedAt?.toISOString() || null
   };
@@ -28,12 +28,12 @@ async function putHandler(req: NextRequest) {
     where: { userId: auth.user.id },
     create: {
       userId: auth.user.id,
-      emailOptIn: body.emailOptIn !== false,
+      emailOptIn: body.emailOptIn === true,
       whatsappOptIn: body.whatsappOptIn === true,
       unsubscribedAt: null
     },
     update: {
-      emailOptIn: body.emailOptIn !== false,
+      emailOptIn: body.emailOptIn === true,
       whatsappOptIn: body.whatsappOptIn === true,
       unsubscribedAt: null
     }

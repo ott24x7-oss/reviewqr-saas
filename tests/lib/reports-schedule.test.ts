@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { showReportPrompt } from "../../lib/reports/prompt";
 import { clockOnDay, mondayKey, monthlyDue, sendSlots, wantsReport, weeklyDue } from "../../lib/reports/schedule";
 import { buildMonthlyPdf, lineNeedsRaster, rasterLine } from "../../lib/reports/pdf";
 import { istWeekdayIndex } from "../../lib/analytics/ist";
@@ -18,13 +19,16 @@ describe("report schedule", () => {
     expect(monthlyDue(new Date("2026-12-01T04:00:00.000Z"), 9, 0)).toBe("2026-11");
   });
 
-  it("keeps email on by default and honours unsubscribe", () => {
-    expect(wantsReport(null, "email")).toBe(true);
+  it("keeps both channels off until the owner opts in", () => {
+    expect(wantsReport(null, "email")).toBe(false);
     expect(wantsReport(null, "whatsapp")).toBe(false);
     expect(wantsReport({ emailOptIn: false, whatsappOptIn: true, unsubscribedAt: null }, "email")).toBe(false);
     expect(wantsReport({ emailOptIn: false, whatsappOptIn: true, unsubscribedAt: null }, "whatsapp")).toBe(true);
     expect(wantsReport({ emailOptIn: true, whatsappOptIn: true, unsubscribedAt: new Date("2026-10-01T00:00:00.000Z") }, "email")).toBe(false);
     expect(wantsReport({ emailOptIn: true, whatsappOptIn: true, unsubscribedAt: new Date("2026-10-01T00:00:00.000Z") }, "whatsapp")).toBe(false);
+    expect(showReportPrompt({ dismissed: false, emailOptIn: false, whatsappOptIn: false })).toBe(true);
+    expect(showReportPrompt({ dismissed: true, emailOptIn: false, whatsappOptIn: false })).toBe(false);
+    expect(showReportPrompt({ dismissed: false, emailOptIn: true, whatsappOptIn: false })).toBe(false);
   });
 
   it("spreads sends so only N leave in the same minute", () => {

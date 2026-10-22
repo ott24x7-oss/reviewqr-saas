@@ -1356,7 +1356,7 @@ model ReportDelivery {
 model ReportPreference {
   userId         String    @id
   user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  emailOptIn     Boolean   @default(true)
+  emailOptIn     Boolean   @default(false)
   whatsappOptIn  Boolean   @default(false)
   unsubscribedAt DateTime?
   updatedAt      DateTime  @updatedAt

@@ -36,10 +36,9 @@ export type ReportChannelPref = {
   unsubscribedAt: Date | null;
 } | null;
 
-/** Missing row: email on, WhatsApp off. Unsubscribe turns both off. */
+/** Missing row: both channels off. Unsubscribe turns both off. */
 export function wantsReport(pref: ReportChannelPref, channel: "email" | "whatsapp") {
-  if (pref?.unsubscribedAt) return false;
-  if (!pref) return channel === "email";
+  if (!pref || pref.unsubscribedAt) return false;
   return channel === "email" ? pref.emailOptIn : pref.whatsappOptIn;
 }
 
