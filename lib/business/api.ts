@@ -75,10 +75,19 @@ export async function createBusiness(user: { id: string; role: string }, raw: un
     }
   }
 
+  let linkedAgent = agentIdFor(user);
+  if (!linkedAgent) {
+    const attribution = await prisma.signupAttribution.findUnique({
+      where: { userId: user.id },
+      select: { agentId: true }
+    });
+    linkedAgent = attribution?.agentId || null;
+  }
+
   const business = await prisma.business.create({
     data: {
       ownerId: user.id,
-      agentId: agentIdFor(user),
+      agentId: linkedAgent,
       name: data.name,
       slug,
       industry: data.industry || null,
