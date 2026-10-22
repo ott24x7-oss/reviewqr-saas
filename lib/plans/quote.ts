@@ -31,16 +31,25 @@ export type PlanQuote =
  * A cheaper different plan waits until the period ends.
  * Anything else is an upgrade: the unused value reduces what is due now.
  */
+export function monthlyEquivalent(pricePaise: number, months: number) {
+  const span = Math.max(1, Math.floor(months) || 1);
+  return Math.round(Math.max(0, Math.floor(pricePaise)) / span);
+}
+
 export function quotePlanChange(input: {
   samePlan: boolean;
   currentPricePaise: number;
   targetPricePaise: number;
   creditPaise: number;
+  currentMonths?: number;
+  targetMonths?: number;
 }): PlanQuote {
   const target = Math.max(0, Math.floor(input.targetPricePaise));
   const current = Math.max(0, Math.floor(input.currentPricePaise));
   if (input.samePlan) return { kind: "renew", duePaise: target, creditPaise: 0 };
-  if (target < current) return { kind: "downgrade", duePaise: 0, creditPaise: 0 };
+  const targetMonthly = monthlyEquivalent(target, input.targetMonths ?? 1);
+  const currentMonthly = monthlyEquivalent(current, input.currentMonths ?? 1);
+  if (targetMonthly < currentMonthly) return { kind: "downgrade", duePaise: 0, creditPaise: 0 };
   const credit = Math.min(Math.max(0, Math.floor(input.creditPaise)), target);
   return { kind: "upgrade", duePaise: target - credit, creditPaise: credit };
 }

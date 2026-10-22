@@ -47,11 +47,14 @@ export async function quotePlanCheckout(userId: string, slug: string, duration: 
     ? prorateCredit({ pricePaidPaise: basis, startsAt: sub.startsAt, endsAt: sub.endsAt })
     : 0;
   const samePlan = granting && sub.planId === plan.id && sub.duration === duration;
+  const currentMonths = granting ? durationMonths(sub.duration ?? inferDuration(sub.startsAt, sub.endsAt)) ?? 1 : 1;
   const quote = quotePlanChange({
     samePlan,
     currentPricePaise: currentPrice,
     targetPricePaise: price.pricePaise,
-    creditPaise: credit
+    creditPaise: credit,
+    currentMonths,
+    targetMonths: durationMonths(duration) ?? 1
   });
   const months = durationMonths(duration) ?? 0;
   return {

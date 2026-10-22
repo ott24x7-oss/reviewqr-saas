@@ -12,6 +12,7 @@ import { absoluteUrl, formatINR } from "./utils";
 import { approveDueCommissions } from "./plans/ledger";
 import { readyToApprove } from "./plans/commission-rules";
 import { notifyUser } from "./plans/notify";
+import { applyDuePlanChanges } from "./plans/downgrade";
 import { applyDueReferralRewards } from "./plans/rewards";
 
 const REMINDER_DAYS = [7, 3, 1, 0] as const;
@@ -33,6 +34,7 @@ export async function expireLapsedSubscriptions(): Promise<number> {
       );
     }
     await applyDueReferralRewards(now);
+    await applyDuePlanChanges(now);
   } catch (error) {
     console.warn("[plans] could not mature holds", error);
   }
