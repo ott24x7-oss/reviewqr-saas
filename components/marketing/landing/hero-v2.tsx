@@ -48,13 +48,13 @@ export function HeroV2() {
             <Nfc className="h-3.5 w-3.5" /> Tap
           </span>
 
-          <h1 className="marketing-display mt-4 text-balance">
+          <h2 className="marketing-display mt-4 text-balance">
             One smart stand.{" "}
             <span className="bg-gradient-to-r from-primary-600 to-emerald-500 bg-clip-text text-transparent">
               Menu, orders &amp; reviews
             </span>{" "}
             in one tap.
-          </h1>
+          </h2>
 
           <p className="mx-auto mt-4 max-w-xl text-base sm:text-lg text-muted-ink text-pretty lg:mx-0">
             Put our QR + NFC stand on your counter. Customers scan or tap their phone to see your menu, order on

@@ -9,10 +9,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { CodeScan } from "@/components/dashboard/code-scan";
+import { DirectDevice } from "@/components/dashboard/direct-device";
 import { codeFromScan } from "@/lib/tap/qr-stock";
 
 type Location = { id: string; name: string };
-type Business = { id: string; name: string; canManage: boolean; locations: Location[] };
+type Option = { key: string; labelEn: string; labelHi: string };
+type Business = { id: string; name: string; canManage: boolean; locations: Location[]; options: Option[] };
 type Item = {
   code: string;
   label: string;
@@ -22,6 +24,10 @@ type Item = {
   businessName: string;
   locationId: string | null;
   locationName: string | null;
+  directMode: string;
+  directTarget: string;
+  opensEn: string;
+  opensHi: string;
 };
 
 async function downloadPdf(codes: string[]) {
@@ -292,6 +298,16 @@ export function QrBoard({ businesses, items }: { businesses: Business[]; items: 
                   ) : null}
                 </div>
                 {asking ? <p className="text-sm">{pending.enable ? "Enable this QR?" : "Disable this QR?"}</p> : null}
+                <DirectDevice
+                  businessId={item.businessId}
+                  code={item.code}
+                  mode={item.directMode}
+                  target={item.directTarget}
+                  opensEn={item.opensEn}
+                  opensHi={item.opensHi}
+                  options={business?.options || []}
+                  canManage={canManage}
+                />
                 {canManage ? (
                   <div className="space-y-2">
                     <div className="flex gap-2">

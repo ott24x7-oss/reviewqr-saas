@@ -13,6 +13,8 @@ import { markOnboarding } from "../tap/onboarding-mark";
 import { isReservedSlug } from "../tap/reserved-slugs";
 import { slugify } from "../utils";
 import { sendVerificationEmail } from "../verify-email";
+import { cookies } from "next/headers";
+import { JOIN_COOKIE, applySignupAttribution } from "../plans/attribution";
 
 export type SignupOtpResult =
   | { ok: true; kind: "request"; channel: "whatsapp" | "email" | "dev"; issuedCode: string }
@@ -49,6 +51,7 @@ async function createPhoneOwner(opts: {
     }
   });
 
+  let businessId: string | null = null;
   if (opts.businessName) {
     let slug = slugify(opts.businessName);
     let count = 0;
@@ -73,7 +76,19 @@ async function createPhoneOwner(opts: {
       }
     });
     await attachTapDraft(business.id, null, { phone: opts.phone, whatsappNumber: opts.phone });
+    businessId = business.id;
   }
+
+  const cookie = await Promise.resolve(cookies())
+    .then((jar) => jar.get(JOIN_COOKIE)?.value)
+    .catch(() => undefined);
+  await applySignupAttribution({
+    userId: user.id,
+    businessId,
+    cookie,
+    phone: opts.phone,
+    email: storedEmail
+  });
 
   await markOnboarding(user.id, "start");
   if (email) sendVerificationEmail({ id: user.id, email, name: user.name }).catch(() => {});

@@ -1,6 +1,11 @@
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/db";
 import { effectiveTier } from "@/lib/payments";
+
+export function tapAccess(owner: Parameters<typeof effectiveTier>[0]) {
+  const paid = effectiveTier(owner) !== "FREE";
+  return { paid, limited: owner.subscriptionTier !== "FREE" && !paid };
+}
 import type { TapBusinessFields } from "./links";
 import { isReservedSlug } from "./reserved-slugs";
 
@@ -83,18 +88,18 @@ async function queryTap(code: string): Promise<TapRecord> {
     published: tapPage?.published ?? null
   };
   const owner = qr.business.owner;
+  const access = tapAccess(owner);
   const shared = {
     qrId: qr.id,
     shortCode: qr.shortCode,
     ownerId: owner.id,
     businessId: qr.business.id,
-    paid: effectiveTier(owner) !== "FREE",
+    paid: access.paid,
     business,
     locationSlug: qr.location?.slug || "",
     staffSlug: qr.staff?.slug || ""
   };
-  const limited = owner.subscriptionTier !== "FREE" && !shared.paid;
-  return limited ? { status: "limited", ...shared } : { status: "active", ...shared };
+  return access.limited ? { status: "limited", ...shared } : { status: "active", ...shared };
 }
 
 /** Cached business snapshot. Tags: tap:<code> and biz:<businessId>. */
@@ -172,17 +177,16 @@ async function queryBusinessPage(businessId: string): Promise<TapRecord> {
     menuCount,
     published: tapPage?.published ?? null
   };
-  const paid = effectiveTier(business.owner) !== "FREE";
+  const access = tapAccess(business.owner);
   const shared = {
     qrId: "",
     shortCode: "",
     ownerId: business.owner.id,
     businessId: business.id,
-    paid,
+    paid: access.paid,
     business: fields,
     locationSlug: "",
     staffSlug: ""
   };
-  const limited = business.owner.subscriptionTier !== "FREE" && !paid;
-  return limited ? { status: "limited", ...shared } : { status: "active", ...shared };
+  return access.limited ? { status: "limited", ...shared } : { status: "active", ...shared };
 }

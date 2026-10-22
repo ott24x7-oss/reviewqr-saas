@@ -278,7 +278,7 @@ export default function ShopScreen() {
       ) : null}
       {tab === "plan" ? (
         <View style={styles.stack}>
-          <Text style={[styles.note, lang === "hi" && styles.hindi]}>{sellPlans ? t.plansFlag : t.plansWeb}</Text>
+          <Text style={[styles.note, lang === "hi" && styles.hindi]}>{sellPlans ? t.plansFlag : t.planHistory}</Text>
           <View style={styles.card}>
             <Text style={styles.title}>{plan?.tier || "…"}</Text>
             <Text style={styles.note}>{plan?.status}</Text>

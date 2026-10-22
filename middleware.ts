@@ -1,65 +1,45 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
-import { getToken } from "next-auth/jwt";
-import { incomingRequestId } from "@/lib/api/request-id";
-import { canonicalRedirect } from "@/lib/http/canonical";
-import { canAccessAdmin } from "@/lib/roles";
+import { NextRequest, NextResponse } from "next/server";
+import { absoluteRedirect, destinationFor, directRedirectResponse, ownHostsFrom } from "@/lib/tap/direct-http";
 
-/**
- * Login gate stays on /dashboard and /admin. Public QR links stay open.
- * HTTPS and canonical redirects apply only to the configured public host.
- */
 export async function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl;
-  const target = canonicalRedirect({
-    pathname,
-    search: req.nextUrl.search,
-    host: req.headers.get("x-forwarded-host") || req.headers.get("host"),
-    proto: req.headers.get("x-forwarded-proto") || req.nextUrl.protocol.replace(":", ""),
-    appUrl: process.env.NEXT_PUBLIC_APP_URL || null
-  });
-  if (target) return NextResponse.redirect(target, 301);
+  const match = req.nextUrl.pathname.match(/^\/(q|t)\/([^/]+)\/?$/);
+  if (!match) return NextResponse.next();
+  if (req.nextUrl.searchParams.get("page") === "1") return NextResponse.next();
 
-  const isDashboard = pathname === "/dashboard" || pathname.startsWith("/dashboard/");
-  const isAdmin = pathname === "/admin" || pathname.startsWith("/admin/");
-  if (!isDashboard && !isAdmin) {
-    if (pathname.startsWith("/api/v1")) return continueWithRequestId(req);
+  const channel = match[1];
+  const code = decodeURIComponent(match[2] || "");
+  const decide = req.nextUrl.clone();
+  decide.pathname = "/api/public/direct-scan";
+  decide.search = "";
+  decide.searchParams.set("code", code);
+  decide.searchParams.set("channel", channel);
+  const src = req.nextUrl.searchParams.get("src");
+  if (src) decide.searchParams.set("src", src);
+
+  const headers = new Headers();
+  headers.set("x-scan-host", req.headers.get("host") || req.nextUrl.host);
+  headers.set("user-agent", req.headers.get("user-agent") || "");
+  const forwarded = req.headers.get("x-forwarded-for") || req.ip || "";
+  if (forwarded) headers.set("x-forwarded-for", forwarded);
+
+  try {
+    const res = await fetch(decide, { headers, cache: "no-store" });
+    if (!res.ok) return NextResponse.next();
+    const body = (await res.json()) as { redirect?: unknown };
+    if (typeof body.redirect !== "string" || !body.redirect) return NextResponse.next();
+    const hosts = ownHostsFrom(req.headers.get("host") || req.nextUrl.host, process.env.NEXT_PUBLIC_APP_URL);
+    const safe = destinationFor(body.redirect, hosts);
+    if (!safe) return NextResponse.next();
+    const location = absoluteRedirect(safe, req.nextUrl.origin);
+    if (!location) return NextResponse.next();
+    return directRedirectResponse(location);
+  } catch {
     return NextResponse.next();
   }
-
-  const token = await getToken({
-    req,
-    secret: process.env.NEXTAUTH_SECRET,
-    secureCookie: process.env.NEXTAUTH_URL?.startsWith("https://") ?? false
-  });
-
-  if (!token) {
-    const url = req.nextUrl.clone();
-    const callback = `${pathname}${req.nextUrl.search}`;
-    url.pathname = "/login";
-    url.search = "";
-    url.searchParams.set("callbackUrl", callback);
-    return NextResponse.redirect(url);
-  }
-
-  if (isAdmin && !canAccessAdmin(typeof token.role === "string" ? token.role : null)) {
-    return NextResponse.redirect(new URL("/dashboard", req.url));
-  }
-
-  return NextResponse.next();
-}
-
-function continueWithRequestId(req: NextRequest) {
-  const requestId = incomingRequestId(req.headers.get("x-request-id"));
-  const requestHeaders = new Headers(req.headers);
-  requestHeaders.set("x-request-id", requestId);
-  const res = NextResponse.next({ request: { headers: requestHeaders } });
-  res.headers.set("x-request-id", requestId);
-  return res;
 }
 
 export const config = {
-  // Keep /api/auth outside middleware. Next.js 14 can consume the POST body
-  // before the credentials handler reads the CSRF token, so sign-in sets no cookie.
-  matcher: ["/((?!api/auth|_next/static|_next/image|favicon.ico).*)"]
+  // The segment pattern has to be written out. A bare :code makes Next append
+  // (.json) to that name, and then /q/<code> never matches.
+  matcher: ["/q/:code([^/]+)", "/t/:code([^/]+)"]
 };

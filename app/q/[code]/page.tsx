@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import { PublicTap } from "@/components/tap/public-page";
+import { metadataForBusiness } from "@/lib/tap/meta";
+import { loadPublicTap } from "@/lib/tap/resolve";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Tap page",
-  robots: { index: false, follow: false }
-};
+export async function generateMetadata({ params }: { params: { code: string } }): Promise<Metadata> {
+  const record = await loadPublicTap(params.code);
+  return metadataForBusiness(record, false);
+}
 
 export default function QrTapPage({
   params,

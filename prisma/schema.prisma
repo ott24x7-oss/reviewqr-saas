@@ -44,6 +44,32 @@ enum SubscriptionStatus {
   EXPIRED
 }
 
+enum PlanDuration {
+  MONTH_1
+  MONTH_6
+  YEAR_1
+  LIFETIME
+}
+
+enum CommissionStatus {
+  PENDING
+  APPROVED
+  PAID
+  REVERSED
+  LEGACY_UNSETTLED
+}
+
+enum CommissionBasis {
+  PERCENT
+  FLAT
+}
+
+enum ReferralRewardStatus {
+  PENDING
+  APPLIED
+  REVERSED
+}
+
 model User {
   id             String    @id @default(cuid())
   email          String    @unique
@@ -87,6 +113,7 @@ model User {
   supportTickets  SupportTicket[]
   supportMessages SupportMessage[] @relation("SupportMessageAuthor")
   onboardingMarks OnboardingMark[]
+  onboardingDraft OnboardingDraft?
   printBatches    PrintBatch[]
   refreshSessions RefreshSession[]
   pushDevices     PushDevice[]
@@ -96,6 +123,17 @@ model User {
   shopOrders      ShopOrder[] @relation("ShopOrderBuyer")
   agentShopOrders ShopOrder[] @relation("ShopOrderAgent")
   shopCommissions ShopCommission[]
+  subscriptions Subscription[]
+  agentProfile AgentProfile?
+  commissionRules CommissionRule[]
+  commissionPayouts CommissionPayout[]
+  ownerReferral OwnerReferral?
+  signupAttribution SignupAttribution? @relation("AttributedUser")
+  referralsMade SignupAttribution[] @relation("ReferrerUser")
+  referralRewardsGiven ReferralReward[] @relation("RewardReferrer")
+  referralRewardReceived ReferralReward? @relation("RewardReferred")
+  referralCredit ReferralCredit?
+  agentOnboardings AgentOnboarding[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -237,6 +275,9 @@ model Business {
   reviewPlatform    String   @default("google") // google | trustpilot — preferred public link order
   ratingThreshold   Int      @default(4) // used only when reviewGating is on
   reviewGating      Boolean  @default(false) // true hides the public link below ratingThreshold
+  // TAP_PAGE keeps today's page. DIRECT opens one published button. Existing rows stay TAP_PAGE.
+  directMode        String   @default("TAP_PAGE")
+  directTarget      String   @default("")
   enableWhatsApp    Boolean  @default(true)
   enableEmail       Boolean  @default(true)
   customThankYou    String?  @db.Text
@@ -484,6 +525,9 @@ model QRCode {
   // Kept in step with status so older queries keep working.
   isActive   Boolean @default(true)
   status     QrStatus @default(ACTIVE)
+  // INHERIT uses the business setting. TAP_PAGE or DIRECT overrides this code only.
+  directMode   String @default("INHERIT")
+  directTarget String @default("")
   assignedAt DateTime?
 
   qrScans    QrScan[]
@@ -664,7 +708,16 @@ model Payment {
   providerPaymentId String? @unique
   tier      SubscriptionTier
   periodMonths Int @default(1)
+  planId    String?
+  plan      Plan?          @relation(fields: [planId], references: [id], onDelete: SetNull)
+  duration  PlanDuration?
+  modules   String[]       @default([])
+  limits    Json?
+  creditPaise Int          @default(0)
+  payerVpa  String?
   invoiceUrl String?
+  commissions ShopCommission[]
+  referralRewards ReferralReward[]
   invoiceNumber String? @unique
   utr          String?
   refundUtr    String?
@@ -700,6 +753,7 @@ model Payment {
   @@index([userId])
   @@index([status, expiresAt])
   @@index([provider, status])
+  @@index([planId])
 }
 
 // One row per Indian financial year. Locked with SELECT … FOR UPDATE while issuing invoice numbers.
@@ -840,6 +894,9 @@ model QrScan {
   // qr | nfc | link. Older rows stay null and are treated as qr.
   source     String?
   event      String   @default("view")
+  // Set when this visit skipped the tap page and opened one button.
+  direct     Boolean  @default(false)
+  target     String   @default("")
   createdAt  DateTime @default(now())
 
   @@index([qrCodeId, ipHash, createdAt])
@@ -1114,6 +1171,19 @@ model OnboardingMark {
 
   @@unique([userId, kind])
   @@index([userId])
+}
+
+// Wizard progress for the Android app. One row per owner. The payload is the draft.
+model OnboardingDraft {
+  userId         String    @id
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  step           Int       @default(0)
+  referralAsked  Boolean   @default(false)
+  referralCode   String?
+  payload        Json      @default("{}")
+  businessId     String?
+  completedAt    DateTime?
+  updatedAt      DateTime  @updatedAt
 }
 
 // Per-business AI calls for a calendar month (Asia/Kolkata), key YYYY-MM.
@@ -1505,11 +1575,27 @@ model ShopCommission {
   order       ShopOrder?         @relation(fields: [orderId], references: [id], onDelete: SetNull)
   amountPaise Int
   percent     Int
+  status      CommissionStatus   @default(PENDING)
+  basis       CommissionBasis    @default(PERCENT)
+  flatPaise   Int                @default(0)
+  saleKind    String             @default("RENEWAL")
+  holdUntil   DateTime?
+  approvedAt  DateTime?
+  paidAt      DateTime?
+  reversedAt  DateTime?
+  paymentId   String?
+  payment     Payment?           @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  planId      String?
+  payoutId    String?
+  payout      CommissionPayout?  @relation(fields: [payoutId], references: [id], onDelete: SetNull)
   createdAt   DateTime           @default(now())
 
   @@unique([agentId, kind, sourceId])
   @@index([agentId, createdAt])
   @@index([orderId])
+  @@index([paymentId])
+  @@index([status, holdUntil])
+  @@index([payoutId])
 }
 
 // Damage or misprint after delivery. Approval is what allows Delivered → Reprint.
@@ -1541,6 +1627,195 @@ model ShopCreditNote {
   createdAt    DateTime  @default(now())
 
   @@index([orderId])
+}
+
+// Admin-built plan. isCombo is modules.length > 1 and is not stored.
+model Plan {
+  id                   String           @id @default(cuid())
+  nameEn               String
+  nameHi               String
+  slug                 String           @unique
+  descriptionEn        String           @default("") @db.Text
+  descriptionHi        String           @default("") @db.Text
+  modules              String[]
+  limits               Json
+  badge                String?
+  category             String           @default("reviews")
+  imageUrl             String           @default("")
+  sortOrder            Int              @default(0)
+  active               Boolean          @default(true)
+  visibleOnPricingPage Boolean          @default(true)
+  legacyTier           SubscriptionTier @default(STARTER)
+  prices               PlanPrice[]
+  subscriptions        Subscription[]
+  payments             Payment[]
+  commissionRules      CommissionRule[]
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  @@index([active, sortOrder])
+  @@index([visibleOnPricingPage, sortOrder])
+}
+
+model PlanPrice {
+  id         String       @id @default(cuid())
+  planId     String
+  plan       Plan         @relation(fields: [planId], references: [id], onDelete: Cascade)
+  duration   PlanDuration
+  pricePaise Int
+  mrpPaise   Int?
+  active     Boolean      @default(true)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@unique([planId, duration])
+}
+
+// Snapshot of the modules and limits the owner bought. Later plan edits do not change it.
+model Subscription {
+  id              String             @id @default(cuid())
+  userId          String
+  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId          String?
+  plan            Plan?              @relation(fields: [planId], references: [id], onDelete: SetNull)
+  modules         String[]
+  limits          Json
+  tier            SubscriptionTier
+  duration        PlanDuration?
+  status          SubscriptionStatus
+  startsAt        DateTime           @default(now())
+  endsAt          DateTime?
+  /// Free days at the end of endsAt. An upgrade carries whatever is left.
+  bonusDays       Int                @default(0)
+  pricePaise      Int                @default(0)
+  pendingPlanId   String?
+  pendingDuration PlanDuration?
+  pendingModules  String[]           @default([])
+  pendingLimits   Json?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@index([userId, status])
+  @@index([planId])
+}
+
+model AgentProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  upiId     String   @default("")
+  city      String   @default("")
+  active    Boolean  @default(true)
+  code      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Null agentId is the default rule. Null planId applies to every plan.
+// hardware = true is the QR/NFC stand rule. Precedence is resolved in code.
+model CommissionRule {
+  id               String          @id @default(cuid())
+  agentId          String?
+  agent            User?           @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  planId           String?
+  plan             Plan?           @relation(fields: [planId], references: [id], onDelete: Cascade)
+  hardware         Boolean         @default(false)
+  firstBasis       CommissionBasis @default(PERCENT)
+  firstPercent     Int             @default(0)
+  firstFlatPaise   Int             @default(0)
+  renewalBasis     CommissionBasis @default(PERCENT)
+  renewalPercent   Int             @default(0)
+  renewalFlatPaise Int             @default(0)
+  renewalMonths    Int?
+  active           Boolean         @default(true)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@index([agentId, planId, hardware])
+}
+
+model CommissionPayout {
+  id             String           @id @default(cuid())
+  agentId        String
+  agent          User             @relation(fields: [agentId], references: [id], onDelete: Restrict)
+  amountPaise    Int
+  utr            String
+  paidAt         DateTime
+  note           String           @default("")
+  idempotencyKey String?          @unique
+  entries        ShopCommission[]
+  createdAt      DateTime         @default(now())
+
+  @@unique([agentId, utr])
+  @@index([agentId, paidAt])
+}
+
+model OwnerReferral {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  code      String   @unique
+  createdAt DateTime @default(now())
+}
+
+// One signup is either an agent or an owner referral. Agent wins when both are present.
+model SignupAttribution {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation("AttributedUser", fields: [userId], references: [id], onDelete: Cascade)
+  agentId        String?
+  referrerUserId String?
+  referrer       User?    @relation("ReferrerUser", fields: [referrerUserId], references: [id], onDelete: SetNull)
+  code           String
+  createdAt      DateTime @default(now())
+
+  @@index([agentId])
+  @@index([referrerUserId])
+}
+
+model ReferralReward {
+  id             String               @id @default(cuid())
+  referrerUserId String
+  referrer       User                 @relation("RewardReferrer", fields: [referrerUserId], references: [id], onDelete: Restrict)
+  referredUserId String               @unique
+  referred       User                 @relation("RewardReferred", fields: [referredUserId], references: [id], onDelete: Restrict)
+  paymentId      String               @unique
+  payment        Payment              @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  months         Int
+  bonusDays      Int                  @default(0)
+  status         ReferralRewardStatus @default(PENDING)
+  holdUntil      DateTime
+  appliedAt      DateTime?
+  reversedAt     DateTime?
+  asCredit       Boolean              @default(false)
+  createdAt      DateTime             @default(now())
+
+  @@index([referrerUserId, status])
+  @@index([status, holdUntil])
+}
+
+model ReferralCredit {
+  userId    String   @id
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  months    Int      @default(0)
+  days      Int      @default(0)
+  updatedAt DateTime @updatedAt
+}
+
+// Agent starts a business. The owner confirms the same phone with WhatsApp OTP.
+model AgentOnboarding {
+  id           String    @id @default(cuid())
+  agentId      String
+  agent        User      @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  phone        String
+  businessName String
+  ownerUserId  String?
+  businessId   String?
+  confirmedAt  DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([agentId, createdAt])
+  @@index([phone])
 }
 
 // Singleton: admin-overridable branding for the WatShop Review *platform*

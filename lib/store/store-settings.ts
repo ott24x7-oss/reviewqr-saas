@@ -4,6 +4,7 @@ import { fail, ok } from "../api/result";
 import { WEEK_DAYS, type WeekHours } from "../tap/hours";
 import { normalizeUpiId } from "./upi";
 import { requireBusinessRole } from "../tenant";
+import { moduleBlock } from "../plans/entitlements";
 
 function paise(rupees: number) {
   return Math.max(0, Math.round(rupees * 100));
@@ -36,6 +37,8 @@ const defaults = {
 export async function readStoreSettings(userId: string, businessId: string) {
   const business = await requireBusinessRole(userId, businessId, "read");
   if (!business) return fail(404, "Not found");
+  const locked = await moduleBlock(business.ownerId, "STORE");
+  if (locked) return fail(403, locked);
   const row = await prisma.storeSettings.findUnique({ where: { businessId: business.id } });
   if (!row) return ok(defaults);
   const hours = row.hours && typeof row.hours === "object" && !Array.isArray(row.hours) ? (row.hours as WeekHours) : {};
@@ -63,6 +66,8 @@ export async function readStoreSettings(userId: string, businessId: string) {
 export async function saveStoreSettings(userId: string, businessId: string, raw: unknown) {
   const business = await requireBusinessRole(userId, businessId, "manage");
   if (!business) return fail(404, "Not found");
+  const locked = await moduleBlock(business.ownerId, "STORE");
+  if (locked) return fail(403, locked);
   const parsed = storeSettingsSchema.safeParse(raw);
   if (!parsed.success) {
     return fail(400, parsed.error.issues[0]?.message || "Invalid store settings");

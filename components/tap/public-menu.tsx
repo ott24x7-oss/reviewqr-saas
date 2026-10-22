@@ -11,6 +11,7 @@ import { resolveLayout } from "@/lib/store/layout";
 import { resolveDesign } from "@/lib/store/design";
 import { readAdminThemes } from "@/lib/tap/theme-store";
 import { FREE_THEME_ID, THEME_PRESETS, resolveTheme, tokensToStyle } from "@/lib/tap/themes";
+import { publicCatalogue } from "@/lib/store/public-catalogue";
 import { PublicTap } from "./public-page";
 import { StoreMenu, type StoreItem } from "./store-menu";
 
@@ -67,8 +68,14 @@ export async function PublicMenu({
       },
       select: { id: true, code: true, kind: true, amount: true, expiresAt: true, active: true }
     }),
-    prisma.business.findUnique({ where: { id: record.businessId }, select: { industry: true, logo: true } })
+    prisma.business.findUnique({ where: { id: record.businessId }, select: { industry: true, logo: true, ownerId: true } })
   ]);
+  const catalogue = profile ? await publicCatalogue(profile.ownerId) : null;
+  const showCatalogue = !!catalogue?.showCatalogue;
+  const canOrder = !!catalogue?.canOrder;
+  if (!showCatalogue) {
+    return <PublicTap code={code} channel={channel} countScan={false} />;
+  }
   const rules = rulesFromSettings(settings, hoursFromPublished(record.business.published));
   const items: StoreItem[] = [
     ...categories.flatMap((category) => category.items.map(toItem)),
@@ -105,26 +112,35 @@ export async function PublicMenu({
         rules={rules}
         closed={isOrderForLater(rules)}
         tableLabel={hideTable ? "" : qr?.label || ""}
-        banners={banners.map((banner) => ({
-          id: banner.id,
-          title: banner.title,
-          body: banner.body,
-          expiresAt: banner.expiresAt ? banner.expiresAt.toISOString() : null
-        }))}
-        coupons={coupons.map((coupon) => ({
-          id: coupon.id,
-          code: coupon.code,
-          kind: coupon.kind,
-          amount: coupon.amount,
-          active: coupon.active,
-          expiresAt: coupon.expiresAt ? coupon.expiresAt.toISOString() : null
-        }))}
+        banners={
+          canOrder
+            ? banners.map((banner) => ({
+                id: banner.id,
+                title: banner.title,
+                body: banner.body,
+                expiresAt: banner.expiresAt ? banner.expiresAt.toISOString() : null
+              }))
+            : []
+        }
+        coupons={
+          canOrder
+            ? coupons.map((coupon) => ({
+                id: coupon.id,
+                code: coupon.code,
+                kind: coupon.kind,
+                amount: coupon.amount,
+                active: coupon.active,
+                expiresAt: coupon.expiresAt ? coupon.expiresAt.toISOString() : null
+              }))
+            : []
+        }
         upiId={normalizeUpiId(settings?.upiId || "") || ""}
         themeStyle={themeStyle as CSSProperties | undefined}
         layout={resolveLayout(settings?.layout, profile?.industry)}
         design={resolveDesign(settings?.design)}
         logoUrl={profile?.logo || ""}
         homeHref={homeHref}
+        canOrder={canOrder}
         askBase={whatsAppNumberUrl(record.business.whatsappNumber) || ""}
       />
     </div>

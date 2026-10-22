@@ -1,10 +1,12 @@
 /**
- * Plan limits in one place. Counts use effectiveTier(), so an expired paid
- * plan is treated as Free. Callers should not read plan.limits themselves.
+ * Plan limits in one place. Counts use the subscription snapshot, then the
+ * old tier mapping, so an expired paid plan is treated as Free.
  */
 import { prisma } from "./db";
-import { effectiveTier, getPlan, type PlanInfo } from "./payments";
+import type { PlanInfo } from "./payments";
 import { getAiConfig } from "./settings";
+import { limitValue } from "./plans/catalog";
+import { loadEntitlement, moduleBlock } from "./plans/entitlements";
 import type { SubscriptionStatus, SubscriptionTier } from "@prisma/client";
 
 export type LimitUser = {
@@ -69,10 +71,10 @@ export async function ownerLimitError(
   used: number,
   adding = 1
 ) {
-  const tier = effectiveTier(user);
-  const limit = (await getPlan(tier)).limits[key];
-  if (!exceedsLimit(used, adding, limit)) return null;
-  return `Your ${tier} plan allows ${limit} ${LABELS[key]}. Upgrade to add more.`;
+  const ent = await loadEntitlement(user.id);
+  const cap = limitValue(ent.limits, key);
+  if (!exceedsLimit(used, adding, cap)) return null;
+  return `Your ${ent.tier} plan allows ${cap} ${LABELS[key]}. Upgrade to add more.`;
 }
 
 export async function monthlyReviewCount(ownerId: string, now = new Date()) {
@@ -109,8 +111,10 @@ export async function consumeAiCall(businessId: string) {
   });
   if (!business) throw new AiQuotaError("plan");
 
-  const tier = effectiveTier(business.owner);
-  const limit = (await getPlan(tier)).limits.aiCallsPerMonth;
+  const locked = await moduleBlock(business.owner.id, "REVIEWS");
+  if (locked) throw new AiQuotaError("plan");
+  const ent = await loadEntitlement(business.owner.id);
+  const limit = ent.limits.aiCalls;
   const cfg = await getAiConfig();
   const month = monthKey();
   const day = dayKey();

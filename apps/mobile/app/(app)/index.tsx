@@ -1,7 +1,7 @@
 import type { Dashboard } from "@reviewqr/shared";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { apiData } from "../../src/api/data";
 import { useI18n } from "../../src/i18n";
 import { accountKey } from "../../src/query/keys";
@@ -14,6 +14,7 @@ export default function HomeScreen() {
   const { t, lang } = useI18n();
   const { user } = useSession();
   const { businesses, business, choose } = useBusiness();
+  const client = useQueryClient();
   const home = useQuery({
     queryKey: accountKey(user?.id ?? "", "dashboard", business?.id ?? "all"),
     enabled: !!user,
@@ -22,7 +23,19 @@ export default function HomeScreen() {
   const plan = home.data?.plan;
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={styles.content}
+      refreshControl={
+        <RefreshControl
+          refreshing={home.isRefetching}
+          onRefresh={() => {
+            home.refetch().catch(() => undefined);
+            client.invalidateQueries({ queryKey: accountKey(user?.id ?? "", "subscription") }).catch(() => undefined);
+          }}
+        />
+      }
+    >
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.switcher}>
         {businesses.map((item) => (
           <Pressable key={item.id} onPress={() => choose(item.id)} style={[styles.chip, item.id === business?.id && styles.chipOn]}>
@@ -39,6 +52,10 @@ export default function HomeScreen() {
       {plan?.subscriptionEndsAt ? <Text style={styles.hint}>{plan.subscriptionEndsAt.slice(0, 10)}</Text> : null}
       {plan?.trialEndsAt && !plan.subscriptionEndsAt ? <Text style={styles.hint}>{plan.trialEndsAt.slice(0, 10)}</Text> : null}
       <PillButton label={t.preview} onPress={() => router.push("/(app)/tap")} tone="dark" />
+      <PillButton label={t.orders} onPress={() => router.push("/(app)/orders")} tone="outline" />
+      <PillButton label={t.quickMenu} onPress={() => router.push("/(app)/menu")} tone="outline" />
+      <PillButton label={t.quickFeedback} onPress={() => router.push("/(app)/feedback")} tone="outline" />
+      <PillButton label={t.orderStand} onPress={() => router.push("/(app)/shop")} tone="outline" />
       <PillButton label={t.addBusiness} onPress={() => router.push("/(app)/business-new")} tone="outline" />
       {business ? <PillButton label={business.name} onPress={() => router.push("/(app)/business-edit")} tone="outline" /> : null}
     </ScrollView>

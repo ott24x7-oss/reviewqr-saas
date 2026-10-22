@@ -1,6 +1,8 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useEffect, useRef } from "react";
 import { apiData } from "../api/data";
+import { accountKey } from "../query/keys";
 import { useSession } from "../state/session";
 import { rememberPushToken } from "./stored-token";
 import { routeForPush } from "./routes";
@@ -8,6 +10,7 @@ import { routeForPush } from "./routes";
 /** Registers this Android device when the owner allows push, and opens the screen a tap names. */
 export function PushBridge() {
   const { user } = useSession();
+  const client = useQueryClient();
   const openedColdStart = useRef(false);
 
   useEffect(() => {
@@ -41,10 +44,21 @@ export function PushBridge() {
       });
       const sub = Notifications.addNotificationResponseReceivedListener((response) => {
         const data = response.notification.request.content.data as Record<string, unknown>;
+        if (data?.type === "plan_active") {
+          client.invalidateQueries({ queryKey: accountKey(user?.id ?? "", "subscription") }).catch(() => undefined);
+        }
         router.push(routeForPush(data));
+      });
+      const received = Notifications.addNotificationReceivedListener((event) => {
+        const data = event.request.content.data as Record<string, unknown>;
+        const title = event.request.content.title || "";
+        if (data?.type === "plan_active" || title === "Your plan is active") {
+          client.invalidateQueries({ queryKey: accountKey(user?.id ?? "", "subscription") }).catch(() => undefined);
+        }
       });
       remove = () => {
         sub.remove();
+        received.remove();
       };
       if (!live || !user?.pushEnabled) return;
       const Device = await import("expo-device");

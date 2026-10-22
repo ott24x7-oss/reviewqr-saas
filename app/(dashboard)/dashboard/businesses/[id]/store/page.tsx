@@ -6,6 +6,8 @@ import type { WeekHours } from "@/lib/tap/hours";
 import { readAdminThemes } from "@/lib/tap/theme-store";
 import { resolveTheme } from "@/lib/tap/themes";
 import { effectiveTier } from "@/lib/payments";
+import { moduleBlock, upsellOffer } from "@/lib/plans/entitlements";
+import { ModuleUpsell } from "@/components/plans/module-upsell";
 import { StoreForm, type StoreFormValues } from "./store-form";
 
 export const dynamic = "force-dynamic";
@@ -15,6 +17,11 @@ export default async function StoreSettingsPage({ params }: { params: { id: stri
   if (!user) redirect("/login");
   const access = await requireBusinessRole(user.id, params.id, "read");
   if (!access) notFound();
+  const locked = await moduleBlock(access.ownerId, "STORE");
+  if (locked) {
+    const offer = await upsellOffer("STORE");
+    return <ModuleUpsell title={offer.title} body={locked} href={offer.href} />;
+  }
   const [settings, tap, owner, extra] = await Promise.all([
     prisma.storeSettings.findUnique({ where: { businessId: access.id } }),
     prisma.tapPage.findUnique({ where: { businessId: access.id }, select: { published: true } }),

@@ -8,19 +8,60 @@ import { sendEmail } from "./email";
 import { sendWhatsAppCloud } from "./whatsapp";
 import { getWhatsAppConfig } from "./settings";
 import { sendPushToUsers } from "./push";
-import { absoluteUrl } from "./utils";
+import { absoluteUrl, formatINR } from "./utils";
+import { approveDueCommissions } from "./plans/ledger";
+import { readyToApprove } from "./plans/commission-rules";
+import { notifyUser } from "./plans/notify";
+import { applyDuePlanChanges, clearStalePendingPlans } from "./plans/downgrade";
+import { applyDueReferralRewards } from "./plans/rewards";
 
 const REMINDER_DAYS = [7, 3, 1, 0] as const;
 
-export async function expireLapsedSubscriptions(): Promise<number> {
+export async function expireLapsedSubscriptions(onlyUserId?: string): Promise<number> {
+  const now = new Date();
+  if (!onlyUserId) {
+    try {
+      const pending = await prisma.shopCommission.findMany({
+        where: { status: "PENDING" },
+        select: { id: true, agentId: true, holdUntil: true, status: true, amountPaise: true }
+      });
+      const ready = pending.filter((row) => readyToApprove(row.status, row.holdUntil, now));
+      await approveDueCommissions(now);
+      for (const row of ready) {
+        await notifyUser(
+          row.agentId,
+          "Commission approved",
+          `${formatINR(row.amountPaise)} commission is approved and waiting for payout.`
+        );
+      }
+      await applyDueReferralRewards(now);
+    } catch (error) {
+      console.warn("[plans] could not mature holds", error);
+    }
+  }
+  try {
+    await applyDuePlanChanges(now, onlyUserId);
+  } catch (error) {
+    console.warn("[plans] could not issue a pending-plan invoice", error);
+  }
   const result = await prisma.user.updateMany({
     where: {
+      ...(onlyUserId ? { id: onlyUserId } : {}),
       subscriptionTier: { not: "FREE" },
-      subscriptionStatus: { in: ["ACTIVE", "PAST_DUE"] },
-      subscriptionEndsAt: { lt: new Date() }
+      subscriptionStatus: { in: ["ACTIVE", "PAST_DUE", "TRIALING"] },
+      subscriptionEndsAt: { lt: now }
     },
     data: { subscriptionStatus: "EXPIRED" }
   });
+  await prisma.subscription.updateMany({
+    where: {
+      ...(onlyUserId ? { userId: onlyUserId } : {}),
+      status: { in: ["ACTIVE", "TRIALING", "PAST_DUE"] },
+      endsAt: { lt: now }
+    },
+    data: { status: "EXPIRED" }
+  });
+  await clearStalePendingPlans(now, onlyUserId);
   return result.count;
 }
 

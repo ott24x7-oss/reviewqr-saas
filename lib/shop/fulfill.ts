@@ -3,10 +3,15 @@
  * A second call for the same order does not take another number or another month.
  */
 import type { Prisma, SubscriptionTier } from "@prisma/client";
+import { differenceInCalendarDays } from "date-fns";
 import { logAudit } from "../admin";
 import { prisma } from "../db";
 import { extendSubscriptionEnd, nextInvoiceNumber } from "../subscription";
+import { legacyPlanId, limitsForTier, modulesForTier } from "../plans/legacy";
+import { grantPlanAccess } from "../plans/snapshot";
 import { bundleGrant } from "./bundle";
+import { holdUntil } from "../plans/commission-rules";
+import { getPlanProgramSettings } from "../plans/settings";
 
 export type FulfillInput = {
   orderId: string;
@@ -23,6 +28,8 @@ export type FulfillResult =
 
 export async function fulfillPaidShopOrder(input: FulfillInput): Promise<FulfillResult> {
   const issue = input.nextInvoiceNumber ?? nextInvoiceNumber;
+  const settings = await getPlanProgramSettings();
+  const heldUntil = holdUntil(new Date(), settings.commissionHoldDays);
   const result = await prisma.$transaction(async (tx) => {
     const rows = await tx.$queryRaw<
       Array<{
@@ -147,9 +154,24 @@ export async function fulfillPaidShopOrder(input: FulfillInput): Promise<Fulfill
       });
     }
     if (grant) {
-      await tx.user.update({
-        where: { id: user.id },
-        data: { subscriptionTier: tier, subscriptionStatus: "ACTIVE", subscriptionEndsAt: endsAt }
+      const open = await tx.subscription.findFirst({
+        where: { userId: user.id, status: { in: ["ACTIVE", "TRIALING", "PAST_DUE"] } },
+        orderBy: { createdAt: "desc" }
+      });
+      const base = open?.endsAt && open.endsAt.getTime() > now.getTime() ? open.endsAt : now;
+      const added = endsAt ? Math.max(0, differenceInCalendarDays(endsAt, base)) : 0;
+      await grantPlanAccess(tx, {
+        userId: user.id,
+        tier,
+        status: "ACTIVE",
+        endsAt,
+        startsAt: now,
+        planId: legacyPlanId(tier),
+        duration: tier === "FOUNDER" ? "LIFETIME" : null,
+        modules: modulesForTier(tier),
+        limits: await limitsForTier(tier),
+        pricePaise: 0,
+        bonusDays: (open?.bonusDays || 0) + added
       });
     }
     await tx.shopCartLine.deleteMany({ where: { cart: { userId: row.userId } } });
@@ -158,7 +180,7 @@ export async function fulfillPaidShopOrder(input: FulfillInput): Promise<Fulfill
       data: { couponCode: null, referralCode: null }
     });
     // Find-then-create. A caught unique violation inside this transaction would abort it.
-    if (row.agentId && row.commissionPaise > 0) {
+    if (row.agentId && row.agentId !== row.userId && row.agentId !== beneficiaryId && row.commissionPaise > 0) {
       const existing = await tx.shopCommission.findUnique({
         where: {
           agentId_kind_sourceId: { agentId: row.agentId, kind: "ORDER", sourceId: row.id }
@@ -172,7 +194,12 @@ export async function fulfillPaidShopOrder(input: FulfillInput): Promise<Fulfill
             sourceId: row.id,
             orderId: row.id,
             amountPaise: row.commissionPaise,
-            percent: row.commissionPercent ?? 0
+            percent: row.commissionPercent ?? 0,
+            basis: (row.commissionPercent ?? 0) > 0 ? "PERCENT" : "FLAT",
+            flatPaise: (row.commissionPercent ?? 0) > 0 ? 0 : row.commissionPaise,
+            saleKind: "HARDWARE",
+            status: "PENDING",
+            holdUntil: heldUntil
           }
         });
       }

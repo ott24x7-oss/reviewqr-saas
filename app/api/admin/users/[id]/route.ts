@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { SubscriptionStatus, SubscriptionTier } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireAdminApi, logAudit } from "@/lib/admin";
 import { hashPassword, isStrongPassword } from "@/lib/auth";
+import { editUserSubscription } from "@/lib/plans/snapshot";
 import { getClientIp } from "@/lib/utils";
 
 const patchSchema = z.object({
@@ -57,11 +59,35 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   const before = await prisma.user.findUnique({
     where: { id: params.id },
-    select: { role: true, subscriptionTier: true }
+    select: {
+      role: true,
+      subscriptionTier: true,
+      subscriptionStatus: true,
+      subscriptionEndsAt: true
+    }
   });
   if (!before) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
-  const user = await prisma.user.update({ where: { id: params.id }, data: update });
+  const subscriptionTouched =
+    data.subscriptionTier != null ||
+    data.subscriptionStatus != null ||
+    data.subscriptionEndsAt !== undefined ||
+    data.trialEndsAt !== undefined;
+  const user = await prisma.$transaction(async (tx) => {
+    const updated = await tx.user.update({ where: { id: params.id }, data: update });
+    if (subscriptionTouched) {
+      const tier = (data.subscriptionTier ?? before.subscriptionTier) as SubscriptionTier;
+      const status = (data.subscriptionStatus ?? before.subscriptionStatus) as SubscriptionStatus;
+      const endsAt =
+        data.subscriptionEndsAt !== undefined
+          ? data.subscriptionEndsAt
+            ? new Date(data.subscriptionEndsAt)
+            : null
+          : before.subscriptionEndsAt;
+      await editUserSubscription(tx, { userId: params.id, tier, status, endsAt });
+    }
+    return updated;
+  });
 
   await logAudit({
     userId: guard.user.id,

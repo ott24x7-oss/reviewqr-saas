@@ -2,11 +2,15 @@
  * Plan activation. One transaction extends the subscription, issues the next
  * GST invoice number, and snapshots the invoice. A completed payment is a no-op.
  */
+import { openDuration, paymentPlan } from "./plans/open-duration";
 import { addMonths } from "date-fns";
-import type { PaymentStatus, Prisma, SubscriptionTier } from "@prisma/client";
+import { Prisma, type PaymentStatus, type PlanDuration, type SubscriptionTier } from "@prisma/client";
 import { prisma } from "./db";
 import { getPaymentsConfig } from "./settings";
 import { absoluteUrl } from "./utils";
+import { limitsForTier, modulesForTier } from "./plans/legacy";
+import { bonusCarry, paidEndsAt, remainingBonusDays, upgradeEndsAt } from "./plans/quote";
+import { clearUserPending, grantPlanAccess } from "./plans/snapshot";
 
 export function financialYearLabel(date: Date): string {
   const start = date.getMonth() >= 3 ? date.getFullYear() : date.getFullYear() - 1;
@@ -64,6 +68,7 @@ export type ActivateInput = {
   utr?: string | null;
   verifiedVia: string;
   matchedEmail?: string | null;
+  payerVpa?: string | null;
   expectedAmountPaise?: number;
   expectedOrderId?: string;
   allowStatuses?: PaymentStatus[];
@@ -77,7 +82,7 @@ export async function activateCompletedPayment(input: ActivateInput): Promise<Ac
   const cfg = await getPaymentsConfig();
   const allowed = input.allowStatuses ?? ["PENDING", "QUEUED"];
 
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx): Promise<ActivateResult> => {
     const rows = await tx.$queryRaw<
       Array<{
         id: string;
@@ -88,9 +93,15 @@ export async function activateCompletedPayment(input: ActivateInput): Promise<Ac
         userId: string;
         tier: SubscriptionTier;
         periodMonths: number;
+        planId: string | null;
+        duration: PlanDuration | null;
+        modules: string[] | null;
+        limits: Prisma.JsonValue | null;
+        creditPaise: number;
       }>
     >`
-      SELECT "id", "status", "providerPaymentId", "invoiceNumber", "amount", "userId", "tier", "periodMonths"
+      SELECT "id", "status", "providerPaymentId", "invoiceNumber", "amount", "userId", "tier", "periodMonths",
+             "planId", "duration", "modules", "limits", "creditPaise"
       FROM "Payment"
       WHERE "id" = ${input.paymentId}
       FOR UPDATE
@@ -136,7 +147,44 @@ export async function activateCompletedPayment(input: ActivateInput): Promise<Ac
     if (!user) return { ok: false, error: "User not found" };
 
     const now = new Date();
-    const expiresAt = extendSubscriptionEnd(user.subscriptionEndsAt, row.periodMonths || 1, now);
+    const lifetime = row.duration === "LIFETIME" || row.periodMonths === 0;
+    const open = await tx.subscription.findFirst({
+      where: { userId: user.id, status: { in: ["ACTIVE", "TRIALING", "PAST_DUE"] } },
+      orderBy: { createdAt: "desc" }
+    });
+    const months = Math.max(1, row.periodMonths || 1);
+    const trialing = open?.status === "TRIALING";
+    // Renew only when both sides name the same plan and the same duration.
+    // Anything unknown (no plan id, legacy row, other duration) starts today.
+    const currentDuration = open ? await openDuration(tx, open) : null;
+    const bought = paymentPlan(row);
+    const samePlanRow = !!(open?.planId && bought.planId && open.planId === bought.planId);
+    const sameDurationRow = !!(bought.duration && currentDuration === bought.duration);
+    const renew = !!open && !trialing && samePlanRow && sameDurationRow && (row.creditPaise || 0) <= 0;
+    const carriedBonus =
+      open && !trialing ? remainingBonusDays({ endsAt: open.endsAt, bonusDays: open.bonusDays || 0, now }) : 0;
+    const paidOpenEnd = open?.endsAt && !trialing ? paidEndsAt(open.endsAt, open.bonusDays || 0) : null;
+    let paidExpiresAt: Date | null = null;
+    if (lifetime) {
+      paidExpiresAt = null;
+    } else if (renew && paidOpenEnd && paidOpenEnd.getTime() > now.getTime()) {
+      paidExpiresAt = extendSubscriptionEnd(paidOpenEnd, months, now);
+    } else if (renew) {
+      paidExpiresAt = extendSubscriptionEnd(null, months, now);
+    } else {
+      paidExpiresAt = upgradeEndsAt({ now, months });
+    }
+    const credit = await tx.referralCredit.findUnique({ where: { userId: user.id } });
+    const carried = bonusCarry({
+      paidEndsAt: paidExpiresAt,
+      carriedDays: lifetime ? 0 : carriedBonus,
+      rewardMonths: credit?.months || 0,
+      rewardDays: credit?.days || 0
+    });
+    const expiresAt = carried.endsAt;
+    if (credit && (credit.months > 0 || credit.days > 0)) {
+      await tx.referralCredit.update({ where: { userId: user.id }, data: { months: 0, days: 0 } });
+    }
     const invoiceNumber = row.invoiceNumber ?? (await nextInvoiceNumber(tx, now));
     const split = splitGst(row.amount, cfg.gstRate || 18, true);
 
@@ -149,6 +197,7 @@ export async function activateCompletedPayment(input: ActivateInput): Promise<Ac
         utr: input.utr || undefined,
         verifiedVia: input.verifiedVia,
         matchedEmail: input.matchedEmail ? input.matchedEmail.slice(0, 200) : undefined,
+        payerVpa: input.payerVpa ? input.payerVpa.slice(0, 120) : undefined,
         invoiceNumber,
         invoiceUrl: absoluteUrl(`/api/billing/invoices/${row.id}`),
         invoiceBuyerName: user.name || user.email,
@@ -165,15 +214,55 @@ export async function activateCompletedPayment(input: ActivateInput): Promise<Ac
       }
     });
 
-    await tx.user.update({
-      where: { id: user.id },
-      data: {
-        subscriptionTier: row.tier,
-        subscriptionStatus: "ACTIVE",
-        subscriptionEndsAt: expiresAt
+    const modules = row.modules && row.modules.length ? row.modules : modulesForTier(row.tier);
+    let rawLimits: unknown = row.limits;
+    if (typeof rawLimits === "string") {
+      try {
+        rawLimits = JSON.parse(rawLimits);
+      } catch {
+        rawLimits = null;
       }
+    }
+    const limits = rawLimits && typeof rawLimits === "object" ? rawLimits : await limitsForTier(row.tier);
+    await grantPlanAccess(tx, {
+      userId: user.id,
+      tier: row.tier,
+      status: "ACTIVE",
+      endsAt: expiresAt,
+      startsAt: now,
+      planId: row.planId,
+      duration: row.duration,
+      modules,
+      limits,
+      pricePaise: Math.max(0, row.amount),
+      bonusDays: carried.bonusDays,
+      clearPending: true
     });
+    await clearUserPending(tx, user.id);
 
-    return { ok: true, already: false, expiresAt, invoiceNumber };
+    return { ok: true, already: false, expiresAt: expiresAt ?? now, invoiceNumber };
   });
+
+  if (result.ok && !result.already) {
+    try {
+      const { settleConfirmedPayment } = await import("./plans/settle");
+      await settleConfirmedPayment(input.paymentId);
+    } catch (error) {
+      console.warn("[plans] could not record commission", error);
+    }
+    try {
+      const payment = await prisma.payment.findUnique({ where: { id: input.paymentId }, select: { userId: true } });
+      if (payment) {
+        const { sendPushToUsers } = await import("./push");
+        await sendPushToUsers([payment.userId], {
+          title: "Your plan is active",
+          body: "Your plan is active",
+          data: { type: "plan_active" }
+        });
+      }
+    } catch (error) {
+      console.warn("[plans] could not send the plan push", error);
+    }
+  }
+  return result;
 }

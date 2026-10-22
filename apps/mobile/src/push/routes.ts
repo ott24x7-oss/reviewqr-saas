@@ -34,7 +34,8 @@ export function routeForPush(data: Record<string, unknown> | null | undefined) {
   const url = typeof data?.url === "string" ? data.url : "";
   if (type === "negative_feedback" || url.includes("/feedback")) return "/(app)/orders?tab=feedback";
   if (type === "store_order" || type === "order_status" || url.includes("/dashboard/orders")) return "/(app)/orders?tab=orders";
-  if (type === "plan_reminder" || type === "tap_expired" || url.includes("/billing")) return "/(app)/shop?tab=plan";
+  if (type === "plan_active") return "/(app)/plan";
+  if (type === "plan_reminder" || type === "tap_expired" || url.includes("/billing")) return "/(app)/plan";
   const explicit = orderFromDeepLink(url) ?? (typeof data?.order === "string" ? data.order : null);
   if (explicit !== null) return shopOrderRoute(explicit) ?? "/(app)";
   const pathId = orderFromShopPath(url);

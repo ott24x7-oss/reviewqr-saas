@@ -57,7 +57,7 @@ export const otpSignupSchema = z.discriminatedUnion("action", [
     phone: z.string().min(10, "Enter a valid mobile number").max(20),
     signupToken: z.string().min(16).max(200),
     name: z.string().min(2).max(80),
-    businessName: z.string().min(2).max(80),
+    businessName: z.union([z.string().min(2).max(80), z.literal("")]).optional(),
     email: z.string().email().optional().or(z.literal("")),
     deviceName: z.string().max(80).optional()
   })
