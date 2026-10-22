@@ -21,7 +21,7 @@ function deviceChoice(mode: string) {
   return "INHERIT";
 }
 
-function moduleAllows(type: string, modules: readonly string[]) {
+export function directTypeAllowed(type: string, modules: readonly string[]) {
   const has = (id: ModuleId) => modules.includes(id);
   if (type === "menu") return has("MENU") || has("STORE");
   if (type === "whatsapp_order") return has("STORE");
@@ -52,7 +52,7 @@ export function resolveDirect(input: {
   const target = device === "DIRECT" ? input.deviceTarget : input.businessTarget;
   const link = input.links.find((item) => item.key === target && item.enabled !== false);
   if (!link) return { action: "page" };
-  if (!moduleAllows(link.type, input.modules)) return { action: "page" };
+  if (!directTypeAllowed(link.type, input.modules)) return { action: "page" };
   const href = destinationFor(link.href, input.ownHosts);
   if (!href) return { action: "page" };
   return { action: "redirect", href, targetType: link.type };
@@ -127,8 +127,9 @@ export function describeOpen(input: {
   businessTarget: string;
   links: DirectChoiceLink[];
   modules: readonly string[];
+  ownHosts?: string[];
 }) {
-  const decision = resolveDirect({ ...input, pagePreview: input.pagePreview === true, ownHosts: [] });
+  const decision = resolveDirect({ ...input, pagePreview: input.pagePreview === true, ownHosts: input.ownHosts || [] });
   if (decision.action === "page") return { labelEn: "Tap page", labelHi: "टैप पेज" };
   const link = input.links.find((item) => item.type === decision.targetType && item.href === decision.href)
     || input.links.find((item) => item.type === decision.targetType);
@@ -147,6 +148,7 @@ export const directCopy = {
     inherit: "Inherit from business",
     tapPage: "Tap page",
     badge: (label: string) => `Opens: ${label}`,
+    limited: "The basic page stays until the plan is renewed.",
     english: "English",
     hindi: "हिंदी"
   },
@@ -158,6 +160,7 @@ export const directCopy = {
     inherit: "बिज़नेस से लें",
     tapPage: "टैप पेज",
     badge: (label: string) => `खुलेगा: ${label}`,
+    limited: "प्लान नवीनीकरण तक बेसिक पेज ही खुलेगा।",
     english: "English",
     hindi: "हिंदी"
   }

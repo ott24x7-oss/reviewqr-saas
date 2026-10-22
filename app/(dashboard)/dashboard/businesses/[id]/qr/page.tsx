@@ -6,6 +6,8 @@ import { requireBusinessRole } from "@/lib/tenant";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { absoluteUrl } from "@/lib/utils";
+import { directBoard } from "@/lib/tap/direct-board";
+import { DirectDevice } from "@/components/dashboard/direct-device";
 import { QrCreateClient } from "./qr-create-client";
 
 export const dynamic = "force-dynamic";
@@ -20,10 +22,14 @@ export default async function BusinessQrPage({ params }: { params: { id: string 
     include: {
       locations: { where: { isActive: true } },
       staffMembers: { where: { isActive: true } },
-      qrCodes: { orderBy: { createdAt: "desc" } }
+      qrCodes: { orderBy: { createdAt: "desc" } },
+      owner: {
+        select: { subscriptionTier: true, subscriptionStatus: true, trialEndsAt: true, subscriptionEndsAt: true }
+      }
     }
   });
   if (!business) notFound();
+  const context = (await directBoard([business])).get(business.id);
 
   return (
     <div className="space-y-5">
@@ -54,6 +60,18 @@ export default async function BusinessQrPage({ params }: { params: { id: string 
                 {qr.status === "ACTIVE" ? "Active" : qr.status === "DISABLED" ? "Disabled" : "Unassigned"}
               </Badge>
               <p className="text-xs text-muted-foreground">{qr.scans} scans</p>
+              <div className="mt-2 text-left">
+                <DirectDevice
+                  businessId={business.id}
+                  code={qr.shortCode}
+                  mode={qr.directMode}
+                  target={qr.directTarget}
+                  opensEn={context?.label(qr.directMode, qr.directTarget).labelEn || "Tap page"}
+                  opensHi={context?.label(qr.directMode, qr.directTarget).labelHi || "टैप पेज"}
+                  options={context?.options || []}
+                  canManage
+                />
+              </div>
               <Link
                 href={`/dashboard/qr-codes/${qr.shortCode}`}
                 className="mt-2 inline-block text-primary text-xs hover:underline"

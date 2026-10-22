@@ -65,7 +65,9 @@ export const tapPageSchema = z.object({
   bioHi: z.string(),
   themeId: z.string(),
   links: z.array(tapLinkSchema),
-  themes: z.array(tapThemeSchema)
+  themes: z.array(tapThemeSchema),
+  directMode: z.enum(["TAP_PAGE", "DIRECT"]).optional(),
+  directTarget: z.string().optional()
 });
 
 export const menuSnapRequestSchema = z.object({
@@ -91,7 +93,9 @@ export const tapSaveSchema = z.object({
   hours: z.unknown().optional(),
   links: z.array(z.unknown()).max(40),
   gallery: z.array(z.string().max(500)).max(8).optional(),
-  themeId: z.string().min(1).max(40).optional()
+  themeId: z.string().min(1).max(40).optional(),
+  directMode: z.enum(["TAP_PAGE", "DIRECT"]).optional(),
+  directTarget: z.string().max(40).optional()
 });
 
 export const shopOrderDetailSchema = z.object({

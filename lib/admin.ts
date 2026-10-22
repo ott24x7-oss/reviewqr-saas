@@ -63,6 +63,7 @@ export type AuditAction =
   | "qr.enable"
   | "qr.label"
   | "qr.location"
+  | "qr.direct"
   | "device.assign"
   | "device.activate"
   | "device.reassign"

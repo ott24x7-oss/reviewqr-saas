@@ -2,7 +2,9 @@ import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { requireBusinessRole } from "@/lib/tenant";
+import { loadEntitlement } from "@/lib/plans/entitlements";
 import { hoursFromPublished } from "@/lib/tap/links";
+import { tapAccess } from "@/lib/tap/resolve";
 import { linksForNewBusiness } from "@/lib/tap/new-business";
 import { normalizeLinks } from "@/lib/tap/page-draft";
 import type { StoredLink } from "@/lib/tap/presets";
@@ -16,13 +18,18 @@ export default async function TapEditorPage({ params }: { params: { id: string }
   if (!user) redirect("/login");
   const access = await requireBusinessRole(user.id, params.id, "read");
   if (!access) notFound();
-  const [page, qr] = await Promise.all([
+  const [page, qr, owner, entitlement] = await Promise.all([
     prisma.tapPage.findUnique({ where: { businessId: access.id } }),
     prisma.qRCode.findFirst({
       where: { businessId: access.id, status: "ACTIVE" },
       select: { shortCode: true },
       orderBy: { createdAt: "asc" }
-    })
+    }),
+    prisma.user.findUnique({
+      where: { id: access.ownerId },
+      select: { subscriptionTier: true, subscriptionStatus: true, trialEndsAt: true, subscriptionEndsAt: true }
+    }),
+    loadEntitlement(access.ownerId)
   ]);
   const draft = page?.draft && typeof page.draft === "object" && !Array.isArray(page.draft) ? page.draft : null;
   const storedLinks = draft && Array.isArray(draft.links) ? draft.links : null;
@@ -46,6 +53,10 @@ export default async function TapEditorPage({ params }: { params: { id: string }
       links={links}
       hours={blankHours(hours)}
       gallery={galleryLines(draft)}
+      modules={entitlement.modules}
+      limited={owner ? tapAccess(owner).limited : false}
+      directMode={access.directMode === "DIRECT" ? "DIRECT" : "TAP_PAGE"}
+      directTarget={access.directTarget || ""}
     />
   );
 }

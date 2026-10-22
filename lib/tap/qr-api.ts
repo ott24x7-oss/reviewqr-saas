@@ -9,10 +9,12 @@ import { fail, ok } from "../api/result";
 import { rateLimitDb } from "../rate-limit";
 import { locationInBusiness, planOwner, requireBusinessRole, staffInBusiness } from "../tenant";
 import { qrCodeSchema } from "../validations";
+import { directContextForBusiness } from "./direct-board";
 import { isLookupCode } from "./ids";
 import { markOnboarding } from "./onboarding-mark";
 import { codeFromScan } from "./qr-stock";
 import { assignQr, createAssignedCode, setManyEnabled, setQrLabel, setQrLocation, type QrChange } from "./qr-mutate";
+import { revalidateBusinessTap } from "./theme-store";
 
 const qrInclude = {
   location: { select: { name: true, slug: true } },
@@ -37,13 +39,13 @@ export async function listQrCodes(userId: string, businessId: string) {
     include: qrInclude,
     orderBy: { createdAt: "desc" }
   });
-  return ok({ qrCodes });
+  return ok({ qrCodes: await withOpens(access.id, qrCodes) });
 }
 
 export async function listQrPage(userId: string, businessId: string, page: PageQuery) {
   const access = await requireBusinessRole(userId, businessId, "manage");
   if (!access) return fail(404, "Not found");
-  return takePage(
+  const listed = await takePage(
     () =>
       prisma.qRCode.findMany({
         where: { businessId: access.id },
@@ -53,6 +55,8 @@ export async function listQrPage(userId: string, businessId: string, page: PageQ
       }),
     page.limit
   );
+  if (!listed.ok) return listed;
+  return ok({ items: await withOpens(access.id, listed.data.items), nextCursor: listed.data.nextCursor });
 }
 
 export async function createQrCode(userId: string, businessId: string, raw: unknown, meta: RequestMeta) {
@@ -101,7 +105,7 @@ export async function patchQrCodes(userId: string, businessId: string, raw: unkn
   const parsed = qrPatchSchema.safeParse(raw);
   if (!parsed.success) return fail(400, parsed.error.issues[0]?.message || "Invalid request");
   const body = parsed.data;
-  const codes = body.action === "label" || body.action === "location" ? [body.code] : body.codes;
+  const codes = body.action === "label" || body.action === "location" || body.action === "direct" ? [body.code] : body.codes;
   if (codes.some((code) => !isLookupCode(code))) return fail(400, "Enter a valid QR code");
 
   if (body.action === "label") {
@@ -114,6 +118,34 @@ export async function patchQrCodes(userId: string, businessId: string, raw: unkn
     const result = await setQrLocation(body.code, body.locationId, business.id);
     if (!result.ok) return fail(result.status, result.error);
     await writeQrAudit(userId, "qr.location", result.change, meta);
+    return ok({ ok: true as const });
+  }
+  if (body.action === "direct") {
+    const target = (body.target || "").trim().slice(0, 40);
+    if (body.mode === "DIRECT") {
+      const allowed = await directTargets(business.id);
+      if (!allowed.some((item) => item.key === target)) return fail(400, "Choose an enabled button");
+    }
+    const qr = await prisma.qRCode.findFirst({ where: { shortCode: body.code, businessId: business.id } });
+    if (!qr) return fail(404, "Not found");
+    await prisma.qRCode.update({
+      where: { id: qr.id },
+      data: { directMode: body.mode, directTarget: body.mode === "DIRECT" ? target : "" }
+    });
+    try {
+      await revalidateBusinessTap(business.id);
+    } catch {
+      // The device row is saved. Cache tags are unavailable in a direct test call.
+    }
+    await logAudit({
+      userId,
+      action: "qr.direct",
+      entity: "QRCode",
+      entityId: qr.id,
+      metadata: { code: qr.shortCode, mode: body.mode, target: body.mode === "DIRECT" ? target : "" },
+      ip: meta.ip,
+      userAgent: meta.userAgent
+    });
     return ok({ ok: true as const });
   }
 
@@ -271,5 +303,18 @@ async function writeQrAudit(userId: string, action: AuditAction, change: QrChang
     },
     ip: meta.ip,
     userAgent: meta.userAgent
+  });
+}
+
+async function directTargets(businessId: string) {
+  const ctx = await directContextForBusiness(businessId);
+  return ctx?.options || [];
+}
+
+async function withOpens<T extends { directMode: string; directTarget: string }>(businessId: string, rows: T[]) {
+  const ctx = await directContextForBusiness(businessId);
+  return rows.map((row) => {
+    const open = ctx?.label(row.directMode, row.directTarget) || { labelEn: "Tap page", labelHi: "टैप पेज" };
+    return { ...row, opensEn: open.labelEn, opensHi: open.labelHi };
   });
 }

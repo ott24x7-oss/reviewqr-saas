@@ -6,6 +6,7 @@ import { accessRole, allows, readableBusinessWhere } from "@/lib/tenant";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Building2, Plus } from "lucide-react";
+import { directBoard } from "@/lib/tap/direct-board";
 import { QrBoard } from "./qr-board";
 
 export const dynamic = "force-dynamic";
@@ -25,6 +26,9 @@ export default async function QrCodesPage({
     include: {
       members: { where: { userId: user.id }, select: { role: true }, take: 1 },
       locations: { where: { isActive: true }, select: { id: true, name: true }, orderBy: { name: "asc" } },
+      owner: {
+        select: { subscriptionTier: true, subscriptionStatus: true, trialEndsAt: true, subscriptionEndsAt: true }
+      },
       qrCodes: {
         include: { location: { select: { name: true } } },
         orderBy: { createdAt: "desc" }
@@ -33,26 +37,36 @@ export default async function QrCodesPage({
     orderBy: { name: "asc" }
   });
 
+  const contexts = await directBoard(rows);
   const businesses = rows.map((row) => ({
     id: row.id,
     name: row.name,
     canManage: allows(accessRole(row.ownerId, user.id, row.members[0]?.role, row.agentId), "manage"),
-    locations: row.locations.map((location) => ({ id: location.id, name: location.name }))
+    locations: row.locations.map((location) => ({ id: location.id, name: location.name })),
+    options: contexts.get(row.id)?.options || []
   }));
   const items = rows.flatMap((row) => {
     if (businessId && row.id !== businessId) return [];
+    const context = contexts.get(row.id);
     return row.qrCodes
       .filter((qr) => !status || qr.status === status)
-      .map((qr) => ({
-        code: qr.shortCode,
-        label: qr.label,
-        status: qr.status,
-        scans: qr.scans,
-        businessId: row.id,
-        businessName: row.name,
-        locationId: qr.locationId,
-        locationName: qr.location?.name || null
-      }));
+      .map((qr) => {
+        const open = context?.label(qr.directMode, qr.directTarget) || { labelEn: "Tap page", labelHi: "टैप पेज" };
+        return {
+          code: qr.shortCode,
+          label: qr.label,
+          status: qr.status,
+          scans: qr.scans,
+          businessId: row.id,
+          businessName: row.name,
+          locationId: qr.locationId,
+          locationName: qr.location?.name || null,
+          directMode: qr.directMode,
+          directTarget: qr.directTarget,
+          opensEn: open.labelEn,
+          opensHi: open.labelHi
+        };
+      });
   });
 
   return (
