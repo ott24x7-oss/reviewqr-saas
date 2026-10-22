@@ -174,7 +174,7 @@ export async function activateCompletedPayment(input: ActivateInput): Promise<Ac
       const bonusStillRunning = !!(open?.endsAt && open.endsAt.getTime() > now.getTime());
       const baseEnd = openStillRunning ? paidOpenEnd : bonusStillRunning ? null : user.subscriptionEndsAt;
       paidExpiresAt = extendSubscriptionEnd(baseEnd, months, now);
-      if (openStillRunning && paidOpenEnd) {
+      if (open && openStillRunning && paidOpenEnd) {
         carriedPaise = carriedRenewalPaise({
           now,
           open: { pricePaise: open.pricePaise, startsAt: open.startsAt, endsAt: paidOpenEnd }
