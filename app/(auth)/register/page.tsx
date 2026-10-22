@@ -19,6 +19,17 @@ import {
   WhatsAppIcon
 } from "@/components/auth/otp-ui";
 
+function planCheckoutPath() {
+  if (typeof window === "undefined") return null;
+  const params = new URLSearchParams(window.location.search);
+  const plan = params.get("plan");
+  if (!plan) return null;
+  const next = new URLSearchParams({ plan });
+  const duration = params.get("duration");
+  if (duration) next.set("duration", duration);
+  return `/dashboard/billing?${next.toString()}`;
+}
+
 export default function RegisterPage() {
   const router = useRouter();
   const { lang, choose, t } = useAuthLang();
@@ -77,7 +88,7 @@ export default function RegisterPage() {
         return;
       }
       toast.success("Welcome to ReviewQR!");
-      window.location.assign(entered.path);
+      window.location.assign(planCheckoutPath() || entered.path);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -152,7 +163,7 @@ export default function RegisterPage() {
           email: "otp-login@invalid.local",
           password: "unused"
         },
-        "/dashboard/onboarding"
+        planCheckoutPath() || "/dashboard/onboarding"
       );
       if (!entered.ok) throw new Error("Account created — please sign in");
       window.location.assign(entered.path);

@@ -98,6 +98,8 @@ function PaymentModal({
   upiEnabled,
   usdtEnabled,
   youpiEnabled,
+  planSlug,
+  duration,
   onClose
 }: {
   tier: SubscriptionTier;
@@ -106,6 +108,8 @@ function PaymentModal({
   upiEnabled: boolean;
   usdtEnabled: boolean;
   youpiEnabled: boolean;
+  planSlug?: string;
+  duration?: string;
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -128,10 +132,16 @@ function PaymentModal({
       const res = await fetch("/api/billing/youpi/order", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ tier, months })
+        body: JSON.stringify({ tier, months, planSlug, duration })
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error || "Could not start payment");
+      if (json.activated || json.scheduled) {
+        toast.success(json.scheduled ? `Your plan changes to ${json.plan} when this period ends.` : "Plan updated");
+        router.refresh();
+        onClose();
+        return;
+      }
       if (json.checkoutUrl) {
         window.location.href = json.checkoutUrl;
         return;
@@ -516,21 +526,49 @@ function PaymentModal({
   );
 }
 
+export type CatalogPlan = {
+  slug: string;
+  name: string;
+  description: string;
+  badge: string | null;
+  modules: string[];
+  prices: Array<{ duration: string; pricePaise: number; mrpPaise: number | null }>;
+};
+
 export function BillingClient({
   currentTier,
   plans,
   upiEnabled,
   usdtEnabled,
-  youpiEnabled
+  youpiEnabled,
+  catalog = [],
+  initialDuration,
+  initialSlug
 }: {
   currentTier: SubscriptionTier;
   plans: PricingConfig;
   upiEnabled: boolean;
   usdtEnabled: boolean;
   youpiEnabled: boolean;
+  catalog?: CatalogPlan[];
+  initialDuration?: string;
+  initialSlug?: string;
 }) {
   const [annual, setAnnual] = React.useState(true);
+  const [duration, setDuration] = React.useState(
+    initialDuration === "MONTH_1" || initialDuration === "MONTH_6" || initialDuration === "YEAR_1" || initialDuration === "LIFETIME"
+      ? initialDuration
+      : "YEAR_1"
+  );
   const [modalTier, setModalTier] = React.useState<SubscriptionTier | null>(null);
+  const [modalPlan, setModalPlan] = React.useState<CatalogPlan | null>(null);
+  React.useEffect(() => {
+    if (!initialSlug) return;
+    const match = catalog.find((plan) => plan.slug === initialSlug);
+    if (match) setModalPlan(match);
+    // The catalog is ready on the first paint. Later refreshes must not reopen the modal.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialSlug]);
 
   const tiers = (["FREE", "STARTER", "GROWTH", "AGENCY"] as const).filter(
     (k) => plans[k].visible
@@ -575,6 +613,54 @@ export function BillingClient({
               </button>
             </div>
           </div>
+
+          {catalog.length > 0 && (
+            <div className="mb-4 flex flex-wrap gap-2">
+              {[
+                ["MONTH_1", "1 month"],
+                ["MONTH_6", "6 months"],
+                ["YEAR_1", "1 year"],
+                ["LIFETIME", "Lifetime"]
+              ].map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setDuration(id)}
+                  className={cn(
+                    "rounded-full px-3 py-1 text-xs font-medium",
+                    duration === id ? "bg-white shadow dark:bg-slate-900" : "text-muted-foreground"
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {catalog.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+              {catalog.map((plan) => {
+                const price = plan.prices.find((row) => row.duration === duration);
+                return (
+                  <div key={plan.slug} data-plan={plan.slug} className="rounded-xl border p-4 flex flex-col">
+                    <h3 className="font-semibold">{plan.name}</h3>
+                    {plan.badge && <p className="text-xs font-medium text-primary">{plan.badge}</p>}
+                    <p className="text-xs text-muted-foreground">{plan.description}</p>
+                    <p className="mt-3 text-2xl font-bold">{price ? formatINR(price.pricePaise) : "Not offered"}</p>
+                    <p className="mt-2 text-xs">{plan.modules.join(" · ")}</p>
+                    <Button
+                      size="sm"
+                      className="mt-3 w-full"
+                      disabled={!price || price.pricePaise <= 0}
+                      onClick={() => setModalPlan(plan)}
+                    >
+                      {price && price.pricePaise > 0 ? "Choose" : "Included"}
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             {tiers.map((tierKey) => {
@@ -654,6 +740,19 @@ export function BillingClient({
           usdtEnabled={usdtEnabled}
           youpiEnabled={youpiEnabled}
           onClose={() => setModalTier(null)}
+        />
+      )}
+      {modalPlan && (
+        <PaymentModal
+          tier={currentTier === "FREE" ? "STARTER" : currentTier}
+          tierName={modalPlan.name}
+          months={duration === "YEAR_1" ? 12 : duration === "MONTH_6" ? 6 : 1}
+          planSlug={modalPlan.slug}
+          duration={duration}
+          upiEnabled={upiEnabled}
+          usdtEnabled={usdtEnabled}
+          youpiEnabled={youpiEnabled}
+          onClose={() => setModalPlan(null)}
         />
       )}
     </>

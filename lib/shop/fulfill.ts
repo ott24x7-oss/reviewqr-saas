@@ -7,6 +7,8 @@ import { logAudit } from "../admin";
 import { prisma } from "../db";
 import { extendSubscriptionEnd, nextInvoiceNumber } from "../subscription";
 import { bundleGrant } from "./bundle";
+import { holdUntil } from "../plans/commission-rules";
+import { getPlanProgramSettings } from "../plans/settings";
 
 export type FulfillInput = {
   orderId: string;
@@ -23,6 +25,8 @@ export type FulfillResult =
 
 export async function fulfillPaidShopOrder(input: FulfillInput): Promise<FulfillResult> {
   const issue = input.nextInvoiceNumber ?? nextInvoiceNumber;
+  const settings = await getPlanProgramSettings();
+  const heldUntil = holdUntil(new Date(), settings.commissionHoldDays);
   const result = await prisma.$transaction(async (tx) => {
     const rows = await tx.$queryRaw<
       Array<{
@@ -172,7 +176,12 @@ export async function fulfillPaidShopOrder(input: FulfillInput): Promise<Fulfill
             sourceId: row.id,
             orderId: row.id,
             amountPaise: row.commissionPaise,
-            percent: row.commissionPercent ?? 0
+            percent: row.commissionPercent ?? 0,
+            basis: (row.commissionPercent ?? 0) > 0 ? "PERCENT" : "FLAT",
+            flatPaise: (row.commissionPercent ?? 0) > 0 ? 0 : row.commissionPaise,
+            saleKind: "HARDWARE",
+            status: "PENDING",
+            holdUntil: heldUntil
           }
         });
       }

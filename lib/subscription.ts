@@ -3,10 +3,12 @@
  * GST invoice number, and snapshots the invoice. A completed payment is a no-op.
  */
 import { addMonths } from "date-fns";
-import type { PaymentStatus, Prisma, SubscriptionTier } from "@prisma/client";
+import { Prisma, type PaymentStatus, type PlanDuration, type SubscriptionTier } from "@prisma/client";
 import { prisma } from "./db";
 import { getPaymentsConfig } from "./settings";
 import { absoluteUrl } from "./utils";
+import { limitsForTier, modulesForTier } from "./plans/legacy";
+import { extendByReward } from "./plans/quote";
 
 export function financialYearLabel(date: Date): string {
   const start = date.getMonth() >= 3 ? date.getFullYear() : date.getFullYear() - 1;
@@ -64,6 +66,7 @@ export type ActivateInput = {
   utr?: string | null;
   verifiedVia: string;
   matchedEmail?: string | null;
+  payerVpa?: string | null;
   expectedAmountPaise?: number;
   expectedOrderId?: string;
   allowStatuses?: PaymentStatus[];
@@ -77,7 +80,7 @@ export async function activateCompletedPayment(input: ActivateInput): Promise<Ac
   const cfg = await getPaymentsConfig();
   const allowed = input.allowStatuses ?? ["PENDING", "QUEUED"];
 
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx): Promise<ActivateResult> => {
     const rows = await tx.$queryRaw<
       Array<{
         id: string;
@@ -88,9 +91,15 @@ export async function activateCompletedPayment(input: ActivateInput): Promise<Ac
         userId: string;
         tier: SubscriptionTier;
         periodMonths: number;
+        planId: string | null;
+        duration: PlanDuration | null;
+        modules: string[] | null;
+        limits: Prisma.JsonValue | null;
+        creditPaise: number;
       }>
     >`
-      SELECT "id", "status", "providerPaymentId", "invoiceNumber", "amount", "userId", "tier", "periodMonths"
+      SELECT "id", "status", "providerPaymentId", "invoiceNumber", "amount", "userId", "tier", "periodMonths",
+             "planId", "duration", "modules", "limits", "creditPaise"
       FROM "Payment"
       WHERE "id" = ${input.paymentId}
       FOR UPDATE
@@ -136,7 +145,17 @@ export async function activateCompletedPayment(input: ActivateInput): Promise<Ac
     if (!user) return { ok: false, error: "User not found" };
 
     const now = new Date();
-    const expiresAt = extendSubscriptionEnd(user.subscriptionEndsAt, row.periodMonths || 1, now);
+    const lifetime = row.duration === "LIFETIME" || row.periodMonths === 0;
+    let expiresAt: Date | null = lifetime
+      ? null
+      : row.creditPaise > 0
+        ? addMonths(now, Math.max(1, row.periodMonths || 1))
+        : extendSubscriptionEnd(user.subscriptionEndsAt, row.periodMonths || 1, now);
+    const credit = await tx.referralCredit.findUnique({ where: { userId: user.id } });
+    if (expiresAt && credit && (credit.months > 0 || credit.days > 0)) {
+      expiresAt = extendByReward(expiresAt, credit.months, credit.days);
+      await tx.referralCredit.update({ where: { userId: user.id }, data: { months: 0, days: 0 } });
+    }
     const invoiceNumber = row.invoiceNumber ?? (await nextInvoiceNumber(tx, now));
     const split = splitGst(row.amount, cfg.gstRate || 18, true);
 
@@ -149,6 +168,7 @@ export async function activateCompletedPayment(input: ActivateInput): Promise<Ac
         utr: input.utr || undefined,
         verifiedVia: input.verifiedVia,
         matchedEmail: input.matchedEmail ? input.matchedEmail.slice(0, 200) : undefined,
+        payerVpa: input.payerVpa ? input.payerVpa.slice(0, 120) : undefined,
         invoiceNumber,
         invoiceUrl: absoluteUrl(`/api/billing/invoices/${row.id}`),
         invoiceBuyerName: user.name || user.email,
@@ -174,6 +194,51 @@ export async function activateCompletedPayment(input: ActivateInput): Promise<Ac
       }
     });
 
-    return { ok: true, already: false, expiresAt, invoiceNumber };
+    const modules = row.modules && row.modules.length ? row.modules : modulesForTier(row.tier);
+    let rawLimits: unknown = row.limits;
+    if (typeof rawLimits === "string") {
+      try {
+        rawLimits = JSON.parse(rawLimits);
+      } catch {
+        rawLimits = null;
+      }
+    }
+    const limits = rawLimits && typeof rawLimits === "object" ? rawLimits : limitsForTier(row.tier);
+    const snapshot = {
+      planId: row.planId,
+      modules,
+      limits,
+      tier: row.tier,
+      duration: row.duration,
+      status: "ACTIVE" as const,
+      startsAt: now,
+      endsAt: expiresAt,
+      pricePaise: row.amount + Math.max(0, row.creditPaise || 0),
+      pendingPlanId: null,
+      pendingDuration: null,
+      pendingModules: [] as string[],
+      pendingLimits: Prisma.DbNull
+    };
+    const open = await tx.subscription.findFirst({
+      where: { userId: user.id, status: { in: ["ACTIVE", "TRIALING", "PAST_DUE"] } },
+      orderBy: { createdAt: "desc" }
+    });
+    if (open) {
+      await tx.subscription.update({ where: { id: open.id }, data: snapshot });
+    } else {
+      await tx.subscription.create({ data: { userId: user.id, ...snapshot } });
+    }
+
+    return { ok: true, already: false, expiresAt: expiresAt ?? now, invoiceNumber };
   });
+
+  if (result.ok && !result.already) {
+    try {
+      const { settleConfirmedPayment } = await import("./plans/settle");
+      await settleConfirmedPayment(input.paymentId);
+    } catch (error) {
+      console.warn("[plans] could not record commission", error);
+    }
+  }
+  return result;
 }

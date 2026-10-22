@@ -4,6 +4,7 @@ import { logAudit } from "@/lib/admin";
 import { prisma } from "@/lib/db";
 import { nextInvoiceNumber } from "@/lib/subscription";
 import { scaleCredit } from "./commission";
+import { reverseCommissionsForOrder } from "../plans/ledger";
 
 export async function issueShopCreditNote(opts: {
   orderId: string;
@@ -43,6 +44,10 @@ export async function issueShopCreditNote(opts: {
     return { ok: true as const, note };
   });
   if (!result.ok) return fail(result.error === "Order not found" ? 404 : 400, result.error);
+  const order = await prisma.shopOrder.findUnique({ where: { id: opts.orderId }, select: { totalPaise: true } });
+  if (order && result.note.amountPaise >= order.totalPaise) {
+    await reverseCommissionsForOrder(opts.orderId);
+  }
   await logAudit({
     userId: opts.userId,
     action: "shop.credit",

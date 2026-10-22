@@ -96,6 +96,7 @@ export async function POST(req: NextRequest) {
       providerPaymentId: remote.paymentId || gatewayId,
       providerOrderId: payment.id,
       utr: remote.utr || event.utr || null,
+      payerVpa: typeof event.payerVpa === "string" ? event.payerVpa : typeof event.vpa === "string" ? event.vpa : null,
       verifiedVia: "webhook",
       expectedAmountPaise: payment.amount,
       expectedOrderId: payment.id

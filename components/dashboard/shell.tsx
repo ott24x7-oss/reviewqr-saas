@@ -23,7 +23,9 @@ import {
   LifeBuoy,
   ShoppingBag,
   Package,
-  Users
+  Users,
+  BadgePercent,
+  Gift
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { VerifyEmailBanner } from "@/components/dashboard/verify-email-banner";
@@ -87,6 +89,7 @@ const nav = [
   { href: "/dashboard/ai", label: "AI Reviews", icon: Sparkles },
   { href: "/dashboard/campaigns", label: "Campaigns", icon: Send },
   { href: "/dashboard/billing", label: "Billing", icon: CreditCard },
+  { href: "/dashboard/refer", label: "Refer & earn", icon: Gift },
   { href: "/dashboard/help", label: "Help", icon: LifeBuoy },
   { href: "/dashboard/settings", label: "Settings", icon: Settings }
 ];
@@ -111,6 +114,10 @@ export function DashboardShell({
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [notifications, setNotifications] = React.useState<Notification[]>([]);
   const [unread, setUnread] = React.useState(0);
+  const items =
+    user.role === "AGENT"
+      ? [{ href: "/dashboard/agent", label: "My sales", icon: BadgePercent, exact: false }, ...nav]
+      : nav;
 
   React.useEffect(() => {
     setMobileOpen(false);
@@ -300,7 +307,7 @@ export function DashboardShell({
         {/* Sidebar - desktop */}
         <aside className="hidden md:flex w-60 lg:w-64 border-r dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0 flex-col">
           <nav className="flex-1 p-3 space-y-0.5">
-            {nav.map((n) => (
+            {items.map((n) => (
               <Link
                 key={n.href}
                 href={n.href}
@@ -335,7 +342,7 @@ export function DashboardShell({
               onClick={(e) => e.stopPropagation()}
             >
               <nav className="p-3 space-y-0.5">
-                {nav.map((n) => (
+                {items.map((n) => (
                   <Link
                     key={n.href}
                     href={n.href}

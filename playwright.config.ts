@@ -60,6 +60,11 @@ export default defineConfig({
       name: "shop",
       testMatch: /shop-smoke\.spec\.ts/,
       use: { ...devices["Desktop Chrome"], baseURL: devURL }
+    },
+    {
+      name: "plans",
+      testMatch: /plans-agents\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"], baseURL: devURL }
     }
   ],
   webServer: [

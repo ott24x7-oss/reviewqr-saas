@@ -4,6 +4,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { requireBusinessRole } from "@/lib/tenant";
 import { getAiConfig } from "@/lib/settings";
 import { resolveLayout, type StoreView } from "@/lib/store/layout";
+import { moduleBlock, upsellOffer } from "@/lib/plans/entitlements";
+import { ModuleUpsell } from "@/components/plans/module-upsell";
 import { MenuEditor } from "./menu-editor";
 
 export const dynamic = "force-dynamic";
@@ -39,6 +41,11 @@ export default async function BusinessMenuPage({ params }: { params: { id: strin
     prisma.storeSettings.findUnique({ where: { businessId: access.id }, select: { layout: true } })
   ]);
   const layout: StoreView = resolveLayout(settings?.layout, access.industry);
+  const locked = await moduleBlock(access.ownerId, "MENU");
+  if (locked) {
+    const offer = await upsellOffer("MENU");
+    return <ModuleUpsell title={offer.title} body={locked} href={offer.href} />;
+  }
   return (
     <MenuEditor
       businessId={access.id}

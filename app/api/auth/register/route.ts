@@ -10,6 +10,8 @@ import { absoluteUrl, getClientIp } from "@/lib/utils";
 import { attachTapDraft } from "@/lib/tap/new-business";
 import { markOnboarding } from "@/lib/tap/onboarding-mark";
 import { isReservedSlug } from "@/lib/tap/reserved-slugs";
+import { cookies } from "next/headers";
+import { JOIN_COOKIE, applySignupAttribution } from "@/lib/plans/attribution";
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req.headers);
@@ -57,6 +59,7 @@ export async function POST(req: NextRequest) {
     }
   });
 
+  let businessId: string | null = null;
   if (data.businessName) {
     let slug = slugify(data.businessName);
     let count = 0;
@@ -81,7 +84,16 @@ export async function POST(req: NextRequest) {
       }
     });
     await attachTapDraft(business.id, null, { phone: data.phone, whatsappNumber: data.phone });
+    businessId = business.id;
   }
+
+  await applySignupAttribution({
+    userId: user.id,
+    businessId,
+    cookie: cookies().get(JOIN_COOKIE)?.value,
+    phone: data.phone,
+    email
+  });
 
   await markOnboarding(user.id, "start");
 

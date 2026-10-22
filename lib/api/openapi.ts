@@ -382,6 +382,63 @@ registry.registerPath({
   }
 });
 
+registry.registerPath({
+  method: "get",
+  path: "/api/v1/plans",
+  summary: "Plans the app can show. Purchase stays on the website.",
+  responses: {
+    200: jsonResponse(
+      "Visible plans",
+      dataSchema(
+        z.object({
+          plans: z.array(
+            z.object({
+              slug: z.string(),
+              nameEn: z.string(),
+              nameHi: z.string(),
+              modules: z.array(z.string()),
+              prices: z.array(z.object({ duration: z.string(), pricePaise: z.number() }))
+            })
+          ),
+          purchase: z.literal("web")
+        })
+      )
+    )
+  }
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/api/v1/subscription",
+  summary: "Current modules, limits, and plan. The app does not sell plans.",
+  security: [{ bearerAuth: [] }],
+  responses: {
+    200: jsonResponse(
+      "Current subscription",
+      dataSchema(
+        z.object({
+          tier: z.string(),
+          modules: z.array(z.string()),
+          purchase: z.literal("web")
+        })
+      )
+    ),
+    401: unauthorized
+  }
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/api/v1/agent",
+  summary: "Agent businesses, earnings, and payouts",
+  security: [{ bearerAuth: [] }],
+  responses: {
+    200: jsonResponse("Agent home", dataSchema(z.object({ code: z.string(), link: z.string() }))),
+    401: unauthorized,
+    403: { description: "Not an agent", content: { "application/json": { schema: errorRef } } }
+  }
+});
+
 registerResourcePaths(registry, errorRef);
 
 let cached: ReturnType<OpenApiGeneratorV3["generateDocument"]> | null = null;
