@@ -21,13 +21,13 @@ export function VerifyEmailBanner() {
   }
 
   return (
-    <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
-      Confirm your email so we can reach you about this account. You can keep using the dashboard.
+    <div className="mb-4 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+      <p className="min-w-0 flex-1">Please confirm your email.</p>
       <button
         type="button"
         onClick={resend}
         disabled={loading}
-        className="ml-2 font-medium underline disabled:opacity-60"
+        className="min-h-11 shrink-0 rounded-lg px-3 font-medium underline underline-offset-2 disabled:opacity-60"
       >
         {loading ? "Sending…" : "Resend link"}
       </button>

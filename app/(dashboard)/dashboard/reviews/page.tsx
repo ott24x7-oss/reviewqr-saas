@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Star, ArrowUpRight, Download, MessageSquare } from "lucide-react";
+import { Star, ArrowUpRight, Download, MessageSquare, Phone, Mail } from "lucide-react";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
@@ -8,13 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { timeAgo } from "@/lib/utils";
 import { ownedOrAssignedWhere } from "@/lib/tenant";
+import { LoadMore, shownCount } from "@/components/dashboard/load-more";
 
 export const dynamic = "force-dynamic";
 
 export default async function ReviewsPage({
   searchParams
 }: {
-  searchParams: { rating?: string; business?: string };
+  searchParams: { rating?: string; business?: string; show?: string };
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
@@ -28,7 +29,8 @@ export default async function ReviewsPage({
   const filterRating = searchParams.rating ? Number(searchParams.rating) : undefined;
   const filterBusiness = searchParams.business || undefined;
 
-  const reviews = await prisma.review.findMany({
+  const shown = shownCount(searchParams.show);
+  const rows = await prisma.review.findMany({
     where: {
       businessId: filterBusiness ? filterBusiness : { in: businessIds },
       ...(filterRating && { rating: filterRating })
@@ -40,8 +42,10 @@ export default async function ReviewsPage({
       feedback: { select: { message: true, status: true } }
     },
     orderBy: { createdAt: "desc" },
-    take: 100
+    take: shown + 1
   });
+  const hasMore = rows.length > shown;
+  const reviews = rows.slice(0, shown);
 
   return (
     <div className="space-y-5">
@@ -132,17 +136,17 @@ export default async function ReviewsPage({
                     <span className="text-xs text-muted-foreground">·</span>
                     <span className="text-xs text-muted-foreground">{r.business.name}</span>
                     {r.location && (
-                      <Badge variant="outline" className="text-[10px]">
+                      <Badge variant="outline" className="text-xs">
                         {r.location.name}
                       </Badge>
                     )}
                     {r.staff && (
-                      <Badge variant="outline" className="text-[10px]">
+                      <Badge variant="outline" className="text-xs">
                         {r.staff.name}
                       </Badge>
                     )}
                     {r.redirected && (
-                      <Badge variant="success" className="text-[10px]">
+                      <Badge variant="success" className="text-xs">
                         <ArrowUpRight className="h-2.5 w-2.5" /> Google
                       </Badge>
                     )}
@@ -151,13 +155,18 @@ export default async function ReviewsPage({
                     <p className="mt-1.5 text-sm text-foreground/90 leading-relaxed">{r.feedback.message}</p>
                   )}
                   <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
-                    {r.customerPhone && <span>📱 {r.customerPhone}</span>}
-                    {r.customerEmail && <span>✉️ {r.customerEmail}</span>}
+                    {r.customerPhone && (
+                      <span className="inline-flex items-center gap-1"><Phone className="h-3.5 w-3.5" aria-hidden="true" /> {r.customerPhone}</span>
+                    )}
+                    {r.customerEmail && (
+                      <span className="inline-flex items-center gap-1"><Mail className="h-3.5 w-3.5" aria-hidden="true" /> {r.customerEmail}</span>
+                    )}
                   </div>
                 </div>
               </CardContent>
             </Card>
           ))}
+          {hasMore && <LoadMore basePath="/dashboard/reviews" params={searchParams} shown={shown} />}
         </div>
       )}
     </div>
@@ -168,7 +177,7 @@ function FilterPill({ href, active, children }: { href: string; active: boolean;
   return (
     <Link
       href={href}
-      className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+      className={`inline-flex min-h-10 shrink-0 items-center px-4 rounded-full text-sm font-medium transition-colors ${
         active ? "bg-primary text-white" : "bg-secondary text-foreground hover:bg-secondary/80"
       }`}
     >

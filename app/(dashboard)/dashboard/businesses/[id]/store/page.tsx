@@ -9,6 +9,7 @@ import { effectiveTier } from "@/lib/payments";
 import { moduleBlock, upsellOffer } from "@/lib/plans/entitlements";
 import { ModuleUpsell } from "@/components/plans/module-upsell";
 import { StoreForm, type StoreFormValues } from "./store-form";
+import { HelpLink } from "@/components/help/help-link";
 
 export const dynamic = "force-dynamic";
 
@@ -66,9 +67,12 @@ export default async function StoreSettingsPage({ params }: { params: { id: stri
   };
   return (
     <div className="space-y-4">
-      <div>
+      <div className="flex items-start justify-between gap-3">
+        <div>
         <h1 className="font-display text-xl font-bold sm:text-2xl">Store settings</h1>
         <p className="text-sm text-muted-foreground">{access.name}</p>
+        </div>
+        <HelpLink context="store" page="Store" />
       </div>
       {access.accessRole === "STAFF" ? (
         <p className="text-sm text-muted-foreground">Only a manager can change store settings.</p>

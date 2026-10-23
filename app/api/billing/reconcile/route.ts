@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminApi } from "@/lib/admin";
-import { enqueueBillingJobs, runClaimedJob } from "@/lib/jobs/dispatch";
+import { enqueueBillingJobs, enqueueInsightJobs, runClaimedJob } from "@/lib/jobs/dispatch";
 import { workerIsFresh } from "@/lib/jobs/store";
 import { timingSafeEqualString } from "@/lib/timing-safe";
 
@@ -23,6 +23,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const [reconcileJob, staleJob, lapsedJob, reminderJob] = await enqueueBillingJobs();
+    await enqueueInsightJobs().catch(() => {});
     if (await workerIsFresh()) return NextResponse.json({ queued: true });
 
     const result = (await runClaimedJob(reconcileJob.id)) as { checked: number; activated: number } | null;

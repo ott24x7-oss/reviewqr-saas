@@ -150,7 +150,17 @@ const en = {
   coverPhoto: "Cover photo",
   camera: "Camera",
   gallery: "Gallery",
-  cameraOff: "Allow the camera to take a logo photo"
+  cameraOff: "Allow the camera to take a logo photo",
+  analytics: "Analytics",
+  growthScore: "Growth score",
+  gettingStarted: "Getting started",
+  doThisWeek: "Do these 3 things this week",
+  dismiss: "Dismiss",
+  scans: "Scans",
+  taps: "Taps",
+  pageViews: "Page views",
+  ordersValue: "WhatsApp orders",
+  markDone: "Mark done"
 };
 
 const hi: typeof en = {
@@ -303,7 +313,17 @@ const hi: typeof en = {
   coverPhoto: "कवर फोटो",
   camera: "कैमरा",
   gallery: "गैलरी",
-  cameraOff: "लोगो फोटो के लिए कैमरा अनुमति दें"
+  cameraOff: "लोगो फोटो के लिए कैमरा अनुमति दें",
+  analytics: "एनालिटिक्स",
+  growthScore: "ग्रोथ स्कोर",
+  gettingStarted: "शुरुआत",
+  doThisWeek: "इस हफ़्ते ये 3 काम करें",
+  dismiss: "बंद करें",
+  scans: "स्कैन",
+  taps: "टैप",
+  pageViews: "पेज व्यू",
+  ordersValue: "WhatsApp ऑर्डर",
+  markDone: "हो गया"
 };
 
 export const copy = { en, hi };

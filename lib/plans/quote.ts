@@ -54,6 +54,21 @@ export function monthlyEquivalent(pricePaise: number, months: number) {
   return Math.round(Math.max(0, Math.floor(pricePaise)) / span);
 }
 
+/**
+ * A lifetime plan has no end date, so it must not be queued as a downgrade.
+ * A higher-priced lifetime plan is still an upgrade. Anything else is blocked.
+ */
+export function lifetimeChangeError(input: {
+  currentLifetime: boolean;
+  targetLifetime: boolean;
+  currentPricePaise: number;
+  targetPricePaise: number;
+}) {
+  if (!input.currentLifetime) return null;
+  if (input.targetLifetime && input.targetPricePaise > input.currentPricePaise) return null;
+  return "You have a lifetime plan";
+}
+
 export function quotePlanChange(input: {
   samePlan: boolean;
   currentPricePaise: number;

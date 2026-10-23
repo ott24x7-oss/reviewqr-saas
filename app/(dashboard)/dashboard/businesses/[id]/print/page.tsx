@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { requireBusinessRole } from "@/lib/tenant";
 import { PrintEditor } from "@/app/admin/print/editor";
+import { HelpLink } from "@/components/help/help-link";
 
 export const dynamic = "force-dynamic";
 
@@ -16,5 +17,10 @@ export default async function BusinessPrintPage({ params }: { params: { id: stri
     select: { id: true, name: true }
   });
   if (!business) notFound();
-  return <PrintEditor mode="tables" businessId={business.id} businessName={business.name} />;
+  return (
+    <div className="space-y-3">
+      <HelpLink context="print" page="Print studio" />
+      <PrintEditor mode="tables" businessId={business.id} businessName={business.name} />
+    </div>
+  );
 }

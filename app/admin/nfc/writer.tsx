@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Button } from "@/components/ui/button";
+import { HelpLink } from "@/components/help/help-link";
 import { codeFromScan } from "@/lib/tap/qr-stock";
 import { decodeNdefUrl, nfcLinkMatches, nfcUrl, normalizeChipUid } from "@/lib/tap/nfc";
 
@@ -132,9 +133,12 @@ export function NfcWriter() {
 
   return (
     <div className="space-y-4">
-      <div>
+      <div className="flex items-start justify-between gap-3">
+        <div>
         <h1 className="font-display text-2xl font-bold sm:text-3xl">NFC writer</h1>
         <p className="text-sm text-muted-foreground">Write a tag, read it back, and save the chip UID.</p>
+        </div>
+        <HelpLink context="nfc" page="NFC" />
       </div>
       {supported === false ? (
         <div className="rounded-2xl border bg-white p-4 text-sm">

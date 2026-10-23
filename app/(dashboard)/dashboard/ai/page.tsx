@@ -99,8 +99,8 @@ export default async function DashboardAiPage() {
                     <span
                       className={
                         b.aiReviewsEnabled
-                          ? "inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300 px-2 py-0.5 text-[11px] font-semibold shrink-0"
-                          : "inline-flex items-center gap-1 rounded-full bg-secondary text-muted-foreground px-2 py-0.5 text-[11px] font-semibold shrink-0"
+                          ? "inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300 px-2 py-0.5 text-xs font-semibold shrink-0"
+                          : "inline-flex items-center gap-1 rounded-full bg-secondary text-muted-foreground px-2 py-0.5 text-xs font-semibold shrink-0"
                       }
                     >
                       {b.aiReviewsEnabled ? (
@@ -114,7 +114,7 @@ export default async function DashboardAiPage() {
                   </div>
 
                   {!b.googleReviewUrl && (
-                    <p className="mt-3 text-[11px] text-amber-700 flex items-center gap-1">
+                    <p className="mt-3 text-xs text-amber-700 flex items-center gap-1">
                       <AlertTriangle className="h-3 w-3" /> Add a Google review link in business settings.
                     </p>
                   )}

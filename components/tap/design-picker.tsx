@@ -117,6 +117,19 @@ function ClassicPreview() {
   );
 }
 
+/** Wraps a non-interactive preview: hidden from screen readers and skipped by Tab. */
+function InertPreview({ children }: { children: React.ReactNode }) {
+  const ref = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    ref.current?.setAttribute("inert", "");
+  }, []);
+  return (
+    <div ref={ref} aria-hidden="true" className="pointer-events-none">
+      {children}
+    </div>
+  );
+}
+
 export function DesignPicker({
   value,
   onChange,
@@ -131,26 +144,33 @@ export function DesignPicker({
   return (
     <div role="group" aria-label="Store design" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
       {DESIGN_PICKER.map((choice) => (
-        <button
+        <div
           key={choice.id}
-          type="button"
-          aria-pressed={value === choice.id}
-          onClick={() => onChange(choice.id)}
-          className={`flex min-h-11 flex-col items-center gap-2 rounded-xl border p-2 text-sm ${value === choice.id ? "border-primary ring-2 ring-primary" : ""}`}
+          className={`relative flex flex-col items-center gap-2 rounded-xl border p-2 text-sm ${value === choice.id ? "border-primary ring-2 ring-primary" : ""}`}
         >
-          <Phone accent={accent} accentInk={accentInk}>
-            {choice.id === "CLASSIC" ? (
-              <ClassicPreview />
-            ) : choice.id === "MINIMAL" ? (
-              <MinimalStore {...previewProps} />
-            ) : choice.id === "BOLD" ? (
-              <BoldStore {...previewProps} />
-            ) : (
-              <PremiumStore {...previewProps} />
-            )}
-          </Phone>
-          {choice.label}
-        </button>
+          {/* The preview is a picture of a store, not a control: no nested buttons, no tab stops. */}
+          <InertPreview>
+            <Phone accent={accent} accentInk={accentInk}>
+              {choice.id === "CLASSIC" ? (
+                <ClassicPreview />
+              ) : choice.id === "MINIMAL" ? (
+                <MinimalStore {...previewProps} />
+              ) : choice.id === "BOLD" ? (
+                <BoldStore {...previewProps} />
+              ) : (
+                <PremiumStore {...previewProps} />
+              )}
+            </Phone>
+          </InertPreview>
+          <button
+            type="button"
+            aria-pressed={value === choice.id}
+            onClick={() => onChange(choice.id)}
+            className="min-h-11 w-full rounded-lg font-medium after:absolute after:inset-0 after:rounded-xl after:content-['']"
+          >
+            {choice.label}
+          </button>
+        </div>
       ))}
     </div>
   );

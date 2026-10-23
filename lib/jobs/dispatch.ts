@@ -1,4 +1,9 @@
 import type { Prisma } from "@prisma/client";
+import { backfillIdempotencyKey, rollupJobDays } from "../analytics/build";
+import { prisma } from "../db";
+import { istDayKey, istParts } from "../analytics/ist";
+import { monthlyDue, weeklyDue } from "../reports/schedule";
+import { getInsightSettings } from "../reports/settings";
 import {
   claimById,
   enqueueJob,
@@ -63,4 +68,63 @@ export async function enqueueBillingJobs() {
     enqueueOpen("billing.expireLapsed"),
     enqueueOpen("billing.reminders")
   ]);
+}
+
+/** Hourly rollup for today, plus a one-time 90-day backfill. A finished key is not run again. */
+export async function enqueueInsightJobs(now = new Date()) {
+  const day = istDayKey(now);
+  const hour = istParts(now).hour;
+  const days = rollupJobDays(day, hour);
+  const rollup = await enqueueJob({
+    type: "analytics.rollup",
+    payload: { day },
+    idempotencyKey: `analytics.rollup:${day}:${hour}`
+  });
+  const late =
+    days.length > 1
+      ? await enqueueJob({
+          type: "analytics.rollup",
+          payload: { day: days[1] },
+          idempotencyKey: `analytics.rollup:${days[1]}:late`
+        })
+      : null;
+  const businesses = await prisma.business.findMany({ where: { archived: false }, select: { id: true } });
+  const backfill = [];
+  for (const business of businesses) {
+    backfill.push(
+      await enqueueJob({
+        type: "analytics.backfill",
+        payload: { days: 90, businessId: business.id },
+        idempotencyKey: backfillIdempotencyKey(90, business.id)
+      })
+    );
+  }
+  const growth = await enqueueJob({
+    type: "growth.score",
+    payload: { day },
+    idempotencyKey: `growth.score:${day}`
+  });
+  const settings = await getInsightSettings().catch(() => ({
+    reportHourIst: 9,
+    reportMinuteIst: 0,
+    reportMaxPerMinute: 20,
+    whatsappNumber: ""
+  }));
+  const weekKey = weeklyDue(now, settings.reportHourIst, settings.reportMinuteIst);
+  const monthKey = monthlyDue(now, settings.reportHourIst, settings.reportMinuteIst);
+  const weekly = weekKey
+    ? await enqueueJob({
+        type: "reports.weekly",
+        payload: { weekKey },
+        idempotencyKey: `reports.weekly:${weekKey}`
+      })
+    : null;
+  const monthly = monthKey
+    ? await enqueueJob({
+        type: "reports.monthly",
+        payload: { monthKey },
+        idempotencyKey: `reports.monthly:${monthKey}`
+      })
+    : null;
+  return { rollup, late, backfill, growth, weekly, monthly };
 }
