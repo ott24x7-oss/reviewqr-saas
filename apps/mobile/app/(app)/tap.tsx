@@ -9,6 +9,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withDelay, withRepeat, with
 import { WebView } from "react-native-webview";
 import * as WebBrowser from "expo-web-browser";
 import { apiBaseUrl } from "../../src/api/instance";
+import { trackOnce } from "../../src/analytics/events";
 import { apiData } from "../../src/api/data";
 import { ApiError } from "../../src/api/http";
 import { CoachTour } from "../../src/guide/coach";
@@ -108,6 +109,9 @@ export default function TapScreen() {
   }
 
   const qrUri = data?.code && base ? `${base}/api/qr/${data.code}/image?format=png` : "";
+  useEffect(() => {
+    if (qrUri) void trackOnce("first_qr_shown");
+  }, [qrUri]);
 
   useEffect(() => {
     if (reduceMotion || lowRam || !data?.code) {

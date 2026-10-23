@@ -19,6 +19,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { trackAppEvent } from "../../src/analytics/events";
 import { apiData } from "../../src/api/data";
 import { ApiError } from "../../src/api/http";
 import { useI18n } from "../../src/i18n";
@@ -237,6 +238,7 @@ export default function WizardScreen() {
         }
       }
       await AsyncStorage.removeItem(WIZARD_LOCAL_KEY).catch(() => undefined);
+      void trackAppEvent("setup_complete");
       setDone(created);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not save this step");

@@ -14,6 +14,7 @@ import { CoachTour } from "../../src/guide/coach";
 import { HelpButton } from "../../src/guide/help-sheet";
 import { useI18n } from "../../src/i18n";
 import { accountKey } from "../../src/query/keys";
+import { trackAppEvent } from "../../src/analytics/events";
 import { enqueueOrderStatus, isNetworkFailure } from "../../src/orders/queue";
 import { noteOrderCompleted } from "../../src/review/prompt";
 import { useReviewMoment } from "../../src/review/watch";
@@ -281,6 +282,7 @@ export default function OrdersScreen() {
     }
     try {
       await apiData(`/api/v1/orders/${orderId}/status`, { method: "POST", body: JSON.stringify({ status }) });
+      void trackAppEvent("order_status_changed");
       await client.invalidateQueries({ queryKey: accountKey(userId, "orders", id || "") });
       if (status === "COMPLETED") void noteOrderCompleted(false);
     } catch (err) {

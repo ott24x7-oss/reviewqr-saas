@@ -1922,6 +1922,17 @@ model SignupAttribution {
   @@index([referrerUserId])
 }
 
+// Privacy-safe app funnel. installId is a random device id, not a user, phone, or email.
+model AppEvent {
+  id        String   @id @default(cuid())
+  name      String
+  installId String
+  createdAt DateTime @default(now())
+
+  @@index([name, createdAt])
+  @@index([installId, name])
+}
+
 model ReferralReward {
   id             String               @id @default(cuid())
   referrerUserId String

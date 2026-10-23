@@ -4,6 +4,7 @@ import { router } from "expo-router";
 import { useEffect, useRef, useState , useMemo } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { trackAppEvent } from "../../src/analytics/events";
 import { apiData } from "../../src/api/data";
 import { ApiError } from "../../src/api/http";
 import { clearPendingOtp, getPendingOtp } from "../../src/auth/pending";
@@ -54,6 +55,7 @@ export default function BusinessNameScreen() {
       leaving.current = true;
       clearPendingOtp();
       await saveSession(pair);
+      void trackAppEvent("signup_complete");
       router.replace("/(onboard)/referral");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not create the account");

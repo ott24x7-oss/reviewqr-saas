@@ -7,6 +7,7 @@ import { useFonts } from "expo-font";
 import { Stack, usePathname } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { AppOpenEvent } from "../src/analytics/open";
 import { I18nProvider } from "../src/i18n";
 import { OrderStatusSync } from "../src/orders/sync";
 import { queryClient, queryPersistOptions } from "../src/query/persist";
@@ -52,6 +53,7 @@ function RootLayout() {
         <I18nProvider>
           <PersistQueryClientProvider client={queryClient} persistOptions={queryPersistOptions}>
             <SessionProvider>
+              <AppOpenEvent />
               <OrderStatusSync />
               <AppUpdateCheck />
               <Boot fontsReady={Boolean(loaded)} />

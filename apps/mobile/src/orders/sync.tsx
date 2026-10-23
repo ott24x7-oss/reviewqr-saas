@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
+import { trackAppEvent } from "../analytics/events";
 import { apiData } from "../api/data";
 import { useOnline } from "../net/online";
 import { flushStoredOrderQueue } from "./queue";
@@ -10,12 +11,13 @@ export function OrderStatusSync() {
   const client = useQueryClient();
   useEffect(() => {
     if (!online) return;
-    void flushStoredOrderQueue((row) =>
-      apiData(`/api/v1/orders/${row.orderId}/status`, {
+    void flushStoredOrderQueue(async (row) => {
+      await apiData(`/api/v1/orders/${row.orderId}/status`, {
         method: "POST",
         body: JSON.stringify({ status: row.status })
-      })
-    ).then((sent) => {
+      });
+      void trackAppEvent("order_status_changed");
+    }).then((sent) => {
       if (sent > 0) void client.invalidateQueries({ predicate: (query) => query.queryKey.includes("orders") });
     });
   }, [client, online]);
