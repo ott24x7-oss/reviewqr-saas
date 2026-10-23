@@ -2,7 +2,7 @@
 
 The Android application id in `apps/mobile/app.config.ts` is `com.qr24x7.app`. The app name is QR24x7. Deep links use `qr24x7://`, and `reviewqr://` still opens the same screens. Changing the application id later means a new Play listing. The Expo project slug stays `reviewqr` so an existing EAS project id keeps working.
 
-`versionCode` is `1`. `compileSdkVersion` and `targetSdkVersion` are `36` (Android 16). From 31 August 2026, new apps and updates must target API 36. `minSdkVersion` is `24`. The splash image is the `expo-splash-screen` plugin. Icons are in `apps/mobile/assets`.
+`versionCode` is `3`. `compileSdkVersion` is `37` and `targetSdkVersion` is `36` (Android 16). From 31 August 2026, new apps and updates must target API 36. `minSdkVersion` is `24`. The splash image is the `expo-splash-screen` plugin. Icons are in `apps/mobile/assets`.
 
 Digital plans are not sold in the app. See [play-billing.md](play-billing.md). Physical QR stands and NFC cards still check out through the server.
 
