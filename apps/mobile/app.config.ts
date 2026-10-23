@@ -14,14 +14,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   version: "1.0.0",
   orientation: "portrait",
   icon: "./assets/icon.png",
-  userInterfaceStyle: "light",
+  userInterfaceStyle: "automatic",
   ios: {
     supportsTablet: false,
     bundleIdentifier: packageName
   },
   android: {
     package: packageName,
-    versionCode: 1,
+    versionCode: 2,
     adaptiveIcon: {
       foregroundImage: "./assets/adaptive-icon.png",
       backgroundImage: "./assets/adaptive-icon-background.png",
@@ -46,9 +46,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       "expo-splash-screen",
       {
-        backgroundColor: "#F4EFE6",
-        image: "./assets/splash.png",
-        imageWidth: 200
+        backgroundColor: "#16A34A",
+        image: "./assets/splash-mark.png",
+        imageWidth: 120
       }
     ],
     [
@@ -82,6 +82,40 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       }
     ],
     "expo-sharing",
+    "expo-audio",
+    [
+      "react-native-android-widget/app.plugin",
+      {
+        widgets: [
+          {
+            name: "QR24x7Today",
+            label: "QR24x7 Today",
+            description: "Today's scans, orders and reviews",
+            minWidth: "110dp",
+            minHeight: "110dp",
+            targetCellWidth: 2,
+            targetCellHeight: 2,
+            maxResizeWidth: "250dp",
+            maxResizeHeight: "110dp",
+            resizeMode: "horizontal",
+            updatePeriodMillis: 1800000,
+            previewImage: "./assets/icon.png"
+          },
+          {
+            name: "MyQr",
+            label: "My QR",
+            description: "Open your QR",
+            minWidth: "40dp",
+            minHeight: "40dp",
+            targetCellWidth: 1,
+            targetCellHeight: 1,
+            resizeMode: "none",
+            updatePeriodMillis: 1800000,
+            previewImage: "./assets/icon.png"
+          }
+        ]
+      }
+    ],
     [
       "react-native-nfc-manager",
       {
