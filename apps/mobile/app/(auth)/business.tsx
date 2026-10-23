@@ -2,7 +2,7 @@ import type { TokenPair } from "@reviewqr/shared";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import { useEffect, useRef, useState , useMemo } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { apiData } from "../../src/api/data";
 import { ApiError } from "../../src/api/http";
@@ -12,7 +12,8 @@ import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
 import { usePalette } from "../../src/ui/theme";
 import type { Palette } from "../../src/ui/tokens";
-import { Field, PillButton } from "../../src/ui/controls";
+import { FilledField, PillButton, StickyAction } from "../../src/ui/controls";
+import { SectionHeader } from "../../src/ui/rows";
 
 export default function BusinessNameScreen() {
   const palette = usePalette();
@@ -62,24 +63,32 @@ export default function BusinessNameScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
-      <View style={styles.card}>
-        <Text style={[styles.title, lang === "hi" && styles.hindi]}>{t.businessName}</Text>
-        <Field label={t.name} value={name} onChangeText={setName} />
-        <Field label={t.businessName} value={businessName} onChangeText={setBusinessName} />
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-        <PillButton label={t.finish} onPress={finish} disabled={busy || name.trim().length < 2} hint={name.trim().length < 2 ? t.hintName : t.hintWait} />
-      </View>
+    <SafeAreaView style={styles.screen} edges={["top"]}>
+      <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          <Text style={[styles.title, lang === "hi" && styles.hindi]}>{t.signupTitle}</Text>
+          <SectionHeader label={t.name} />
+          <View style={styles.card}>
+            <FilledField label={t.name} value={name} onChangeText={setName} />
+            <FilledField label={t.businessName} value={businessName} onChangeText={setBusinessName} />
+          </View>
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+        </ScrollView>
+        <StickyAction>
+          <PillButton label={t.finish} onPress={finish} disabled={busy || name.trim().length < 2} hint={name.trim().length < 2 ? t.hintName : t.hintWait} />
+        </StickyAction>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 function makeStyles(colors: Palette) {
   return StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.navy, padding: 16, justifyContent: "center" },
-  card: { gap: 16, padding: 22, borderRadius: 24, backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.line },
-  title: { color: colors.cyanSoft, fontFamily: fonts.display, fontSize: 28 },
-  error: { color: "#FFB4B4" },
+  screen: { flex: 1, backgroundColor: colors.paper },
+  content: { padding: 16, gap: 12, paddingBottom: 24 },
+  card: { gap: 10, padding: 12, borderRadius: 20, backgroundColor: colors.card },
+  title: { color: colors.ink, fontFamily: fonts.display, fontSize: 28 },
+  error: { color: colors.danger, fontFamily: fonts.body },
   hindi: { fontFamily: fonts.hindi }
 });
 }

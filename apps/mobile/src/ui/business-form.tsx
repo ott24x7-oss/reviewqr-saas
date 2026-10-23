@@ -2,7 +2,7 @@ import type { PlaceDetails, PlacesSearch } from "@reviewqr/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useState , useMemo } from "react";
-import { Pressable, ScrollView, StyleSheet, Text } from "react-native";
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { apiData } from "../api/data";
 import { ApiError } from "../api/http";
 import { useI18n } from "../i18n";
@@ -12,7 +12,8 @@ import { useSession } from "../state/session";
 import { fonts } from "../theme";
 import { usePalette } from "./theme";
 import type { Palette } from "./tokens";
-import { Field, PillButton } from "./controls";
+import { FilledField, PillButton, StickyAction } from "./controls";
+import { SectionHeader } from "./rows";
 
 type Draft = {
   name: string;
@@ -130,38 +131,55 @@ export function BusinessForm({ initial, businessId }: { initial?: BusinessCard |
   }
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      <Field label={t.searchPlaces} tone="paper" value={query} onChangeText={setQuery} />
-      <PillButton label={t.searchPlaces} onPress={search} disabled={busy || query.trim().length < 2} tone="outline" />
-      {places && !places.enabled ? <Text style={[styles.note, lang === "hi" && styles.hindi]}>{t.placesOff}</Text> : null}
-      {places?.predictions.map((row) => (
-        <Pressable key={row.placeId} accessibilityRole="button" accessibilityLabel={row.description} onPress={() => pick(row.placeId)} style={styles.hit}>
-          <Text style={[styles.hitText, lang === "hi" && styles.hindi]}>{row.description}</Text>
-        </Pressable>
-      ))}
-      <Field label={t.businessName} tone="paper" value={draft.name} onChangeText={(name) => patch({ name })} />
-      <Field label={t.phone} tone="paper" value={draft.phone} onChangeText={(phone) => patch({ phone })} keyboardType="phone-pad" />
-      <Field label={t.whatsapp} tone="paper" value={draft.whatsappNumber} onChangeText={(whatsappNumber) => patch({ whatsappNumber })} keyboardType="phone-pad" />
-      <Field label={t.city} tone="paper" value={draft.city} onChangeText={(city) => patch({ city })} />
-      <Field label={t.address} tone="paper" value={draft.address} onChangeText={(address) => patch({ address })} />
-      <Field label={t.reviewUrl} tone="paper" value={draft.googleReviewUrl} onChangeText={(googleReviewUrl) => patch({ googleReviewUrl })} autoCapitalize="none" />
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-      <PillButton
-        label={t.save}
-        onPress={save}
-        disabled={busy || draft.name.trim().length < 2}
-        hint={draft.name.trim().length < 2 ? t.hintBusiness : t.hintWait}
-        tone="dark"
-      />
-    </ScrollView>
+    <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <SectionHeader label={t.searchPlaces} />
+        <View style={styles.card}>
+          <FilledField label={t.searchPlaces} value={query} onChangeText={setQuery} />
+          <PillButton label={t.searchPlaces} onPress={search} disabled={busy || query.trim().length < 2} tone="outline" />
+          {places && !places.enabled ? <Text style={[styles.note, lang === "hi" && styles.hindi]}>{t.placesOff}</Text> : null}
+          {places?.predictions.map((row) => (
+            <Pressable key={row.placeId} accessibilityRole="button" accessibilityLabel={row.description} onPress={() => pick(row.placeId)} style={styles.hit}>
+              <Text style={[styles.hitText, lang === "hi" && styles.hindi]}>{row.description}</Text>
+            </Pressable>
+          ))}
+        </View>
+        <SectionHeader label={t.businessName} />
+        <View style={styles.card}>
+          <FilledField label={t.businessName} value={draft.name} onChangeText={(name) => patch({ name })} />
+          <FilledField label={t.phone} value={draft.phone} onChangeText={(phone) => patch({ phone })} keyboardType="phone-pad" />
+          <FilledField label={t.whatsapp} value={draft.whatsappNumber} onChangeText={(whatsappNumber) => patch({ whatsappNumber })} keyboardType="phone-pad" />
+        </View>
+        <SectionHeader label={t.address} />
+        <View style={styles.card}>
+          <FilledField label={t.city} value={draft.city} onChangeText={(city) => patch({ city })} />
+          <FilledField label={t.address} value={draft.address} onChangeText={(address) => patch({ address })} />
+        </View>
+        <SectionHeader label={t.reviewUrl} />
+        <View style={styles.card}>
+          <FilledField label={t.reviewUrl} value={draft.googleReviewUrl} onChangeText={(googleReviewUrl) => patch({ googleReviewUrl })} autoCapitalize="none" />
+        </View>
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+      </ScrollView>
+      <StickyAction>
+        <PillButton
+          label={t.save}
+          onPress={save}
+          disabled={busy || draft.name.trim().length < 2}
+          hint={draft.name.trim().length < 2 ? t.hintBusiness : t.hintWait}
+          tone="dark"
+        />
+      </StickyAction>
+    </KeyboardAvoidingView>
   );
 }
 
 function makeStyles(colors: Palette) {
   return StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.paper },
-  content: { padding: 16, gap: 12 },
-  hit: { minHeight: 48, justifyContent: "center", backgroundColor: colors.card, borderRadius: 14, paddingHorizontal: 14 },
+  content: { padding: 16, gap: 12, paddingBottom: 24 },
+  card: { backgroundColor: colors.card, borderRadius: 20, padding: 12, gap: 10 },
+  hit: { minHeight: 48, justifyContent: "center", backgroundColor: colors.paper, borderRadius: 14, paddingHorizontal: 14 },
   hitText: { fontFamily: fonts.body, color: colors.ink },
   note: { fontFamily: fonts.body, color: colors.inkSoft, lineHeight: 22 },
   error: { color: colors.danger, fontFamily: fonts.body },
