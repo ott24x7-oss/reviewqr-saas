@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState , useMemo } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { User } from "lucide-react-native";
+import { ScrollView, StyleSheet, Text } from "react-native";
 import { apiData } from "../../src/api/data";
 import { ApiError } from "../../src/api/http";
 import { useI18n } from "../../src/i18n";
@@ -11,6 +12,7 @@ import { fonts } from "../../src/theme";
 import { usePalette } from "../../src/ui/theme";
 import type { Palette } from "../../src/ui/tokens";
 import { Field, PillButton } from "../../src/ui/controls";
+import { Group, GroupRow, SectionHeader } from "../../src/ui/rows";
 
 type StaffRow = { id: string; name: string; role: string | null };
 
@@ -51,12 +53,16 @@ export default function StaffScreen() {
       <Field label={t.name} tone="paper" value={name} onChangeText={setName} />
       <PillButton label={t.addItem} onPress={add} disabled={name.trim().length < 2} hint={t.hintName} tone="dark" />
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      {(rows.data?.items ?? []).map((row) => (
-        <View key={row.id} style={styles.card}>
-          <Text style={styles.title}>{row.name}</Text>
-          {row.role ? <Text style={styles.note}>{row.role}</Text> : null}
-        </View>
-      ))}
+      <SectionHeader label={t.sectionTeam} />
+      <Group>
+        {(rows.data?.items ?? []).length === 0 ? (
+          <GroupRow icon={User} tint="blue" title={t.staff} hint={t.hintNoStaff} />
+        ) : (
+          (rows.data?.items ?? []).map((row) => (
+            <GroupRow key={row.id} icon={User} tint="blue" title={row.name} hint={row.role || t.hintStaffRow} />
+          ))
+        )}
+      </Group>
     </ScrollView>
   );
 }
@@ -65,9 +71,7 @@ function makeStyles(colors: Palette) {
   return StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.paper },
   content: { padding: 16, gap: 12 },
-  card: { backgroundColor: colors.card, borderRadius: 20, padding: 14, gap: 4 },
   title: { fontFamily: fonts.title, fontSize: 20, color: colors.ink },
-  note: { fontFamily: fonts.body, color: colors.inkSoft },
   error: { color: colors.danger, fontFamily: fonts.body },
   hindi: { fontFamily: fonts.hindi }
 });

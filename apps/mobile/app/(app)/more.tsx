@@ -1,4 +1,20 @@
 import { router } from "expo-router";
+import {
+  BarChart3,
+  CircleHelp,
+  CreditCard,
+  Languages,
+  LogOut,
+  Bell,
+  Nfc,
+  Palette,
+  QrCode,
+  ShoppingBag,
+  Store,
+  Trash2,
+  User,
+  Users
+} from "lucide-react-native";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { apiData } from "../../src/api/data";
@@ -9,20 +25,8 @@ import { useBusiness } from "../../src/state/business";
 import { useEntitlement } from "../../src/state/entitlement";
 import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
-import { Card } from "../../src/ui/bits";
+import { Group, GroupRow, SectionHeader } from "../../src/ui/rows";
 import { useTheme, type SchemeChoice } from "../../src/ui/theme";
-
-const LINKS = [
-  ["pageQr", "/(app)/tap"],
-  ["theme", "/(app)/business-edit"],
-  ["storeSettings", "/(app)/store"],
-  ["staff", "/(app)/staff"],
-  ["devices", "/(app)/nfc"],
-  ["shop", "/(app)/shop"],
-  ["analytics", "/(app)/analytics"],
-  ["plans", "/(app)/plan"],
-  ["help", "/(app)/help"]
-] as const;
 
 export default function MoreScreen() {
   const { t, lang, choose } = useI18n();
@@ -33,6 +37,7 @@ export default function MoreScreen() {
   const owns = businesses.some((item) => item.ownerId === user?.id);
   const [error, setError] = useState<string | null>(null);
   const name = lang === "hi" ? plan.data?.plan?.nameHi || plan.data?.plan?.nameEn : plan.data?.plan?.nameEn;
+  const themes: SchemeChoice[] = ["system", "light", "dark"];
 
   async function togglePush() {
     if (!user) return;
@@ -48,67 +53,89 @@ export default function MoreScreen() {
     }
   }
 
-  const themes: SchemeChoice[] = ["system", "light", "dark"];
-
   return (
     <ScrollView style={{ flex: 1, backgroundColor: palette.paper }} contentContainerStyle={styles.content}>
       <Text style={[styles.title, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.more}</Text>
-      <Card>
-        <Text style={[styles.cardTitle, { color: palette.ink }, lang === "hi" && styles.hindi]}>{name || plan.data?.tier || t.plans}</Text>
-        <Text style={[styles.note, { color: palette.muted }]}>{plan.data?.status}</Text>
-        <Text style={[styles.note, { color: palette.muted }, lang === "hi" && styles.hindi]}>{t.plansWeb}</Text>
-      </Card>
-      <Card>
-        {LINKS.map(([key, href]) => (
-          <Pressable key={key} accessibilityRole="button" accessibilityLabel={t[key]} onPress={() => router.push(href)} style={styles.row}>
-            <Text style={[styles.rowText, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t[key]}</Text>
-          </Pressable>
-        ))}
+
+      <SectionHeader label={t.plans} />
+      <Group>
+        <GroupRow
+          icon={CreditCard}
+          tint="green"
+          title={name || plan.data?.tier || t.plans}
+          hint={plan.data?.status ? `${plan.data.status} · ${t.plansWeb}` : t.hintPlanRow}
+          onPress={() => router.push("/(app)/plan")}
+        />
+      </Group>
+
+      <SectionHeader label={t.sectionYourPage} />
+      <Group>
+        <GroupRow icon={QrCode} tint="green" title={t.pageQr} hint={t.hintPageQr} onPress={() => router.push("/(app)/tap")} />
+        <GroupRow icon={Palette} tint="pink" title={t.theme} hint={t.hintLook} onPress={() => router.push("/(app)/business-edit")} />
+        <GroupRow icon={Store} tint="amber" title={t.storeSettings} hint={t.hintStoreRow} onPress={() => router.push("/(app)/store")} />
+        <GroupRow icon={Users} tint="blue" title={t.staff} hint={t.hintStaffRow} onPress={() => router.push("/(app)/staff")} />
+        <GroupRow icon={Nfc} tint="ink" title={t.devices} hint={t.hintDevices} onPress={() => router.push("/(app)/nfc")} />
         {canWriteNfc(user?.role, owns) ? (
-          <Pressable accessibilityRole="button" accessibilityLabel={t.nfc} onPress={() => router.push("/(app)/nfc")} style={styles.row}>
-            <Text style={[styles.rowText, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.nfc}</Text>
-          </Pressable>
+          <GroupRow icon={Nfc} tint="green" title={t.nfc} hint={t.hintNfcRow} onPress={() => router.push("/(app)/nfc")} />
         ) : null}
-      </Card>
-      <Card>
-        <Text style={[styles.cardTitle, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.themeMode}</Text>
-        <View style={styles.themes}>
-          {themes.map((item) => (
-            <Pressable key={item} accessibilityRole="button" accessibilityLabel={item === "system" ? t.themeSystem : item === "light" ? t.themeLight : t.themeDark} accessibilityState={{ selected: choice === item }} onPress={() => setChoice(item)} style={[styles.theme, { borderColor: palette.line, backgroundColor: choice === item ? palette.deep : palette.card }]}>
-              <Text style={{ color: choice === item ? "#FFFFFF" : palette.ink, fontFamily: fonts.bodyStrong }}>{item === "system" ? t.themeSystem : item === "light" ? t.themeLight : t.themeDark}</Text>
-            </Pressable>
-          ))}
+        <GroupRow icon={ShoppingBag} tint="amber" title={t.shop} hint={t.hintShopRow} onPress={() => router.push("/(app)/shop")} />
+        <GroupRow icon={BarChart3} tint="blue" title={t.analytics} hint={t.hintAnalyticsRow} onPress={() => router.push("/(app)/analytics")} />
+        <GroupRow icon={CircleHelp} tint="green" title={t.help} hint={t.hintHelpRow} onPress={() => router.push("/(app)/help")} />
+      </Group>
+
+      <SectionHeader label={t.sectionApp} />
+      <Group>
+        <View style={styles.themeBlock}>
+          <Text style={[styles.themeLabel, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.themeMode}</Text>
+          <View style={styles.themes}>
+            {themes.map((item) => (
+              <Pressable
+                key={item}
+                accessibilityRole="button"
+                accessibilityLabel={item === "system" ? t.themeSystem : item === "light" ? t.themeLight : t.themeDark}
+                accessibilityState={{ selected: choice === item }}
+                onPress={() => setChoice(item)}
+                style={[styles.theme, { borderColor: palette.line, backgroundColor: choice === item ? palette.deep : palette.card }]}
+              >
+                <Text style={{ color: choice === item ? "#FFFFFF" : palette.ink, fontFamily: fonts.bodyStrong }}>
+                  {item === "system" ? t.themeSystem : item === "light" ? t.themeLight : t.themeDark}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
         </View>
-        <Pressable accessibilityRole="button" accessibilityLabel={t.language} onPress={() => choose(lang === "en" ? "hi" : "en")} style={styles.row}>
-          <Text style={[styles.rowText, { color: palette.ink }, lang === "hi" && styles.hindi]}>{lang === "en" ? t.hindi : t.english}</Text>
-        </Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel={user?.pushEnabled ? t.pushOn : t.pushOff} onPress={togglePush} style={styles.row}>
-          <Text style={[styles.rowText, { color: palette.ink }, lang === "hi" && styles.hindi]}>{user?.pushEnabled ? t.pushOn : t.pushOff}</Text>
-        </Pressable>
-      </Card>
-      <Card>
-        <Pressable accessibilityRole="button" accessibilityLabel={t.account} onPress={() => router.push("/(app)/delete-account")} style={styles.row}>
-          <Text style={[styles.rowText, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.account}</Text>
-        </Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel={t.deleteAccount} onPress={() => router.push("/(app)/delete-account")} style={styles.row}>
-          <Text style={[styles.rowText, { color: palette.danger }, lang === "hi" && styles.hindi]}>{t.deleteAccount}</Text>
-        </Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel={t.signOut} onPress={() => logout()} style={styles.row}>
-          <Text style={[styles.rowText, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.signOut}</Text>
-        </Pressable>
-      </Card>
+        <GroupRow
+          icon={Languages}
+          tint="blue"
+          title={lang === "en" ? t.hindi : t.english}
+          hint={t.hintLanguage}
+          onPress={() => choose(lang === "en" ? "hi" : "en")}
+        />
+        <GroupRow
+          icon={Bell}
+          tint="amber"
+          title={user?.pushEnabled ? t.pushOn : t.pushOff}
+          hint={t.hintPushRow}
+          onPress={togglePush}
+        />
+      </Group>
+
+      <SectionHeader label={t.sectionAccount} />
+      <Group>
+        <GroupRow icon={User} tint="ink" title={t.account} hint={t.hintAccountRow} onPress={() => router.push("/(app)/delete-account")} />
+        <GroupRow icon={Trash2} tint="pink" title={t.deleteAccount} hint={t.hintDeleteRow} danger onPress={() => router.push("/(app)/delete-account")} />
+        <GroupRow icon={LogOut} tint="ink" title={t.signOut} hint={t.hintSignOut} onPress={() => logout()} />
+      </Group>
       {error ? <Text style={{ color: palette.danger, fontFamily: fonts.body }}>{error}</Text> : null}
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { padding: 16, paddingBottom: 120, gap: 14 },
+  content: { padding: 16, paddingBottom: 120, gap: 10 },
   title: { fontFamily: fonts.display, fontSize: 28 },
-  cardTitle: { fontFamily: fonts.title, fontSize: 18 },
-  note: { fontFamily: fonts.body, fontSize: 14, lineHeight: 20 },
-  row: { minHeight: 48, justifyContent: "center" },
-  rowText: { fontFamily: fonts.bodyStrong, fontSize: 16 },
+  themeBlock: { paddingHorizontal: 14, paddingTop: 14, gap: 10 },
+  themeLabel: { fontFamily: fonts.bodyStrong, fontSize: 16 },
   themes: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
   theme: { minHeight: 48, borderRadius: 999, borderWidth: 1, paddingHorizontal: 14, alignItems: "center", justifyContent: "center" },
   hindi: { fontFamily: fonts.hindi }

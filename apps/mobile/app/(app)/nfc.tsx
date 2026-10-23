@@ -2,7 +2,9 @@ import type { TapPage } from "@reviewqr/shared";
 import { useQuery } from "@tanstack/react-query";
 import LottieView from "lottie-react-native";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Smartphone } from "lucide-react-native";
 import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
+import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from "react-native-reanimated";
 import { apiBaseUrl } from "../../src/api/instance";
 import { apiData } from "../../src/api/data";
 import { useI18n } from "../../src/i18n";
@@ -136,6 +138,15 @@ export default function NfcScreen() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Text style={[styles.title, lang === "hi" && styles.hindi]}>{t.nfc}</Text>
+      <View style={styles.hold}>
+        {!reduceMotion && !lowRam ? (
+          <LottieView source={require("../../assets/lottie/nfc.json")} autoPlay loop style={styles.lottie} />
+        ) : (
+          <HoldMark still={reduceMotion || lowRam} />
+        )}
+        <Text style={[styles.holdTitle, lang === "hi" && styles.hindi]}>{t.holdTag}</Text>
+        <Text style={[styles.note, lang === "hi" && styles.hindi]}>{safe ? url : path ? t.nfcUnsafeUrl : t.noQr}</Text>
+      </View>
       {!base ? <Text style={styles.note}>{t.missingApi}</Text> : null}
       {business && !tap.isLoading && !path ? <Text style={styles.note}>{t.noQr}</Text> : null}
       {path && !safe ? <Text style={[styles.note, lang === "hi" && styles.hindi]}>{t.nfcUnsafeUrl}</Text> : null}
@@ -164,6 +175,31 @@ export default function NfcScreen() {
   );
 }
 
+function HoldMark({ still }: { still: boolean }) {
+  const scale = useSharedValue(still ? 1 : 0.92);
+  useEffect(() => {
+    if (still) return;
+    scale.value = withRepeat(withSequence(withTiming(1.06, { duration: 900 }), withTiming(0.92, { duration: 900 })), -1, false);
+  }, [scale, still]);
+  const anim = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  return (
+    <Animated.View style={[stylesHold.ring, anim]}>
+      <Smartphone color="#0F7A37" size={36} strokeWidth={1.75} />
+    </Animated.View>
+  );
+}
+
+const stylesHold = StyleSheet.create({
+  ring: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: "#DCFCE7",
+    alignItems: "center",
+    justifyContent: "center"
+  }
+});
+
 function makeStyles(colors: Palette) {
   return StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.paper },
@@ -172,6 +208,14 @@ function makeStyles(colors: Palette) {
   note: { color: colors.inkSoft, fontFamily: fonts.body, fontSize: 16 },
   url: { color: colors.ink, fontFamily: fonts.bodyStrong, fontSize: 14 },
   hindi: { fontFamily: fonts.hindi },
-  lottie: { width: 180, height: 180, alignSelf: "center" }
+  lottie: { width: 180, height: 180, alignSelf: "center" },
+  hold: {
+    backgroundColor: colors.card,
+    borderRadius: 20,
+    padding: 16,
+    alignItems: "center",
+    gap: 8
+  },
+  holdTitle: { fontFamily: fonts.title, fontSize: 18, color: colors.ink, textAlign: "center" }
 });
 }

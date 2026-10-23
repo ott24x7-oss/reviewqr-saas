@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { CalendarOff, Palette, Wallet } from "lucide-react-native";
+import { ScrollView, StyleSheet, Text } from "react-native";
 import { apiData } from "../../src/api/data";
 import { useI18n } from "../../src/i18n";
 import { accountKey } from "../../src/query/keys";
@@ -11,6 +12,7 @@ import { fonts } from "../../src/theme";
 import { usePalette } from "../../src/ui/theme";
 import type { Palette } from "../../src/ui/tokens";
 import { LockedModuleCard } from "../../src/ui/locked-module";
+import { Group, GroupRow, SectionHeader } from "../../src/ui/rows";
 
 type StoreSettings = { holiday?: boolean; upiId?: string; design?: string };
 
@@ -34,11 +36,19 @@ export default function StoreScreen() {
       <Text style={[styles.title, lang === "hi" && styles.hindi]}>{t.storeSettings}</Text>
       {modules && !hasModule(modules, "STORE") ? <LockedModuleCard moduleId="STORE" /> : null}
       {open ? (
-        <View style={styles.card}>
-          <Text style={styles.note}>{settings.data?.design || t.storeSettings}</Text>
-          <Text style={styles.note}>{settings.data?.upiId || ""}</Text>
-          <Text style={styles.note}>{settings.data?.holiday ? t.cancel : t.available}</Text>
-        </View>
+        <>
+          <SectionHeader label={t.sectionCounter} />
+          <Group>
+            <GroupRow icon={Palette} tint="pink" title={t.hintDesign} hint={settings.data?.design || t.storeSettings} />
+            <GroupRow icon={Wallet} tint="amber" title={t.hintUpi} hint={settings.data?.upiId || t.hintStoreRow} />
+            <GroupRow
+              icon={CalendarOff}
+              tint={settings.data?.holiday ? "ink" : "green"}
+              title={settings.data?.holiday ? t.cancel : t.available}
+              hint={settings.data?.holiday ? t.hintClosed : t.hintOpen}
+            />
+          </Group>
+        </>
       ) : null}
     </ScrollView>
   );
@@ -48,9 +58,7 @@ function makeStyles(colors: Palette) {
   return StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.paper },
   content: { padding: 16, gap: 12 },
-  card: { backgroundColor: colors.card, borderRadius: 20, padding: 16, gap: 8 },
   title: { fontFamily: fonts.display, fontSize: 28, color: colors.ink },
-  note: { fontFamily: fonts.body, color: colors.inkSoft },
   hindi: { fontFamily: fonts.hindi }
 });
 }

@@ -2,8 +2,9 @@ import type { TapLink, TapPage } from "@reviewqr/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { router } from "expo-router";
+import { Link2, Palette, Plus } from "lucide-react-native";
 import { useEffect, useRef, useState, useMemo } from "react";
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from "react-native-reanimated";
 import { WebView } from "react-native-webview";
 import * as WebBrowser from "expo-web-browser";
@@ -21,6 +22,7 @@ import { useTheme } from "../../src/ui/theme";
 import { BLURHASH } from "../../src/ui/tokens";
 import type { Palette } from "../../src/ui/tokens";
 import { Field, PillButton } from "../../src/ui/controls";
+import { Group, GroupRow, SectionHeader } from "../../src/ui/rows";
 
 const ADDABLE = ["menu", "whatsapp_chat", "call", "google", "website", "feedback"] as const;
 
@@ -183,25 +185,38 @@ export default function TapScreen() {
         <PillButton label={t.printStand} onPress={() => qrUri && WebBrowser.openBrowserAsync(qrUri)} disabled={!qrUri} tone="outline" />
       </View>
       <PillButton label={t.nfc} onPress={() => router.push("/(app)/nfc")} tone="dark" />
-      <Text style={[styles.section, lang === "hi" && styles.hindi]}>{t.directTitle}</Text>
-      <PillButton
-        label={t.directToggle}
-        tone={directMode === "DIRECT" ? "dark" : "outline"}
-        onPress={() => {
-          const next = directMode !== "DIRECT";
-          setDirectOn(next);
-          if (next && !directOptions.some((link) => link.key === directTarget) && directOptions[0]) {
-            setDirectKey(directOptions[0].key);
+      <SectionHeader label={t.directTitle} />
+      <Group>
+        <GroupRow
+          icon={Link2}
+          tint={directMode === "DIRECT" ? "green" : "ink"}
+          title={t.directToggle}
+          hint={
+            directMode === "DIRECT" && chosen
+              ? `${t.directOpens} ${lang === "hi" && chosen.labelHi ? chosen.labelHi : chosen.labelEn}`
+              : t.directHint
           }
-        }}
-      />
-      {directOptions.map((link) => (
-        <Pressable key={link.key} accessibilityRole="button" accessibilityState={{ selected: link.key === directTarget && directMode === "DIRECT" }} accessibilityLabel={lang === "hi" && link.labelHi ? link.labelHi : link.labelEn} onPress={() => { setDirectOn(true); setDirectKey(link.key); }} style={[styles.chip, link.key === directTarget && directMode === "DIRECT" && styles.chipOn]}>
-          <Text style={[styles.chipText, link.key === directTarget && directMode === "DIRECT" && styles.chipTextOn, lang === "hi" && styles.hindi]}>
-            {lang === "hi" && link.labelHi ? link.labelHi : link.labelEn}
-          </Text>
-        </Pressable>
-      ))}
+          selected={directMode === "DIRECT"}
+          onPress={() => {
+            const next = directMode !== "DIRECT";
+            setDirectOn(next);
+            if (next && !directOptions.some((link) => link.key === directTarget) && directOptions[0]) {
+              setDirectKey(directOptions[0].key);
+            }
+          }}
+        />
+        {directOptions.map((link) => (
+          <GroupRow
+            key={link.key}
+            icon={Link2}
+            tint="blue"
+            title={lang === "hi" && link.labelHi ? link.labelHi : link.labelEn}
+            hint={link.type}
+            selected={link.key === directTarget && directMode === "DIRECT"}
+            onPress={() => { setDirectOn(true); setDirectKey(link.key); }}
+          />
+        ))}
+      </Group>
       {directMode === "DIRECT" && chosen ? (
         <Text style={[styles.note, lang === "hi" && styles.hindi]}>{t.directOpens} {lang === "hi" && chosen.labelHi ? chosen.labelHi : chosen.labelEn}</Text>
       ) : null}
@@ -209,38 +224,47 @@ export default function TapScreen() {
         <Text style={[styles.note, lang === "hi" && styles.hindi]}>{t.directHint}</Text>
       ) : null}
       <Field label={t.about} tone="paper" value={bioText} onChangeText={setBio} />
-      <Text style={[styles.section, lang === "hi" && styles.hindi]}>{t.theme}</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
+      <SectionHeader label={t.theme} />
+      <Group>
         {(data?.themes ?? []).map((item) => (
-          <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={item.name} accessibilityState={{ selected: item.id === theme }} onPress={() => setThemeId(item.id)} style={[styles.chip, item.id === theme && styles.chipOn]}>
-            <Text style={[styles.chipText, item.id === theme && styles.chipTextOn]}>{item.name}</Text>
-          </Pressable>
+          <GroupRow
+            key={item.id}
+            icon={Palette}
+            tint={item.id === theme ? "green" : "pink"}
+            title={item.name}
+            hint={t.theme}
+            selected={item.id === theme}
+            onPress={() => setThemeId(item.id)}
+          />
         ))}
-      </ScrollView>
+      </Group>
+      <SectionHeader label={t.sectionButtons} />
       {shown.map((link, index) => (
         <View key={`${link.key}-${index}`} style={styles.card}>
-          <Field label={link.type} tone="paper" value={link.labelEn} onChangeText={(labelEn) => edit(index, { labelEn })} />
-          <Field label="URL" tone="paper" value={link.url} onChangeText={(url) => edit(index, { url })} autoCapitalize="none" />
-          <PillButton
-            label={link.enabled ? t.available : t.inStock}
-            tone={link.enabled ? "dark" : "outline"}
+          <GroupRow
+            icon={Link2}
+            tint={link.enabled ? "green" : "ink"}
+            title={link.labelEn || link.type}
+            hint={link.enabled ? t.available : t.inStock}
             onPress={() => edit(index, { enabled: !link.enabled })}
           />
+          <Field label={link.type} tone="paper" value={link.labelEn} onChangeText={(labelEn) => edit(index, { labelEn })} />
+          <Field label="URL" tone="paper" value={link.url} onChangeText={(url) => edit(index, { url })} autoCapitalize="none" />
         </View>
       ))}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
+      <SectionHeader label={t.sectionAddButton} />
+      <Group>
         {ADDABLE.map((type) => (
-          <Pressable
+          <GroupRow
             key={type}
-            accessibilityRole="button"
-            accessibilityLabel={type}
-            style={styles.chip}
+            icon={Plus}
+            tint="amber"
+            title={type}
+            hint={t.sectionAddButton}
             onPress={() => setLinks([...shown, { key: type, type, labelEn: type, labelHi: "", enabled: true, url: "" }])}
-          >
-            <Text style={styles.chipText}>{type}</Text>
-          </Pressable>
+          />
         ))}
-      </ScrollView>
+      </Group>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <PillButton label={t.publish} onPress={publish} disabled={busy} hint={t.hintWait} tone="dark" />
       {data?.code ? (
