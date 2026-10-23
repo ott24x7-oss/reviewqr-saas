@@ -248,14 +248,14 @@ export function LaunchFrame({
   skip?: boolean;
   children: ReactNode;
 }) {
-  const warm = useRef(leftForeground);
-  const opacity = useSharedValue(warm.current || skip ? 1 : 0);
+  const [warm] = useState(leftForeground);
+  const opacity = useSharedValue(warm || skip ? 1 : 0);
   const style = useAnimatedStyle(() => ({ flex: 1, opacity: opacity.value }));
   return (
     <View style={styles.frame}>
       <Animated.View style={style}>{children}</Animated.View>
       {skip ? null : (
-        <LaunchOverlay fontsReady={fontsReady} sessionReady={sessionReady} warm={warm.current} content={opacity} />
+        <LaunchOverlay fontsReady={fontsReady} sessionReady={sessionReady} warm={warm} content={opacity} />
       )}
     </View>
   );

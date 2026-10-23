@@ -1,7 +1,7 @@
 import type { BillingSummary } from "@reviewqr/shared";
 import { useQuery } from "@tanstack/react-query";
 import { CreditCard, Receipt } from "lucide-react-native";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { apiData } from "../../src/api/data";
 import { useI18n } from "../../src/i18n";
@@ -17,10 +17,10 @@ function rupees(paise: number) {
   return `₹${Math.round(paise / 100)}`;
 }
 
-function expiryProgress(when: string) {
+function expiryProgress(when: string, now: number) {
   const end = new Date(when).getTime();
   if (Number.isNaN(end)) return 0;
-  const days = (end - Date.now()) / 86400000;
+  const days = (end - now) / 86400000;
   return Math.max(0, Math.min(1, 1 - days / 30));
 }
 
@@ -38,8 +38,14 @@ export default function PlanScreen() {
   const name = lang === "hi" ? plan.data?.plan?.nameHi || plan.data?.plan?.nameEn : plan.data?.plan?.nameEn;
   const when = plan.data?.endsAt || plan.data?.trialEndsAt || "";
   const whenLabel = when.slice(0, 10);
-  const days = when ? Math.max(0, Math.ceil((new Date(when).getTime() - Date.now()) / 86400000)) : null;
-  const progress = when ? expiryProgress(when) : 0;
+  const [now, setNow] = useState<number | null>(null);
+  // The purity lint rejects Date.now() during render. A timeout keeps the read outside render.
+  useEffect(() => {
+    const timer = setTimeout(() => setNow(Date.now()), 0);
+    return () => clearTimeout(timer);
+  }, [when]);
+  const days = when && now != null ? Math.max(0, Math.ceil((new Date(when).getTime() - now) / 86400000)) : null;
+  const progress = when && now != null ? expiryProgress(when, now) : 0;
   const modules = plan.data?.modules ?? [];
 
   return (
