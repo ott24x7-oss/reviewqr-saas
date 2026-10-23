@@ -1,6 +1,6 @@
 import { router } from "expo-router";
-import { useState , useMemo } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import { StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { apiData } from "../../src/api/data";
 import { ApiError } from "../../src/api/http";
@@ -8,15 +8,14 @@ import { devCodeFrom } from "../../src/auth/otp";
 import { setPendingOtp } from "../../src/auth/pending";
 import { useI18n } from "../../src/i18n";
 import { fonts } from "../../src/theme";
+import { PrimaryButton, TextButton } from "../../src/ui/buttons";
+import { Field, Muted } from "../../src/ui/controls";
 import { usePalette } from "../../src/ui/theme";
-import type { Palette } from "../../src/ui/tokens";
-import { Field, Muted, PillButton } from "../../src/ui/controls";
 
 type Sent = { sent: true; channel?: string; resendAfterSec?: number; devCode?: string };
 
 export default function SignupScreen() {
   const palette = usePalette();
-  const styles = useMemo(() => makeStyles(palette), [palette]);
   const { t, lang } = useI18n();
   const [phone, setPhone] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -47,28 +46,23 @@ export default function SignupScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
-      <View style={styles.card}>
-        <Text style={[styles.title, lang === "hi" && styles.hindi]}>{t.signupTitle}</Text>
+    <SafeAreaView style={[styles.screen, { backgroundColor: palette.paper }]}>
+      <View style={styles.body}>
+        <Text style={[styles.title, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.signupTitle}</Text>
         <Muted>{t.signupSub}</Muted>
         <Field label={t.phone} value={phone} onChangeText={setPhone} keyboardType="phone-pad" autoComplete="tel" />
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-        <PillButton label={t.sendCode} onPress={send} disabled={busy || phone.trim().length < 10} />
-        <Pressable onPress={() => router.replace("/(auth)/login")}>
-          <Text style={[styles.link, lang === "hi" && styles.hindi]}>{t.haveLogin}</Text>
-        </Pressable>
+        {error ? <Text style={[styles.error, { color: palette.danger }]}>{error}</Text> : null}
+        <PrimaryButton label={t.sendCode} onPress={send} disabled={busy || phone.trim().length < 10} />
+        <TextButton label={t.haveLogin} onPress={() => router.replace("/(auth)/login")} />
       </View>
     </SafeAreaView>
   );
 }
 
-function makeStyles(colors: Palette) {
-  return StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.navy, padding: 16, justifyContent: "center" },
-  card: { gap: 16, padding: 22, borderRadius: 24, backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.line },
-  title: { color: colors.cyanSoft, fontFamily: fonts.display, fontSize: 32 },
-  link: { color: colors.cyanSoft, fontFamily: fonts.bodyStrong, minHeight: 48 },
-  error: { color: "#FFB4B4" },
+const styles = StyleSheet.create({
+  screen: { flex: 1 },
+  body: { padding: 22, gap: 14 },
+  title: { fontFamily: fonts.display, fontSize: 32 },
+  error: { fontFamily: fonts.body },
   hindi: { fontFamily: fonts.hindi }
 });
-}

@@ -469,7 +469,7 @@ export default function OrdersScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  listPad: { padding: 16, paddingBottom: 32 },
+  listPad: { padding: 16, paddingBottom: 120 },
   header: { gap: 12, marginBottom: 12 },
   stack: { gap: 12 },
   row: { flexDirection: "row", flexWrap: "wrap", gap: 8 },

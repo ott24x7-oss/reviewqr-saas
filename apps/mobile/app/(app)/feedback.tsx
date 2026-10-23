@@ -142,7 +142,7 @@ export default function FeedbackTab() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  pad: { padding: 16, paddingBottom: 32 },
+  pad: { padding: 16, paddingBottom: 120 },
   header: { gap: 12, marginBottom: 12 },
   titleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   title: { fontFamily: fonts.display, fontSize: 28 },

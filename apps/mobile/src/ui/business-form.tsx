@@ -135,7 +135,7 @@ export function BusinessForm({ initial, businessId }: { initial?: BusinessCard |
       <PillButton label={t.searchPlaces} onPress={search} disabled={busy || query.trim().length < 2} tone="outline" />
       {places && !places.enabled ? <Text style={[styles.note, lang === "hi" && styles.hindi]}>{t.placesOff}</Text> : null}
       {places?.predictions.map((row) => (
-        <Pressable key={row.placeId} onPress={() => pick(row.placeId)} style={styles.hit}>
+        <Pressable key={row.placeId} accessibilityRole="button" accessibilityLabel={row.description} onPress={() => pick(row.placeId)} style={styles.hit}>
           <Text style={[styles.hitText, lang === "hi" && styles.hindi]}>{row.description}</Text>
         </Pressable>
       ))}

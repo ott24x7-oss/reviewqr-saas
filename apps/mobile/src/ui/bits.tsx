@@ -52,8 +52,8 @@ export function Chip({
 }) {
   const { lang } = useI18n();
   const { palette } = useTheme();
-  const bg = selected ? palette.ink : tone === "good" ? palette.deep : tone === "live" ? palette.card : palette.card;
-  const fg = selected || tone === "good" ? palette.white : palette.ink;
+  const bg = selected || tone === "good" ? palette.deep : palette.card;
+  const fg = selected || tone === "good" ? palette.onPrimary : palette.ink;
   const border = tone === "live" ? palette.primary : palette.line;
   return (
     <Pressable
@@ -391,7 +391,7 @@ export function BottomSheet({
     <Modal visible={shown} transparent animationType="none" onRequestClose={onClose}>
       <View style={styles.sheetRoot}>
         <Animated.View style={[styles.scrim, { backgroundColor: palette.scrim }, scrim]}>
-          <Pressable accessibilityLabel="Close" style={StyleSheet.absoluteFill} onPress={onClose} />
+          <Pressable accessibilityRole="button" accessibilityLabel="Close" style={StyleSheet.absoluteFill} onPress={onClose} />
         </Animated.View>
         <GestureDetector gesture={pan}>
           <Animated.View style={[styles.sheet, { backgroundColor: palette.card }, sheet]}>

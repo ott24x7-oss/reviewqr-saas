@@ -108,21 +108,20 @@ export default function MenuTab() {
             </View>
             {locked ? <LockedModuleCard moduleId="MENU" /> : null}
             {items.isLoading ? <Skeleton height={120} /> : null}
+            {!locked && !items.isLoading && rows.length === 0 ? (
+              <EmptyState
+                icon={UtensilsCrossed}
+                title={t.emptyMenuTitle}
+                body={t.emptyMenuBody}
+                action={t.quickAdd}
+                onAction={() => setOpen(true)}
+              />
+            ) : null}
           </View>
         }
-        ListEmptyComponent={
-          locked || items.isLoading ? null : (
-            <EmptyState
-              icon={UtensilsCrossed}
-              title={t.emptyMenuTitle}
-              body={t.emptyMenuBody}
-              action={t.quickAdd}
-              onAction={() => setOpen(true)}
-            />
-          )
-        }
+        ListEmptyComponent={null}
         renderItem={({ item }) => (
-          <View style={[styles.cell, grid && styles.cellGrid]}>
+          <View style={styles.cell}>
             <Card>
               <Text style={[styles.item, { color: palette.ink }]}>{item.name}</Text>
               <Text style={[styles.note, { color: palette.muted }]}>₹{Math.round(item.pricePaise / 100)}</Text>
@@ -163,14 +162,13 @@ export default function MenuTab() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  pad: { padding: 16, paddingBottom: 96 },
+  pad: { padding: 16, paddingBottom: 120 },
   header: { gap: 12, marginBottom: 12 },
   titleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   title: { fontFamily: fonts.display, fontSize: 28 },
   row: { flexDirection: "row", gap: 8 },
   stack: { gap: 12 },
-  cell: { padding: 6, width: "100%" },
-  cellGrid: { width: "50%" },
+  cell: { flex: 1, padding: 6 },
   item: { fontFamily: fonts.title, fontSize: 16 },
   note: { fontFamily: fonts.body, fontSize: 15 },
   hindi: { fontFamily: fonts.hindi },

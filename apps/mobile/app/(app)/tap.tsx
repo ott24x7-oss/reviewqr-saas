@@ -196,7 +196,7 @@ export default function TapScreen() {
         }}
       />
       {directOptions.map((link) => (
-        <Pressable key={link.key} onPress={() => { setDirectOn(true); setDirectKey(link.key); }} style={[styles.chip, link.key === directTarget && directMode === "DIRECT" && styles.chipOn]}>
+        <Pressable key={link.key} accessibilityRole="button" accessibilityState={{ selected: link.key === directTarget && directMode === "DIRECT" }} accessibilityLabel={lang === "hi" && link.labelHi ? link.labelHi : link.labelEn} onPress={() => { setDirectOn(true); setDirectKey(link.key); }} style={[styles.chip, link.key === directTarget && directMode === "DIRECT" && styles.chipOn]}>
           <Text style={[styles.chipText, link.key === directTarget && directMode === "DIRECT" && styles.chipTextOn, lang === "hi" && styles.hindi]}>
             {lang === "hi" && link.labelHi ? link.labelHi : link.labelEn}
           </Text>
@@ -212,7 +212,7 @@ export default function TapScreen() {
       <Text style={[styles.section, lang === "hi" && styles.hindi]}>{t.theme}</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
         {(data?.themes ?? []).map((item) => (
-          <Pressable key={item.id} onPress={() => setThemeId(item.id)} style={[styles.chip, item.id === theme && styles.chipOn]}>
+          <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={item.name} accessibilityState={{ selected: item.id === theme }} onPress={() => setThemeId(item.id)} style={[styles.chip, item.id === theme && styles.chipOn]}>
             <Text style={[styles.chipText, item.id === theme && styles.chipTextOn]}>{item.name}</Text>
           </Pressable>
         ))}
@@ -232,6 +232,8 @@ export default function TapScreen() {
         {ADDABLE.map((type) => (
           <Pressable
             key={type}
+            accessibilityRole="button"
+            accessibilityLabel={type}
             style={styles.chip}
             onPress={() => setLinks([...shown, { key: type, type, labelEn: type, labelHi: "", enabled: true, url: "" }])}
           >

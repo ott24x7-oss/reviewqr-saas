@@ -73,6 +73,7 @@ function AppTabs() {
         />
       )}
       screenOptions={{
+        headerShown: false,
         headerStyle: { backgroundColor: palette.paper },
         headerTintColor: palette.ink,
         headerTitleStyle: { fontFamily: label },
@@ -80,21 +81,21 @@ function AppTabs() {
       }}
     >
       <Tabs.Screen name="index" options={{ title: t.home }} />
-      <Tabs.Screen name="analytics" options={{ href: null, title: t.analytics }} />
+      <Tabs.Screen name="analytics" options={{ title: t.analytics }} />
       <Tabs.Screen name="orders" options={{ title: t.orders }} />
       <Tabs.Screen name="menu" options={{ title: t.menuTab }} />
       <Tabs.Screen name="feedback" options={{ title: t.feedbackTab }} />
       <Tabs.Screen name="more" options={{ title: t.more }} />
-      <Tabs.Screen name="shop" options={{ href: null, title: t.shop }} />
-      <Tabs.Screen name="business-new" options={{ href: null, title: t.addBusiness }} />
-      <Tabs.Screen name="business-edit" options={{ href: null, title: t.businesses }} />
-      <Tabs.Screen name="tap" options={{ href: null, title: t.preview }} />
-      <Tabs.Screen name="nfc" options={{ href: null, title: t.nfc }} />
-      <Tabs.Screen name="delete-account" options={{ href: null, title: t.deleteAccount }} />
-      <Tabs.Screen name="help" options={{ href: null, title: t.help }} />
-      <Tabs.Screen name="plan" options={{ href: null, title: t.plans }} />
-      <Tabs.Screen name="staff" options={{ href: null, title: t.staff }} />
-      <Tabs.Screen name="store" options={{ href: null, title: t.storeSettings }} />
+      <Tabs.Screen name="shop" options={{ title: t.shop }} />
+      <Tabs.Screen name="business-new" options={{ title: t.addBusiness }} />
+      <Tabs.Screen name="business-edit" options={{ title: t.businesses }} />
+      <Tabs.Screen name="tap" options={{ title: t.preview }} />
+      <Tabs.Screen name="nfc" options={{ title: t.nfc }} />
+      <Tabs.Screen name="delete-account" options={{ title: t.deleteAccount }} />
+      <Tabs.Screen name="help" options={{ title: t.help }} />
+      <Tabs.Screen name="plan" options={{ title: t.plans }} />
+      <Tabs.Screen name="staff" options={{ title: t.staff }} />
+      <Tabs.Screen name="store" options={{ title: t.storeSettings }} />
     </Tabs>
   );
 }

@@ -45,12 +45,12 @@ export function PremiumTabBar({
   const { lang } = useI18n();
   const insets = useSafeAreaInsets();
   const routes = state.routes.filter((route) => route.name in ICONS);
-  const active = routes.findIndex((route) => route.key === state.routes[state.index]?.key);
-  const index = Math.max(0, active);
+  const index = routes.findIndex((route) => route.key === state.routes[state.index]?.key);
   const slide = useSharedValue(index);
   const tabWidth = useSharedValue(0);
   useEffect(() => {
-    slide.value = reduceMotion ? index : withSpring(index, { damping: 18, stiffness: 220 });
+    const next = index < 0 ? 0 : index;
+    slide.value = reduceMotion ? next : withSpring(next, { damping: 18, stiffness: 220 });
   }, [index, reduceMotion, slide]);
   const pill = useAnimatedStyle(() => ({
     transform: [{ translateX: slide.value * tabWidth.value }]
@@ -65,7 +65,7 @@ export function PremiumTabBar({
         }}
       >
         {routes.map((route, position) => {
-          const focused = position === index;
+          const focused = position === index && index >= 0;
           const Icon = ICONS[route.name as keyof typeof ICONS];
           const options = descriptors[route.key]?.options;
           const label = options?.title || route.name;
@@ -73,7 +73,7 @@ export function PremiumTabBar({
           return (
             <Pressable
               key={route.key}
-              accessibilityRole="button"
+              accessibilityRole="tab"
               accessibilityState={{ selected: focused }}
               accessibilityLabel={label}
               onPress={() => {
@@ -94,14 +94,16 @@ export function PremiumTabBar({
             </Pressable>
           );
         })}
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            styles.pill,
-            { backgroundColor: "rgba(22,163,74,0.12)", width: `${100 / Math.max(1, routes.length)}%` as `${number}%` },
-            pill
-          ]}
-        />
+        {index >= 0 ? (
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              styles.pill,
+              { backgroundColor: "rgba(22,163,74,0.12)", width: `${100 / Math.max(1, routes.length)}%` as `${number}%` },
+              pill
+            ]}
+          />
+        ) : null}
       </View>
     </View>
   );

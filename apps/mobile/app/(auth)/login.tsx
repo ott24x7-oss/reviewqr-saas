@@ -55,7 +55,7 @@ export default function LoginScreen() {
     <SafeAreaView style={[styles.screen, { backgroundColor: palette.paper }]}>
       <Image source={require("../../assets/onboarding/cafe.webp")} style={styles.strip} contentFit="cover" placeholder={{ blurhash: BLURHASH }} />
       <View style={styles.body}>
-        <Pressable accessibilityRole="button" accessibilityLabel={t.language} onPress={toggle} style={styles.lang}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t.language} accessibilityState={{ selected: lang === "hi" }} onPress={toggle} style={styles.lang}>
           <Text style={[styles.langText, { color: palette.deep }]}>{t.language}</Text>
         </Pressable>
         <Text style={[styles.title, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.welcome}</Text>
@@ -90,13 +90,13 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   strip: { height: 180, width: "100%" },
   body: { padding: 22, gap: 12 },
-  lang: { alignSelf: "flex-end", minHeight: 44, justifyContent: "center" },
+  lang: { alignSelf: "flex-end", minHeight: 48, justifyContent: "center", paddingHorizontal: 8 },
   langText: { fontFamily: fonts.bodyStrong },
   title: { fontFamily: fonts.display, fontSize: 32 },
   sub: { fontFamily: fonts.body, fontSize: 16, lineHeight: 22 },
   label: { fontFamily: fonts.bodyStrong, fontSize: 14 },
   phoneRow: { minHeight: 56, borderRadius: 16, borderWidth: 1, flexDirection: "row", alignItems: "center", padding: 6, gap: 8 },
-  prefix: { minHeight: 44, borderRadius: 12, paddingHorizontal: 12, alignItems: "center", justifyContent: "center" },
+  prefix: { minHeight: 48, borderRadius: 12, paddingHorizontal: 12, alignItems: "center", justifyContent: "center" },
   prefixText: { fontFamily: fonts.bodyStrong, fontSize: 16 },
   input: { flex: 1, minHeight: 48, fontFamily: fonts.body, fontSize: 18 },
   error: { fontFamily: fonts.body },

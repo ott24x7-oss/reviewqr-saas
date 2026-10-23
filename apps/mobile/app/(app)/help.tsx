@@ -56,7 +56,7 @@ export default function HelpScreen() {
           {article.videoUrl ? <Text style={{ color: palette.deep, fontFamily: fonts.body }}>{article.videoUrl}</Text> : null}
         </Card>
       ))}
-      <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.back}>
+      <Pressable accessibilityRole="button" accessibilityLabel={t.wizardBack} onPress={() => router.back()} style={styles.back}>
         <Text style={{ color: palette.deep, fontFamily: fonts.bodyStrong }}>{t.wizardBack}</Text>
       </Pressable>
     </ScrollView>

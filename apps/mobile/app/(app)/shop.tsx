@@ -207,7 +207,7 @@ export default function ShopScreen() {
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.row}>
         {(["catalogue", "orders", "plan"] as const).map((item) => (
-          <Pressable key={item} onPress={() => setTab(item)} style={[styles.chip, tab === item && styles.chipOn]}>
+          <Pressable key={item} accessibilityRole="button" accessibilityState={{ selected: tab === item }} accessibilityLabel={item === "catalogue" ? t.catalogue : item === "orders" ? t.orders : t.plans} onPress={() => setTab(item)} style={[styles.chip, tab === item && styles.chipOn]}>
             <Text style={[styles.chipText, tab === item && styles.chipOnText, lang === "hi" && styles.hindi]}>
               {item === "catalogue" ? t.catalogue : item === "orders" ? t.orders : t.plans}
             </Text>
@@ -218,7 +218,7 @@ export default function ShopScreen() {
       {tab === "catalogue" ? (
         <View style={styles.stack}>
           {(catalog.data?.items ?? []).map((product) => (
-            <Pressable key={product.name} style={styles.card} onPress={() => add(product)}>
+            <Pressable key={product.name} accessibilityRole="button" accessibilityLabel={product.name} style={styles.card} onPress={() => add(product)}>
               <Text style={styles.title}>{product.name}</Text>
               <Text style={styles.note}>{product.variants[0] ? rupees(product.variants[0].salePaise) : ""}</Text>
             </Pressable>
@@ -247,7 +247,7 @@ export default function ShopScreen() {
       {tab === "orders" ? (
         <View style={styles.stack}>
           {(orders.data?.items ?? []).map((order) => (
-            <Pressable key={order.id} style={styles.card} onPress={() => setOpenId(order.id)}>
+            <Pressable key={order.id} accessibilityRole="button" accessibilityLabel={order.statusLabel || order.status} style={styles.card} onPress={() => setOpenId(order.id)}>
               <Text style={styles.title}>{order.statusLabel || order.status}</Text>
               <Text style={styles.note}>
                 {rupees(order.totalPaise)} · {order.paymentStatus}

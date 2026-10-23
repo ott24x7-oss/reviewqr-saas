@@ -353,7 +353,7 @@ export default function WizardScreen() {
             </Animated.View>
             <View style={styles.row}>
               {ONBOARDING_THEMES.map((item) => (
-                <Pressable key={item.id} onPress={() => patch({ themeId: item.id })} style={[styles.swatch, { backgroundColor: item.bg }, draft.themeId === item.id && styles.swatchOn]} />
+                <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={item.id} accessibilityState={{ selected: draft.themeId === item.id }} onPress={() => patch({ themeId: item.id })} style={[styles.swatch, { backgroundColor: item.bg }, draft.themeId === item.id && styles.swatchOn]} />
               ))}
             </View>
           </View>
@@ -378,7 +378,7 @@ export default function WizardScreen() {
             <Field label={t.searchPlaces} tone="paper" value={placeQuery} onChangeText={setPlaceQuery} />
             <PillButton label={t.searchPlaces} tone="outline" onPress={searchPlaces} />
             {places.map((place) => (
-              <Pressable key={place.placeId} onPress={() => choosePlace(place.placeId)} style={styles.chip}>
+              <Pressable key={place.placeId} accessibilityRole="button" accessibilityLabel={place.description} onPress={() => choosePlace(place.placeId)} style={styles.chip}>
                 <Text>{place.description}</Text>
               </Pressable>
             ))}
@@ -462,7 +462,7 @@ function makeStyles(colors: Palette) {
   previewName: { fontFamily: fonts.display, fontSize: 28 },
   previewButton: { alignSelf: "flex-start", borderRadius: 999, paddingHorizontal: 16, paddingVertical: 10 },
   previewButtonText: { color: colors.white, fontFamily: fonts.bodyStrong },
-  swatch: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, borderColor: "#DDD6C8" },
+  swatch: { width: 48, height: 48, borderRadius: 24, borderWidth: 1, borderColor: "#DDD6C8" },
   swatchOn: { borderColor: colors.ink, borderWidth: 3 },
   url: { fontFamily: fonts.body, color: colors.ink },
   note: { fontFamily: fonts.body, color: colors.inkSoft },

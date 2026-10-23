@@ -74,7 +74,7 @@ export default function MoreScreen() {
         <Text style={[styles.cardTitle, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.themeMode}</Text>
         <View style={styles.themes}>
           {themes.map((item) => (
-            <Pressable key={item} accessibilityRole="button" accessibilityState={{ selected: choice === item }} onPress={() => setChoice(item)} style={[styles.theme, { borderColor: palette.line, backgroundColor: choice === item ? palette.deep : palette.card }]}>
+            <Pressable key={item} accessibilityRole="button" accessibilityLabel={item === "system" ? t.themeSystem : item === "light" ? t.themeLight : t.themeDark} accessibilityState={{ selected: choice === item }} onPress={() => setChoice(item)} style={[styles.theme, { borderColor: palette.line, backgroundColor: choice === item ? palette.deep : palette.card }]}>
               <Text style={{ color: choice === item ? "#FFFFFF" : palette.ink, fontFamily: fonts.bodyStrong }}>{item === "system" ? t.themeSystem : item === "light" ? t.themeLight : t.themeDark}</Text>
             </Pressable>
           ))}
@@ -103,7 +103,7 @@ export default function MoreScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { padding: 16, gap: 14 },
+  content: { padding: 16, paddingBottom: 120, gap: 14 },
   title: { fontFamily: fonts.display, fontSize: 28 },
   cardTitle: { fontFamily: fonts.title, fontSize: 18 },
   note: { fontFamily: fonts.body, fontSize: 14, lineHeight: 20 },

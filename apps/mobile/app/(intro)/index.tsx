@@ -90,6 +90,8 @@ export default function IntroScreen() {
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
+        style={{ height: 420 }}
+        contentContainerStyle={{ width: frame * SLIDES.length }}
         onScroll={reduceMotion ? undefined : onScroll}
         scrollEventThrottle={16}
         onMomentumScrollEnd={(event) => {
@@ -103,10 +105,10 @@ export default function IntroScreen() {
       </Animated.ScrollView>
       <SafeAreaView style={styles.sheet} edges={["bottom"]}>
         <View style={styles.langs}>
-          <Pressable accessibilityRole="button" accessibilityLabel={t.english} onPress={() => choose("en")} style={[styles.lang, lang === "en" && { backgroundColor: palette.ink }]}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t.english} accessibilityState={{ selected: lang === "en" }} onPress={() => choose("en")} style={[styles.lang, lang === "en" && { backgroundColor: palette.ink }]}>
             <Text style={[styles.langText, { color: lang === "en" ? palette.paper : palette.ink }]}>{t.english}</Text>
           </Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel={t.hindi} onPress={() => choose("hi")} style={[styles.lang, lang === "hi" && { backgroundColor: palette.ink }]}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t.hindi} accessibilityState={{ selected: lang === "hi" }} onPress={() => choose("hi")} style={[styles.lang, lang === "hi" && { backgroundColor: palette.ink }]}>
             <Text style={[styles.langText, styles.hindi, { color: lang === "hi" ? palette.paper : palette.ink }]}>{t.hindi}</Text>
           </Pressable>
         </View>
@@ -155,8 +157,8 @@ function Slide({
     opacity: page === index ? 1 : 0.4
   }));
   return (
-    <View style={{ width: frame, height: 420 }} testID={`intro-${slide.key}`}>
-      <Animated.View style={[styles.photo, photo]}>
+    <View style={{ width: frame, height: 420, overflow: "hidden", flexGrow: 0, flexShrink: 0 }} testID={`intro-${slide.key}`}>
+      <Animated.View style={[styles.photo, photo, { width: frame * 1.3, marginLeft: -frame * 0.15 }]}>
         <Image source={slide.image} style={styles.image} contentFit="cover" placeholder={{ blurhash: BLURHASH }} transition={200} />
       </Animated.View>
       <Animated.View style={text} />
@@ -166,11 +168,11 @@ function Slide({
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  photo: { width: "130%", height: 420, marginLeft: "-15%" },
+  photo: { height: 420 },
   image: { width: "100%", height: "100%" },
   sheet: { marginTop: -36, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 22, paddingTop: 8, gap: 8 },
-  langs: { minHeight: 44, flexDirection: "row", gap: 8, alignSelf: "flex-end", backgroundColor: "rgba(255,255,255,0.9)", borderRadius: 999, padding: 4 },
-  lang: { minHeight: 44, minWidth: 64, borderRadius: 999, alignItems: "center", justifyContent: "center", paddingHorizontal: 12 },
+  langs: { minHeight: 48, flexDirection: "row", gap: 8, alignSelf: "flex-end", backgroundColor: "rgba(255,255,255,0.9)", borderRadius: 999, padding: 4 },
+  lang: { minHeight: 48, minWidth: 64, borderRadius: 999, alignItems: "center", justifyContent: "center", paddingHorizontal: 12 },
   langText: { fontFamily: fonts.bodyStrong, fontSize: 14 },
   title: { fontFamily: fonts.display, fontSize: 28, lineHeight: 34 },
   body: { fontFamily: fonts.body, fontSize: 15, lineHeight: 22 },

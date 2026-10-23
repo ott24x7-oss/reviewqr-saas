@@ -1,20 +1,19 @@
 import type { TokenPair } from "@reviewqr/shared";
 import { router } from "expo-router";
-import { useState , useMemo } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import { StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { apiData } from "../../src/api/data";
 import { ApiError } from "../../src/api/http";
 import { useI18n } from "../../src/i18n";
 import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
+import { PrimaryButton, TextButton } from "../../src/ui/buttons";
+import { Field } from "../../src/ui/controls";
 import { usePalette } from "../../src/ui/theme";
-import type { Palette } from "../../src/ui/tokens";
-import { Field, PillButton } from "../../src/ui/controls";
 
 export default function EmailScreen() {
   const palette = usePalette();
-  const styles = useMemo(() => makeStyles(palette), [palette]);
   const { t, lang } = useI18n();
   const { saveSession } = useSession();
   const [email, setEmail] = useState("");
@@ -40,28 +39,23 @@ export default function EmailScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
-      <View style={styles.card}>
-        <Text style={[styles.title, lang === "hi" && styles.hindi]}>{t.emailInstead}</Text>
+    <SafeAreaView style={[styles.screen, { backgroundColor: palette.paper }]}>
+      <View style={styles.body}>
+        <Text style={[styles.title, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.emailInstead}</Text>
         <Field label={t.email} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoComplete="email" />
         <Field label={t.password} value={password} onChangeText={setPassword} secureTextEntry autoComplete="password" />
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-        <PillButton label={t.signIn} onPress={submit} disabled={busy || !email.includes("@") || password.length < 1} />
-        <Pressable onPress={() => router.back()}>
-          <Text style={[styles.link, lang === "hi" && styles.hindi]}>{t.phoneInstead}</Text>
-        </Pressable>
+        {error ? <Text style={[styles.error, { color: palette.danger }]}>{error}</Text> : null}
+        <PrimaryButton label={t.signIn} onPress={submit} disabled={busy || !email.includes("@") || password.length < 1} />
+        <TextButton label={t.phoneInstead} onPress={() => router.back()} />
       </View>
     </SafeAreaView>
   );
 }
 
-function makeStyles(colors: Palette) {
-  return StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.navy, padding: 16, justifyContent: "center" },
-  card: { gap: 16, padding: 22, borderRadius: 24, backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.line },
-  title: { color: colors.cyanSoft, fontFamily: fonts.display, fontSize: 28 },
-  link: { color: colors.cyanSoft, fontFamily: fonts.bodyStrong, minHeight: 48 },
-  error: { color: "#FFB4B4" },
+const styles = StyleSheet.create({
+  screen: { flex: 1 },
+  body: { padding: 22, gap: 14 },
+  title: { fontFamily: fonts.display, fontSize: 28 },
+  error: { fontFamily: fonts.body },
   hindi: { fontFamily: fonts.hindi }
 });
-}

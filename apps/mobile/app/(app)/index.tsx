@@ -1,7 +1,7 @@
 import type { Dashboard } from "@reviewqr/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, type Href } from "expo-router";
-import { ClipboardList, MessageSquare, Printer, QrCode, Share2, ShoppingBag, Sparkles } from "lucide-react-native";
+import { Check, ClipboardList, MessageSquare, Printer, QrCode, Share2, ShoppingBag, Sparkles, Star } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import Svg, { Circle } from "react-native-svg";
@@ -128,7 +128,7 @@ export default function HomeScreen() {
           <Text style={[styles.hello, lang === "hi" && styles.hindi]}>{t.greeting}{user?.name ? `, ${user.name}` : ""}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.switcher}>
             {businesses.map((item) => (
-              <Pressable key={item.id} accessibilityRole="button" accessibilityState={{ selected: item.id === business?.id }} onPress={() => choose(item.id)} style={[styles.biz, item.id === business?.id && styles.bizOn]}>
+              <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={item.name} accessibilityState={{ selected: item.id === business?.id }} onPress={() => choose(item.id)} style={[styles.biz, item.id === business?.id && styles.bizOn]}>
                 <Text style={[styles.bizText, { color: item.id === business?.id ? "#1C1813" : "#F4EFE6" }, lang === "hi" && styles.hindi]}>{item.name}</Text>
               </Pressable>
             ))}
@@ -154,16 +154,18 @@ export default function HomeScreen() {
           <Card>
             <View style={styles.noteHead}>
               <Text style={[styles.panelTitle, { color: palette.ink }, lang === "hi" && styles.hindi]}>{growth.data.ready ? t.growthScore : t.gettingStarted}</Text>
-              <Ring score={growth.data.ready ? growth.data.score ?? 0 : 0} />
+              <Ring score={growth.data.ready ? growth.data.score ?? 0 : 0} track={palette.line} />
             </View>
             {growth.data.ready ? <Text style={[styles.hint, { color: palette.muted }, lang === "hi" && styles.hindi]}>{t.doThisWeek}</Text> : null}
             {(growth.data.ready ? growth.data.tips : growth.data.checklist).map((tip) => (
               <View key={tip.key} style={styles.tipRow}>
-                <Pressable accessibilityRole="button" onPress={() => router.push(tip.appHref as Href)} style={styles.tipLink}>
-                  <Text style={[styles.tipText, { color: palette.ink }, lang === "hi" && styles.hindi]}>
-                    {tip.done ? "✓ " : ""}
-                    {lang === "hi" ? tip.titleHi : tip.titleEn}
-                  </Text>
+                <Pressable accessibilityRole="button" accessibilityLabel={lang === "hi" ? tip.titleHi : tip.titleEn} accessibilityState={{ checked: !!tip.done }} onPress={() => router.push(tip.appHref as Href)} style={styles.tipLink}>
+                  <View style={styles.tipLine}>
+                    {tip.done ? <Check color={palette.deep} size={16} strokeWidth={2} /> : null}
+                    <Text style={[styles.tipText, { color: palette.ink, flexShrink: 1 }, lang === "hi" && styles.hindi]}>
+                      {lang === "hi" ? tip.titleHi : tip.titleEn}
+                    </Text>
+                  </View>
                 </Pressable>
                 {growth.data?.ready ? (
                   <Pressable accessibilityRole="button" accessibilityLabel={t.markDone} onPress={() => markTip(tip.key).catch(() => undefined)} style={[styles.done, { backgroundColor: palette.chip }]}>
@@ -200,7 +202,7 @@ export default function HomeScreen() {
         ) : (
           <>
             {(orders.data?.items ?? []).map((order) => (
-              <Pressable key={order.id} accessibilityRole="button" onPress={() => router.push("/(app)/orders?tab=orders")} style={[styles.rowCard, { backgroundColor: palette.card }]}>
+              <Pressable key={order.id} accessibilityRole="button" accessibilityLabel={`#${order.number} ${order.status}`} onPress={() => router.push("/(app)/orders?tab=orders")} style={[styles.rowCard, { backgroundColor: palette.card }]}>
                 <View style={[styles.avatar, { backgroundColor: palette.header }]}><Text style={styles.avatarText}>{(order.customerName || "?").slice(0, 1)}</Text></View>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.tipText, { color: palette.ink }]}>#{order.number} · {order.status}</Text>
@@ -209,10 +211,14 @@ export default function HomeScreen() {
               </Pressable>
             ))}
             {(feedback.data?.items ?? []).map((row) => (
-              <Pressable key={row.id} accessibilityRole="button" onPress={() => router.push("/(app)/feedback")} style={[styles.rowCard, { backgroundColor: palette.card }]}>
+              <Pressable key={row.id} accessibilityRole="button" accessibilityLabel={`${row.review.rating} ${row.message}`} onPress={() => router.push("/(app)/feedback")} style={[styles.rowCard, { backgroundColor: palette.card }]}>
                 <View style={[styles.avatar, { backgroundColor: palette.deep }]}><Text style={styles.avatarText}>{(row.review.customerName || "?").slice(0, 1)}</Text></View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: palette.star, fontFamily: fonts.bodyStrong }}>{"★".repeat(Math.max(1, Math.min(5, row.review.rating)))}</Text>
+                  <View style={styles.stars} accessibilityElementsHidden>
+                    {Array.from({ length: Math.max(1, Math.min(5, row.review.rating)) }, (_, index) => (
+                      <Star key={index} color={palette.star} size={14} fill={palette.star} strokeWidth={1.5} />
+                    ))}
+                  </View>
                   <Text style={[styles.hint, { color: palette.muted }]}>{row.message}</Text>
                 </View>
               </Pressable>
@@ -240,27 +246,29 @@ export default function HomeScreen() {
   );
 }
 
-function Ring({ score }: { score: number }) {
+function Ring({ score, track }: { score: number; track: string }) {
   const radius = 22;
   const c = 2 * Math.PI * radius;
   const dash = c * (Math.max(0, Math.min(100, score)) / 100);
   return (
     <View style={{ width: 56, height: 56, alignItems: "center", justifyContent: "center" }}>
-      <Svg width={56} height={56}>
-        <Circle cx={28} cy={28} r={radius} stroke="#E7E0D4" strokeWidth={5} fill="none" />
-        <Circle cx={28} cy={28} r={radius} stroke="#0F7A37" strokeWidth={5} fill="none" strokeDasharray={`${dash} ${c}`} strokeLinecap="round" rotation={-90} origin="28, 28" />
-      </Svg>
+      <View style={{ transform: [{ rotate: "-90deg" }] }}>
+        <Svg width={56} height={56}>
+          <Circle cx={28} cy={28} r={radius} stroke={track} strokeWidth={5} fill="none" />
+          <Circle cx={28} cy={28} r={radius} stroke="#0F7A37" strokeWidth={5} fill="none" strokeDasharray={`${dash} ${c}`} strokeLinecap="round" />
+        </Svg>
+      </View>
       <Text style={styles.ringText}>{Math.round(score)}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { paddingBottom: 28, gap: 14 },
+  content: { paddingBottom: 120, gap: 14 },
   header: { padding: 20, paddingTop: 16, gap: 10, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
   hello: { color: "#F4EFE6", fontFamily: fonts.display, fontSize: 28 },
   switcher: { gap: 8 },
-  biz: { minHeight: 44, borderRadius: 999, paddingHorizontal: 14, justifyContent: "center", backgroundColor: "rgba(255,255,255,0.12)" },
+  biz: { minHeight: 48, borderRadius: 999, paddingHorizontal: 14, justifyContent: "center", backgroundColor: "rgba(255,255,255,0.12)" },
   bizOn: { backgroundColor: "#F4EFE6" },
   bizText: { fontFamily: fonts.bodyStrong, color: "#1C1813" },
   plan: { color: "#F4EFE6", fontFamily: fonts.bodyStrong },
@@ -271,11 +279,13 @@ const styles = StyleSheet.create({
   hint: { fontFamily: fonts.body, fontSize: 14, lineHeight: 20 },
   tipRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   tipLink: { flex: 1, minHeight: 48, justifyContent: "center" },
+  tipLine: { flexDirection: "row", alignItems: "center", gap: 8 },
   tipText: { fontFamily: fonts.bodyStrong, fontSize: 15 },
-  done: { minHeight: 44, justifyContent: "center", paddingHorizontal: 10, borderRadius: 999 },
+  done: { minHeight: 48, justifyContent: "center", paddingHorizontal: 12, borderRadius: 999 },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 10, paddingHorizontal: 16 },
   action: { width: "31%", minHeight: 88, borderRadius: 18, borderWidth: 1, alignItems: "flex-start", justifyContent: "center", padding: 12, gap: 8 },
-  actionText: { fontFamily: fonts.bodyStrong, fontSize: 13 },
+  actionText: { fontFamily: fonts.bodyStrong, fontSize: 13, flexShrink: 1 },
+  stars: { flexDirection: "row", gap: 2 },
   rowCard: { marginHorizontal: 16, borderRadius: 18, padding: 12, flexDirection: "row", gap: 10, alignItems: "center" },
   avatar: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
   avatarText: { color: "#FFFFFF", fontFamily: fonts.bodyStrong },

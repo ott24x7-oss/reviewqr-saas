@@ -90,7 +90,7 @@ export function OtpCodeForm({
       {phone ? (
         <Text style={[styles.phone, { color: palette.ink }, lang === "hi" && styles.hindi]}>{maskPhone(phone)}</Text>
       ) : null}
-      <Pressable accessibilityRole="button" onPress={() => input.current?.focus()}>
+      <Pressable accessible={false} onPress={() => input.current?.focus()}>
         <Animated.View style={[styles.boxes, shakeStyle]}>
           {Array.from({ length: 6 }, (_, index) => (
             <OtpCell
@@ -123,34 +123,34 @@ export function OtpCodeForm({
       ) : null}
       {error ? <Text style={[styles.error, { color: palette.danger }]}>{error}</Text> : null}
       <View style={styles.timerRow}>
-        <Svg width={28} height={28} accessibilityElementsHidden>
-          <Circle cx={14} cy={14} r={12} stroke={palette.line} strokeWidth={3} fill="none" />
-          <Circle
-            cx={14}
-            cy={14}
-            r={12}
-            stroke={palette.primary}
-            strokeWidth={3}
-            fill="none"
-            strokeDasharray={`${ring} ${ring}`}
-            strokeDashoffset={ring * remain}
-            strokeLinecap="round"
-            rotation={-90}
-            origin="14, 14"
-          />
-        </Svg>
-        <Pressable accessibilityRole="button" disabled={!ready || submitting} onPress={onResend} style={styles.linkHit}>
+        <View accessibilityElementsHidden style={{ transform: [{ rotate: "-90deg" }] }}>
+          <Svg width={28} height={28}>
+            <Circle cx={14} cy={14} r={12} stroke={palette.line} strokeWidth={3} fill="none" />
+            <Circle
+              cx={14}
+              cy={14}
+              r={12}
+              stroke={palette.primary}
+              strokeWidth={3}
+              fill="none"
+              strokeDasharray={`${ring} ${ring}`}
+              strokeDashoffset={ring * remain}
+              strokeLinecap="round"
+            />
+          </Svg>
+        </View>
+        <Pressable accessibilityRole="button" accessibilityLabel={ready ? t.resend : `${t.resendIn} ${secondsLeft}`} accessibilityState={{ disabled: !ready || submitting }} disabled={!ready || submitting} onPress={onResend} style={styles.linkHit}>
           <Text style={[styles.link, { color: ready ? palette.deep : palette.muted }, lang === "hi" && styles.hindi]}>
             {ready ? t.resend : `${t.resendIn} ${secondsLeft}s`}
           </Text>
         </Pressable>
       </View>
-      <Pressable accessibilityRole="button" onPress={() => setCallNote(true)} style={styles.linkHit}>
+      <Pressable accessibilityRole="button" accessibilityLabel={t.otpCall} onPress={() => setCallNote(true)} style={styles.linkHit}>
         <Text style={[styles.link, { color: palette.deep }, lang === "hi" && styles.hindi]}>{t.otpCall}</Text>
       </Pressable>
       {callNote ? <Text style={[styles.note, { color: palette.muted }]}>{t.otpCallUnavailable}</Text> : null}
       <PrimaryButton label={t.verify} onPress={onSubmit} disabled={submitting || code.length !== 6} />
-      <Pressable accessibilityRole="button" onPress={onChangeNumber} style={styles.linkHit}>
+      <Pressable accessibilityRole="button" accessibilityLabel={t.changeNumber} onPress={onChangeNumber} style={styles.linkHit}>
         <Text style={[styles.link, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.changeNumber}</Text>
       </Pressable>
     </View>

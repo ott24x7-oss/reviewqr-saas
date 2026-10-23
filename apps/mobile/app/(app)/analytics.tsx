@@ -53,7 +53,7 @@ export default function AnalyticsScreen() {
       <Text style={[styles.title, lang === "hi" && styles.hindi]}>{t.analytics}</Text>
       <View style={styles.ranges}>
         {(["7d", "30d"] as const).map((item) => (
-          <Pressable key={item} onPress={() => setRange(item)} style={[styles.chip, range === item && styles.chipOn]}>
+          <Pressable key={item} accessibilityRole="button" accessibilityLabel={item} accessibilityState={{ selected: range === item }} onPress={() => setRange(item)} style={[styles.chip, range === item && styles.chipOn]}>
             <Text style={[styles.chipText, range === item && styles.chipTextOn]}>{item}</Text>
           </Pressable>
         ))}
