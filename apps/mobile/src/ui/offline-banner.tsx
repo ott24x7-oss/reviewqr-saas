@@ -19,13 +19,10 @@ export function ConnectivityBanner() {
 export function QueryRetryBar() {
   const client = useQueryClient();
   const { t, lang } = useI18n();
-  const [failed, setFailed] = useState(0);
-  useEffect(() => {
-    const cache = client.getQueryCache();
-    const count = () => cache.getAll().filter((query) => query.state.status === "error").length;
-    setFailed(count());
-    return cache.subscribe(() => setFailed(count()));
-  }, [client]);
+  const cache = client.getQueryCache();
+  const [, setTick] = useState(0);
+  useEffect(() => cache.subscribe(() => setTick((value) => value + 1)), [cache]);
+  const failed = cache.getAll().filter((query) => query.state.status === "error").length;
   if (failed === 0) return null;
   return (
     <Pressable

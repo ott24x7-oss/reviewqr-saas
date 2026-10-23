@@ -46,8 +46,12 @@ export async function readOrderQueue() {
   }
 }
 
-export async function enqueueOrderStatus(next: QueuedOrderStatus) {
-  const queue = queueOrderStatus(await readOrderQueue(), next);
+export async function enqueueOrderStatus(next: { orderId: string; status: string; at?: number }) {
+  const queue = queueOrderStatus(await readOrderQueue(), {
+    orderId: next.orderId,
+    status: next.status,
+    at: next.at ?? Date.now()
+  });
   await AsyncStorage.setItem(ORDER_QUEUE_KEY, JSON.stringify(queue));
   return queue;
 }

@@ -10,7 +10,7 @@ export function onlineFrom(state: { isConnected?: boolean | null; isInternetReac
 export function useOnline() {
   const [online, setOnline] = useState(true);
   useEffect(() => {
-    let remove = () => undefined;
+    let remove = () => {};
     let alive = true;
     import("expo-network")
       .then((Network) => {
@@ -21,7 +21,9 @@ export function useOnline() {
           })
           .catch(() => undefined);
         const sub = Network.addNetworkStateListener((state) => setOnline(onlineFrom(state)));
-        remove = () => sub.remove();
+        remove = () => {
+          sub.remove();
+        };
       })
       .catch(() => undefined);
     return () => {

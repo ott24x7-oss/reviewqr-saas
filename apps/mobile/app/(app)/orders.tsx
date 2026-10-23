@@ -263,7 +263,7 @@ export default function OrdersScreen() {
   }
 
   async function queueStatus(orderId: string, status: string) {
-    await enqueueOrderStatus({ orderId, status, at: Date.now() });
+    await enqueueOrderStatus({ orderId, status });
     rememberStatus(orderId, status);
     if (status === "COMPLETED") void noteOrderCompleted(false);
   }
