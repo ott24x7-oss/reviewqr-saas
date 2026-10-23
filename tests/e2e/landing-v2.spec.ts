@@ -2,16 +2,22 @@ import { expect, test } from "@playwright/test";
 
 const steps = ["choose", "ship", "setup", "scan", "results", "track"];
 
-test("landing at 360px shows the hero buy button on the first screen", async ({ page }) => {
-  await page.setViewportSize({ width: 360, height: 640 });
+test("landing at 375px shows Start free on the first screen", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("/");
-  const buy = page.locator("#sell-hero").getByRole("link", { name: "Buy now" });
-  await expect(buy).toBeVisible();
-  const box = await buy.boundingBox();
+  const start = page.locator("#home-hero").getByRole("link", { name: "Start free" });
+  await expect(start).toBeVisible();
+  const box = await start.boundingBox();
   expect(box).toBeTruthy();
-  expect(box!.y + box!.height).toBeLessThanOrEqual(640);
-  const fits = await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1);
-  expect(fits).toBe(true);
+  expect(box!.y + box!.height).toBeLessThanOrEqual(812);
+  for (const width of [360, 375, 390, 414]) {
+    await page.setViewportSize({ width, height: 800 });
+    const fits = await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1);
+    expect(fits).toBe(true);
+  }
+  await page.setViewportSize({ width: 740, height: 360 });
+  const landscape = await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1);
+  expect(landscape).toBe(true);
   await page.screenshot({ path: "docs/landing/home-360.png" });
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.screenshot({ path: "docs/landing/home-1280.png" });
@@ -27,10 +33,11 @@ test("a phone shows at most six plan cards until See all plans", async ({ page }
   for (let index = 0; index < count; index += 1) {
     if (await cards.nth(index).isVisible()) shown += 1;
   }
-  expect(shown).toBeLessThanOrEqual(6);
-  if (count > 6) {
-    await page.getByRole("button", { name: "See all plans" }).click();
-    await expect(cards.nth(6)).toBeVisible();
+  expect(shown).toBeLessThanOrEqual(4);
+  if (count > 4) {
+    const more = page.getByRole("link", { name: "See all plans" });
+    await expect(more).toBeVisible();
+    await expect(more).toHaveAttribute("href", "/pricing");
   }
 });
 
@@ -58,12 +65,12 @@ test("adjacent plan cards do not share an image", async ({ page }) => {
 test("the home price anchor is a paid monthly price", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("/");
-  const anchor = page.locator("#sell-hero [data-price-anchor]");
+  await expect(page.locator("#home-hero").getByRole("link", { name: "Start free" })).toBeVisible();
+  const anchor = page.locator("[data-plan-card] [data-price-anchor]").first();
   await expect(anchor).toBeVisible();
   const paise = Number(await anchor.getAttribute("data-price-anchor"));
   expect(paise).toBeGreaterThan(0);
   await expect(anchor).not.toContainText(/₹\s*0(?:\D|$)/);
-  await expect(page.locator("#sell-hero").getByRole("link", { name: "Start free" })).toBeVisible();
 });
 
 test("a duration chip changes the price and Buy now opens signup", async ({ page }) => {
@@ -133,14 +140,84 @@ test("home at 375px stays under 9000px and old sections live on /features", asyn
 
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("/");
-  await expect(page.locator("#sell-hero")).toBeVisible();
+  await expect(page.locator("#home-hero")).toBeVisible();
   await expect(page.locator("#features")).toHaveCount(0);
   await expect(page.locator("#story")).toHaveCount(0);
   const height = await page.evaluate(() => document.documentElement.scrollHeight);
-  expect(height).toBeLessThan(9000);
-  await page.screenshot({ path: "docs/landing/home-375.png", fullPage: false });
+  expect(height).toBeLessThan(7000);
+  await expect.poll(() => page.locator("#home-flow img").first().evaluate((img) => (img as HTMLImageElement).naturalWidth > 10)).toBe(true);
+  await page.screenshot({ path: "docs/home-v3/home-375.png", fullPage: true });
   await page.setViewportSize({ width: 1280, height: 800 });
-  await page.screenshot({ path: "docs/landing/home-1280.png", fullPage: false });
+  await page.locator("#home-flow").scrollIntoViewIfNeeded();
+  await expect.poll(() =>
+    page.locator("#home-flow img").evaluateAll((imgs) =>
+      imgs.every((img) => {
+        const shot = img as HTMLImageElement;
+        return shot.complete && shot.naturalWidth > 10 && shot.currentSrc.includes("-960");
+      })
+    )
+  ).toBe(true);
+  await page.locator("#home-flow img").evaluateAll((imgs) => Promise.all(imgs.map((img) => (img as HTMLImageElement).decode())));
+  await page.screenshot({ path: "docs/home-v3/home-1280.png", fullPage: true });
+});
+
+test("customer tabs swap the phone screenshot", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/");
+  const shot = page.locator("#customer-view img[data-active='true']");
+  await expect(shot).toHaveAttribute("data-shot", "review");
+  await page.getByRole("tab", { name: "Menu" }).click();
+  await expect(shot).toHaveAttribute("data-shot", "menu");
+  await page.getByRole("tab", { name: "WhatsApp order" }).click();
+  await expect(shot).toHaveAttribute("data-shot", "order");
+});
+
+test("the sticky bar appears after the hero and does not cover the footer", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/");
+  const bar = page.locator("#sticky-cta");
+  await expect(bar).toBeHidden();
+  await page.locator("#home-flow").evaluate((element) => {
+    const top = element.getBoundingClientRect().top + window.scrollY;
+    window.scrollTo(0, top + 8);
+  });
+  await expect(bar).toBeVisible();
+  const overlap = await page.evaluate(() => {
+    const node = document.getElementById("sticky-cta");
+    if (!node || node.hidden) return "hidden";
+    const barBox = node.getBoundingClientRect();
+    const flow = document.querySelector("#home-flow h2");
+    if (!flow) return "missing";
+    const title = flow.getBoundingClientRect();
+    const hits = title.bottom > barBox.top && title.top < barBox.bottom;
+    return hits ? "covered" : "";
+  });
+  expect(overlap).toBe("");
+  await page.locator("#home-footer").scrollIntoViewIfNeeded();
+  await expect(bar).toBeHidden();
+});
+
+test("every home image has alt text", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/");
+  const missing = await page.evaluate(() =>
+    [...document.images].filter((img) => !img.getAttribute("alt")?.trim()).map((img) => img.currentSrc || img.src)
+  );
+  expect(missing).toEqual([]);
+});
+
+test("reduced motion still shows the home", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/");
+  const hero = page.locator("#home-hero");
+  await expect(hero).toBeVisible();
+  const opacity = await hero.evaluate((element) => getComputedStyle(element).opacity);
+  expect(opacity).toBe("1");
+  const card = page.locator(".hv3-rise").first();
+  await expect(card).toBeVisible();
+  const animated = await card.evaluate((element) => getComputedStyle(element).animationName);
+  expect(animated).toBe("none");
 });
 
 test("a plan page keeps the buy bar on a phone", async ({ page }) => {

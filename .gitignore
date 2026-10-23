@@ -1,6 +1,7 @@
 node_modules
 .next
 .next-e2e-dev
+.next-shots
 scripts/__pycache__
 out
 build
