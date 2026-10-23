@@ -9,7 +9,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { I18nProvider } from "../src/i18n";
 import { SessionProvider, useSession } from "../src/state/session";
-import { LaunchOverlay } from "../src/ui/launch";
+import { LaunchFrame } from "../src/ui/launch";
 import { ThemeProvider } from "../src/ui/theme";
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
@@ -17,11 +17,11 @@ SplashScreen.preventAutoHideAsync().catch(() => undefined);
 function Boot({ fontsReady }: { fontsReady: boolean }) {
   const { ready } = useSession();
   const path = usePathname();
+  const motionLab = path.includes("motion-lab");
   return (
-    <>
+    <LaunchFrame fontsReady={fontsReady} sessionReady={ready} skip={motionLab}>
       {fontsReady ? <Stack screenOptions={{ headerShown: false }} /> : null}
-      {path.includes("motion-lab") ? null : <LaunchOverlay fontsReady={fontsReady} sessionReady={ready} />}
-    </>
+    </LaunchFrame>
   );
 }
 

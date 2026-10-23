@@ -48,7 +48,23 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       {
         backgroundColor: "#16A34A",
         image: "./assets/splash-mark.png",
-        imageWidth: 120
+        imageWidth: 120,
+        resizeMode: "contain",
+        dark: {
+          backgroundColor: "#16A34A",
+          image: "./assets/splash-mark.png"
+        },
+        // Android 12+ windowSplashScreenBackground and windowSplashScreenAnimatedIcon.
+        android: {
+          backgroundColor: "#16A34A",
+          image: "./assets/splash-mark.png",
+          imageWidth: 120,
+          resizeMode: "contain",
+          dark: {
+            backgroundColor: "#16A34A",
+            image: "./assets/splash-mark.png"
+          }
+        }
       }
     ],
     [
