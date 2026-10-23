@@ -1,21 +1,38 @@
 import { router } from "expo-router";
 import { useState } from "react";
-import { ScrollView, StyleSheet, Text } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { apiData } from "../../src/api/data";
 import { ApiError } from "../../src/api/http";
 import { useI18n } from "../../src/i18n";
 import { canWriteNfc } from "../../src/nfc/access";
 import { useBusiness } from "../../src/state/business";
+import { useEntitlement } from "../../src/state/entitlement";
 import { useSession } from "../../src/state/session";
-import { colors, fonts } from "../../src/theme";
-import { PillButton } from "../../src/ui/controls";
+import { fonts } from "../../src/theme";
+import { Card } from "../../src/ui/bits";
+import { useTheme, type SchemeChoice } from "../../src/ui/theme";
+
+const LINKS = [
+  ["pageQr", "/(app)/tap"],
+  ["theme", "/(app)/business-edit"],
+  ["storeSettings", "/(app)/store"],
+  ["staff", "/(app)/staff"],
+  ["devices", "/(app)/nfc"],
+  ["shop", "/(app)/shop"],
+  ["analytics", "/(app)/analytics"],
+  ["plans", "/(app)/plan"],
+  ["help", "/(app)/help"]
+] as const;
 
 export default function MoreScreen() {
-  const { t, lang } = useI18n();
+  const { t, lang, choose } = useI18n();
+  const { palette, choice, setChoice } = useTheme();
   const { user, logout, refreshUser } = useSession();
   const { businesses } = useBusiness();
+  const plan = useEntitlement();
   const owns = businesses.some((item) => item.ownerId === user?.id);
   const [error, setError] = useState<string | null>(null);
+  const name = lang === "hi" ? plan.data?.plan?.nameHi || plan.data?.plan?.nameEn : plan.data?.plan?.nameEn;
 
   async function togglePush() {
     if (!user) return;
@@ -31,32 +48,68 @@ export default function MoreScreen() {
     }
   }
 
+  const themes: SchemeChoice[] = ["system", "light", "dark"];
+
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={[styles.title, lang === "hi" && styles.hindi]}>{t.more}</Text>
-      <PillButton label={t.pageQr} onPress={() => router.push("/(app)/tap")} tone="dark" />
-      <PillButton label={t.theme} onPress={() => router.push("/(app)/business-edit")} tone="outline" />
-      <PillButton label={t.storeSettings} onPress={() => router.push("/(app)/store")} tone="outline" />
-      <PillButton label={t.staff} onPress={() => router.push("/(app)/staff")} tone="outline" />
-      <PillButton label={t.devices} onPress={() => router.push("/(app)/nfc")} tone="outline" />
-      <PillButton label={t.shop} onPress={() => router.push("/(app)/shop")} tone="outline" />
-      <PillButton label={t.plans} onPress={() => router.push("/(app)/plan")} tone="outline" />
-      <PillButton label={user?.pushEnabled ? t.pushOn : t.pushOff} onPress={togglePush} tone="dark" />
-      {canWriteNfc(user?.role, owns) ? (
-        <PillButton label={t.nfc} onPress={() => router.push("/(app)/nfc")} tone="outline" />
-      ) : null}
-      <PillButton label={t.account} onPress={() => router.push("/(app)/delete-account")} tone="outline" />
-      <PillButton label={t.deleteAccount} onPress={() => router.push("/(app)/delete-account")} tone="outline" />
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-      <PillButton label={t.signOut} onPress={() => logout()} tone="outline" />
+    <ScrollView style={{ flex: 1, backgroundColor: palette.paper }} contentContainerStyle={styles.content}>
+      <Text style={[styles.title, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.more}</Text>
+      <Card>
+        <Text style={[styles.cardTitle, { color: palette.ink }, lang === "hi" && styles.hindi]}>{name || plan.data?.tier || t.plans}</Text>
+        <Text style={[styles.note, { color: palette.muted }]}>{plan.data?.status}</Text>
+        <Text style={[styles.note, { color: palette.muted }, lang === "hi" && styles.hindi]}>{t.plansWeb}</Text>
+      </Card>
+      <Card>
+        {LINKS.map(([key, href]) => (
+          <Pressable key={key} accessibilityRole="button" accessibilityLabel={t[key]} onPress={() => router.push(href)} style={styles.row}>
+            <Text style={[styles.rowText, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t[key]}</Text>
+          </Pressable>
+        ))}
+        {canWriteNfc(user?.role, owns) ? (
+          <Pressable accessibilityRole="button" accessibilityLabel={t.nfc} onPress={() => router.push("/(app)/nfc")} style={styles.row}>
+            <Text style={[styles.rowText, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.nfc}</Text>
+          </Pressable>
+        ) : null}
+      </Card>
+      <Card>
+        <Text style={[styles.cardTitle, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.themeMode}</Text>
+        <View style={styles.themes}>
+          {themes.map((item) => (
+            <Pressable key={item} accessibilityRole="button" accessibilityState={{ selected: choice === item }} onPress={() => setChoice(item)} style={[styles.theme, { borderColor: palette.line, backgroundColor: choice === item ? palette.deep : palette.card }]}>
+              <Text style={{ color: choice === item ? "#FFFFFF" : palette.ink, fontFamily: fonts.bodyStrong }}>{item === "system" ? t.themeSystem : item === "light" ? t.themeLight : t.themeDark}</Text>
+            </Pressable>
+          ))}
+        </View>
+        <Pressable accessibilityRole="button" accessibilityLabel={t.language} onPress={() => choose(lang === "en" ? "hi" : "en")} style={styles.row}>
+          <Text style={[styles.rowText, { color: palette.ink }, lang === "hi" && styles.hindi]}>{lang === "en" ? t.hindi : t.english}</Text>
+        </Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel={user?.pushEnabled ? t.pushOn : t.pushOff} onPress={togglePush} style={styles.row}>
+          <Text style={[styles.rowText, { color: palette.ink }, lang === "hi" && styles.hindi]}>{user?.pushEnabled ? t.pushOn : t.pushOff}</Text>
+        </Pressable>
+      </Card>
+      <Card>
+        <Pressable accessibilityRole="button" accessibilityLabel={t.account} onPress={() => router.push("/(app)/delete-account")} style={styles.row}>
+          <Text style={[styles.rowText, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.account}</Text>
+        </Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel={t.deleteAccount} onPress={() => router.push("/(app)/delete-account")} style={styles.row}>
+          <Text style={[styles.rowText, { color: palette.danger }, lang === "hi" && styles.hindi]}>{t.deleteAccount}</Text>
+        </Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel={t.signOut} onPress={() => logout()} style={styles.row}>
+          <Text style={[styles.rowText, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.signOut}</Text>
+        </Pressable>
+      </Card>
+      {error ? <Text style={{ color: palette.danger, fontFamily: fonts.body }}>{error}</Text> : null}
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.paper },
-  content: { padding: 20, gap: 16 },
-  title: { fontFamily: fonts.display, fontSize: 28, color: colors.ink },
-  error: { color: colors.danger, fontFamily: fonts.body },
+  content: { padding: 16, gap: 14 },
+  title: { fontFamily: fonts.display, fontSize: 28 },
+  cardTitle: { fontFamily: fonts.title, fontSize: 18 },
+  note: { fontFamily: fonts.body, fontSize: 14, lineHeight: 20 },
+  row: { minHeight: 48, justifyContent: "center" },
+  rowText: { fontFamily: fonts.bodyStrong, fontSize: 16 },
+  themes: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
+  theme: { minHeight: 48, borderRadius: 999, borderWidth: 1, paddingHorizontal: 14, alignItems: "center", justifyContent: "center" },
   hindi: { fontFamily: fonts.hindi }
 });

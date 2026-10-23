@@ -1,14 +1,15 @@
 import { ActivityIndicator, View } from "react-native";
 import { useBusiness } from "../../src/state/business";
-import { colors } from "../../src/theme";
 import { BusinessForm } from "../../src/ui/business-form";
+import { usePalette } from "../../src/ui/theme";
 
 export default function EditBusinessScreen() {
+  const palette = usePalette();
   const { business, loading } = useBusiness();
   if (loading || !business) {
     return (
-      <View style={{ flex: 1, backgroundColor: colors.paper, alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator color={colors.ink} />
+      <View style={{ flex: 1, backgroundColor: palette.paper, alignItems: "center", justifyContent: "center" }}>
+        <ActivityIndicator color={palette.ink} />
       </View>
     );
   }

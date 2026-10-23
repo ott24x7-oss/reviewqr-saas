@@ -1,7 +1,7 @@
 import type { PlaceDetails, PlacesSearch } from "@reviewqr/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
-import { useState } from "react";
+import { useState , useMemo } from "react";
 import { Pressable, ScrollView, StyleSheet, Text } from "react-native";
 import { apiData } from "../api/data";
 import { ApiError } from "../api/http";
@@ -9,7 +9,9 @@ import { useI18n } from "../i18n";
 import { accountKey } from "../query/keys";
 import { useBusiness, type BusinessCard } from "../state/business";
 import { useSession } from "../state/session";
-import { colors, fonts } from "../theme";
+import { fonts } from "../theme";
+import { usePalette } from "./theme";
+import type { Palette } from "./tokens";
 import { Field, PillButton } from "./controls";
 
 type Draft = {
@@ -33,6 +35,8 @@ const empty: Draft = {
 };
 
 export function BusinessForm({ initial, businessId }: { initial?: BusinessCard | null; businessId?: string }) {
+  const palette = usePalette();
+  const styles = useMemo(() => makeStyles(palette), [palette]);
   const { t, lang } = useI18n();
   const { user } = useSession();
   const { choose, reload } = useBusiness();
@@ -147,12 +151,14 @@ export function BusinessForm({ initial, businessId }: { initial?: BusinessCard |
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+  return StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.paper },
   content: { padding: 16, gap: 12 },
-  hit: { minHeight: 44, justifyContent: "center", backgroundColor: colors.card, borderRadius: 14, paddingHorizontal: 14 },
+  hit: { minHeight: 48, justifyContent: "center", backgroundColor: colors.card, borderRadius: 14, paddingHorizontal: 14 },
   hitText: { fontFamily: fonts.body, color: colors.ink },
   note: { fontFamily: fonts.body, color: colors.inkSoft, lineHeight: 22 },
   error: { color: colors.danger, fontFamily: fonts.body },
   hindi: { fontFamily: fonts.hindi }
 });
+}

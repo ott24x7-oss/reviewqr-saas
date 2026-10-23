@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import type { BillingSummary } from "@reviewqr/shared";
 import { useQuery } from "@tanstack/react-query";
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -6,13 +7,17 @@ import { useI18n } from "../../src/i18n";
 import { accountKey } from "../../src/query/keys";
 import { useEntitlement } from "../../src/state/entitlement";
 import { useSession } from "../../src/state/session";
-import { colors, fonts } from "../../src/theme";
+import { fonts } from "../../src/theme";
+import { usePalette } from "../../src/ui/theme";
+import type { Palette } from "../../src/ui/tokens";
 
 function rupees(paise: number) {
   return `₹${Math.round(paise / 100)}`;
 }
 
 export default function PlanScreen() {
+  const palette = usePalette();
+  const styles = useMemo(() => makeStyles(palette), [palette]);
   const { t, lang } = useI18n();
   const { user } = useSession();
   const plan = useEntitlement();
@@ -42,6 +47,7 @@ export default function PlanScreen() {
       <View style={styles.card}>
         <Text style={styles.title}>{name || plan.data?.tier || "…"}</Text>
         <Text style={styles.note}>{plan.data?.status}</Text>
+        <Text style={[styles.note, lang === "hi" && styles.hindi]}>{t.plansWeb}</Text>
         <Text style={[styles.note, lang === "hi" && styles.hindi]}>
           {t.included}: {(plan.data?.modules ?? []).join(", ") || "…"}
         </Text>
@@ -59,7 +65,8 @@ export default function PlanScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+  return StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.paper },
   content: { padding: 16, gap: 12 },
   card: { backgroundColor: colors.card, borderRadius: 20, padding: 16, gap: 6 },
@@ -67,3 +74,4 @@ const styles = StyleSheet.create({
   note: { fontFamily: fonts.body, color: colors.inkSoft },
   hindi: { fontFamily: fonts.hindi }
 });
+}

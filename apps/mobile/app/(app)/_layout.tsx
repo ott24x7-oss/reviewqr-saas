@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Redirect, Tabs } from "expo-router";
-import { type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { apiData } from "../../src/api/data";
 import { useI18n } from "../../src/i18n";
@@ -8,11 +8,14 @@ import { PushBridge } from "../../src/push/register";
 import { accountKey } from "../../src/query/keys";
 import { BusinessProvider, useBusiness } from "../../src/state/business";
 import { useSession } from "../../src/state/session";
-import { colors, fonts } from "../../src/theme";
+import { fonts } from "../../src/theme";
+import { PremiumTabBar } from "../../src/ui/tab-bar";
+import { usePalette } from "../../src/ui/theme";
 
 function PanelGate({ children }: { children: ReactNode }) {
   const { user } = useSession();
   const { businesses, loading } = useBusiness();
+  const palette = usePalette();
   const progress = useQuery({
     queryKey: accountKey(user?.id ?? "", "onboarding"),
     enabled: !!user && user.role === "USER",
@@ -20,8 +23,8 @@ function PanelGate({ children }: { children: ReactNode }) {
   });
   if (user?.role === "USER" && (loading || progress.isLoading)) {
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.paper }}>
-        <ActivityIndicator color={colors.ink} />
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: palette.paper }}>
+        <ActivityIndicator color={palette.ink} />
       </View>
     );
   }
@@ -32,28 +35,52 @@ function PanelGate({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-export default function AppLayout() {
-  const { ready, user } = useSession();
+function AppTabs() {
+  const { user } = useSession();
+  const { business } = useBusiness();
   const { t, lang } = useI18n();
-  if (ready && !user) return <Redirect href="/(auth)/login" />;
+  const palette = usePalette();
+  const id = business?.id;
+  const orders = useQuery({
+    queryKey: accountKey(user?.id ?? "", "orders", id),
+    enabled: !!user && !!id,
+    queryFn: () => apiData<{ items: { status: string }[] }>(`/api/v1/orders?limit=30&businessId=${id}`)
+  });
+  const feedback = useQuery({
+    queryKey: accountKey(user?.id ?? "", "feedback", id),
+    enabled: !!user && !!id,
+    queryFn: () => apiData<{ items: { status: string }[] }>(`/api/v1/feedback?limit=30&businessId=${id}`)
+  });
+  const badges = useMemo(
+    () => ({
+      orders: (orders.data?.items ?? []).filter((row) => row.status === "ACCEPTED").length,
+      feedback: (feedback.data?.items ?? []).filter((row) => row.status !== "RESOLVED").length
+    }),
+    [orders.data, feedback.data]
+  );
   const label = lang === "hi" ? fonts.hindiStrong : fonts.bodyStrong;
   return (
-    <BusinessProvider>
-    <PushBridge />
-    <PanelGate>
     <Tabs
+      tabBar={(props) => (
+        <PremiumTabBar
+          state={props.state}
+          descriptors={props.descriptors}
+          badges={badges}
+          onTabPress={(route, focused) => {
+            const event = props.emitter.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
+            if (!focused && !event.defaultPrevented) props.navigateToTab(route.key);
+          }}
+        />
+      )}
       screenOptions={{
-        headerStyle: { backgroundColor: colors.paper },
-        headerTintColor: colors.ink,
+        headerStyle: { backgroundColor: palette.paper },
+        headerTintColor: palette.ink,
         headerTitleStyle: { fontFamily: label },
-        tabBarStyle: { backgroundColor: colors.card, minHeight: 64, paddingBottom: 8, paddingTop: 8 },
-        tabBarActiveTintColor: colors.ink,
-        tabBarInactiveTintColor: colors.inkSoft,
-        tabBarLabelStyle: { fontFamily: label, fontSize: 12 }
+        tabBarStyle: { backgroundColor: palette.card, minHeight: 64 }
       }}
     >
       <Tabs.Screen name="index" options={{ title: t.home }} />
-      <Tabs.Screen name="analytics" options={{ title: t.analytics }} />
+      <Tabs.Screen name="analytics" options={{ href: null, title: t.analytics }} />
       <Tabs.Screen name="orders" options={{ title: t.orders }} />
       <Tabs.Screen name="menu" options={{ title: t.menuTab }} />
       <Tabs.Screen name="feedback" options={{ title: t.feedbackTab }} />
@@ -64,10 +91,22 @@ export default function AppLayout() {
       <Tabs.Screen name="tap" options={{ href: null, title: t.preview }} />
       <Tabs.Screen name="nfc" options={{ href: null, title: t.nfc }} />
       <Tabs.Screen name="delete-account" options={{ href: null, title: t.deleteAccount }} />
+      <Tabs.Screen name="help" options={{ href: null, title: t.help }} />
       <Tabs.Screen name="plan" options={{ href: null, title: t.plans }} />
       <Tabs.Screen name="staff" options={{ href: null, title: t.staff }} />
       <Tabs.Screen name="store" options={{ href: null, title: t.storeSettings }} />
     </Tabs>
+  );
+}
+
+export default function AppLayout() {
+  const { ready, user } = useSession();
+  if (ready && !user) return <Redirect href="/(auth)/login" />;
+  return (
+    <BusinessProvider>
+    <PushBridge />
+    <PanelGate>
+      <AppTabs />
     </PanelGate>
     </BusinessProvider>
   );

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState , useMemo } from "react";
 import { ScrollView, StyleSheet, Text, TextInput } from "react-native";
 import { apiBaseUrl } from "../../src/api/instance";
 import { apiData } from "../../src/api/data";
@@ -7,12 +7,16 @@ import { devCodeFrom, digitsFrom } from "../../src/auth/otp";
 import { channelCopy } from "../../src/i18n/copy";
 import { useI18n } from "../../src/i18n";
 import { useSession } from "../../src/state/session";
-import { colors, fonts } from "../../src/theme";
+import { fonts } from "../../src/theme";
+import { usePalette } from "../../src/ui/theme";
+import type { Palette } from "../../src/ui/tokens";
 import { PillButton } from "../../src/ui/controls";
 
 type Sent = { channel?: string; resendAfterSec?: number; devCode?: string; message?: string };
 
 export default function DeleteAccountScreen() {
+  const palette = usePalette();
+  const styles = useMemo(() => makeStyles(palette), [palette]);
   const { t, lang } = useI18n();
   const { logout } = useSession();
   const [sent, setSent] = useState<Sent | null>(null);
@@ -111,7 +115,8 @@ export default function DeleteAccountScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+  return StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.paper },
   content: { padding: 20, gap: 16 },
   title: { fontFamily: fonts.display, fontSize: 28, color: colors.ink },
@@ -133,3 +138,4 @@ const styles = StyleSheet.create({
   error: { color: colors.danger, fontFamily: fonts.body },
   hindi: { fontFamily: fonts.hindi }
 });
+}

@@ -2,7 +2,7 @@ import type { BillingSummary, ShopOrderDetail } from "@reviewqr/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as WebBrowser from "expo-web-browser";
 import { useLocalSearchParams } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState , useMemo } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { apiData } from "../../src/api/data";
 import { ApiError } from "../../src/api/http";
@@ -12,7 +12,9 @@ import { useBusiness } from "../../src/state/business";
 import { useSession } from "../../src/state/session";
 import { pollPayment } from "../../src/shop/poll";
 import { cartPaise } from "../../src/shop/totals";
-import { colors, fonts } from "../../src/theme";
+import { fonts } from "../../src/theme";
+import { usePalette } from "../../src/ui/theme";
+import type { Palette } from "../../src/ui/tokens";
 import { Field, PillButton } from "../../src/ui/controls";
 
 type Tab = "catalogue" | "orders" | "plan";
@@ -40,6 +42,8 @@ function rupees(paise: number) {
 }
 
 export default function ShopScreen() {
+  const palette = usePalette();
+  const styles = useMemo(() => makeStyles(palette), [palette]);
   const { t, lang } = useI18n();
   const { user } = useSession();
   const { business } = useBusiness();
@@ -296,18 +300,20 @@ export default function ShopScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+  return StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.paper },
   content: { padding: 16, gap: 12 },
   stack: { gap: 12 },
   row: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  chip: { minHeight: 44, borderRadius: 999, paddingHorizontal: 14, justifyContent: "center", backgroundColor: colors.card },
-  chipOn: { backgroundColor: colors.ink },
+  chip: { minHeight: 48, borderRadius: 999, paddingHorizontal: 14, justifyContent: "center", backgroundColor: colors.card },
+  chipOn: { backgroundColor: colors.deep },
   chipText: { fontFamily: fonts.bodyStrong, color: colors.ink },
-  chipOnText: { color: colors.white },
+  chipOnText: { color: colors.onPrimary },
   card: { backgroundColor: colors.card, borderRadius: 20, padding: 14, gap: 6 },
   title: { fontFamily: fonts.title, fontSize: 18, color: colors.ink },
   note: { fontFamily: fonts.body, color: colors.inkSoft },
   error: { color: colors.danger, fontFamily: fonts.body },
   hindi: { fontFamily: fonts.hindi }
 });
+}

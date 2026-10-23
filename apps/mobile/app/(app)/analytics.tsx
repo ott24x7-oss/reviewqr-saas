@@ -1,12 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState , useMemo } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { apiData } from "../../src/api/data";
 import { useI18n } from "../../src/i18n";
 import { accountKey } from "../../src/query/keys";
 import { useBusiness } from "../../src/state/business";
 import { useSession } from "../../src/state/session";
-import { colors, fonts } from "../../src/theme";
+import { fonts } from "../../src/theme";
+import { usePalette } from "../../src/ui/theme";
+import type { Palette } from "../../src/ui/tokens";
 
 type Analytics = {
   summary: {
@@ -20,7 +22,7 @@ type Analytics = {
     feedback: number;
     avgRating: number | null;
   };
-  trend: Array<{ day: string; scans: number }>;
+  trend: { day: string; scans: number }[];
   heatmap: number[][];
   modules: { store: boolean };
 };
@@ -28,6 +30,8 @@ type Analytics = {
 const DAYS = ["S", "M", "T", "W", "T", "F", "S"];
 
 export default function AnalyticsScreen() {
+  const palette = usePalette();
+  const styles = useMemo(() => makeStyles(palette), [palette]);
   const { t, lang } = useI18n();
   const { user } = useSession();
   const { business } = useBusiness();
@@ -102,6 +106,8 @@ export default function AnalyticsScreen() {
 }
 
 function Card({ label, value }: { label: string; value: string }) {
+  const palette = usePalette();
+  const styles = useMemo(() => makeStyles(palette), [palette]);
   const { lang } = useI18n();
   return (
     <View style={styles.card}>
@@ -111,15 +117,16 @@ function Card({ label, value }: { label: string; value: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+  return StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.paper },
   content: { padding: 16, gap: 12 },
   title: { fontFamily: fonts.title, fontSize: 22, color: colors.ink },
   ranges: { flexDirection: "row", gap: 8 },
-  chip: { minHeight: 44, borderRadius: 999, paddingHorizontal: 16, justifyContent: "center", backgroundColor: colors.card },
-  chipOn: { backgroundColor: colors.ink },
+  chip: { minHeight: 48, borderRadius: 999, paddingHorizontal: 16, justifyContent: "center", backgroundColor: colors.card },
+  chipOn: { backgroundColor: colors.deep },
   chipText: { fontFamily: fonts.bodyStrong, color: colors.ink },
-  chipTextOn: { color: colors.white },
+  chipTextOn: { color: colors.onPrimary },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
   card: { width: "47%", backgroundColor: colors.card, borderRadius: 20, padding: 16, gap: 6 },
   cardLabel: { fontFamily: fonts.body, color: colors.inkSoft, fontSize: 14 },
@@ -134,3 +141,4 @@ const styles = StyleSheet.create({
   heatCell: { width: 10, height: 10, borderRadius: 2 },
   hindi: { fontFamily: fonts.hindi }
 });
+}

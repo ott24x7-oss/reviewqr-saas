@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { apiData } from "../../src/api/data";
@@ -6,12 +7,16 @@ import { accountKey } from "../../src/query/keys";
 import { useBusiness } from "../../src/state/business";
 import { hasModule, useEntitlement } from "../../src/state/entitlement";
 import { useSession } from "../../src/state/session";
-import { colors, fonts } from "../../src/theme";
+import { fonts } from "../../src/theme";
+import { usePalette } from "../../src/ui/theme";
+import type { Palette } from "../../src/ui/tokens";
 import { LockedModuleCard } from "../../src/ui/locked-module";
 
 type StoreSettings = { holiday?: boolean; upiId?: string; design?: string };
 
 export default function StoreScreen() {
+  const palette = usePalette();
+  const styles = useMemo(() => makeStyles(palette), [palette]);
   const { t, lang } = useI18n();
   const { user } = useSession();
   const { business } = useBusiness();
@@ -39,7 +44,8 @@ export default function StoreScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+  return StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.paper },
   content: { padding: 16, gap: 12 },
   card: { backgroundColor: colors.card, borderRadius: 20, padding: 16, gap: 8 },
@@ -47,3 +53,4 @@ const styles = StyleSheet.create({
   note: { fontFamily: fonts.body, color: colors.inkSoft },
   hindi: { fontFamily: fonts.hindi }
 });
+}

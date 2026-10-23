@@ -1,20 +1,31 @@
+import { FlashList } from "@shopify/flash-list";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { createAudioPlayer, type AudioPlayer } from "expo-audio";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams } from "expo-router";
-import { useState } from "react";
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ChevronRight, ClipboardList } from "lucide-react-native";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Linking, StyleSheet, Text, View } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withDelay, withSpring, withTiming } from "react-native-reanimated";
 import { apiData } from "../../src/api/data";
 import { ApiError } from "../../src/api/http";
+import { CoachTour } from "../../src/guide/coach";
+import { HelpButton } from "../../src/guide/help-sheet";
 import { useI18n } from "../../src/i18n";
 import { accountKey } from "../../src/query/keys";
 import { useBusiness } from "../../src/state/business";
 import { hasModule, useEntitlement } from "../../src/state/entitlement";
 import { useSession } from "../../src/state/session";
-import { colors, fonts } from "../../src/theme";
+import { fonts } from "../../src/theme";
+import { Card, Chip, EmptyState, Skeleton } from "../../src/ui/bits";
 import { Field, PillButton } from "../../src/ui/controls";
+import { tapStrong } from "../../src/ui/haptics";
 import { LockedModuleCard } from "../../src/ui/locked-module";
+import { useTheme } from "../../src/ui/theme";
 
 type Tab = "products" | "orders" | "feedback";
+type Status = (typeof STATUSES)[number];
 
 type Product = {
   id: string;
@@ -42,8 +53,70 @@ type FeedbackRow = {
 
 const STATUSES = ["ACCEPTED", "PREPARING", "READY", "COMPLETED"] as const;
 
+function labelFor(status: string, t: { statusNew: string; statusPreparing: string; statusReady: string; statusDone: string }) {
+  if (status === "ACCEPTED") return t.statusNew;
+  if (status === "PREPARING") return t.statusPreparing;
+  if (status === "READY") return t.statusReady;
+  if (status === "COMPLETED") return t.statusDone;
+  return status;
+}
+
+function nextStatus(status: string): Status | null {
+  const index = STATUSES.indexOf(status as Status);
+  if (index < 0 || index >= STATUSES.length - 1) return null;
+  return STATUSES[index + 1];
+}
+
+function EnterRow({ index, drop, children }: { index: number; drop?: boolean; children: ReactNode }) {
+  const { reduceMotion } = useTheme();
+  const y = useSharedValue(reduceMotion ? 0 : drop ? -28 : 10);
+  const opacity = useSharedValue(reduceMotion ? 1 : 0);
+  useEffect(() => {
+    if (reduceMotion) return;
+    const delay = index < 8 ? index * 30 : 0;
+    y.value = withDelay(delay, withSpring(0, { damping: 16 }));
+    opacity.value = withDelay(delay, withTiming(1, { duration: 220 }));
+  }, [drop, index, opacity, reduceMotion, y]);
+  const anim = useAnimatedStyle(() => ({ opacity: opacity.value, transform: [{ translateY: y.value }] }));
+  return <Animated.View style={anim}>{children}</Animated.View>;
+}
+
+function SwipeAdvance({ hint, onAdvance, children }: { hint: string; onAdvance: () => void; children: ReactNode }) {
+  const { palette, reduceMotion } = useTheme();
+  const x = useSharedValue(0);
+  const width = useSharedValue(1);
+  const pan = Gesture.Pan()
+    .activeOffsetX(16)
+    .failOffsetY([-18, 18])
+    .onUpdate((event) => {
+      x.value = Math.max(0, event.translationX);
+    })
+    .onEnd(() => {
+      const pass = x.value > width.value * 0.4;
+      x.value = reduceMotion ? 0 : withSpring(0, { damping: 18 });
+      if (pass) runOnJS(onAdvance)();
+    });
+  const card = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
+  return (
+    <GestureDetector gesture={pan}>
+      <View
+        onLayout={(event) => {
+          width.value = event.nativeEvent.layout.width;
+        }}
+      >
+        <View style={[styles.reveal, { backgroundColor: palette.deep }]}>
+          <ChevronRight color="#FFFFFF" size={22} strokeWidth={1.75} />
+          <Text style={styles.revealText}>{hint}</Text>
+        </View>
+        <Animated.View style={card}>{children}</Animated.View>
+      </View>
+    </GestureDetector>
+  );
+}
+
 export default function OrdersScreen() {
   const { t, lang } = useI18n();
+  const { palette } = useTheme();
   const { user } = useSession();
   const { business } = useBusiness();
   const client = useQueryClient();
@@ -51,18 +124,24 @@ export default function OrdersScreen() {
   const requested = params.tab === "orders" || params.tab === "feedback" || params.tab === "products" ? params.tab : null;
   const linkKey = requested ?? "";
   const [picked, setPicked] = useState<{ key: string; tab: Tab } | null>(null);
-  const tab = picked?.key === linkKey ? picked.tab : (requested ?? "products");
+  const tab = picked?.key === linkKey ? picked.tab : (requested ?? "orders");
   function setTab(next: Tab) {
     setPicked({ key: linkKey, tab: next });
   }
+  const [filter, setFilter] = useState<Status>("ACCEPTED");
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [reply, setReply] = useState<string | null>(null);
+  const [detail, setDetail] = useState<OrderCard | null>(null);
+  const [skeletonReady, setSkeletonReady] = useState(false);
   const entitlement = useEntitlement();
   const modules = entitlement.data?.modules;
   const id = business?.id;
   const userId = user?.id ?? "";
+  const known = useRef<Set<string> | null>(null);
+  const fresh = useRef<Set<string>>(new Set());
+  const player = useRef<AudioPlayer | null>(null);
 
   const products = useQuery({
     queryKey: accountKey(userId, "menu", id),
@@ -79,6 +158,46 @@ export default function OrdersScreen() {
     enabled: !!user && !!id && tab === "feedback",
     queryFn: () => apiData<{ items: FeedbackRow[] }>(`/api/v1/feedback?limit=30${id ? `&businessId=${id}` : ""}`)
   });
+
+  const loading = tab === "products" ? products.isLoading : tab === "orders" ? orders.isLoading : feedback.isLoading;
+  useEffect(() => {
+    if (!loading) return;
+    const timer = setTimeout(() => setSkeletonReady(true), 300);
+    return () => {
+      clearTimeout(timer);
+      setSkeletonReady(false);
+    };
+  }, [loading]);
+  const showSkeleton = loading && skeletonReady;
+
+  useEffect(() => {
+    try {
+      player.current = createAudioPlayer(require("../../assets/sounds/order.wav"));
+    } catch {
+      player.current = null;
+    }
+    return () => {
+      player.current?.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    const items = orders.data?.items;
+    if (!items) return;
+    if (known.current) {
+      const arrived = items.filter((item) => !known.current?.has(item.id));
+      for (const item of arrived) fresh.current.add(item.id);
+      if (arrived.length > 0) {
+        tapStrong();
+        const sound = player.current;
+        if (sound) {
+          sound.seekTo(0).catch(() => undefined);
+          sound.play();
+        }
+      }
+    }
+    known.current = new Set(items.map((item) => item.id));
+  }, [orders.data]);
 
   async function run(path: string, body: unknown, key: string[]) {
     setError(null);
@@ -99,16 +218,19 @@ export default function OrdersScreen() {
     setPrice("");
   }
 
-  async function fromPhoto() {
+  async function fromPhoto(source: "camera" | "library") {
     if (!id) return;
     setError(null);
-    const shot = await ImagePicker.launchCameraAsync({ base64: true, quality: 0.4, mediaTypes: ["images"] });
+    const shot =
+      source === "camera"
+        ? await ImagePicker.launchCameraAsync({ base64: true, quality: 0.4, mediaTypes: ["images"] })
+        : await ImagePicker.launchImageLibraryAsync({ base64: true, quality: 0.4, mediaTypes: ["images"] });
     if (shot.canceled || !shot.assets[0]?.base64) return;
     try {
-      const data = await apiData<{ item: { name?: string; description?: string; category?: string; veg?: string } }>(
-        `/api/v1/businesses/${id}/menu/snap`,
-        { method: "POST", body: JSON.stringify({ image: `data:image/jpeg;base64,${shot.assets[0].base64}` }) }
-      );
+      const data = await apiData<{ item: { name?: string } }>(`/api/v1/businesses/${id}/menu/snap`, {
+        method: "POST",
+        body: JSON.stringify({ image: `data:image/jpeg;base64,${shot.assets[0].base64}` })
+      });
       if (data.item.name) setName(data.item.name);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Type the name and price");
@@ -120,8 +242,16 @@ export default function OrdersScreen() {
     const available = !item.available;
     await run(`/api/v1/businesses/${id}/menu`, { action: "update", id: item.id, available }, accountKey(userId, "menu", id));
     for (const variant of item.variants || []) {
-      await run(`/api/v1/businesses/${id}/menu`, { action: "variant-update", id: variant.id, inStock: available }, accountKey(userId, "menu", id));
+      await run(
+        `/api/v1/businesses/${id}/menu`,
+        { action: "variant-update", id: variant.id, inStock: available },
+        accountKey(userId, "menu", id)
+      );
     }
+  }
+
+  async function setOrderStatus(orderId: string, status: string) {
+    await run(`/api/v1/orders/${orderId}/status`, { status }, accountKey(userId, "orders", id || ""));
   }
 
   async function draftReply(row: FeedbackRow) {
@@ -134,108 +264,238 @@ export default function OrdersScreen() {
       setReply(data.publicReply);
       const phone = (row.review.customerPhone || "").replace(/\D/g, "");
       if (phone.length >= 8) {
-        const url = `https://wa.me/${phone}?text=${encodeURIComponent(data.whatsappReply)}`;
-        await Linking.openURL(url);
+        await Linking.openURL(`https://wa.me/${phone}?text=${encodeURIComponent(data.whatsappReply)}`);
       }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "A reply draft isn't available right now.");
     }
   }
 
-  return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+  async function resolve(row: FeedbackRow) {
+    setError(null);
+    try {
+      await apiData(`/api/v1/feedback/${row.id}`, { method: "PATCH", body: JSON.stringify({ status: "RESOLVED" }) });
+      await client.invalidateQueries({ queryKey: accountKey(userId, "feedback", id) });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not save");
+    }
+  }
+
+  const menuLocked = !!(modules && !hasModule(modules, "MENU"));
+  const storeLocked = !!(modules && !hasModule(modules, "STORE"));
+  const reviewsLocked = !!(modules && !hasModule(modules, "REVIEWS"));
+  const locked = tab === "products" ? menuLocked : tab === "orders" ? storeLocked : reviewsLocked;
+  const orderRows = (orders.data?.items ?? []).filter((order) => order.status === filter);
+  const listData: (Product | OrderCard | FeedbackRow)[] = locked
+    ? []
+    : tab === "products"
+      ? (products.data?.items ?? [])
+      : tab === "orders"
+        ? orderRows
+        : (feedback.data?.items ?? []);
+
+  const header = (
+    <View style={styles.header}>
+      <View style={styles.titleRow}>
+        <Text style={[styles.screenTitle, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.orders}</Text>
+        <HelpButton title={t.coachOrdersFilter} body={t.coachOrdersSwipeBody} />
+      </View>
       <View style={styles.row}>
-        {(["products", "orders", "feedback"] as const).map((item) => (
-          <Pressable key={item} onPress={() => setTab(item)} style={[styles.chip, tab === item && styles.chipOn]}>
-            <Text style={[styles.chipText, tab === item && styles.chipTextOn, lang === "hi" && styles.hindi]}>
-              {item === "products" ? t.products : item === "orders" ? t.orders : t.feedback}
-            </Text>
-          </Pressable>
+        {(["orders", "products", "feedback"] as const).map((item) => (
+          <Chip
+            key={item}
+            label={item === "products" ? t.products : item === "orders" ? t.orders : t.feedback}
+            selected={tab === item}
+            onPress={() => setTab(item)}
+          />
         ))}
       </View>
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-      {tab === "products" && modules && !hasModule(modules, "MENU") ? <LockedModuleCard moduleId="MENU" /> : null}
-      {tab === "products" && (!modules || hasModule(modules, "MENU")) ? (
+      {tab === "orders" && !locked ? (
+        <View style={styles.row}>
+          {STATUSES.map((status) => (
+            <Chip key={status} label={labelFor(status, t)} selected={filter === status} onPress={() => setFilter(status)} />
+          ))}
+        </View>
+      ) : null}
+      {error ? <Text style={[styles.error, { color: palette.danger }]}>{error}</Text> : null}
+      {locked ? <LockedModuleCard moduleId={tab === "products" ? "MENU" : tab === "orders" ? "STORE" : "REVIEWS"} /> : null}
+      {tab === "products" && !locked ? (
         <View style={styles.stack}>
           <Field label={t.name} tone="paper" value={name} onChangeText={setName} />
           <Field label={t.price} tone="paper" value={price} onChangeText={setPrice} keyboardType="decimal-pad" />
           <PillButton label={t.quickAdd} onPress={addProduct} disabled={!name.trim() || !price.trim()} tone="dark" />
-          <PillButton label={t.photo} onPress={fromPhoto} tone="outline" />
-          {(products.data?.items ?? []).map((item) => (
-            <View key={item.id} style={styles.card}>
-              <Text style={styles.title}>{item.name}</Text>
-              <Text style={styles.note}>₹{Math.round(item.pricePaise / 100)}</Text>
-              <PillButton label={item.available ? t.available : t.inStock} tone={item.available ? "dark" : "outline"} onPress={() => toggle(item)} />
-              <PillButton
-                label={t.duplicate}
-                tone="outline"
-                onPress={() => id && run(`/api/v1/businesses/${id}/menu`, { action: "duplicate", id: item.id, kind: "item" }, accountKey(userId, "menu", id))}
-              />
-            </View>
-          ))}
+          <PillButton label={t.photo} onPress={() => fromPhoto("camera")} tone="outline" />
+          <PillButton label={t.gallery} onPress={() => fromPhoto("library")} tone="outline" />
         </View>
       ) : null}
-      {tab === "orders" && modules && !hasModule(modules, "STORE") ? <LockedModuleCard moduleId="STORE" /> : null}
-      {tab === "orders" && (!modules || hasModule(modules, "STORE"))
-        ? (orders.data?.items ?? []).map((order) => (
-            <View key={order.id} style={styles.card}>
-              <Text style={styles.title}>#{order.number}</Text>
-              <Text style={styles.note}>
-                {order.customerName} · ₹{Math.round(order.totalPaise / 100)} · {order.status}
-              </Text>
-              <Text style={styles.note}>{order.items.map((item) => `${item.qty} ${item.name}`).join(", ")}</Text>
-              <View style={styles.row}>
-                {STATUSES.map((status) => (
-                  <Pressable
-                    key={status}
-                    style={styles.chip}
-                    onPress={() => run(`/api/v1/orders/${order.id}/status`, { status }, accountKey(userId, "orders", id || ""))}
-                  >
-                    <Text style={styles.chipText}>{status}</Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-          ))
-        : null}
-      {tab === "feedback" && modules && !hasModule(modules, "REVIEWS") ? <LockedModuleCard moduleId="REVIEWS" /> : null}
-      {tab === "feedback" && (!modules || hasModule(modules, "REVIEWS"))
-        ? (feedback.data?.items ?? []).map((row) => (
-            <View key={row.id} style={styles.card}>
-              <Text style={styles.title}>
-                {row.review.customerName || t.feedback} · {row.review.rating}
-              </Text>
-              <Text style={styles.note}>{row.message}</Text>
-              {reply ? <Text style={styles.note}>{reply}</Text> : null}
-              <PillButton label={t.reply} onPress={() => draftReply(row)} tone="dark" />
-              <PillButton
-                label={t.resolved}
-                tone="outline"
-                onPress={() =>
-                  apiData(`/api/v1/feedback/${row.id}`, { method: "PATCH", body: JSON.stringify({ status: "RESOLVED" }) })
-                    .then(() => client.invalidateQueries({ queryKey: accountKey(userId, "feedback", id) }))
-                    .catch((err) => setError(err instanceof ApiError ? err.message : "Could not save"))
-                }
-              />
-            </View>
-          ))
-        : null}
-    </ScrollView>
+      {showSkeleton ? (
+        <View style={styles.stack}>
+          <Skeleton height={88} />
+          <Skeleton height={88} />
+        </View>
+      ) : null}
+    </View>
+  );
+
+  return (
+    <View style={[styles.screen, { backgroundColor: palette.paper }]}>
+      <FlashList
+        data={showSkeleton || locked ? [] : listData}
+        keyExtractor={(item) => item.id}
+        ListHeaderComponent={header}
+        contentContainerStyle={styles.listPad}
+        ListEmptyComponent={
+          locked || showSkeleton || loading ? null : tab === "orders" ? (
+            <EmptyState icon={ClipboardList} title={t.emptyOrdersTitle} body={t.emptyOrdersBody} />
+          ) : tab === "products" ? (
+            <EmptyState icon={ClipboardList} title={t.emptyMenuTitle} body={t.emptyMenuBody} action={t.quickAdd} onAction={addProduct} />
+          ) : (
+            <EmptyState icon={ClipboardList} title={t.emptyFeedbackTitle} body={t.emptyFeedbackBody} />
+          )
+        }
+        renderItem={({ item, index }) => {
+          if (tab === "products") {
+            const product = item as Product;
+            return (
+              <EnterRow index={index}>
+                <Card style={styles.gap}>
+                  <Text style={[styles.title, { color: palette.ink }]}>{product.name}</Text>
+                  <Text style={[styles.note, { color: palette.muted }]}>₹{Math.round(product.pricePaise / 100)}</Text>
+                  <PillButton
+                    label={product.available ? t.available : t.inStock}
+                    tone={product.available ? "dark" : "outline"}
+                    onPress={() => toggle(product)}
+                  />
+                  <PillButton
+                    label={t.duplicate}
+                    tone="outline"
+                    onPress={() =>
+                      id &&
+                      run(
+                        `/api/v1/businesses/${id}/menu`,
+                        { action: "duplicate", id: product.id, kind: "item" },
+                        accountKey(userId, "menu", id)
+                      )
+                    }
+                  />
+                </Card>
+              </EnterRow>
+            );
+          }
+          if (tab === "feedback") {
+            const row = item as FeedbackRow;
+            return (
+              <EnterRow index={index}>
+                <SwipeAdvance hint={t.resolved} onAdvance={() => resolve(row)}>
+                  <Card style={styles.gap}>
+                    <Text style={[styles.title, { color: palette.ink }, lang === "hi" && styles.hindi]}>
+                      {row.review.customerName || t.feedback} · {row.review.rating}
+                    </Text>
+                    <Text style={[styles.note, { color: palette.muted }]}>{row.message}</Text>
+                    {reply ? <Text style={[styles.note, { color: palette.ink }]}>{reply}</Text> : null}
+                    <View style={styles.row}>
+                      <Chip label={t.replyThanks} onPress={() => draftReply(row)} />
+                      <Chip label={t.replySorry} onPress={() => draftReply(row)} />
+                      <Chip label={t.replyOnIt} onPress={() => draftReply(row)} />
+                    </View>
+                    <PillButton label={t.reply} onPress={() => draftReply(row)} tone="dark" />
+                    <PillButton label={t.resolved} tone="outline" onPress={() => resolve(row)} />
+                  </Card>
+                </SwipeAdvance>
+              </EnterRow>
+            );
+          }
+          const order = item as OrderCard;
+          const upcoming = nextStatus(order.status);
+          const action =
+            order.status === "ACCEPTED" ? t.acceptOrder : order.status === "PREPARING" ? t.markReady : order.status === "READY" ? t.statusDone : "";
+          return (
+            <EnterRow index={index} drop={fresh.current.has(order.id)}>
+              <SwipeAdvance hint={action || t.viewDetails} onAdvance={() => (upcoming ? setOrderStatus(order.id, upcoming) : setDetail(order))}>
+                <Card style={styles.gap}>
+                  <View style={styles.titleRow}>
+                    <Text style={[styles.title, { color: palette.ink }]}>#{order.number}</Text>
+                    <View style={[styles.status, { backgroundColor: palette.chip }]}>
+                      <Text style={[styles.statusText, { color: palette.deep }]}>{labelFor(order.status, t)}</Text>
+                    </View>
+                  </View>
+                  <Text style={[styles.note, { color: palette.muted }]}>
+                    {order.customerName} · ₹{Math.round(order.totalPaise / 100)}
+                  </Text>
+                  <Text style={[styles.note, { color: palette.ink }]}>{order.items.map((line) => `${line.qty} ${line.name}`).join(", ")}</Text>
+                  <View style={styles.track}>
+                    {STATUSES.map((status, step) => (
+                      <View
+                        key={status}
+                        style={[
+                          styles.trackDot,
+                          { backgroundColor: STATUSES.indexOf(order.status as Status) >= step ? palette.primary : palette.line }
+                        ]}
+                      />
+                    ))}
+                  </View>
+                  <View style={styles.row}>
+                    {STATUSES.map((status) => (
+                      <Chip key={status} label={labelFor(status, t)} selected={order.status === status} onPress={() => setOrderStatus(order.id, status)} />
+                    ))}
+                  </View>
+                  {upcoming ? <PillButton label={action} onPress={() => setOrderStatus(order.id, upcoming)} tone="dark" /> : null}
+                  <PillButton label={t.viewDetails} tone="outline" onPress={() => setDetail(order)} />
+                </Card>
+              </SwipeAdvance>
+            </EnterRow>
+          );
+        }}
+      />
+      {detail ? (
+        <Card style={styles.detail}>
+          <Text style={[styles.title, { color: palette.ink }]}>#{detail.number}</Text>
+          <Text style={[styles.note, { color: palette.muted }]}>{detail.items.map((line) => `${line.qty} ${line.name}`).join("\n")}</Text>
+          <PillButton label={t.resolved} tone="outline" onPress={() => setDetail(null)} />
+        </Card>
+      ) : null}
+      {tab === "orders" ? (
+        <CoachTour
+          screen="orders"
+          steps={[
+            { title: t.coachOrdersFilter, body: t.coachOrdersFilterBody, top: 120 },
+            { title: t.coachOrdersSwipe, body: t.coachOrdersSwipeBody, top: 280 }
+          ]}
+        />
+      ) : null}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.paper },
-  content: { padding: 16, gap: 12 },
+  screen: { flex: 1 },
+  listPad: { padding: 16, paddingBottom: 32 },
+  header: { gap: 12, marginBottom: 12 },
   stack: { gap: 12 },
   row: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  chip: { minHeight: 44, borderRadius: 999, paddingHorizontal: 14, justifyContent: "center", backgroundColor: colors.card },
-  chipOn: { backgroundColor: colors.ink },
-  chipText: { fontFamily: fonts.bodyStrong, color: colors.ink, fontSize: 13 },
-  chipTextOn: { color: colors.white },
-  card: { backgroundColor: colors.card, borderRadius: 20, padding: 14, gap: 8 },
-  title: { fontFamily: fonts.title, fontSize: 18, color: colors.ink },
-  note: { fontFamily: fonts.body, color: colors.inkSoft },
-  error: { color: colors.danger, fontFamily: fonts.body },
-  hindi: { fontFamily: fonts.hindi }
+  titleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
+  screenTitle: { fontFamily: fonts.display, fontSize: 28 },
+  title: { fontFamily: fonts.title, fontSize: 17 },
+  note: { fontFamily: fonts.body, fontSize: 15, lineHeight: 22 },
+  error: { fontFamily: fonts.body },
+  hindi: { fontFamily: fonts.hindi },
+  gap: { marginBottom: 12 },
+  status: { borderRadius: 999, paddingHorizontal: 10, minHeight: 28, justifyContent: "center" },
+  statusText: { fontFamily: fonts.bodyStrong, fontSize: 13 },
+  track: { flexDirection: "row", gap: 6 },
+  trackDot: { flex: 1, height: 6, borderRadius: 99 },
+  reveal: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 12,
+    borderRadius: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingLeft: 16,
+    gap: 6
+  },
+  revealText: { color: "#FFFFFF", fontFamily: fonts.bodyStrong },
+  detail: { position: "absolute", left: 16, right: 16, bottom: 16, gap: 8 }
 });
