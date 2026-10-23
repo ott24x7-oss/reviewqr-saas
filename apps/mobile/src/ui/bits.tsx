@@ -213,7 +213,10 @@ export function KpiCard({
   trend,
   points,
   count,
-  prefix
+  prefix,
+  icon: Icon,
+  trendLabel,
+  fill
 }: {
   label: string;
   value: string;
@@ -221,6 +224,9 @@ export function KpiCard({
   points?: number[];
   count?: number | null;
   prefix?: string;
+  icon?: LucideIcon;
+  trendLabel?: string;
+  fill?: boolean;
 }) {
   const { lang } = useI18n();
   const { palette, reduceMotion } = useTheme();
@@ -242,17 +248,25 @@ export function KpiCard({
   const arrowColor = trend === "down" ? palette.danger : palette.deep;
   const shown = count == null || counted == null ? value : `${prefix ?? ""}${counted}`;
   return (
-    <Card style={styles.kpi}>
-      <Text style={[styles.caption, { color: palette.muted }, lang === "hi" && styles.hindiBody]}>{label}</Text>
+    <Card style={[styles.kpi, fill && styles.kpiFill]}>
+      <View style={styles.kpiLabelRow}>
+        <Text style={[styles.caption, { color: palette.muted, flex: 1 }, lang === "hi" && styles.hindiBody]}>{label}</Text>
+        {Icon ? <Icon color={palette.muted} size={16} strokeWidth={1.75} /> : null}
+      </View>
       <View style={styles.kpiRow}>
         <Text style={[styles.kpiValue, { color: palette.ink }]}>{shown}</Text>
-        {arrow ? (
+        {!trendLabel && arrow ? (
           <Text accessibilityLabel={trend} style={[styles.arrow, { color: arrowColor }]}>
             {arrow}
           </Text>
         ) : null}
       </View>
-      <Sparkline points={points && points.length ? points : [0, 0]} />
+      <Sparkline points={points && points.length ? points : [0, 0]} width={fill ? 120 : 88} />
+      {trendLabel ? (
+        <Text accessibilityLabel={trend} style={[styles.trend, { color: arrowColor }, lang === "hi" && styles.hindiBody]}>
+          {trendLabel}
+        </Text>
+      ) : null}
     </Card>
   );
 }
@@ -428,7 +442,10 @@ const styles = StyleSheet.create({
   tileHint: { fontFamily: fonts.body, fontSize: 12, lineHeight: 16 },
   check: { position: "absolute", top: 8, right: 8, width: 22, height: 22, borderRadius: 11, alignItems: "center", justifyContent: "center" },
   kpi: { width: 148, gap: 6 },
+  kpiFill: { width: "100%" },
+  kpiLabelRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 6 },
   kpiRow: { flexDirection: "row", alignItems: "flex-end", gap: 6 },
+  trend: { fontFamily: fonts.bodyStrong, fontSize: 11 },
   kpiValue: { fontFamily: fonts.display, fontSize: 26 },
   arrow: { fontFamily: fonts.bodyStrong, fontSize: 16, marginBottom: 4 },
   caption: { fontFamily: fonts.body, fontSize: 13 },
