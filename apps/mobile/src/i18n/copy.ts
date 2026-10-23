@@ -287,6 +287,7 @@ const en = {
   hintUpi: "UPI id",
   hintOpen: "Taking orders",
   hintClosed: "Holiday mode is on",
+  soldOut: "Sold out",
   hintNoStaff: "Add someone who works the counter",
   daysLeft: "{days} days left"
 };
@@ -578,6 +579,7 @@ const hi: typeof en = {
   hintUpi: "UPI आईडी",
   hintOpen: "ऑर्डर ले रहे हैं",
   hintClosed: "छुट्टी मोड चालू है",
+  soldOut: "खत्म",
   hintNoStaff: "काउंटर पर काम करने वाले को जोड़ें",
   daysLeft: "{days} दिन बाकी"
 };
