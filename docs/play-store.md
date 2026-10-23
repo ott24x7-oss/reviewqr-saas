@@ -51,6 +51,10 @@ Users can request deletion in the app and at `/account/delete`. Data is encrypte
 - Notifications: new order, new feedback, shipping update, and plan expiry. The owner can turn them off in More.
 - NFC: write the tap-page URL onto a stand, read it back, and optionally lock the tag. Shown to owners and field roles. A phone without NFC sees a plain message.
 
+## Store listing
+
+Phone screenshots (1080×1920), the 1024×500 feature graphic, English and Hindi captions, the short and full descriptions, and a 30-second promo script are in [play-store/](play-store/). The screenshots are the redesigned app. The listing does not sell plans. Plans stay on the website.
+
 ## Crash reports
 
 The app uses `@sentry/react-native`. It starts only when `EXPO_PUBLIC_SENTRY_DSN` is set. An empty value sends nothing. Events do not include the user block. Phone numbers, email addresses, and tokens are stripped before send. `release` is `com.qr24x7.app@<version>+<versionCode>` and `dist` is the `versionCode`.
