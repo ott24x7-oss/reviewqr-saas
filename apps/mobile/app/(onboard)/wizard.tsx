@@ -13,16 +13,24 @@ import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
 import * as Sharing from "expo-sharing";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import LottieView from "lottie-react-native";
+import { Camera, Download, Image as ImageIcon, Share2, ShoppingBag, Store, Utensils } from "lucide-react-native";
+import { useEffect, useMemo, useState } from "react";
 import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { apiData } from "../../src/api/data";
 import { ApiError } from "../../src/api/http";
 import { useI18n } from "../../src/i18n";
 import { WIZARD_LOCAL_KEY } from "../../src/onboarding/seen";
 import { useSession } from "../../src/state/session";
-import { colors, fonts } from "../../src/theme";
+import { fonts } from "../../src/theme";
+import { OptionTile, ProgressSteps } from "../../src/ui/bits";
+import { PrimaryButton, TextButton } from "../../src/ui/buttons";
 import { Field, PillButton } from "../../src/ui/controls";
+import { tapSuccess } from "../../src/ui/haptics";
+import { useTheme } from "../../src/ui/theme";
+import type { Palette } from "../../src/ui/tokens";
 
 type Progress = {
   step: number;
@@ -37,6 +45,11 @@ type Done = { businessId: string; name: string; publicUrl: string; scanUrl: stri
 export default function WizardScreen() {
   const { t, lang } = useI18n();
   const { user } = useSession();
+  const { palette, reduceMotion, lowRam } = useTheme();
+  const styles = useMemo(() => makeStyles(palette), [palette]);
+  const slide = useSharedValue(0);
+  const previewFade = useSharedValue(1);
+  const qrScale = useSharedValue(1);
   const [step, setStep] = useState(1);
   const [draft, setDraft] = useState<WizardDraft>(emptyDraft());
   const [ready, setReady] = useState(false);
@@ -94,13 +107,13 @@ export default function WizardScreen() {
   }, [ready, step, draft]);
 
   useEffect(() => {
-    if (step !== 3 || draft.slug.length < 3) {
-      setSlug(null);
-      return;
-    }
+    if (step !== 3 || draft.slug.length < 3) return;
+    const slugQuery = draft.slug;
     const timer = setTimeout(() => {
-      apiData<SlugCheck>(`/api/v1/slugs/availability?slug=${encodeURIComponent(draft.slug)}`)
-        .then(setSlug)
+      apiData<SlugCheck>(`/api/v1/slugs/availability?slug=${encodeURIComponent(slugQuery)}`)
+        .then((row) => {
+          if (row.slug === slugQuery) setSlug(row);
+        })
         .catch(() => setSlug(null));
     }, 300);
     return () => clearTimeout(timer);
@@ -177,8 +190,8 @@ export default function WizardScreen() {
       setError(issues[0]);
       return false;
     }
-    if (nextStep === 3 && !slug?.available) {
-      setError(slug?.reason === "reserved" ? t.slugReserved : t.slugTaken);
+    if (nextStep === 3 && (slug?.slug !== draft.slug || !slug?.available)) {
+      setError(slug?.slug === draft.slug && slug?.reason === "reserved" ? t.slugReserved : t.slugTaken);
       return false;
     }
     await apiData("/api/v1/onboarding", {
@@ -195,6 +208,10 @@ export default function WizardScreen() {
       const saved = await persist(step);
       if (!saved) return;
       if (step < 4) {
+        if (!reduceMotion) {
+          slide.value = 28;
+          slide.value = withTiming(0, { duration: 280 });
+        }
         setStep(step + 1);
         return;
       }
@@ -236,23 +253,57 @@ export default function WizardScreen() {
     if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(path);
   }
 
+  useEffect(() => {
+    if (reduceMotion) return;
+    previewFade.value = 0.45;
+    previewFade.value = withTiming(1, { duration: 200 });
+  }, [draft.name, draft.themeId, previewFade, reduceMotion]);
+
+  useEffect(() => {
+    if (!done) return;
+    tapSuccess();
+    if (reduceMotion || lowRam) {
+      qrScale.value = 1;
+      return;
+    }
+    qrScale.value = 0.9;
+    qrScale.value = withSpring(1, { damping: 14 });
+  }, [done, lowRam, qrScale, reduceMotion]);
+
+  const stepShift = useAnimatedStyle(() => ({ transform: [{ translateX: slide.value }], opacity: reduceMotion ? 1 : 1 }));
+  const previewAnim = useAnimatedStyle(() => ({ opacity: previewFade.value }));
+  const qrAnim = useAnimatedStyle(() => ({ transform: [{ scale: qrScale.value }] }));
+
   if (!ready) return <SafeAreaView style={styles.screen} />;
 
   if (done) {
     return (
       <SafeAreaView style={styles.screen} testID="wizard-success">
         <ScrollView contentContainerStyle={styles.content}>
-          <Text style={[styles.title, lang === "hi" && styles.hindi]}>{t.successTitle}</Text>
-          <Text style={styles.url}>{done.publicUrl}</Text>
-          <Image source={{ uri: done.qrDataUrl }} style={styles.qr} />
-          <PillButton label={t.openPage} onPress={() => Linking.openURL(done.publicUrl)} />
-          <PillButton
-            label={t.shareWhatsapp}
-            tone="outline"
-            onPress={() => Linking.openURL(`https://wa.me/?text=${encodeURIComponent(done.publicUrl)}`)}
-          />
-          <PillButton label={t.downloadQr} tone="outline" onPress={shareQr} />
-          <PillButton label={t.orderStand} tone="dark" onPress={() => router.replace("/(app)/shop")} />
+          {!reduceMotion && !lowRam ? (
+            <LottieView source={require("../../assets/lottie/confetti.json")} autoPlay loop={false} style={styles.confetti} />
+          ) : null}
+          <Text style={[styles.title, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.pageLive}</Text>
+          <Text style={[styles.url, { color: palette.muted }]}>{done.publicUrl}</Text>
+          <Animated.View style={[styles.qrCard, { backgroundColor: palette.card }, qrAnim]}>
+            <Image source={{ uri: done.qrDataUrl }} style={styles.qr} />
+          </Animated.View>
+          <View style={styles.actions}>
+            <Pressable accessibilityRole="button" accessibilityLabel={t.shareWhatsapp} onPress={() => Linking.openURL(`https://wa.me/?text=${encodeURIComponent(done.publicUrl)}`)} style={styles.action}>
+              <Share2 color={palette.deep} size={22} strokeWidth={1.75} />
+              <Text style={[styles.actionText, { color: palette.ink }]}>{t.shareWhatsapp}</Text>
+            </Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel={t.downloadQr} onPress={shareQr} style={styles.action}>
+              <Download color={palette.deep} size={22} strokeWidth={1.75} />
+              <Text style={[styles.actionText, { color: palette.ink }]}>{t.downloadQr}</Text>
+            </Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel={t.orderStand} onPress={() => router.replace("/(app)/shop")} style={styles.action}>
+              <ShoppingBag color={palette.deep} size={22} strokeWidth={1.75} />
+              <Text style={[styles.actionText, { color: palette.ink }]}>{t.orderStand}</Text>
+            </Pressable>
+          </View>
+          <PrimaryButton label={t.openPage} onPress={() => Linking.openURL(done.publicUrl)} />
+          <TextButton label={t.goDashboard} onPress={() => router.replace("/(app)")} />
         </ScrollView>
       </SafeAreaView>
     );
@@ -263,19 +314,25 @@ export default function WizardScreen() {
   return (
     <SafeAreaView style={styles.screen} testID={`wizard-step-${step}`}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={[styles.kicker, lang === "hi" && styles.hindi]}>{step} / 4</Text>
+        <ProgressSteps labels={[t.stepBusiness, t.stepLook, t.stepLink, t.stepMenu]} step={step} />
+        <Animated.View style={stepShift}>
         {step === 1 ? (
           <View style={styles.stack}>
             <Field label={t.businessName} tone="paper" value={draft.name} onChangeText={(name) => patch({ name })} />
             <Text style={styles.label}>{t.category}</Text>
-            <View style={styles.row}>
-              {BUSINESS_CATEGORIES.map((item) => (
-                <Pressable key={item.id} onPress={() => patch({ category: item.id })} style={[styles.chip, draft.category === item.id && styles.chipOn]}>
-                  <Text style={[styles.chipText, draft.category === item.id && styles.chipTextOn, lang === "hi" && styles.hindi]}>
-                    {lang === "hi" ? item.hi : item.en}
-                  </Text>
-                </Pressable>
-              ))}
+            <View style={styles.tiles}>
+              {BUSINESS_CATEGORIES.map((item) => {
+                const Icon = item.id === "cafe" ? Utensils : item.id === "clinic" ? Store : item.id === "shop" ? ShoppingBag : item.id === "salon" ? ImageIcon : Store;
+                return (
+                  <OptionTile
+                    key={item.id}
+                    icon={Icon}
+                    title={lang === "hi" ? item.hi : item.en}
+                    selected={draft.category === item.id}
+                    onPress={() => patch({ category: item.id })}
+                  />
+                );
+              })}
             </View>
             <Field label={t.city} tone="paper" value={draft.city} onChangeText={(city) => patch({ city })} />
             <Field label={t.whatsapp} tone="paper" value={draft.whatsapp} onChangeText={(whatsapp) => patch({ whatsapp })} keyboardType="phone-pad" />
@@ -283,15 +340,17 @@ export default function WizardScreen() {
         ) : null}
         {step === 2 ? (
           <View style={styles.stack}>
-            <PillButton label={t.camera} tone="outline" onPress={() => upload("logo", "camera")} />
-            <PillButton label={t.gallery} tone="outline" onPress={() => upload("logo", "library")} />
+            <View style={styles.tiles}>
+              <OptionTile icon={Camera} title={t.camera} onPress={() => upload("logo", "camera")} />
+              <OptionTile icon={ImageIcon} title={t.gallery} onPress={() => upload("logo", "library")} />
+            </View>
             <PillButton label={t.coverPhoto} tone="outline" onPress={() => upload("cover", "library")} />
-            <View style={[styles.preview, { backgroundColor: theme.bg }]}>
+            <Animated.View style={[styles.preview, { backgroundColor: theme.bg }, previewAnim]}>
               <Text style={[styles.previewName, { color: theme.ink }]}>{draft.name || t.businessName}</Text>
               <View style={[styles.previewButton, { backgroundColor: theme.button }]}>
                 <Text style={styles.previewButtonText}>{t.preview}</Text>
               </View>
-            </View>
+            </Animated.View>
             <View style={styles.row}>
               {ONBOARDING_THEMES.map((item) => (
                 <Pressable key={item.id} onPress={() => patch({ themeId: item.id })} style={[styles.swatch, { backgroundColor: item.bg }, draft.themeId === item.id && styles.swatchOn]} />
@@ -308,8 +367,8 @@ export default function WizardScreen() {
               autoCapitalize="none"
               onChangeText={(value) => patch({ slug: normalizeSlug(value) })}
             />
-            {slug?.url ? <Text style={styles.url}>{slug.url}</Text> : null}
-            {slug ? (
+            {slug?.slug === draft.slug && slug.url ? <Text style={styles.url}>{slug.url}</Text> : null}
+            {slug?.slug === draft.slug ? (
               <Text style={styles.note}>{slug.available ? t.slugFree : slug.reason === "reserved" ? t.slugReserved : t.slugTaken}</Text>
             ) : null}
           </View>
@@ -359,15 +418,29 @@ export default function WizardScreen() {
             <PillButton label={photo ? t.photo : t.importMenu} tone="outline" onPress={importPhoto} />
           </View>
         ) : null}
+        </Animated.View>
         {error ? <Text style={styles.error}>{error}</Text> : null}
-        <PillButton label={step === 4 ? t.finish : t.wizardNext} onPress={next} disabled={busy} />
-        {step > 1 ? <PillButton label={t.wizardBack} tone="outline" onPress={() => setStep(step - 1)} /> : null}
+        <PrimaryButton label={step === 4 ? t.finish : t.wizardNext} onPress={next} disabled={busy} />
+        {step > 1 ? (
+          <PillButton
+            label={t.wizardBack}
+            tone="outline"
+            onPress={() => {
+              if (!reduceMotion) {
+                slide.value = -28;
+                slide.value = withTiming(0, { duration: 280 });
+              }
+              setStep(step - 1);
+            }}
+          />
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+  return StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.paper },
   content: { padding: 20, gap: 14 },
   stack: { gap: 12 },
@@ -375,10 +448,16 @@ const styles = StyleSheet.create({
   kicker: { fontFamily: fonts.bodyStrong, color: colors.inkSoft },
   label: { fontFamily: fonts.bodyStrong, color: colors.inkSoft },
   row: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  chip: { minHeight: 44, borderRadius: 999, paddingHorizontal: 14, justifyContent: "center", backgroundColor: colors.card },
-  chipOn: { backgroundColor: colors.ink },
+  chip: { minHeight: 48, borderRadius: 999, paddingHorizontal: 14, justifyContent: "center", backgroundColor: colors.card },
+  chipOn: { backgroundColor: colors.deep },
   chipText: { fontFamily: fonts.bodyStrong, color: colors.ink },
-  chipTextOn: { color: colors.white },
+  chipTextOn: { color: colors.onPrimary },
+  tiles: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  confetti: { width: 220, height: 140, alignSelf: "center" },
+  qrCard: { borderRadius: 20, padding: 16, alignItems: "center" },
+  actions: { flexDirection: "row", gap: 8 },
+  action: { flex: 1, minHeight: 72, alignItems: "center", justifyContent: "center", gap: 6 },
+  actionText: { fontFamily: fonts.bodyStrong, fontSize: 12, textAlign: "center" },
   preview: { borderRadius: 24, padding: 20, gap: 16, minHeight: 180, justifyContent: "center" },
   previewName: { fontFamily: fonts.display, fontSize: 28 },
   previewButton: { alignSelf: "flex-start", borderRadius: 999, paddingHorizontal: 16, paddingVertical: 10 },
@@ -393,3 +472,4 @@ const styles = StyleSheet.create({
   price: { width: 110 },
   hindi: { fontFamily: fonts.hindi }
 });
+}

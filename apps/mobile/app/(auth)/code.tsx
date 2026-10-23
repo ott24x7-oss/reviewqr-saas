@@ -9,14 +9,16 @@ import { devCodeFrom } from "../../src/auth/otp";
 import { getPendingOtp, patchPendingOtp, setPendingOtp } from "../../src/auth/pending";
 import { useI18n } from "../../src/i18n";
 import { useSession } from "../../src/state/session";
-import { colors, fonts } from "../../src/theme";
+import { fonts } from "../../src/theme";
 import { OtpCodeForm } from "../../src/ui/otp-form";
+import { usePalette } from "../../src/ui/theme";
 import type { TokenPair } from "@reviewqr/shared";
 
 type Sent = { sent: true; channel?: string; resendAfterSec?: number; devCode?: string };
 
 export default function CodeScreen() {
   const { t, lang } = useI18n();
+  const palette = usePalette();
   const { saveSession } = useSession();
   const [pending, setPending] = useState<PendingOtp | null>(getPendingOtp());
   const [code, setCode] = useState("");
@@ -90,15 +92,18 @@ export default function CodeScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
-      <View style={styles.card}>
-        <Text style={[styles.title, lang === "hi" && styles.hindi]}>{t.codeTitle}</Text>
+    <SafeAreaView style={[styles.screen, { backgroundColor: palette.paper }]}>
+      <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.line }]}>
+        <Text style={[styles.title, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.codeOnWhatsapp}</Text>
+        <Text style={[styles.sent, { color: palette.muted }, lang === "hi" && styles.hindi]}>{t.sentTo}</Text>
         <OtpCodeForm
           channel={challenge.channel}
           devCode={challenge.devCode}
+          phone={challenge.phone}
           code={code}
           onCode={setCode}
           secondsLeft={secondsLeft}
+          resendAfterSec={challenge.resendAfterSec}
           onResend={resend}
           onChangeNumber={() => router.back()}
           onSubmit={submit}
@@ -111,8 +116,9 @@ export default function CodeScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.navy, padding: 16, justifyContent: "center" },
-  card: { gap: 16, padding: 22, borderRadius: 24, backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.line },
-  title: { color: colors.cyanSoft, fontFamily: fonts.display, fontSize: 32 },
+  screen: { flex: 1, padding: 16, justifyContent: "center" },
+  card: { gap: 16, padding: 22, borderRadius: 24, borderWidth: 1 },
+  title: { fontFamily: fonts.display, fontSize: 28 },
+  sent: { fontFamily: fonts.body, fontSize: 15 },
   hindi: { fontFamily: fonts.hindi }
 });

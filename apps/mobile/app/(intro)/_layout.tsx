@@ -1,6 +1,7 @@
 import { Stack } from "expo-router";
-import { colors } from "../../src/theme";
+import { usePalette } from "../../src/ui/theme";
 
 export default function IntroLayout() {
-  return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.navy } }} />;
+  const palette = usePalette();
+  return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: palette.paper } }} />;
 }
