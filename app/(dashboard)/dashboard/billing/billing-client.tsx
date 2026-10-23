@@ -592,9 +592,11 @@ export function BillingClient({
             </div>
             <div className="inline-flex items-center gap-1 p-1 rounded-full bg-secondary">
               <button
+                type="button"
+                aria-pressed={!annual}
                 onClick={() => setAnnual(false)}
                 className={cn(
-                  "px-3 py-1 rounded-full text-xs font-medium transition",
+                  "min-h-10 px-4 rounded-full text-sm font-medium transition",
                   !annual
                     ? "bg-white dark:bg-slate-900 shadow text-foreground"
                     : "text-muted-foreground"
@@ -603,16 +605,18 @@ export function BillingClient({
                 Monthly
               </button>
               <button
+                type="button"
+                aria-pressed={annual}
                 onClick={() => setAnnual(true)}
                 className={cn(
-                  "px-3 py-1 rounded-full text-xs font-medium transition flex items-center gap-1",
+                  "min-h-10 px-4 rounded-full text-sm font-medium transition flex items-center gap-1",
                   annual
                     ? "bg-white dark:bg-slate-900 shadow text-foreground"
                     : "text-muted-foreground"
                 )}
               >
                 Yearly
-                <span className="px-1.5 py-0.5 rounded-full bg-accent-100 text-accent-800 text-[9px] font-bold">
+                <span className="px-1.5 py-0.5 rounded-full bg-accent-100 text-accent-800 text-xs font-bold">
                   -17%
                 </span>
               </button>
@@ -683,7 +687,7 @@ export function BillingClient({
                   )}
                 >
                   {isHighlighted && (
-                    <span className="absolute -top-2 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full gradient-brand text-white text-[10px] font-bold">
+                    <span className="absolute -top-2 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full gradient-brand text-white text-xs font-bold">
                       <Sparkles className="h-2.5 w-2.5" /> Popular
                     </span>
                   )}

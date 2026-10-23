@@ -136,17 +136,17 @@ export default async function ReviewsPage({
                     <span className="text-xs text-muted-foreground">·</span>
                     <span className="text-xs text-muted-foreground">{r.business.name}</span>
                     {r.location && (
-                      <Badge variant="outline" className="text-[10px]">
+                      <Badge variant="outline" className="text-xs">
                         {r.location.name}
                       </Badge>
                     )}
                     {r.staff && (
-                      <Badge variant="outline" className="text-[10px]">
+                      <Badge variant="outline" className="text-xs">
                         {r.staff.name}
                       </Badge>
                     )}
                     {r.redirected && (
-                      <Badge variant="success" className="text-[10px]">
+                      <Badge variant="success" className="text-xs">
                         <ArrowUpRight className="h-2.5 w-2.5" /> Google
                       </Badge>
                     )}

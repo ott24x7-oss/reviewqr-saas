@@ -174,7 +174,7 @@ export function FeedbackItem({ feedback }: { feedback: FeedbackItemData }) {
             {feedback.tags.map((t) => (
               <span
                 key={t.name}
-                className="px-2 py-0.5 rounded-full text-[11px] font-medium border"
+                className="px-2 py-0.5 rounded-full text-xs font-medium border"
                 style={{ borderColor: t.color, color: t.color }}
               >
                 {t.name}

@@ -288,7 +288,7 @@ export function AnalyticsBoard({ businesses }: { businesses: Business[] }) {
         <div className="mt-2 grid gap-px" style={{ gridTemplateColumns: "2.2rem repeat(24, minmax(0, 1fr))" }} role="img" aria-label={text.hours}>
           {heat.map((row, day) => (
             <React.Fragment key={days[day]}>
-              <span className="text-[10px] leading-4">{lang === "hi" ? daysHi[day] : days[day]}</span>
+              <span className="text-xs leading-4">{lang === "hi" ? daysHi[day] : days[day]}</span>
               {row.map((count, hour) => (
                 <span
                   key={`${day}-${hour}`}

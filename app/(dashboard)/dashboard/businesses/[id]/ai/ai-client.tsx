@@ -103,7 +103,7 @@ export function AiReviewsClient({
               }
               className="min-h-[120px] mt-1"
             />
-            <p className="text-[11px] text-muted-foreground mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               List what you offer. AI uses this only to keep a cleanup in the customer&apos;s own
               meaning. It must not add praise they did not write.
             </p>

@@ -87,15 +87,15 @@ export default async function BusinessesPage() {
                         {avg > 0 ? avg.toFixed(1) : "—"}
                         {avg > 0 && <Star className="h-3 w-3 fill-amber-400 text-amber-400" />}
                       </div>
-                      <div className="text-[10px] text-muted-foreground">Rating</div>
+                      <div className="text-xs text-muted-foreground">Rating</div>
                     </div>
                     <div className="rounded-lg bg-secondary p-2">
                       <div className="text-base font-bold">{formatNumber(b._count.reviews)}</div>
-                      <div className="text-[10px] text-muted-foreground">Reviews</div>
+                      <div className="text-xs text-muted-foreground">Reviews</div>
                     </div>
                     <div className="rounded-lg bg-secondary p-2">
                       <div className="text-base font-bold">{b._count.qrCodes}</div>
-                      <div className="text-[10px] text-muted-foreground">QR codes</div>
+                      <div className="text-xs text-muted-foreground">QR codes</div>
                     </div>
                   </div>
                 </CardContent>

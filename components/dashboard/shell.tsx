@@ -179,7 +179,7 @@ export function DashboardShell({
             >
               {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
-            <Link href="/dashboard" className="flex items-center gap-2 font-bold">
+            <Link href="/dashboard" aria-label={brandName} className="flex min-h-11 min-w-11 items-center gap-2 font-bold">
               {brandLogo ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
