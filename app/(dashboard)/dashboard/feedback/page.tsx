@@ -7,13 +7,14 @@ import { timeAgo } from "@/lib/utils";
 import { MessageSquare } from "lucide-react";
 import { FeedbackFilter } from "./feedback-filter";
 import { FeedbackItem } from "./feedback-item";
+import { LoadMore, shownCount } from "@/components/dashboard/load-more";
 
 export const dynamic = "force-dynamic";
 
 export default async function FeedbackPage({
   searchParams
 }: {
-  searchParams: { status?: string };
+  searchParams: { status?: string; show?: string };
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
@@ -28,7 +29,8 @@ export default async function FeedbackPage({
   const filter =
     status && ["NEW", "IN_PROGRESS", "RESOLVED", "IGNORED"].includes(status) ? (status as any) : undefined;
 
-  const feedbacks = await prisma.feedback.findMany({
+  const shown = shownCount(searchParams.show);
+  const rows = await prisma.feedback.findMany({
     where: {
       businessId: { in: businessIds },
       ...(filter && { status: filter })
@@ -47,8 +49,10 @@ export default async function FeedbackPage({
       tags: { include: { tag: { select: { name: true, color: true } } } }
     },
     orderBy: { createdAt: "desc" },
-    take: 100
+    take: shown + 1
   });
+  const hasMore = rows.length > shown;
+  const feedbacks = rows.slice(0, shown);
 
   return (
     <div className="space-y-5">
@@ -93,6 +97,7 @@ export default async function FeedbackPage({
               }}
             />
           ))}
+          {hasMore && <LoadMore basePath="/dashboard/feedback" params={searchParams} shown={shown} />}
         </div>
       )}
     </div>

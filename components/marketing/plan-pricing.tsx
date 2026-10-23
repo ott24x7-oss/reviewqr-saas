@@ -14,7 +14,9 @@ const moduleName = (id: string, hindi: boolean) => {
 
 export function PlanPricing({ plans, sectionId = "pricing" }: { plans: PublicPlan[]; sectionId?: string }) {
   const [hindi, setHindi] = React.useState(false);
-  const [tab, setTab] = React.useState<PricingTab>("reviews");
+  // Only offer tabs that have plans, and open on the first one, so the page never starts empty.
+  const tabs = PRICING_TABS.filter((item) => plans.some((plan) => plan.tab === item.id));
+  const [tab, setTab] = React.useState<PricingTab>(tabs[0]?.id ?? "reviews");
   const [duration, setDuration] = React.useState<(typeof plans)[number]["prices"][number]["duration"]>("YEAR_1");
   const visible = plans.filter((plan) => plan.tab === tab);
 
@@ -23,7 +25,7 @@ export function PlanPricing({ plans, sectionId = "pricing" }: { plans: PublicPla
       <div className="container max-w-6xl px-4">
         <div className="mx-auto max-w-2xl text-center">
           <div className="mb-3 flex justify-end">
-            <button type="button" className="text-sm font-medium underline" onClick={() => setHindi((value) => !value)}>
+            <button type="button" className="min-h-11 px-2 text-sm font-medium underline" onClick={() => setHindi((value) => !value)}>
               {hindi ? "English" : "हिन्दी"}
             </button>
           </div>
@@ -36,13 +38,13 @@ export function PlanPricing({ plans, sectionId = "pricing" }: { plans: PublicPla
         </div>
 
         <div className="mt-6 flex gap-2 overflow-x-auto pb-1">
-          {PRICING_TABS.map((item) => (
+          {tabs.map((item) => (
             <button
               key={item.id}
               type="button"
               onClick={() => setTab(item.id)}
               className={cn(
-                "shrink-0 rounded-full border px-3 py-1.5 text-sm",
+                "min-h-11 shrink-0 rounded-full border px-4 text-sm",
                 tab === item.id ? "bg-primary text-primary-foreground" : "bg-white"
               )}
             >
@@ -58,7 +60,7 @@ export function PlanPricing({ plans, sectionId = "pricing" }: { plans: PublicPla
               type="button"
               onClick={() => setDuration(id)}
               className={cn(
-                "rounded-full px-3 py-1 text-sm",
+                "min-h-11 rounded-full px-4 text-sm",
                 duration === id ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-700"
               )}
             >

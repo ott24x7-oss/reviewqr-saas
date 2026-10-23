@@ -137,11 +137,18 @@ export async function sendWeeklyToUser(userId: string, weekKey: string) {
 
   let whatsapp: "sent" | "failed" | "skipped" = "skipped";
   if (whatsappIds.length && user.phone) {
-    const sent = await sendWhatsAppReport({ to: user.phone, message: await summarize(whatsappIds) });
-    if (sent.ok) whatsapp = "sent";
-    else {
-      whatsapp = "failed";
+    try {
+      const sent = await sendWhatsAppReport({ to: user.phone, message: await summarize(whatsappIds) });
+      if (sent.ok) whatsapp = "sent";
+      else {
+        whatsapp = "failed";
+        await releaseDeliveries(whatsappIds, weekKey, "whatsapp");
+      }
+    } catch (error) {
+      // Building or sending threw: free both claims so the retry sends the report.
       await releaseDeliveries(whatsappIds, weekKey, "whatsapp");
+      if (emailIds.length) await releaseDeliveries(emailIds, weekKey, "email");
+      throw error;
     }
   }
   const emailFallback = whatsapp === "failed" && !!user.email;

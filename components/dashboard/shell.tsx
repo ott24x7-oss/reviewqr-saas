@@ -240,7 +240,7 @@ export function DashboardShell({
                       >
                         <div className="flex items-start justify-between gap-2">
                           <span className="text-sm font-medium leading-snug">{n.title}</span>
-                          <span className="shrink-0 text-[10px] text-muted-foreground whitespace-nowrap pt-0.5">
+                          <span className="shrink-0 text-xs text-muted-foreground whitespace-nowrap pt-0.5">
                             {timeAgo(n.createdAt)}
                           </span>
                         </div>
@@ -267,7 +267,7 @@ export function DashboardShell({
                     <span className="text-sm font-medium truncate max-w-[140px]">
                       {user.name || user.email.split("@")[0]}
                     </span>
-                    <span className="text-[11px] text-muted-foreground">{user.tier}</span>
+                    <span className="text-xs text-muted-foreground">{user.tier}</span>
                   </span>
                   <ChevronDown className="h-4 w-4 text-muted-foreground hidden sm:block" />
                 </button>
@@ -385,9 +385,10 @@ export function DashboardShell({
                 </button>
               </div>
             )}
-            {user.emailVerified === false && <VerifyEmailBanner />}
+            {/* Account prompts stay on the dashboard home so every other page opens on its content. */}
+            {pathname === "/dashboard" && user.emailVerified === false && <VerifyEmailBanner />}
             <AnnouncementBanner />
-            <ReportPrompt />
+            {pathname === "/dashboard" && <ReportPrompt />}
             {children}
           </div>
         </main>
@@ -406,7 +407,7 @@ export function DashboardShell({
             key={n.href}
             href={n.href}
             className={cn(
-              "flex flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-medium",
+              "flex min-h-14 flex-col items-center justify-center gap-0.5 py-2 text-xs font-medium",
               isActive(n.href, n.exact) ? "text-primary" : "text-muted-foreground"
             )}
           >

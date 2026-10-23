@@ -40,16 +40,16 @@ export function ReportPrompt() {
     <div className="mb-4 rounded-xl border bg-card p-4" role="region" aria-label="Weekly summary">
       <p className="text-sm font-medium">Get a weekly summary by email/WhatsApp?</p>
       <div className="mt-3 flex flex-wrap gap-2">
-        <button type="button" className="rounded-lg bg-primary px-3 py-1.5 text-sm text-primary-foreground" onClick={() => answer(true, false)}>
+        <button type="button" className="min-h-11 rounded-lg bg-primary px-4 text-sm text-primary-foreground" onClick={() => answer(true, false)}>
           Email
         </button>
-        <button type="button" className="rounded-lg border px-3 py-1.5 text-sm" onClick={() => answer(false, true)}>
+        <button type="button" className="min-h-11 rounded-lg border px-4 text-sm" onClick={() => answer(false, true)}>
           WhatsApp
         </button>
-        <button type="button" className="rounded-lg border px-3 py-1.5 text-sm" onClick={() => answer(true, true)}>
+        <button type="button" className="min-h-11 rounded-lg border px-4 text-sm" onClick={() => answer(true, true)}>
           Both
         </button>
-        <button type="button" className="rounded-lg px-3 py-1.5 text-sm text-muted-foreground" onClick={() => answer(false, false)}>
+        <button type="button" className="min-h-11 rounded-lg px-4 text-sm text-muted-foreground" onClick={() => answer(false, false)}>
           Not now
         </button>
       </div>
