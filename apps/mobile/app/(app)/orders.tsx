@@ -14,6 +14,7 @@ import { CoachTour } from "../../src/guide/coach";
 import { HelpButton } from "../../src/guide/help-sheet";
 import { useI18n } from "../../src/i18n";
 import { accountKey } from "../../src/query/keys";
+import { enqueueOrderStatus, isNetworkFailure } from "../../src/orders/queue";
 import { noteOrderCompleted } from "../../src/review/prompt";
 import { useReviewMoment } from "../../src/review/watch";
 import { useBusiness } from "../../src/state/business";
@@ -253,13 +254,40 @@ export default function OrdersScreen() {
     }
   }
 
+  function rememberStatus(orderId: string, status: string) {
+    client.setQueryData(accountKey(userId, "orders", id || ""), (current: { items: OrderCard[] } | undefined) => {
+      if (!current?.items) return current;
+      return { ...current, items: current.items.map((item) => (item.id === orderId ? { ...item, status } : item)) };
+    });
+  }
+
+  async function queueStatus(orderId: string, status: string) {
+    await enqueueOrderStatus({ orderId, status, at: Date.now() });
+    rememberStatus(orderId, status);
+    if (status === "COMPLETED") void noteOrderCompleted(false);
+  }
+
   async function setOrderStatus(orderId: string, status: string) {
     setError(null);
+    try {
+      const net = await import("expo-network");
+      const state = await net.getNetworkStateAsync();
+      if (state.isConnected === false || state.isInternetReachable === false) {
+        await queueStatus(orderId, status);
+        return;
+      }
+    } catch {
+      // A missing network module still tries the request.
+    }
     try {
       await apiData(`/api/v1/orders/${orderId}/status`, { method: "POST", body: JSON.stringify({ status }) });
       await client.invalidateQueries({ queryKey: accountKey(userId, "orders", id || "") });
       if (status === "COMPLETED") void noteOrderCompleted(false);
     } catch (err) {
+      if (isNetworkFailure(err)) {
+        await queueStatus(orderId, status);
+        return;
+      }
       setError(err instanceof ApiError ? err.message : "Could not save");
     }
   }

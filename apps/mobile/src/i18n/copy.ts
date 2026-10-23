@@ -292,7 +292,9 @@ const en = {
   firstScansBody: "Show your QR so a customer can scan it.",
   soldOut: "Sold out",
   hintNoStaff: "Add someone who works the counter",
-  daysLeft: "{days} days left"
+  daysLeft: "{days} days left",
+  offlineBanner: "You're offline. Showing the last saved data.",
+  retryLoad: "Couldn't load. Retry"
 };
 
 const hi: typeof en = {
@@ -587,7 +589,9 @@ const hi: typeof en = {
   firstScansBody: "QR दिखाएँ, ताकि ग्राहक स्कैन कर सके।",
   soldOut: "खत्म",
   hintNoStaff: "काउंटर पर काम करने वाले को जोड़ें",
-  daysLeft: "{days} दिन बाकी"
+  daysLeft: "{days} दिन बाकी",
+  offlineBanner: "आप ऑफ़लाइन हैं। आखिरी सेव डेटा दिख रहा है।",
+  retryLoad: "लोड नहीं हुआ। फिर कोशिश करें"
 };
 
 export const copy = { en, hi };
