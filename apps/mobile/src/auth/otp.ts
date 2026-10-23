@@ -1,3 +1,4 @@
+import { devSurfaceAllowed } from "./dev-surface";
 import { channelCopy, type Lang } from "../i18n/copy";
 
 export function channelLabel(channel: string | undefined, lang: Lang) {
@@ -18,8 +19,12 @@ export function canResend(sentAtMs: number, resendAfterSec: number, now: number)
   return secondsUntilResend(sentAtMs, resendAfterSec, now) === 0;
 }
 
-/** Show a code only when the API included one. The app never invents a code. */
-export function devCodeFrom(body: { devCode?: unknown } | null | undefined) {
+/** Show a code only when the API included one, and never in a production build. */
+export function devCodeFrom(
+  body: { devCode?: unknown } | null | undefined,
+  surface?: { dev?: boolean; apiUrl?: string | null }
+) {
+  if (!devSurfaceAllowed(surface)) return null;
   const code = body?.devCode;
   return typeof code === "string" && /^\d{6}$/.test(code) ? code : null;
 }

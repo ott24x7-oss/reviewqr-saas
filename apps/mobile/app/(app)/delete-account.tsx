@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, Text, TextInput } from "react-native";
 import { apiBaseUrl } from "../../src/api/instance";
 import { apiData } from "../../src/api/data";
 import { ApiError } from "../../src/api/http";
+import { devSurfaceAllowed } from "../../src/auth/dev-surface";
 import { devCodeFrom, digitsFrom } from "../../src/auth/otp";
 import { channelCopy } from "../../src/i18n/copy";
 import { useI18n } from "../../src/i18n";
@@ -96,7 +97,7 @@ export default function DeleteAccountScreen() {
             maxLength={6}
             style={styles.code}
           />
-          {shownCode ? (
+          {devSurfaceAllowed() && shownCode ? (
             <Text style={styles.dev}>
               {t.devHint}: {shownCode}
             </Text>

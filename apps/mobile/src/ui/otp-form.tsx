@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View, type TextInputInstance } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withSequence, withTiming } from "react-native-reanimated";
 import Svg, { Circle } from "react-native-svg";
+import { devSurfaceAllowed } from "../auth/dev-surface";
 import { channelLabel, digitsFrom } from "../auth/otp";
 import { useI18n } from "../i18n";
 import { fonts } from "../theme";
@@ -116,7 +117,7 @@ export function OtpCodeForm({
         maxLength={6}
         style={styles.hidden}
       />
-      {devCode ? (
+      {devSurfaceAllowed() && devCode ? (
         <Text style={[styles.dev, { color: palette.deep }]}>
           {t.devHint}: {devCode}
         </Text>

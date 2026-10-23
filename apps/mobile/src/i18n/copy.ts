@@ -1,3 +1,5 @@
+import { devSurfaceAllowed } from "../auth/dev-surface";
+
 export type Lang = "en" | "hi";
 
 const en = {
@@ -599,6 +601,6 @@ export const copy = { en, hi };
 export function channelCopy(channel: string | undefined, lang: Lang) {
   const table = copy[lang];
   if (channel === "email") return table.codeSentEmail;
-  if (channel === "dev") return table.codeSentDev;
+  if (channel === "dev" && devSurfaceAllowed()) return table.codeSentDev;
   return table.codeSentWhatsapp;
 }
