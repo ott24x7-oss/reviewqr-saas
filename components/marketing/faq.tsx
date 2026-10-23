@@ -65,7 +65,7 @@ export function FAQ() {
           </h2>
           <p className="section-sub mt-4">
             Can't find what you're looking for?{" "}
-            <a href="mailto:hello@reviewqr.in" className="text-primary font-medium hover:underline">
+            <a href="mailto:hello@qr24x7.in" className="text-primary font-medium hover:underline">
               Email us
             </a>
             .

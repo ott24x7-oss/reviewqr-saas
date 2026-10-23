@@ -1,12 +1,16 @@
 import type { ConfigContext, ExpoConfig } from "expo/config";
 
 const packageName = "com.qr24x7.app";
+// Expo project @ott24x7/reviewqr. Not a secret.
+const easProjectId = "00c6693d-9ab5-4dce-9de6-e24889f469fa";
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: "QR24x7",
   slug: "reviewqr",
+  owner: "ott24x7",
   scheme: ["qr24x7", "reviewqr"],
+  primaryColor: "#16A34A",
   version: "1.0.0",
   orientation: "portrait",
   icon: "./assets/icon.png",
@@ -28,7 +32,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       "android.permission.CAMERA",
       "android.permission.POST_NOTIFICATIONS",
       "android.permission.NFC"
-    ]
+    ],
+    // Added by plugins but never used: no audio recording, no overlay windows.
+    blockedPermissions: ["android.permission.RECORD_AUDIO", "android.permission.SYSTEM_ALERT_WINDOW"]
   },
   plugins: [
     "expo-router",
@@ -49,7 +55,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       "expo-build-properties",
       {
         android: {
-          compileSdkVersion: 36,
+          compileSdkVersion: 37,
           targetSdkVersion: 36,
           minSdkVersion: 24
         }
@@ -88,7 +94,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   extra: {
     eas: {
-      projectId: process.env.EXPO_PUBLIC_EAS_PROJECT_ID || ""
+      projectId: process.env.EXPO_PUBLIC_EAS_PROJECT_ID || easProjectId
     }
   }
 });

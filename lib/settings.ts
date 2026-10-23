@@ -357,7 +357,7 @@ export const DEFAULT_EMAIL: EmailConfig = {
   smtpPort: 587,
   smtpUser: "",
   smtpPass: "",
-  smtpFrom: `${DEFAULT_BRAND_NAME} <noreply@reviewqr.in>`
+  smtpFrom: `${DEFAULT_BRAND_NAME} <noreply@qr24x7.in>`
 };
 
 export const DEFAULT_WHATSAPP: WhatsAppConfig = {
@@ -371,7 +371,7 @@ export const DEFAULT_WHATSAPP: WhatsAppConfig = {
 export const DEFAULT_SITE: SiteConfig = {
   appName: DEFAULT_BRAND_NAME,
   logoUrl: BRAND_ICON,
-  supportEmail: "hello@reviewqr.in",
+  supportEmail: "hello@qr24x7.in",
   appUrl: "",
   marketingTagline: DEFAULT_BRAND_TAGLINE,
   signupsEnabled: true,
@@ -570,7 +570,7 @@ export async function getEmailConfig(): Promise<EmailConfig> {
     smtpPass: stored.smtpPass || process.env.SMTP_PASS || "",
     smtpFrom: brandFromOrDefault(
       stored.smtpFrom || process.env.SMTP_FROM,
-      `${DEFAULT_BRAND_NAME} <${stored.smtpUser || process.env.SMTP_USER || "noreply@reviewqr.in"}>`
+      `${DEFAULT_BRAND_NAME} <${stored.smtpUser || process.env.SMTP_USER || "noreply@qr24x7.in"}>`
     )
   };
 }
@@ -600,7 +600,11 @@ export async function getSiteConfig(): Promise<SiteConfig> {
   return {
     appName: brandNameOrDefault(stored.appName || process.env.NEXT_PUBLIC_APP_NAME, DEFAULT_SITE.appName),
     logoUrl: stored.logoUrl || DEFAULT_SITE.logoUrl,
-    supportEmail: stored.supportEmail || DEFAULT_SITE.supportEmail,
+    // The previous default address moves to the new domain; a custom address stays.
+    supportEmail:
+      stored.supportEmail && stored.supportEmail !== "hello@reviewqr.in"
+        ? stored.supportEmail
+        : DEFAULT_SITE.supportEmail,
     appUrl: stored.appUrl || process.env.NEXT_PUBLIC_APP_URL || "",
     marketingTagline: brandTaglineOrDefault(stored.marketingTagline, DEFAULT_SITE.marketingTagline),
     signupsEnabled: stored.signupsEnabled ?? true,
