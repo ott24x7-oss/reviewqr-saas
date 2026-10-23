@@ -14,6 +14,8 @@ import { CoachTour } from "../../src/guide/coach";
 import { HelpButton } from "../../src/guide/help-sheet";
 import { useI18n } from "../../src/i18n";
 import { accountKey } from "../../src/query/keys";
+import { noteOrderCompleted } from "../../src/review/prompt";
+import { useReviewMoment } from "../../src/review/watch";
 import { useBusiness } from "../../src/state/business";
 import { hasModule, useEntitlement } from "../../src/state/entitlement";
 import { useSession } from "../../src/state/session";
@@ -160,6 +162,7 @@ export default function OrdersScreen() {
   });
 
   const loading = tab === "products" ? products.isLoading : tab === "orders" ? orders.isLoading : feedback.isLoading;
+  useReviewMoment(orders.data?.items ?? [], feedback.data?.items ?? [], Boolean(error) || orders.isError || feedback.isError);
   useEffect(() => {
     if (!loading) return;
     const timer = setTimeout(() => setSkeletonReady(true), 300);
@@ -251,7 +254,14 @@ export default function OrdersScreen() {
   }
 
   async function setOrderStatus(orderId: string, status: string) {
-    await run(`/api/v1/orders/${orderId}/status`, { status }, accountKey(userId, "orders", id || ""));
+    setError(null);
+    try {
+      await apiData(`/api/v1/orders/${orderId}/status`, { method: "POST", body: JSON.stringify({ status }) });
+      await client.invalidateQueries({ queryKey: accountKey(userId, "orders", id || "") });
+      if (status === "COMPLETED") void noteOrderCompleted(false);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not save");
+    }
   }
 
   async function draftReply(row: FeedbackRow) {

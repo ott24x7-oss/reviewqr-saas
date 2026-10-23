@@ -22,6 +22,7 @@ import { apiData } from "../../src/api/data";
 import { CoachTour } from "../../src/guide/coach";
 import { useI18n } from "../../src/i18n";
 import { accountKey } from "../../src/query/keys";
+import { useReviewMoment } from "../../src/review/watch";
 import { useBusiness } from "../../src/state/business";
 import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
@@ -103,6 +104,7 @@ export default function HomeScreen() {
   const noteCount = (notes.data ?? []).length;
   const recentOrders = orders.data?.items ?? [];
   const recentFeedback = feedback.data?.items ?? [];
+  useReviewMoment(recentOrders, recentFeedback, home.isError || orders.isError || feedback.isError);
   const quiet = recentOrders.length === 0 && recentFeedback.length === 0;
 
   useEffect(() => {

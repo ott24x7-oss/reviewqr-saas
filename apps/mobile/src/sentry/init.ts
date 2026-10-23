@@ -1,6 +1,7 @@
 import * as Sentry from "@sentry/react-native";
 import Constants from "expo-constants";
 import type { ComponentType } from "react";
+import { blockReviewAfterError } from "../review/prompt";
 import { scrubSentryEvent, sentryIdentity } from "./scrub";
 
 let started = false;
@@ -24,6 +25,7 @@ export function initSentry() {
       release: identity.release,
       dist: identity.dist,
       beforeSend(event) {
+        blockReviewAfterError();
         return scrubSentryEvent(event);
       }
     });
