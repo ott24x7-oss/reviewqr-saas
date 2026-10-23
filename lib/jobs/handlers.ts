@@ -1,4 +1,8 @@
 import type { Prisma } from "@prisma/client";
+import { backfillBusiness, backfillRollups, rollupAllBusinesses, rollupBusinessDay, rollupJobDays } from "../analytics/build";
+import { istDayKey, istParts } from "../analytics/ist";
+import { scoreAllBusinesses } from "../growth/compute";
+import { enqueueMonthlySends, enqueueWeeklySends, sendMonthlyToUser, sendWeeklyToUser } from "../reports/run";
 import { expireLapsedSubscriptions, sendRenewalReminders } from "../billing-jobs";
 import { expireStale, reconcileAllPending } from "../manual-payments";
 import { deliverNegativeFeedback } from "../notify";
@@ -76,6 +80,33 @@ export async function handleJob(job: ClaimedJob) {
       return expireLapsedSubscriptions();
     case "billing.reminders":
       return sendRenewalReminders();
+    case "analytics.rollup": {
+      const now = new Date();
+      const today = istDayKey(now);
+      const day = text(payload.day) || today;
+      const businessId = text(payload.businessId);
+      if (businessId) return rollupBusinessDay(businessId, day);
+      const days = day === today ? rollupJobDays(today, istParts(now).hour) : [day];
+      let businesses = 0;
+      for (const key of days) businesses = await rollupAllBusinesses(key);
+      return { businesses, days };
+    }
+    case "analytics.backfill": {
+      const days = Number(payload.days) || 90;
+      const businessId = text(payload.businessId);
+      if (!businessId) return backfillRollups(days);
+      return backfillBusiness(businessId, days);
+    }
+    case "growth.score":
+      return scoreAllBusinesses();
+    case "reports.weekly":
+      return enqueueWeeklySends(text(payload.weekKey));
+    case "reports.weekly.send":
+      return sendWeeklyToUser(text(payload.userId), text(payload.weekKey));
+    case "reports.monthly":
+      return enqueueMonthlySends(text(payload.monthKey));
+    case "reports.monthly.send":
+      return sendMonthlyToUser(text(payload.userId), text(payload.monthKey));
     case "shop.ship":
     case "shop.label":
     case "shop.track":

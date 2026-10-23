@@ -62,15 +62,23 @@ export function CartEditor() {
   const [cart, setCart] = React.useState<CartView | null>(null);
   const [address, setAddress] = React.useState(blankAddress);
   const [saving, setSaving] = React.useState(false);
+  const edited = React.useRef(false);
 
-  const load = React.useCallback(async () => {
+  const load = React.useCallback(async (force = false) => {
     const response = await fetch("/api/v1/shop/cart");
     const payload = (await response.json()) as { data?: CartView; error?: { message?: string } };
     if (!response.ok || !payload.data) {
       toast.error(payload.error?.message || "Could not load the cart");
       return;
     }
-    setCart(payload.data);
+    const next = payload.data;
+    setCart((current) => {
+      // A late first load must not wipe a selection the owner already made.
+      // Saving an address still has to add that row to the list.
+      if (edited.current && !force) return current;
+      if (edited.current && current) return { ...current, addresses: next.addresses };
+      return next;
+    });
   }, []);
 
   React.useEffect(() => {
@@ -78,6 +86,7 @@ export function CartEditor() {
   }, [load]);
 
   function patch(partial: Partial<CartView>) {
+    edited.current = true;
     setCart((current) => (current ? { ...current, ...partial } : current));
   }
 
@@ -140,7 +149,7 @@ export function CartEditor() {
       return;
     }
     setAddress(blankAddress);
-    await load();
+    await load(true);
   }
 
   if (!cart) return <p className="text-sm text-muted-ink">{copy.cart}</p>;

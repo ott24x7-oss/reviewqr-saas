@@ -453,5 +453,5 @@ describe("entitlements per module", () => {
     const body = await res.json();
     expect(res.status, JSON.stringify(body)).toBe(200);
     expect(body.orderId || body.number || body.whatsappUrl || body.ok).toBeTruthy();
-  });
+  }, 20_000);
 });

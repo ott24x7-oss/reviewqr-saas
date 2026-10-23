@@ -18,6 +18,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { PricingConfig } from "@/lib/settings";
+import { catalogueChargePaise } from "@/lib/plans/catalogue-price";
 import { formatINR, cn } from "@/lib/utils";
 import type { SubscriptionTier } from "@prisma/client";
 
@@ -100,6 +101,7 @@ function PaymentModal({
   youpiEnabled,
   planSlug,
   duration,
+  priceLabel,
   onClose
 }: {
   tier: SubscriptionTier;
@@ -110,6 +112,7 @@ function PaymentModal({
   youpiEnabled: boolean;
   planSlug?: string;
   duration?: string;
+  priceLabel: string;
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -292,8 +295,9 @@ function PaymentModal({
             <div className="font-semibold">
               Upgrade to {tierName}
               <span className="ml-1 text-xs font-normal text-muted-foreground">
-                ({months === 12 ? "yearly" : "monthly"})
+                ({months === 12 ? "yearly" : months === 6 ? "6 months" : months === 1 ? "monthly" : "lifetime"})
               </span>
+              <div className="text-sm font-semibold" data-testid="charge-price">{priceLabel}</div>
             </div>
           </div>
           <button
@@ -531,6 +535,7 @@ export type CatalogPlan = {
   name: string;
   description: string;
   badge: string | null;
+  legacyTier: string | null;
   modules: string[];
   prices: Array<{ duration: string; pricePaise: number; mrpPaise: number | null }>;
 };
@@ -587,9 +592,11 @@ export function BillingClient({
             </div>
             <div className="inline-flex items-center gap-1 p-1 rounded-full bg-secondary">
               <button
+                type="button"
+                aria-pressed={!annual}
                 onClick={() => setAnnual(false)}
                 className={cn(
-                  "px-3 py-1 rounded-full text-xs font-medium transition",
+                  "min-h-10 px-4 rounded-full text-sm font-medium transition",
                   !annual
                     ? "bg-white dark:bg-slate-900 shadow text-foreground"
                     : "text-muted-foreground"
@@ -598,16 +605,18 @@ export function BillingClient({
                 Monthly
               </button>
               <button
+                type="button"
+                aria-pressed={annual}
                 onClick={() => setAnnual(true)}
                 className={cn(
-                  "px-3 py-1 rounded-full text-xs font-medium transition flex items-center gap-1",
+                  "min-h-10 px-4 rounded-full text-sm font-medium transition flex items-center gap-1",
                   annual
                     ? "bg-white dark:bg-slate-900 shadow text-foreground"
                     : "text-muted-foreground"
                 )}
               >
                 Yearly
-                <span className="px-1.5 py-0.5 rounded-full bg-accent-100 text-accent-800 text-[9px] font-bold">
+                <span className="px-1.5 py-0.5 rounded-full bg-accent-100 text-accent-800 text-xs font-bold">
                   -17%
                 </span>
               </button>
@@ -665,7 +674,7 @@ export function BillingClient({
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             {tiers.map((tierKey) => {
               const tier = plans[tierKey];
-              const price = annual ? tier.yearly : tier.monthly;
+              const listed = catalogueChargePaise(catalog, tierKey, annual);
               const isCurrent = currentTier === tierKey;
               const isHighlighted = !!tier.highlighted;
 
@@ -678,7 +687,7 @@ export function BillingClient({
                   )}
                 >
                   {isHighlighted && (
-                    <span className="absolute -top-2 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full gradient-brand text-white text-[10px] font-bold">
+                    <span className="absolute -top-2 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full gradient-brand text-white text-xs font-bold">
                       <Sparkles className="h-2.5 w-2.5" /> Popular
                     </span>
                   )}
@@ -687,11 +696,13 @@ export function BillingClient({
                     <p className="text-xs text-muted-foreground">{tier.tagline}</p>
                   </div>
                   <div className="mt-3">
-                    {price === 0 ? (
+                    {tier.tier === "FREE" ? (
                       <div className="text-2xl font-bold">Free</div>
+                    ) : listed == null ? (
+                      <div className="text-sm font-medium">This plan is not on the catalogue</div>
                     ) : (
                       <div>
-                        <div className="text-2xl font-bold">{formatINR(price)}</div>
+                        <div className="text-2xl font-bold" data-testid={`tier-price-${tierKey}`}>{formatINR(listed)}</div>
                         <div className="text-xs text-muted-foreground">
                           per {annual ? "year" : "month"}
                         </div>
@@ -719,6 +730,7 @@ export function BillingClient({
                       size="sm"
                       variant={isHighlighted ? "gradient" : "default"}
                       className="mt-3 w-full"
+                      disabled={listed == null}
                       onClick={() => setModalTier(tier.tier)}
                     >
                       Upgrade
@@ -739,6 +751,11 @@ export function BillingClient({
           upiEnabled={upiEnabled}
           usdtEnabled={usdtEnabled}
           youpiEnabled={youpiEnabled}
+          priceLabel={
+            catalogueChargePaise(catalog, modalTier, annual) == null
+              ? "This plan is not on the catalogue"
+              : formatINR(catalogueChargePaise(catalog, modalTier, annual) || 0)
+          }
           onClose={() => setModalTier(null)}
         />
       )}
@@ -752,6 +769,11 @@ export function BillingClient({
           upiEnabled={upiEnabled}
           usdtEnabled={usdtEnabled}
           youpiEnabled={youpiEnabled}
+          priceLabel={
+            modalPlan.prices.find((row) => row.duration === duration)
+              ? formatINR(modalPlan.prices.find((row) => row.duration === duration)!.pricePaise)
+              : "This plan is not on the catalogue"
+          }
           onClose={() => setModalPlan(null)}
         />
       )}

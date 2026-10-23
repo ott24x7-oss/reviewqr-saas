@@ -10,6 +10,7 @@ import { normalizeLinks } from "@/lib/tap/page-draft";
 import type { StoredLink } from "@/lib/tap/presets";
 import { WEEK_DAYS, type WeekHours } from "@/lib/tap/hours";
 import { TapEditor } from "./tap-editor";
+import { HelpLink } from "@/components/help/help-link";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +40,8 @@ export default async function TapEditorPage({ params }: { params: { id: string }
   const hours = hoursFromPublished(draft) || {};
 
   return (
+    <div className="space-y-3">
+    <HelpLink context="tap" page="Tap page" />
     <TapEditor
       businessId={access.id}
       businessName={access.name}
@@ -58,6 +61,7 @@ export default async function TapEditorPage({ params }: { params: { id: string }
       directMode={access.directMode === "DIRECT" ? "DIRECT" : "TAP_PAGE"}
       directTarget={access.directTarget || ""}
     />
+    </div>
   );
 }
 

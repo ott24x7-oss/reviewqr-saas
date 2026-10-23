@@ -35,7 +35,7 @@ export function Footer({
             <div className="mt-4 space-y-1.5 text-sm">
               <a
                 href={`mailto:${supportEmail}`}
-                className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
+                className="flex min-h-11 items-center gap-2 text-muted-foreground hover:text-foreground"
               >
                 <Mail className="h-4 w-4" /> {supportEmail}
               </a>

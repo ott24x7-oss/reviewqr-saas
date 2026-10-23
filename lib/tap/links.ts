@@ -261,6 +261,21 @@ export type PresentedTap = {
   directions: string | null;
 };
 
+/** Keep a click key only when that button is on the page. Anything else is stored as no key. */
+export function keepLinkKey(raw: string | null | undefined, allowedKeys: Iterable<string>) {
+  const key = (raw || "").trim();
+  if (!key) return null;
+  for (const allowed of allowedKeys) {
+    if (allowed === key) return key;
+  }
+  return null;
+}
+
+/** Keys the public page can emit right now, including gating and schedules. */
+export function allowedTapLinkKeys(fields: TapBusinessFields, code: string, now = new Date()) {
+  return presentBusiness(fields, "q", code, now).links.map((item) => item.key);
+}
+
 /** When gating is on, a published Google or Trustpilot button cannot bypass the rating check. */
 export function hideGatedReviewLinks(links: PublicLink[], fields: TapBusinessFields): PublicLink[] {
   if (!fields.reviewGating) return links;

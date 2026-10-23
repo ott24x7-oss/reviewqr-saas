@@ -53,6 +53,7 @@ export default function AppLayout() {
       }}
     >
       <Tabs.Screen name="index" options={{ title: t.home }} />
+      <Tabs.Screen name="analytics" options={{ title: t.analytics }} />
       <Tabs.Screen name="orders" options={{ title: t.orders }} />
       <Tabs.Screen name="menu" options={{ title: t.menuTab }} />
       <Tabs.Screen name="feedback" options={{ title: t.feedbackTab }} />
