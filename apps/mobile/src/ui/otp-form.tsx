@@ -149,7 +149,12 @@ export function OtpCodeForm({
         <Text style={[styles.link, { color: palette.deep }, lang === "hi" && styles.hindi]}>{t.otpCall}</Text>
       </Pressable>
       {callNote ? <Text style={[styles.note, { color: palette.muted }]}>{t.otpCallUnavailable}</Text> : null}
-      <PrimaryButton label={t.verify} onPress={onSubmit} disabled={submitting || code.length !== 6} />
+      <PrimaryButton
+        label={t.verify}
+        onPress={onSubmit}
+        disabled={submitting || code.length !== 6}
+        hint={code.length !== 6 ? t.hintCode : t.hintWait}
+      />
       <Pressable accessibilityRole="button" accessibilityLabel={t.changeNumber} onPress={onChangeNumber} style={styles.linkHit}>
         <Text style={[styles.link, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.changeNumber}</Text>
       </Pressable>

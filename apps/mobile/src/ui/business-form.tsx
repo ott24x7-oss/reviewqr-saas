@@ -146,7 +146,13 @@ export function BusinessForm({ initial, businessId }: { initial?: BusinessCard |
       <Field label={t.address} tone="paper" value={draft.address} onChangeText={(address) => patch({ address })} />
       <Field label={t.reviewUrl} tone="paper" value={draft.googleReviewUrl} onChangeText={(googleReviewUrl) => patch({ googleReviewUrl })} autoCapitalize="none" />
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      <PillButton label={t.save} onPress={save} disabled={busy || draft.name.trim().length < 2} tone="dark" />
+      <PillButton
+        label={t.save}
+        onPress={save}
+        disabled={busy || draft.name.trim().length < 2}
+        hint={draft.name.trim().length < 2 ? t.hintBusiness : t.hintWait}
+        tone="dark"
+      />
     </ScrollView>
   );
 }

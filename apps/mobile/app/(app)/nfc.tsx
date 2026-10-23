@@ -143,7 +143,13 @@ export default function NfcScreen() {
       {status ? <Text style={[styles.note, lang === "hi" && styles.hindi]}>{status}</Text> : null}
       {verified ? <Text style={styles.title}>{t.nfcSuccess}</Text> : null}
       {!busy && !verified && (status === t.nfcMismatch || status === t.nfcRetry) ? <Text style={styles.note}>{t.nfcFail}</Text> : null}
-      <PillButton label={t.nfc} onPress={() => { void write(); }} disabled={busy || !safe} tone="dark" />
+      <PillButton
+        label={t.nfc}
+        onPress={() => { void write(); }}
+        disabled={busy || !safe}
+        hint={!safe ? (path ? t.nfcUnsafeUrl : t.noQr) : t.hintWait}
+        tone="dark"
+      />
       {verified ? <PillButton label={t.lockTag} onPress={askLock} disabled={busy} tone="outline" /> : null}
       <BottomSheet visible={busy} title={t.holdTag} onClose={() => { void import("react-native-nfc-manager").then((nfc) => nfc.default.cancelTechnologyRequest()).catch(() => undefined); }}>
         <View style={styles.lottie}>

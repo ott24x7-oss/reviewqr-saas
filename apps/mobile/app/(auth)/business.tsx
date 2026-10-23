@@ -68,7 +68,7 @@ export default function BusinessNameScreen() {
         <Field label={t.name} value={name} onChangeText={setName} />
         <Field label={t.businessName} value={businessName} onChangeText={setBusinessName} />
         {error ? <Text style={styles.error}>{error}</Text> : null}
-        <PillButton label={t.finish} onPress={finish} disabled={busy || name.trim().length < 2} />
+        <PillButton label={t.finish} onPress={finish} disabled={busy || name.trim().length < 2} hint={name.trim().length < 2 ? t.hintName : t.hintWait} />
       </View>
     </SafeAreaView>
   );

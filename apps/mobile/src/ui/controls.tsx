@@ -32,16 +32,18 @@ export function PillButton({
   label,
   onPress,
   disabled,
+  hint,
   tone = "primary"
 }: {
   label: string;
   onPress: () => void;
   disabled?: boolean;
+  hint?: string;
   tone?: "primary" | "ghost" | "dark" | "outline";
 }) {
   if (tone === "ghost") return <TextButton label={label} onPress={onPress} disabled={disabled} />;
   if (tone === "outline") return <SecondaryButton label={label} onPress={onPress} disabled={disabled} />;
-  return <PrimaryButton label={label} onPress={onPress} disabled={disabled} />;
+  return <PrimaryButton label={label} onPress={onPress} disabled={disabled} hint={hint} />;
 }
 
 export function Muted({ children }: { children: string }) {

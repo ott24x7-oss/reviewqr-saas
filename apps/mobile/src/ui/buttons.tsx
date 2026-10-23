@@ -1,7 +1,7 @@
 import { LinearGradient } from "expo-linear-gradient";
 import type { LucideIcon } from "lucide-react-native";
 import { useEffect } from "react";
-import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -18,64 +18,78 @@ type PressProps = {
   label: string;
   onPress: () => void;
   disabled?: boolean;
+  /** Shown under the button only while it is disabled. */
+  hint?: string;
   icon?: LucideIcon;
   testID?: string;
   style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
 };
 
-export function PrimaryButton({ label, onPress, disabled, icon: Icon, testID, style, accessibilityLabel }: PressProps) {
+export function PrimaryButton({ label, onPress, disabled, hint, icon: Icon, testID, style, accessibilityLabel }: PressProps) {
   const { lang } = useI18n();
   const { palette, reduceMotion } = useTheme();
+  const off = !!disabled;
   const scale = useSharedValue(1);
   const sheen = useSharedValue(-1.2);
 
   useEffect(() => {
-    if (reduceMotion) return;
+    if (reduceMotion || off) return;
     sheen.value = -1.2;
     sheen.value = withTiming(1.4, { duration: 900, easing: Easing.out(Easing.cubic) });
-  }, [reduceMotion, sheen]);
+  }, [reduceMotion, sheen, off]);
 
   const scaleStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   const sheenStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: sheen.value * 220 }, { rotate: "18deg" }]
+    transform: [{ translateX: sheen.value * 280 }, { rotate: "18deg" }]
   }));
 
+  const face = (
+    <View style={styles.row}>
+      {Icon ? <Icon color={off ? "#6B6358" : palette.onPrimary} size={20} strokeWidth={1.75} /> : null}
+      <Text style={[off ? styles.disabledText : styles.primaryText, lang === "hi" && styles.hindi]}>{label}</Text>
+    </View>
+  );
+
   return (
-    <Animated.View style={[scaleStyle, disabled && styles.dim, style]}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={accessibilityLabel || label}
-        accessibilityState={{ disabled: !!disabled }}
-        disabled={disabled}
-        testID={testID}
-        onPress={onPress}
-        onPressIn={() => {
-          scale.value = withSpring(0.97, { damping: 15, stiffness: 320 });
-          if (!disabled) tapLight();
-        }}
-        onPressOut={() => {
-          scale.value = withSpring(1, { damping: 15, stiffness: 320 });
-        }}
-        style={styles.hit}
-      >
-        <LinearGradient
-          colors={[palette.bright, palette.deep, palette.deep]}
-          locations={[0, 0.42, 1]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.primary}
+    <Animated.View style={[scaleStyle, style]}>
+      <View style={off ? undefined : styles.glow}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={accessibilityLabel || label}
+          accessibilityHint={off ? hint : undefined}
+          accessibilityState={{ disabled: off }}
+          disabled={off}
+          testID={testID}
+          onPress={onPress}
+          onPressIn={() => {
+            if (off) return;
+            scale.value = withSpring(0.97, { damping: 15, stiffness: 320 });
+            tapLight();
+          }}
+          onPressOut={() => {
+            scale.value = withSpring(1, { damping: 15, stiffness: 320 });
+          }}
+          style={styles.hit}
         >
-          <View style={styles.highlight} />
-          {reduceMotion ? null : (
-            <Animated.View pointerEvents="none" style={[styles.sheen, sheenStyle]} />
+          {off ? (
+            <View style={[styles.primary, styles.disabledFill]}>{face}</View>
+          ) : (
+            <LinearGradient
+              colors={[palette.bright, palette.primary, palette.deep]}
+              locations={[0, 0.55, 1]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.primary}
+            >
+              <View style={styles.highlight} />
+              {reduceMotion ? null : <Animated.View pointerEvents="none" style={[styles.sheen, sheenStyle]} />}
+              {face}
+            </LinearGradient>
           )}
-          <View style={styles.row}>
-            {Icon ? <Icon color={palette.onPrimary} size={20} strokeWidth={1.75} /> : null}
-            <Text style={[styles.primaryText, lang === "hi" && styles.hindi]}>{label}</Text>
-          </View>
-        </LinearGradient>
-      </Pressable>
+        </Pressable>
+      </View>
+      {off && hint ? <Text style={[styles.hint, { color: palette.muted }, lang === "hi" && styles.hindiHint]}>{hint}</Text> : null}
     </Animated.View>
   );
 }
@@ -126,25 +140,37 @@ export function TextButton({ label, onPress, disabled, testID, accessibilityLabe
       }}
       style={styles.textHit}
     >
-      <Text style={[styles.textLabel, { color: palette.muted }, lang === "hi" && styles.hindi]}>{label}</Text>
+      <Text style={[styles.textLabel, { color: palette.muted }, disabled && styles.dimText, lang === "hi" && styles.hindi]}>{label}</Text>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   hit: { minHeight: 56, borderRadius: 16 },
+  glow: {
+    borderRadius: 16,
+    ...Platform.select({
+      web: { boxShadow: "0 10px 24px rgba(22, 163, 74, 0.35)" } as ViewStyle,
+      default: {
+        shadowColor: "#16A34A",
+        shadowOpacity: 0.35,
+        shadowRadius: 16,
+        shadowOffset: { width: 0, height: 10 },
+        elevation: 8
+      }
+    })
+  },
   primary: {
     minHeight: 56,
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
-    paddingHorizontal: 18,
-    shadowColor: "#16A34A",
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 6
+    paddingHorizontal: 18
+  },
+  disabledFill: {
+    backgroundColor: "#8C847A",
+    opacity: 0.45
   },
   highlight: {
     position: "absolute",
@@ -152,17 +178,20 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 1,
-    backgroundColor: "rgba(255,255,255,0.25)"
+    backgroundColor: "rgba(255,255,255,0.35)"
   },
   sheen: {
     position: "absolute",
-    top: -20,
-    width: 48,
-    height: 120,
-    backgroundColor: "rgba(255,255,255,0.35)"
+    top: -28,
+    left: -80,
+    width: 36,
+    height: 140,
+    backgroundColor: "rgba(255,255,255,0.28)"
   },
   row: { flexDirection: "row", alignItems: "center", gap: 8 },
   primaryText: { color: "#FFFFFF", fontFamily: fonts.bodyStrong, fontSize: 16 },
+  disabledText: { color: "#3F3A34", fontFamily: fonts.bodyStrong, fontSize: 16 },
+  hint: { marginTop: 8, textAlign: "center", fontFamily: fonts.body, fontSize: 13, lineHeight: 18 },
   secondary: {
     minHeight: 52,
     borderRadius: 16,
@@ -177,5 +206,7 @@ const styles = StyleSheet.create({
   textHit: { minHeight: 48, justifyContent: "center", alignItems: "center", paddingHorizontal: 12 },
   textLabel: { fontFamily: fonts.bodyStrong, fontSize: 15 },
   dim: { opacity: 0.5 },
-  hindi: { fontFamily: fonts.hindiStrong }
+  dimText: { opacity: 0.45 },
+  hindi: { fontFamily: fonts.hindiStrong },
+  hindiHint: { fontFamily: fonts.hindi }
 });

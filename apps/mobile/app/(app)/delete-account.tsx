@@ -104,10 +104,16 @@ export default function DeleteAccountScreen() {
         </>
       ) : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      {!done && !sent ? <PillButton label={t.deleteSend} onPress={() => { void requestCode(); }} disabled={busy} tone="dark" /> : null}
+      {!done && !sent ? <PillButton label={t.deleteSend} onPress={() => { void requestCode(); }} disabled={busy} hint={t.hintWait} tone="dark" /> : null}
       {!done && sent ? (
         <>
-          <PillButton label={t.deleteAccount} onPress={() => { void confirm(); }} disabled={busy || code.length !== 6} tone="dark" />
+          <PillButton
+            label={t.deleteAccount}
+            onPress={() => { void confirm(); }}
+            disabled={busy || code.length !== 6}
+            hint={code.length !== 6 ? t.hintCode : t.hintWait}
+            tone="dark"
+          />
           <PillButton label={secondsLeft > 0 ? `${t.resendIn} ${secondsLeft}s` : t.resend} onPress={() => { void requestCode(); }} disabled={busy || secondsLeft > 0} tone="outline" />
         </>
       ) : null}

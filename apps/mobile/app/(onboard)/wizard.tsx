@@ -420,7 +420,7 @@ export default function WizardScreen() {
         ) : null}
         </Animated.View>
         {error ? <Text style={styles.error}>{error}</Text> : null}
-        <PrimaryButton label={step === 4 ? t.finish : t.wizardNext} onPress={next} disabled={busy} />
+        <PrimaryButton label={step === 4 ? t.finish : t.wizardNext} onPress={next} disabled={busy} hint={t.hintWait} />
         {step > 1 ? (
           <PillButton
             label={t.wizardBack}

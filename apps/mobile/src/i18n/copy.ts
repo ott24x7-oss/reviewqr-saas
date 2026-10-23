@@ -243,7 +243,16 @@ const en = {
   sentTo: "We sent a 6-digit code to",
   helpCenter: "Help centre",
   greeting: "Hello",
-  rupee: "₹"
+  rupee: "₹",
+  hintPhone: "Enter a 10-digit mobile number",
+  hintWait: "Please wait",
+  hintEmail: "Enter your email and password",
+  hintCode: "Enter the 6-digit code",
+  hintNamePrice: "Add a name and a price",
+  hintName: "Enter a name",
+  hintBusiness: "Enter the business name",
+  hintCart: "Add an item before you pay",
+  hintReferral: "Enter a code of at least 4 characters"
 };
 
 const hi: typeof en = {
@@ -489,7 +498,16 @@ const hi: typeof en = {
   sentTo: "हमने 6 अंकों का कोड भेजा है",
   helpCenter: "सहायता केंद्र",
   greeting: "नमस्ते",
-  rupee: "₹"
+  rupee: "₹",
+  hintPhone: "10 अंकों का मोबाइल नंबर लिखें",
+  hintWait: "कृपया प्रतीक्षा करें",
+  hintEmail: "ईमेल और पासवर्ड लिखें",
+  hintCode: "6 अंकों का कोड लिखें",
+  hintNamePrice: "नाम और कीमत जोड़ें",
+  hintName: "नाम लिखें",
+  hintBusiness: "व्यवसाय का नाम लिखें",
+  hintCart: "भुगतान से पहले एक वस्तु जोड़ें",
+  hintReferral: "कम से कम 4 अक्षरों का कोड लिखें"
 };
 
 export const copy = { en, hi };

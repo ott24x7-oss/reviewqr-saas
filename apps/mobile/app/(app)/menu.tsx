@@ -152,7 +152,12 @@ export default function MenuTab() {
           <Field label={t.name} tone="paper" value={name} onChangeText={setName} />
           <Field label={t.price} tone="paper" value={price} onChangeText={setPrice} keyboardType="decimal-pad" />
           {error ? <Text style={{ color: palette.danger, fontFamily: fonts.body }}>{error}</Text> : null}
-          <PrimaryButton label={t.saveAnother} onPress={() => add(true)} disabled={!name.trim() || !price.trim()} />
+          <PrimaryButton
+            label={t.saveAnother}
+            onPress={() => add(true)}
+            disabled={!name.trim() || !price.trim()}
+            hint={t.hintNamePrice}
+          />
         </View>
       </BottomSheet>
       <CoachTour screen="menu" steps={[{ title: t.coachMenuAdd, body: t.coachMenuAddBody, top: 96 }]} />

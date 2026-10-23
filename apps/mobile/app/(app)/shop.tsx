@@ -241,7 +241,13 @@ export default function ShopScreen() {
               <Field label={t.pincode} tone="paper" value={address.pincode} onChangeText={(pincode) => setAddress({ ...address, pincode })} keyboardType="number-pad" />
             </View>
           ) : null}
-          <PillButton label={t.checkout} onPress={pay} disabled={busy || lines.length === 0 || !!pendingOrderId} tone="dark" />
+          <PillButton
+            label={t.checkout}
+            onPress={pay}
+            disabled={busy || lines.length === 0 || !!pendingOrderId}
+            hint={lines.length === 0 ? t.hintCart : t.hintWait}
+            tone="dark"
+          />
         </View>
       ) : null}
       {tab === "orders" ? (

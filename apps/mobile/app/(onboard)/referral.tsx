@@ -40,7 +40,12 @@ export default function ReferralScreen() {
       <Muted>{t.referralHint}</Muted>
       <Field label={t.referralTitle} tone="paper" value={code} onChangeText={setCode} autoCapitalize="characters" />
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      <PillButton label={t.referralContinue} onPress={() => send(code.trim())} disabled={busy || code.trim().length < 4} />
+      <PillButton
+        label={t.referralContinue}
+        onPress={() => send(code.trim())}
+        disabled={busy || code.trim().length < 4}
+        hint={code.trim().length < 4 ? t.hintReferral : t.hintWait}
+      />
       <PillButton label={t.referralSkip} tone="outline" onPress={() => send("")} disabled={busy} />
     </SafeAreaView>
   );

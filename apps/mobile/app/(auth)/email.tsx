@@ -45,7 +45,12 @@ export default function EmailScreen() {
         <Field label={t.email} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoComplete="email" />
         <Field label={t.password} value={password} onChangeText={setPassword} secureTextEntry autoComplete="password" />
         {error ? <Text style={[styles.error, { color: palette.danger }]}>{error}</Text> : null}
-        <PrimaryButton label={t.signIn} onPress={submit} disabled={busy || !email.includes("@") || password.length < 1} />
+        <PrimaryButton
+          label={t.signIn}
+          onPress={submit}
+          disabled={busy || !email.includes("@") || password.length < 1}
+          hint={!email.includes("@") || password.length < 1 ? t.hintEmail : t.hintWait}
+        />
         <TextButton label={t.phoneInstead} onPress={() => router.back()} />
       </View>
     </SafeAreaView>

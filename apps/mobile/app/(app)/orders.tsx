@@ -323,7 +323,7 @@ export default function OrdersScreen() {
         <View style={styles.stack}>
           <Field label={t.name} tone="paper" value={name} onChangeText={setName} />
           <Field label={t.price} tone="paper" value={price} onChangeText={setPrice} keyboardType="decimal-pad" />
-          <PillButton label={t.quickAdd} onPress={addProduct} disabled={!name.trim() || !price.trim()} tone="dark" />
+          <PillButton label={t.quickAdd} onPress={addProduct} disabled={!name.trim() || !price.trim()} hint={t.hintNamePrice} tone="dark" />
           <PillButton label={t.photo} onPress={() => fromPhoto("camera")} tone="outline" />
           <PillButton label={t.gallery} onPress={() => fromPhoto("library")} tone="outline" />
         </View>

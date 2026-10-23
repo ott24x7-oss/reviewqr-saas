@@ -78,7 +78,12 @@ export default function LoginScreen() {
           />
         </View>
         {error ? <Text style={[styles.error, { color: palette.danger }]}>{error}</Text> : null}
-        <PrimaryButton label={t.sendCode} onPress={send} disabled={busy || phone.trim().length < 10} />
+        <PrimaryButton
+          label={t.sendCode}
+          onPress={send}
+          disabled={busy || phone.trim().length < 10}
+          hint={phone.trim().length < 10 ? t.hintPhone : t.hintWait}
+        />
         <TextButton label={t.haveAccount} onPress={() => router.push("/(auth)/signup")} />
         <TextButton label={t.emailInstead} onPress={() => router.push("/(auth)/email")} />
       </View>

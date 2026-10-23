@@ -49,7 +49,7 @@ export default function StaffScreen() {
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Text style={[styles.title, lang === "hi" && styles.hindi]}>{t.staff}</Text>
       <Field label={t.name} tone="paper" value={name} onChangeText={setName} />
-      <PillButton label={t.addItem} onPress={add} disabled={name.trim().length < 2} tone="dark" />
+      <PillButton label={t.addItem} onPress={add} disabled={name.trim().length < 2} hint={t.hintName} tone="dark" />
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {(rows.data?.items ?? []).map((row) => (
         <View key={row.id} style={styles.card}>

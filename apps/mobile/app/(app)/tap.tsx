@@ -242,7 +242,7 @@ export default function TapScreen() {
         ))}
       </ScrollView>
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      <PillButton label={t.publish} onPress={publish} disabled={busy} tone="dark" />
+      <PillButton label={t.publish} onPress={publish} disabled={busy} hint={t.hintWait} tone="dark" />
       {data?.code ? (
         <>
           <PillButton label={t.shareQr} onPress={share} tone="outline" />
