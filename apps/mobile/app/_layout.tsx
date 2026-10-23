@@ -8,9 +8,12 @@ import { Stack, usePathname } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { I18nProvider } from "../src/i18n";
+import { initSentry, wrapRoot } from "../src/sentry/init";
 import { SessionProvider, useSession } from "../src/state/session";
 import { LaunchFrame } from "../src/ui/launch";
 import { ThemeProvider } from "../src/ui/theme";
+
+initSentry();
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
@@ -27,7 +30,7 @@ function Boot({ fontsReady }: { fontsReady: boolean }) {
 
 const queryClient = new QueryClient();
 
-export default function RootLayout() {
+function RootLayout() {
   const [loaded] = useFonts({
     Sora_700Bold,
     Sora_800ExtraBold,
@@ -53,3 +56,5 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+
+export default wrapRoot(RootLayout);

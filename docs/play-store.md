@@ -51,6 +51,14 @@ Users can request deletion in the app and at `/account/delete`. Data is encrypte
 - Notifications: new order, new feedback, shipping update, and plan expiry. The owner can turn them off in More.
 - NFC: write the tap-page URL onto a stand, read it back, and optionally lock the tag. Shown to owners and field roles. A phone without NFC sees a plain message.
 
+## Crash reports
+
+The app uses `@sentry/react-native`. It starts only when `EXPO_PUBLIC_SENTRY_DSN` is set. An empty value sends nothing. Events do not include the user block. Phone numbers, email addresses, and tokens are stripped before send. `release` is `com.qr24x7.app@<version>+<versionCode>` and `dist` is the `versionCode`.
+
+Source maps upload on EAS Build. The Expo plugin is `@sentry/react-native/expo` in `apps/mobile/app.config.ts`. Set these EAS secrets for the upload: `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, and `SENTRY_PROJECT`. Do not put the auth token in the app config.
+
+`apps/mobile/package.json` runs `node ./scripts/upload-sentry-sourcemaps.mjs` as `eas-build-on-success`. The script does nothing when the DSN is unset. When the token, org, and project are set and a `dist` folder exists, it runs `sentry-expo-upload-sourcemaps`. During the native build the Expo plugin also uploads maps when those secrets are present. Do not run an EAS build from this repository unless you mean to.
+
 ## Closed testing
 
 Google asks a personal Play Console account to run a closed test before production.
