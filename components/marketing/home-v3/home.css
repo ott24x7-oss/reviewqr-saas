@@ -18,7 +18,7 @@
   overflow-x: clip;
   max-width: 100%;
   padding-top: 56px;
-  padding-bottom: calc(80px + env(safe-area-inset-bottom));
+  padding-bottom: calc(64px + env(safe-area-inset-bottom));
 }
 
 .home-v3 *,
@@ -179,6 +179,7 @@
   cursor: pointer;
 }
 
+.home-v3 a.hv3-btn-primary,
 .hv3-btn-primary {
   background: var(--brand-ink);
   color: #fff;
@@ -366,13 +367,13 @@
   border: 1px solid var(--line);
   border-radius: 20px;
   box-shadow: var(--shadow-1);
-  padding: 16px;
+  padding: 12px;
   min-width: 0;
 }
 
 .hv3-flow-card .hv3-phone {
-  width: min(180px, 70%);
-  margin: 8px auto 12px;
+  width: min(150px, 64%);
+  margin: 4px auto 8px;
 }
 
 .hv3-dots {
@@ -455,7 +456,7 @@
 }
 
 .hv3-panel .hv3-phone {
-  width: min(220px, 62%);
+  width: min(172px, 52%);
   margin-inline: auto;
 }
 
@@ -598,7 +599,7 @@
 .hv3-cmp-row {
   display: grid;
   gap: 8px;
-  padding: 12px 0;
+  padding: 8px 0;
   border-top: 1px solid var(--line);
 }
 
@@ -854,8 +855,24 @@
 }
 
 @media (max-width: 1023px) {
+  .hv3-plans {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    max-width: 100%;
+    min-width: 0;
+    padding-bottom: 8px;
+  }
+
+  .hv3-plans > * {
+    flex: 0 0 86%;
+    scroll-snap-align: start;
+    min-width: 0;
+  }
+
   .hv3-plan-extra,
-  .hv3-stand-extra {
+  .hv3-stand-extra,
+  .hv3-plans > .hv3-plan-extra {
     display: none;
   }
 }

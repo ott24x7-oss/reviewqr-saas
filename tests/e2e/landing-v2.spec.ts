@@ -145,8 +145,19 @@ test("home at 375px stays under 9000px and old sections live on /features", asyn
   await expect(page.locator("#story")).toHaveCount(0);
   const height = await page.evaluate(() => document.documentElement.scrollHeight);
   expect(height).toBeLessThan(7000);
+  await expect.poll(() => page.locator("#home-flow img").first().evaluate((img) => (img as HTMLImageElement).naturalWidth > 10)).toBe(true);
   await page.screenshot({ path: "docs/home-v3/home-375.png", fullPage: true });
   await page.setViewportSize({ width: 1280, height: 800 });
+  await page.locator("#home-flow").scrollIntoViewIfNeeded();
+  await expect.poll(() =>
+    page.locator("#home-flow img").evaluateAll((imgs) =>
+      imgs.every((img) => {
+        const shot = img as HTMLImageElement;
+        return shot.complete && shot.naturalWidth > 10 && shot.currentSrc.includes("-960");
+      })
+    )
+  ).toBe(true);
+  await page.locator("#home-flow img").evaluateAll((imgs) => Promise.all(imgs.map((img) => (img as HTMLImageElement).decode())));
   await page.screenshot({ path: "docs/home-v3/home-1280.png", fullPage: true });
 });
 
@@ -166,7 +177,10 @@ test("the sticky bar appears after the hero and does not cover the footer", asyn
   await page.goto("/");
   const bar = page.locator("#sticky-cta");
   await expect(bar).toBeHidden();
-  await page.locator("#home-flow").scrollIntoViewIfNeeded();
+  await page.locator("#home-flow").evaluate((element) => {
+    const top = element.getBoundingClientRect().top + window.scrollY;
+    window.scrollTo(0, top + 8);
+  });
   await expect(bar).toBeVisible();
   const overlap = await page.evaluate(() => {
     const node = document.getElementById("sticky-cta");

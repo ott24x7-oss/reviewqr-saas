@@ -98,7 +98,7 @@ export function HomeFlow() {
             </article>
           ))}
         </div>
-        <div className="hv3-dots" role="tablist" aria-label="Steps">
+        <div className="hv3-dots" role="group" aria-label="Steps">
           {STEPS.map((step, index) => (
             <button
               key={step.id}
