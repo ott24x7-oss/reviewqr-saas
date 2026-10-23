@@ -2,7 +2,7 @@ import type { TapLink, TapPage } from "@reviewqr/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { router } from "expo-router";
-import { Link2, Palette, Plus } from "lucide-react-native";
+import { Link2, Palette as PaletteIcon, Plus } from "lucide-react-native";
 import { useEffect, useRef, useState, useMemo } from "react";
 import { Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from "react-native-reanimated";
@@ -229,7 +229,7 @@ export default function TapScreen() {
         {(data?.themes ?? []).map((item) => (
           <GroupRow
             key={item.id}
-            icon={Palette}
+            icon={PaletteIcon}
             tint={item.id === theme ? "green" : "pink"}
             title={item.name}
             hint={t.theme}

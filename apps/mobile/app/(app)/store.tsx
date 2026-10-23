@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { CalendarOff, Palette, Wallet } from "lucide-react-native";
+import { CalendarOff, Palette as PaletteIcon, Wallet } from "lucide-react-native";
 import { ScrollView, StyleSheet, Text } from "react-native";
 import { apiData } from "../../src/api/data";
 import { useI18n } from "../../src/i18n";
@@ -39,7 +39,7 @@ export default function StoreScreen() {
         <>
           <SectionHeader label={t.sectionCounter} />
           <Group>
-            <GroupRow icon={Palette} tint="pink" title={t.hintDesign} hint={settings.data?.design || t.storeSettings} />
+            <GroupRow icon={PaletteIcon} tint="pink" title={t.hintDesign} hint={settings.data?.design || t.storeSettings} />
             <GroupRow icon={Wallet} tint="amber" title={t.hintUpi} hint={settings.data?.upiId || t.hintStoreRow} />
             <GroupRow
               icon={CalendarOff}
