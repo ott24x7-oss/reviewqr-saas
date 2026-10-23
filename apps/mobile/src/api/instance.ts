@@ -20,7 +20,7 @@ const webStore: TokenStore = {
 
 let preferWeb: Promise<boolean> | null = null;
 
-function useWebStore() {
+function webStorePreferred() {
   if (!preferWeb) {
     preferWeb = SecureStore.isAvailableAsync()
       .then((available) => !available)
@@ -31,15 +31,15 @@ function useWebStore() {
 
 const secureStore: TokenStore = {
   async get(key) {
-    if (await useWebStore()) return webStore.get(key);
+    if (await webStorePreferred()) return webStore.get(key);
     return SecureStore.getItemAsync(key);
   },
   async set(key, value) {
-    if (await useWebStore()) return webStore.set(key, value);
+    if (await webStorePreferred()) return webStore.set(key, value);
     return SecureStore.setItemAsync(key, value);
   },
   async remove(key) {
-    if (await useWebStore()) return webStore.remove(key);
+    if (await webStorePreferred()) return webStore.remove(key);
     return SecureStore.deleteItemAsync(key);
   }
 };

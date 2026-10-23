@@ -6,11 +6,23 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { I18nProvider } from "../src/i18n";
-import { SessionProvider } from "../src/state/session";
+import { SessionProvider, useSession } from "../src/state/session";
+import { LaunchOverlay } from "../src/ui/launch";
+import { ThemeProvider } from "../src/ui/theme";
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
+
+function Boot({ fontsReady }: { fontsReady: boolean }) {
+  const { ready } = useSession();
+  return (
+    <>
+      {fontsReady ? <Stack screenOptions={{ headerShown: false }} /> : null}
+      <LaunchOverlay fontsReady={fontsReady} sessionReady={ready} />
+    </>
+  );
+}
 
 const queryClient = new QueryClient();
 
@@ -26,19 +38,17 @@ export default function RootLayout() {
     Mukta_500Medium
   });
 
-  useEffect(() => {
-    if (loaded) SplashScreen.hideAsync().catch(() => undefined);
-  }, [loaded]);
-
-  if (!loaded) return null;
-
   return (
-    <I18nProvider>
-      <QueryClientProvider client={queryClient}>
-        <SessionProvider>
-          <Stack screenOptions={{ headerShown: false }} />
-        </SessionProvider>
-      </QueryClientProvider>
-    </I18nProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider>
+        <I18nProvider>
+          <QueryClientProvider client={queryClient}>
+            <SessionProvider>
+              <Boot fontsReady={Boolean(loaded)} />
+            </SessionProvider>
+          </QueryClientProvider>
+        </I18nProvider>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }
