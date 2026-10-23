@@ -53,7 +53,7 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: palette.paper }]}>
-      <Image source={require("../../assets/onboarding/cafe.webp")} style={styles.strip} contentFit="cover" placeholder={{ blurhash: BLURHASH }} />
+      <Image source={require("../../assets/onboarding/photo-cafe.webp")} style={styles.strip} contentFit="cover" placeholder={{ blurhash: BLURHASH }} />
       <View style={styles.body}>
         <Pressable accessibilityRole="button" accessibilityLabel={t.language} accessibilityState={{ selected: lang === "hi" }} onPress={toggle} style={styles.lang}>
           <Text style={[styles.langText, { color: palette.deep }]}>{t.language}</Text>

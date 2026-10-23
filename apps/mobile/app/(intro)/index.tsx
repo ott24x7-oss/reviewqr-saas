@@ -21,19 +21,19 @@ import { useTheme } from "../../src/ui/theme";
 const SLIDES = [
   {
     key: "reviews",
-    image: require("../../assets/onboarding/cafe.webp"),
+    image: require("../../assets/onboarding/photo-cafe.webp"),
     title: "introReviews" as const,
     body: "introReviewsBody" as const
   },
   {
     key: "menu",
-    image: require("../../assets/onboarding/menu-live.webp"),
+    image: require("../../assets/onboarding/photo-scan.webp"),
     title: "introMenu" as const,
     body: "introMenuBody" as const
   },
   {
     key: "orders",
-    image: require("../../assets/onboarding/scan-live.webp"),
+    image: require("../../assets/onboarding/photo-kirana.webp"),
     title: "introOrders" as const,
     body: "introOrdersBody" as const
   }
