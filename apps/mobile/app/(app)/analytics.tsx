@@ -67,7 +67,7 @@ export default function AnalyticsScreen() {
           icon={QrCode}
           title={t.firstScans}
           body={t.firstScansBody}
-          action={t.showQr}
+          action={t.showMyQr}
           onAction={() => router.push("/(app)/tap")}
         />
       ) : (
