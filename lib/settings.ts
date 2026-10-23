@@ -14,6 +14,7 @@ import {
   DEFAULT_BRAND_TAGLINE,
   PREVIOUS_BRAND_NAME
 } from "./brand-defaults";
+import { normalizeAppRelease, type AppReleaseConfig } from "./app/release";
 import { BRAND_ICON } from "./brand-assets";
 import { normalizeShopCheckout, shopCheckoutError, type ShopCheckoutConfig } from "./shop/charge";
 import { DEFAULT_SHIPPING, pickupError, presetError, type ShippingConfig } from "./shop/shipping";
@@ -30,7 +31,8 @@ export const SETTING_KEYS = {
   turnstile: "turnstile",
   ai: "ai",
   shipping: "shipping",
-  shop: "shop"
+  shop: "shop",
+  app: "app.release"
 } as const;
 
 // Which fields inside each settings blob are secrets encrypted at rest.
@@ -614,6 +616,15 @@ export async function getSiteConfig(): Promise<SiteConfig> {
 }
 export async function setSiteConfig(v: SiteConfig, by?: string) {
   await writeKey(SETTING_KEYS.site, v, by);
+}
+
+export async function getAppReleaseConfig(): Promise<AppReleaseConfig> {
+  const stored = await readKey<Partial<AppReleaseConfig>>(SETTING_KEYS.app, {});
+  return normalizeAppRelease(stored);
+}
+
+export async function setAppReleaseConfig(value: AppReleaseConfig, by?: string) {
+  await writeKey(SETTING_KEYS.app, normalizeAppRelease(value), by);
 }
 
 /* ============== Turnstile ============== */

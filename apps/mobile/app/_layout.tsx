@@ -10,6 +10,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { I18nProvider } from "../src/i18n";
 import { initSentry, wrapRoot } from "../src/sentry/init";
 import { SessionProvider, useSession } from "../src/state/session";
+import { AppUpdateCheck } from "../src/updates/check";
 import { LaunchFrame } from "../src/ui/launch";
 import { ThemeProvider } from "../src/ui/theme";
 
@@ -48,6 +49,7 @@ function RootLayout() {
         <I18nProvider>
           <QueryClientProvider client={queryClient}>
             <SessionProvider>
+              <AppUpdateCheck />
               <Boot fontsReady={Boolean(loaded)} />
             </SessionProvider>
           </QueryClientProvider>
