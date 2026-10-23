@@ -287,6 +287,8 @@ const en = {
   hintUpi: "UPI id",
   hintOpen: "Taking orders",
   hintClosed: "Holiday mode is on",
+  firstScans: "Your first scans will show here",
+  firstScansBody: "Show your QR so a customer can scan it.",
   soldOut: "Sold out",
   hintNoStaff: "Add someone who works the counter",
   daysLeft: "{days} days left"
@@ -579,6 +581,8 @@ const hi: typeof en = {
   hintUpi: "UPI आईडी",
   hintOpen: "ऑर्डर ले रहे हैं",
   hintClosed: "छुट्टी मोड चालू है",
+  firstScans: "आपके पहले स्कैन यहाँ दिखेंगे",
+  firstScansBody: "QR दिखाएँ, ताकि ग्राहक स्कैन कर सके।",
   soldOut: "खत्म",
   hintNoStaff: "काउंटर पर काम करने वाले को जोड़ें",
   daysLeft: "{days} दिन बाकी"

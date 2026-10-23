@@ -1,4 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
+import { router } from "expo-router";
+import { QrCode } from "lucide-react-native";
 import { useState , useMemo } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { apiData } from "../../src/api/data";
@@ -7,6 +9,7 @@ import { accountKey } from "../../src/query/keys";
 import { useBusiness } from "../../src/state/business";
 import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
+import { EmptyState } from "../../src/ui/bits";
 import { usePalette } from "../../src/ui/theme";
 import type { Palette } from "../../src/ui/tokens";
 
@@ -43,6 +46,7 @@ export default function AnalyticsScreen() {
     queryFn: () => apiData<Analytics>(`/api/v1/analytics?businessId=${id}&range=${range}`)
   });
   const summary = query.data?.summary;
+  const quiet = !!query.data && isQuiet(query.data);
   const trend = query.data?.trend ?? [];
   const maxScan = Math.max(1, ...trend.map((row) => row.scans));
   const heat = query.data?.heatmap ?? [];
@@ -58,6 +62,16 @@ export default function AnalyticsScreen() {
           </Pressable>
         ))}
       </View>
+      {quiet ? (
+        <EmptyState
+          icon={QrCode}
+          title={t.firstScans}
+          body={t.firstScansBody}
+          action={t.showQr}
+          onAction={() => router.push("/(app)/tap")}
+        />
+      ) : (
+      <>
       <View style={styles.grid}>
         <Card label={t.scans} value={summary ? String(summary.scans) : "…"} />
         <Card label={t.taps} value={summary ? `${summary.tapsNfc} + ${summary.tapsQr}` : "…"} />
@@ -101,8 +115,26 @@ export default function AnalyticsScreen() {
           </View>
         </ScrollView>
       </View>
+      </>
+      )}
     </ScrollView>
   );
+}
+
+function isQuiet(data: Analytics) {
+  const summary = data.summary;
+  const totals =
+    summary.scans +
+    summary.tapsNfc +
+    summary.tapsQr +
+    summary.pageViews +
+    summary.buttonClicks +
+    summary.feedback +
+    (summary.orders ?? 0) +
+    (summary.orderPaise ?? 0);
+  const trend = data.trend.reduce((sum, row) => sum + row.scans, 0);
+  const heat = data.heatmap.flat().reduce((sum, count) => sum + count, 0);
+  return totals + trend + heat === 0;
 }
 
 function Card({ label, value }: { label: string; value: string }) {
