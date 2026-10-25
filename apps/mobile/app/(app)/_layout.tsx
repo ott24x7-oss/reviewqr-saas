@@ -53,7 +53,7 @@ function AppTabs() {
   });
   const badges = useMemo(
     () => ({
-      orders: (orders.data?.items ?? []).filter((row) => row.status === "ACCEPTED").length,
+      orders: (orders.data?.items ?? []).filter((row) => row.status === "NEW" || row.status === "ACCEPTED").length,
       feedback: (feedback.data?.items ?? []).filter((row) => row.status !== "RESOLVED").length
     }),
     [orders.data, feedback.data]
@@ -96,6 +96,7 @@ function AppTabs() {
       <Tabs.Screen name="plan" options={{ title: t.plans }} />
       <Tabs.Screen name="staff" options={{ title: t.staff }} />
       <Tabs.Screen name="store" options={{ title: t.storeSettings }} />
+      <Tabs.Screen name="order-detail" options={{ title: t.viewDetails, href: null }} />
     </Tabs>
   );
 }

@@ -290,11 +290,24 @@ export function registerResourcePaths(registry: OpenAPIRegistry, errorRef: JsonS
     path: "/api/v1/orders",
     summary: "Orders you can read, newest first, with today's summary",
     security: bearer,
-    request: { query: pageQuerySchema.extend({ businessId: z.string().optional() }) },
+    request: { query: pageQuerySchema.extend({ businessId: z.string().optional(), from: z.string().optional() }) },
     responses: {
       200: jsonResponse("Orders", dataSchema(listSchema(orderCardSchema).extend({ summary: daySummarySchema }))),
       400: validation,
       401: unauthorized
+    }
+  });
+
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/orders/{id}",
+    summary: "One order: lines, variants, notes, timeline, and KOT text",
+    security: bearer,
+    request: { params: idParams },
+    responses: {
+      200: jsonResponse("Order detail", dataSchema(orderCardSchema.extend({ kot: z.string(), events: z.array(z.object({ status: z.string(), at: z.string() })) }))),
+      401: unauthorized,
+      404: notFound
     }
   });
 

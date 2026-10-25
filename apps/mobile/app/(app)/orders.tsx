@@ -2,7 +2,7 @@ import { FlashList } from "@shopify/flash-list";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createAudioPlayer, type AudioPlayer } from "expo-audio";
 import * as ImagePicker from "expo-image-picker";
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { ChevronRight, ClipboardList } from "lucide-react-native";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Linking, StyleSheet, Text, View } from "react-native";
@@ -56,6 +56,11 @@ type FeedbackRow = {
 };
 
 const STATUSES = ["ACCEPTED", "PREPARING", "READY", "COMPLETED"] as const;
+
+function kolkataDay(daysAgo: number) {
+  const ist = new Date(Date.now() + 5.5 * 60 * 60 * 1000 - daysAgo * 24 * 60 * 60 * 1000);
+  return ist.toISOString().slice(0, 10);
+}
 
 function labelFor(status: string, t: { statusNew: string; statusPreparing: string; statusReady: string; statusDone: string }) {
   if (status === "ACCEPTED") return t.statusNew;
@@ -137,7 +142,7 @@ export default function OrdersScreen() {
   const [price, setPrice] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [reply, setReply] = useState<string | null>(null);
-  const [detail, setDetail] = useState<OrderCard | null>(null);
+  const [range, setRange] = useState<"all" | "today" | "week">("all");
   const [skeletonReady, setSkeletonReady] = useState(false);
   const entitlement = useEntitlement();
   const modules = entitlement.data?.modules;
@@ -152,10 +157,11 @@ export default function OrdersScreen() {
     enabled: !!user && !!id && tab === "products",
     queryFn: () => apiData<{ items: Product[] }>(`/api/v1/businesses/${id}/menu?limit=50`)
   });
+  const from = range === "all" ? "" : kolkataDay(range === "week" ? 6 : 0);
   const orders = useQuery({
-    queryKey: accountKey(userId, "orders", id),
+    queryKey: accountKey(userId, "orders", id, range),
     enabled: !!user && !!id && tab === "orders",
-    queryFn: () => apiData<{ items: OrderCard[] }>(`/api/v1/orders?limit=30${id ? `&businessId=${id}` : ""}`)
+    queryFn: () => apiData<{ items: OrderCard[] }>(`/api/v1/orders?limit=30${id ? `&businessId=${id}` : ""}${from ? `&from=${from}` : ""}`)
   });
   const feedback = useQuery({
     queryKey: accountKey(userId, "feedback", id),
@@ -352,6 +358,14 @@ export default function OrdersScreen() {
       </View>
       {tab === "orders" && !locked ? (
         <View style={styles.row}>
+          {(["today", "week", "all"] as const).map((item) => (
+            <Chip
+              key={item}
+              label={item === "today" ? t.dateToday : item === "week" ? t.dateWeek : t.dateAll}
+              selected={range === item}
+              onPress={() => setRange(item)}
+            />
+          ))}
           {STATUSES.map((status) => (
             <Chip key={status} label={labelFor(status, t)} selected={filter === status} onPress={() => setFilter(status)} />
           ))}
@@ -451,7 +465,7 @@ export default function OrdersScreen() {
             order.status === "ACCEPTED" ? t.acceptOrder : order.status === "PREPARING" ? t.markReady : order.status === "READY" ? t.statusDone : "";
           return (
             <EnterRow index={index} drop={fresh.current.has(order.id)}>
-              <SwipeAdvance hint={action || t.viewDetails} onAdvance={() => (upcoming ? setOrderStatus(order.id, upcoming) : setDetail(order))}>
+              <SwipeAdvance hint={action || t.viewDetails} onAdvance={() => (upcoming ? setOrderStatus(order.id, upcoming) : router.push({ pathname: "/(app)/order-detail", params: { id: order.id } }))}>
                 <Card style={styles.gap}>
                   <View style={styles.titleRow}>
                     <Text style={[styles.title, { color: palette.ink }]}>#{order.number}</Text>
@@ -480,20 +494,14 @@ export default function OrdersScreen() {
                     ))}
                   </View>
                   {upcoming ? <PillButton label={action} onPress={() => setOrderStatus(order.id, upcoming)} tone="dark" /> : null}
-                  <PillButton label={t.viewDetails} tone="outline" onPress={() => setDetail(order)} />
+                  <PillButton label={t.viewDetails} tone="outline" onPress={() => router.push({ pathname: "/(app)/order-detail", params: { id: order.id } })} />
                 </Card>
               </SwipeAdvance>
             </EnterRow>
           );
         }}
       />
-      {detail ? (
-        <Card style={styles.detail}>
-          <Text style={[styles.title, { color: palette.ink }]}>#{detail.number}</Text>
-          <Text style={[styles.note, { color: palette.muted }]}>{detail.items.map((line) => `${line.qty} ${line.name}`).join("\n")}</Text>
-          <PillButton label={t.resolved} tone="outline" onPress={() => setDetail(null)} />
-        </Card>
-      ) : null}
+
       {tab === "orders" ? (
         <CoachTour
           screen="orders"

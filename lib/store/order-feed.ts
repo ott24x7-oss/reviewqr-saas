@@ -117,7 +117,7 @@ const orderInclude = (userId: string) => ({
 /** One page of orders this user can read, plus today's summary. */
 export async function loadOrderCardPage(
   userId: string,
-  page: PageQuery & { businessId?: string | null }
+  page: PageQuery & { businessId?: string | null; since?: Date | null }
 ) {
   const locked = await ownedStoreBlock(userId);
   if (locked) return fail(403, locked);
@@ -126,6 +126,7 @@ export async function loadOrderCardPage(
   const paged = await takePage(async () => {
     const orders = await prisma.menuOrder.findMany({
       where: {
+        ...(page.since ? { createdAt: { gte: page.since } } : {}),
         business: {
           ...readable,
           ...(page.businessId ? { id: page.businessId } : {})
