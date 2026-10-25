@@ -30,6 +30,7 @@ export type Palette = {
   success: string;
   warning: string;
   danger: string;
+  onDanger: string;
   buttonGradient: readonly [string, string];
   cinematic: boolean;
   /** Backwards-compatible aliases used by the existing screen components. */
@@ -51,7 +52,9 @@ export type Palette = {
   glass: string;
 };
 
-type PaletteSeed = Omit<Palette, "deep" | "bright" | "ink" | "paper" | "card" | "star" | "white" | "inkSoft" | "chip" | "scrim" | "header" | "headerInk" | "navy" | "cyan" | "cyanSoft" | "glass" | "cinematic"> & {
+type PaletteSeed = Omit<Palette, "deep" | "bright" | "ink" | "paper" | "card" | "star" | "white" | "inkSoft" | "chip" | "scrim" | "header" | "headerInk" | "navy" | "cyan" | "cyanSoft" | "glass" | "cinematic" | "onDanger"> & {
+  deep?: string;
+  onDanger?: string;
   header?: string;
   headerInk?: string;
   cinematic?: boolean;
@@ -62,7 +65,8 @@ function createPalette(seed: PaletteSeed): Palette {
   return {
     ...seed,
     cinematic: seed.cinematic ?? false,
-    deep: seed.primaryDeep,
+    onDanger: seed.onDanger ?? "#FFFFFF",
+    deep: seed.deep ?? seed.primaryDeep,
     bright: seed.buttonGradient[1],
     ink: seed.text,
     paper: seed.cinematic ? "transparent" : seed.bg,
@@ -82,14 +86,14 @@ function createPalette(seed: PaletteSeed): Palette {
 }
 
 const emeraldLight = createPalette({
-  primary: "#16A34A", primaryDeep: "#166534", onPrimary: "#FFFFFF", accentSoft: "#DCFCE7",
+  primary: "#16A34A", primaryDeep: "#166534", onPrimary: "#052E16", accentSoft: "#DCFCE7",
   bg: "#F4EFE6", surface: "#FFFFFF", surface2: "#E7E0D4", line: "#D7CEC0", text: "#1C1813", muted: "#5E574F",
-  success: "#0F7A37", warning: "#854D0E", danger: "#B91C1C", buttonGradient: ["#166534", "#0F7A37"]
+  success: "#0F7A37", warning: "#854D0E", danger: "#B91C1C", buttonGradient: ["#16A34A", "#22C55E"]
 });
 const emeraldDark = createPalette({
-  primary: "#22C55E", primaryDeep: "#15803D", onPrimary: "#052E16", accentSoft: "rgba(34,197,94,0.18)",
+  primary: "#22C55E", primaryDeep: "#15803D", deep: "#22C55E", onPrimary: "#052E16", accentSoft: "rgba(34,197,94,0.18)",
   bg: "#0E0D0B", surface: "#1A1916", surface2: "#25231F", line: "#3D3A34", text: "#F7F4EE", muted: "#B8B1A4",
-  success: "#4ADE80", warning: "#FBBF24", danger: "#F87171", buttonGradient: ["#22C55E", "#4ADE80"], header: "#141310", headerInk: "#F7F4EE"
+  success: "#4ADE80", warning: "#FBBF24", danger: "#F87171", onDanger: "#0E0D0B", buttonGradient: ["#22C55E", "#4ADE80"], header: "#141310", headerInk: "#F7F4EE"
 });
 
 const themePalettes: Record<AppThemeName, { light: Palette; dark: Palette; alwaysDark?: boolean }> = {
@@ -100,8 +104,8 @@ const themePalettes: Record<AppThemeName, { light: Palette; dark: Palette; alway
       success: "#16723A", warning: "#854D0E", danger: "#B91C1C", buttonGradient: ["#9D174D", "#BE185D"]
     }),
     dark: createPalette({
-      primary: "#F472B6", primaryDeep: "#BE185D", onPrimary: "#500724", accentSoft: "rgba(244,114,182,0.18)", bg: "#120A0E", surface: "#21141A", surface2: "#2C1B23", line: "#49303B", text: "#FFF1F7", muted: "#C9B0BC",
-      success: "#6EE7A0", warning: "#FBBF24", danger: "#FDA4AF", buttonGradient: ["#F472B6", "#FDA4D2"], header: "#1A0E14", headerInk: "#FFF1F7"
+      primary: "#F472B6", primaryDeep: "#BE185D", deep: "#F472B6", onPrimary: "#500724", accentSoft: "rgba(244,114,182,0.18)", bg: "#120A0E", surface: "#21141A", surface2: "#2C1B23", line: "#49303B", text: "#FFF1F7", muted: "#C9B0BC",
+      success: "#6EE7A0", warning: "#FBBF24", danger: "#FDA4AF", onDanger: "#120A0E", buttonGradient: ["#F472B6", "#FDA4D2"], header: "#1A0E14", headerInk: "#FFF1F7"
     })
   },
   ocean: {
@@ -110,8 +114,8 @@ const themePalettes: Record<AppThemeName, { light: Palette; dark: Palette; alway
       success: "#16723A", warning: "#854D0E", danger: "#B91C1C", buttonGradient: ["#1D4ED8", "#1E40AF"]
     }),
     dark: createPalette({
-      primary: "#60A5FA", primaryDeep: "#2563EB", onPrimary: "#0A0F1A", accentSoft: "rgba(96,165,250,0.18)", bg: "#0A0F1A", surface: "#121A29", surface2: "#1B2638", line: "#34445C", text: "#F2F7FF", muted: "#B1C0D5",
-      success: "#6EE7A0", warning: "#FBBF24", danger: "#FDA4AF", buttonGradient: ["#60A5FA", "#93C5FD"], header: "#0D1523", headerInk: "#F2F7FF"
+      primary: "#60A5FA", primaryDeep: "#2563EB", deep: "#60A5FA", onPrimary: "#0A0F1A", accentSoft: "rgba(96,165,250,0.18)", bg: "#0A0F1A", surface: "#121A29", surface2: "#1B2638", line: "#34445C", text: "#F2F7FF", muted: "#B1C0D5",
+      success: "#6EE7A0", warning: "#FBBF24", danger: "#FDA4AF", onDanger: "#0A0F1A", buttonGradient: ["#60A5FA", "#93C5FD"], header: "#0D1523", headerInk: "#F2F7FF"
     })
   },
   crimson: {
@@ -120,8 +124,8 @@ const themePalettes: Record<AppThemeName, { light: Palette; dark: Palette; alway
       success: "#16723A", warning: "#854D0E", danger: "#B91C1C", buttonGradient: ["#B91C1C", "#991B1B"]
     }),
     dark: createPalette({
-      primary: "#EF4444", primaryDeep: "#B91C1C", onPrimary: "#000000", accentSoft: "rgba(239,68,68,0.18)", bg: "#000000", surface: "#121212", surface2: "#1F1F1F", line: "#3D3D3D", text: "#F5F5F5", muted: "#B8B8B8",
-      success: "#6EE7A0", warning: "#FBBF24", danger: "#F87171", buttonGradient: ["#EF4444", "#F87171"], header: "#080808", headerInk: "#F5F5F5"
+      primary: "#EF4444", primaryDeep: "#B91C1C", deep: "#F87171", onPrimary: "#000000", accentSoft: "rgba(239,68,68,0.18)", bg: "#000000", surface: "#121212", surface2: "#1F1F1F", line: "#3D3D3D", text: "#F5F5F5", muted: "#B8B8B8",
+      success: "#6EE7A0", warning: "#FBBF24", danger: "#F87171", onDanger: "#000000", buttonGradient: ["#EF4444", "#F87171"], header: "#080808", headerInk: "#F5F5F5"
     })
   },
   graphite: {
@@ -130,8 +134,8 @@ const themePalettes: Record<AppThemeName, { light: Palette; dark: Palette; alway
       success: "#16723A", warning: "#854D0E", danger: "#B91C1C", buttonGradient: ["#334155", "#1E293B"]
     }),
     dark: createPalette({
-      primary: "#94A3B8", primaryDeep: "#475569", onPrimary: "#0B0C0E", accentSoft: "rgba(148,163,184,0.2)", bg: "#0B0C0E", surface: "#15171B", surface2: "#202329", line: "#383C43", text: "#F3F4F6", muted: "#B8BEC8",
-      success: "#6EE7A0", warning: "#FBBF24", danger: "#FDA4AF", buttonGradient: ["#94A3B8", "#CBD5E1"], header: "#111317", headerInk: "#F3F4F6"
+      primary: "#94A3B8", primaryDeep: "#475569", deep: "#94A3B8", onPrimary: "#0B0C0E", accentSoft: "rgba(148,163,184,0.2)", bg: "#0B0C0E", surface: "#15171B", surface2: "#202329", line: "#383C43", text: "#F3F4F6", muted: "#B8BEC8",
+      success: "#6EE7A0", warning: "#FBBF24", danger: "#FDA4AF", onDanger: "#0B0C0E", buttonGradient: ["#94A3B8", "#CBD5E1"], header: "#111317", headerInk: "#F3F4F6"
     })
   },
   sand: {
@@ -140,8 +144,8 @@ const themePalettes: Record<AppThemeName, { light: Palette; dark: Palette; alway
       success: "#28663A", warning: "#805313", danger: "#B4232F", buttonGradient: ["#8B5E34", "#6E4525"]
     }),
     dark: createPalette({
-      primary: "#D6A86E", primaryDeep: "#8B5E34", onPrimary: "#14110D", accentSoft: "rgba(214,168,110,0.18)", bg: "#14110D", surface: "#211B15", surface2: "#2D251C", line: "#48392A", text: "#F8EBDD", muted: "#C4B39F",
-      success: "#82CE92", warning: "#EDC46E", danger: "#F17D83", buttonGradient: ["#D6A86E", "#E8C78D"], header: "#19140F", headerInk: "#F8EBDD"
+      primary: "#D6A86E", primaryDeep: "#8B5E34", deep: "#D6A86E", onPrimary: "#14110D", accentSoft: "rgba(214,168,110,0.18)", bg: "#14110D", surface: "#211B15", surface2: "#2D251C", line: "#48392A", text: "#F8EBDD", muted: "#C4B39F",
+      success: "#82CE92", warning: "#EDC46E", danger: "#F17D83", onDanger: "#14110D", buttonGradient: ["#D6A86E", "#E8C78D"], header: "#19140F", headerInk: "#F8EBDD"
     })
   },
   sage: {
@@ -150,18 +154,18 @@ const themePalettes: Record<AppThemeName, { light: Palette; dark: Palette; alway
       success: "#28703D", warning: "#805313", danger: "#B4232F", buttonGradient: ["#4D7C0F", "#3F6212"]
     }),
     dark: createPalette({
-      primary: "#A3C76D", primaryDeep: "#5F7D35", onPrimary: "#0D110B", accentSoft: "rgba(163,199,109,0.18)", bg: "#0D110B", surface: "#171D14", surface2: "#21291C", line: "#394331", text: "#F2F5ED", muted: "#B6C2A8",
-      success: "#8BD18E", warning: "#EDC46E", danger: "#F17D83", buttonGradient: ["#A3C76D", "#C1D991"], header: "#11160F", headerInk: "#F2F5ED"
+      primary: "#A3C76D", primaryDeep: "#5F7D35", deep: "#A3C76D", onPrimary: "#0D110B", accentSoft: "rgba(163,199,109,0.18)", bg: "#0D110B", surface: "#171D14", surface2: "#21291C", line: "#394331", text: "#F2F5ED", muted: "#B6C2A8",
+      success: "#8BD18E", warning: "#EDC46E", danger: "#F17D83", onDanger: "#0D110B", buttonGradient: ["#A3C76D", "#C1D991"], header: "#11160F", headerInk: "#F2F5ED"
     })
   },
   cinematic: {
     light: createPalette({
-      primary: "#D4AF37", primaryDeep: "#9C7A16", onPrimary: "#050507", accentSoft: "rgba(212,175,55,0.2)", bg: "#050507", surface: "rgba(255,255,255,0.06)", surface2: "rgba(255,255,255,0.1)", line: "rgba(255,255,255,0.1)", text: "#FFFFFF", muted: "#C7C7CC",
-      success: "#70E6A1", warning: "#F5D06F", danger: "#FF8E91", buttonGradient: ["#D4AF37", "#F0D477"], cinematic: true, header: "#050507", headerInk: "#FFFFFF"
+      primary: "#D4AF37", primaryDeep: "#9C7A16", deep: "#D4AF37", onPrimary: "#050507", accentSoft: "rgba(212,175,55,0.2)", bg: "#050507", surface: "rgba(255,255,255,0.06)", surface2: "rgba(255,255,255,0.1)", line: "rgba(255,255,255,0.1)", text: "#FFFFFF", muted: "#C7C7CC",
+      success: "#70E6A1", warning: "#F5D06F", danger: "#FF8E91", onDanger: "#050507", buttonGradient: ["#D4AF37", "#F0D477"], cinematic: true, header: "#050507", headerInk: "#FFFFFF"
     }),
     dark: createPalette({
-      primary: "#D4AF37", primaryDeep: "#9C7A16", onPrimary: "#050507", accentSoft: "rgba(212,175,55,0.2)", bg: "#050507", surface: "rgba(255,255,255,0.06)", surface2: "rgba(255,255,255,0.1)", line: "rgba(255,255,255,0.1)", text: "#FFFFFF", muted: "#C7C7CC",
-      success: "#70E6A1", warning: "#F5D06F", danger: "#FF8E91", buttonGradient: ["#D4AF37", "#F0D477"], cinematic: true, header: "#050507", headerInk: "#FFFFFF"
+      primary: "#D4AF37", primaryDeep: "#9C7A16", deep: "#D4AF37", onPrimary: "#050507", accentSoft: "rgba(212,175,55,0.2)", bg: "#050507", surface: "rgba(255,255,255,0.06)", surface2: "rgba(255,255,255,0.1)", line: "rgba(255,255,255,0.1)", text: "#FFFFFF", muted: "#C7C7CC",
+      success: "#70E6A1", warning: "#F5D06F", danger: "#FF8E91", onDanger: "#050507", buttonGradient: ["#D4AF37", "#F0D477"], cinematic: true, header: "#050507", headerInk: "#FFFFFF"
     }),
     alwaysDark: true
   }
@@ -192,7 +196,7 @@ export function getThemePalette(appTheme: AppThemeName, scheme: "light" | "dark"
     ...base,
     primary: accent.primary,
     primaryDeep: accent.primaryDeep,
-    deep: accent.primaryDeep,
+    deep: accent.primary,
     bright: accent.gradient[1],
     onPrimary: accent.onPrimary,
     accentSoft: accent.soft,

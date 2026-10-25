@@ -1,3 +1,4 @@
+import { Screen } from "../../src/ui/screen";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ScrollView, Share, StyleSheet, Text } from "react-native";
@@ -14,7 +15,7 @@ import { useTheme } from "../../src/ui/theme";
 type Business = { id: string; name: string; owner: string; plan: string; status: string };
 type Payout = { id: string; amountPaise: number; utr: string; paidAt: string };
 
-export default function AgentScreen() {
+function AgentScreenContent() {
   const { t, lang } = useI18n();
   const { palette } = useTheme();
   const { user } = useSession();
@@ -78,3 +79,9 @@ const styles = StyleSheet.create({
   card: { gap: 4 },
   hindi: { fontFamily: fonts.hindi }
 });
+
+export default function AgentScreen() {
+  return (
+    <Screen topInset={true}><AgentScreenContent /></Screen>
+  );
+}

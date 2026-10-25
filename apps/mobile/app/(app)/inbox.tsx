@@ -1,3 +1,4 @@
+import { Screen } from "../../src/ui/screen";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ScrollView, StyleSheet, Text } from "react-native";
 import { apiData } from "../../src/api/data";
@@ -11,7 +12,7 @@ import { useTheme } from "../../src/ui/theme";
 
 type Note = { id: string; title: string; message: string; isRead: boolean; createdAt: string };
 
-export default function InboxScreen() {
+function InboxScreenContent() {
   const { t, lang } = useI18n();
   const { palette } = useTheme();
   const { user } = useSession();
@@ -50,3 +51,9 @@ const styles = StyleSheet.create({
   card: { gap: 4 },
   hindi: { fontFamily: fonts.hindi }
 });
+
+export default function InboxScreen() {
+  return (
+    <Screen topInset={true}><InboxScreenContent /></Screen>
+  );
+}

@@ -1,5 +1,12 @@
+import { Screen } from "../../src/ui/screen";
 import { BusinessForm } from "../../src/ui/business-form";
 
-export default function NewBusinessScreen() {
+function NewBusinessScreenContent() {
   return <BusinessForm />;
+}
+
+export default function NewBusinessScreen() {
+  return (
+    <Screen topInset={true}><NewBusinessScreenContent /></Screen>
+  );
 }

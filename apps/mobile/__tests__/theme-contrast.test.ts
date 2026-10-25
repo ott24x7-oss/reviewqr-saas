@@ -1,4 +1,4 @@
-import { APP_THEMES, getThemePalette, type Palette } from "../src/ui/tokens";
+import { APP_THEMES, CINEMATIC_ACCENTS, getThemePalette, type AppThemeName, type CinematicAccent, type Palette } from "../src/ui/tokens";
 
 type RGB = readonly [number, number, number];
 
@@ -44,23 +44,32 @@ function readableAgainstSurfaces(theme: string, mode: string, palette: Palette) 
   const backgrounds = [
     palette.bg,
     composite(palette.surface, palette.bg),
-    composite(palette.surface2, palette.bg)
+    composite(palette.surface2, palette.bg),
+    composite(palette.accentSoft, palette.bg)
   ];
   for (const background of backgrounds) {
     expect(contrast(palette.text, background)).toBeGreaterThanOrEqual(4.5);
     expect(contrast(palette.muted, background)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(palette.deep, background)).toBeGreaterThanOrEqual(4.5);
   }
   for (const stop of palette.buttonGradient) {
     expect(contrast(palette.onPrimary, stop)).toBeGreaterThanOrEqual(4.5);
   }
+  expect(contrast(palette.onPrimary, palette.primary)).toBeGreaterThanOrEqual(4.5);
+  expect(contrast(palette.headerInk, palette.header)).toBeGreaterThanOrEqual(4.5);
+  expect(contrast(palette.onDanger, palette.danger)).toBeGreaterThanOrEqual(4.5);
   expect(theme).toBeTruthy();
   expect(mode).toBeTruthy();
 }
 
 describe("owner app theme text contrast", () => {
-  const cases = APP_THEMES.flatMap((theme) => (["light", "dark"] as const).map((mode) => ({ theme, mode })));
-  it.each(cases)("$theme $mode has readable text and buttons", ({ theme, mode }) => {
-      readableAgainstSurfaces(theme, mode, getThemePalette(theme, mode));
-    }
+  const cases: { theme: AppThemeName; mode: "light" | "dark"; accent: CinematicAccent }[] = APP_THEMES.flatMap((theme) =>
+    (["light", "dark"] as const).flatMap((mode) => {
+      const accents: readonly CinematicAccent[] = theme === "cinematic" ? CINEMATIC_ACCENTS : ["gold"];
+      return accents.map((accent) => ({ theme, mode, accent }));
+    })
   );
+  it.each(cases)("$theme $mode ($accent) has readable text and buttons", ({ theme, mode, accent }) => {
+    readableAgainstSurfaces(theme, mode, getThemePalette(theme, mode, accent));
+  });
 });

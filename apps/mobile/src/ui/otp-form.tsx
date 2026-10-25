@@ -193,7 +193,7 @@ function OtpCell({
         style={[
           styles.box,
           {
-            backgroundColor: success ? "#DCFCE7" : palette.card,
+            backgroundColor: success ? palette.accentSoft : palette.card,
             borderColor: success ? palette.primary : active ? palette.primary : palette.line
           },
           anim

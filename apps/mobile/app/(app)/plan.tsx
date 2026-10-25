@@ -1,3 +1,4 @@
+import { Screen } from "../../src/ui/screen";
 import type { BillingSummary } from "@reviewqr/shared";
 import { useQuery } from "@tanstack/react-query";
 import { CreditCard, Receipt } from "lucide-react-native";
@@ -24,7 +25,7 @@ function expiryProgress(when: string, now: number) {
   return Math.max(0, Math.min(1, 1 - days / 30));
 }
 
-export default function PlanScreen() {
+function PlanScreenContent() {
   const palette = usePalette();
   const styles = useMemo(() => makeStyles(palette), [palette]);
   const { t, lang } = useI18n();
@@ -66,7 +67,7 @@ export default function PlanScreen() {
       <View style={styles.plan}>
         <View style={styles.planHead}>
           <View style={styles.mark}>
-            <CreditCard color="#0F7A37" size={22} strokeWidth={1.75} />
+            <CreditCard color={palette.deep} size={22} strokeWidth={1.75} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[styles.planName, lang === "hi" && styles.hindi]}>{name || plan.data?.tier || "…"}</Text>
@@ -119,14 +120,20 @@ function makeStyles(colors: Palette) {
     title: { fontFamily: fonts.display, fontSize: 28, color: colors.ink },
     plan: { backgroundColor: colors.card, borderRadius: 20, padding: 16, gap: 12 },
     planHead: { flexDirection: "row", alignItems: "center", gap: 12 },
-    mark: { width: 44, height: 44, borderRadius: 14, backgroundColor: "#DCFCE7", alignItems: "center", justifyContent: "center" },
+    mark: { width: 44, height: 44, borderRadius: 14, backgroundColor: colors.accentSoft, alignItems: "center", justifyContent: "center" },
     planName: { fontFamily: fonts.title, fontSize: 22, color: colors.ink },
     note: { fontFamily: fonts.body, fontSize: 14, color: colors.inkSoft, lineHeight: 20 },
     chips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-    chip: { backgroundColor: "#DCFCE7", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
-    chipText: { fontFamily: fonts.bodyStrong, fontSize: 12, color: "#0F7A37" },
+    chip: { backgroundColor: colors.accentSoft, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
+    chipText: { fontFamily: fonts.bodyStrong, fontSize: 12, color: colors.deep },
     track: { height: 8, borderRadius: 99, backgroundColor: colors.line, overflow: "hidden" },
     fill: { height: 8, borderRadius: 99, backgroundColor: colors.primary },
     hindi: { fontFamily: fonts.hindi }
   });
+}
+
+export default function PlanScreen() {
+  return (
+    <Screen topInset={true}><PlanScreenContent /></Screen>
+  );
 }

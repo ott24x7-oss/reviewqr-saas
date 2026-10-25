@@ -1,3 +1,4 @@
+import { Screen } from "../../src/ui/screen";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState , useMemo } from "react";
 import { User } from "lucide-react-native";
@@ -16,7 +17,7 @@ import { Group, GroupRow, SectionHeader } from "../../src/ui/rows";
 
 type StaffRow = { id: string; name: string; role: string | null };
 
-export default function StaffScreen() {
+function StaffScreenContent() {
   const palette = usePalette();
   const styles = useMemo(() => makeStyles(palette), [palette]);
   const { t, lang } = useI18n();
@@ -101,4 +102,10 @@ function makeStyles(colors: Palette) {
   error: { color: colors.danger, fontFamily: fonts.body },
   hindi: { fontFamily: fonts.hindi }
 });
+}
+
+export default function StaffScreen() {
+  return (
+    <Screen topInset={true}><StaffScreenContent /></Screen>
+  );
 }

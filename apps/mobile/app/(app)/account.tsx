@@ -1,3 +1,4 @@
+import { Screen } from "../../src/ui/screen";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ScrollView, StyleSheet, Text } from "react-native";
@@ -10,7 +11,7 @@ import { fonts } from "../../src/theme";
 import { Field, PillButton } from "../../src/ui/controls";
 import { useTheme } from "../../src/ui/theme";
 
-export default function AccountScreen() {
+function AccountScreenContent() {
   const { t, lang, choose } = useI18n();
   const { palette } = useTheme();
   const { user, logout, refreshUser } = useSession();
@@ -98,3 +99,9 @@ const styles = StyleSheet.create({
   note: { fontFamily: fonts.body, fontSize: 14 },
   hindi: { fontFamily: fonts.hindi }
 });
+
+export default function AccountScreen() {
+  return (
+    <Screen topInset={true}><AccountScreenContent /></Screen>
+  );
+}

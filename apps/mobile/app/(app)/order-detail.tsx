@@ -1,3 +1,4 @@
+import { Screen } from "../../src/ui/screen";
 import { useQuery } from "@tanstack/react-query";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system/legacy";
@@ -29,7 +30,7 @@ type Detail = {
   kot: string;
 };
 
-export default function OrderDetailScreen() {
+function OrderDetailScreenContent() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t, lang } = useI18n();
   const { palette } = useTheme();
@@ -106,3 +107,9 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
   hindi: { fontFamily: fonts.hindi }
 });
+
+export default function OrderDetailScreen() {
+  return (
+    <Screen topInset={true}><OrderDetailScreenContent /></Screen>
+  );
+}

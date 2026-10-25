@@ -1,3 +1,4 @@
+import { Screen } from "../../src/ui/screen";
 import { useQuery } from "@tanstack/react-query";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
@@ -16,7 +17,7 @@ import { useTheme } from "../../src/ui/theme";
 
 type Customer = { id: string; name: string; phone: string; orders: number; spendPaise: number; tags: string[] };
 
-export default function CustomersScreen() {
+function CustomersScreenContent() {
   const { t, lang } = useI18n();
   const { palette } = useTheme();
   const { user } = useSession();
@@ -67,3 +68,9 @@ const styles = StyleSheet.create({
   card: { gap: 6 },
   hindi: { fontFamily: fonts.hindi }
 });
+
+export default function CustomersScreen() {
+  return (
+    <Screen topInset={true}><CustomersScreenContent /></Screen>
+  );
+}

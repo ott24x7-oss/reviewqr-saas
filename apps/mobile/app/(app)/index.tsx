@@ -1,3 +1,4 @@
+import { Screen } from "../../src/ui/screen";
 import type { Dashboard } from "@reviewqr/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, type Href } from "expo-router";
@@ -17,6 +18,7 @@ import {
 } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Circle } from "react-native-svg";
 import { apiData } from "../../src/api/data";
 import { CoachTour } from "../../src/guide/coach";
@@ -48,9 +50,10 @@ function periodChange(points: number[]) {
   return pct === 0 ? null : pct;
 }
 
-export default function HomeScreen() {
+function HomeScreenContent() {
   const { t, lang } = useI18n();
   const { palette } = useTheme();
+  const insets = useSafeAreaInsets();
   const { user } = useSession();
   const { businesses, business, choose } = useBusiness();
   const client = useQueryClient();
@@ -130,7 +133,7 @@ export default function HomeScreen() {
   }
 
   const actions = [
-    { label: t.showQr, icon: QrCode, href: "/(app)/tap", bg: "#DCFCE7", fg: "#0F7A37" },
+    { label: t.showQr, icon: QrCode, href: "/(app)/tap", bg: palette.accentSoft, fg: palette.deep },
     { label: t.addItem, icon: Plus, href: "/(app)/menu", bg: "#FEF3C7", fg: "#92400E" },
     { label: t.orders, icon: ClipboardList, href: "/(app)/orders", bg: "#DBEAFE", fg: "#1E40AF" },
     { label: t.quickFeedback, icon: MessageSquare, href: "/(app)/feedback", bg: "#FCE7F3", fg: "#9D174D" },
@@ -157,7 +160,7 @@ export default function HomeScreen() {
           />
         }
       >
-        <View style={[styles.header, { backgroundColor: palette.header }]}>
+        <View style={[styles.header, { backgroundColor: palette.header, paddingTop: insets.top + 12 }]}>
           <View style={styles.headerRow}>
             <View style={{ flex: 1 }}>
               <Text style={[styles.hello, lang === "hi" && styles.hindi]}>
@@ -180,7 +183,7 @@ export default function HomeScreen() {
                 >
                   {business?.name || t.businesses}
                 </Text>
-                <ChevronDown color="#F4EFE6" size={18} strokeWidth={2.2} />
+                <ChevronDown color={palette.headerInk} size={18} strokeWidth={2.2} />
               </Pressable>
             </View>
             <Pressable
@@ -189,8 +192,8 @@ export default function HomeScreen() {
               onPress={() => setNotesOpen(true)}
               style={styles.bell}
             >
-              <Bell color="#F4EFE6" size={22} strokeWidth={1.75} />
-              {noteCount > 0 ? <View style={styles.bellDot} /> : null}
+              <Bell color={palette.headerInk} size={22} strokeWidth={1.75} />
+              {noteCount > 0 ? <View style={[styles.bellDot, { backgroundColor: palette.primary }]} /> : null}
             </Pressable>
           </View>
         </View>
@@ -260,7 +263,7 @@ export default function HomeScreen() {
               onPress={() => setGrowthOpen(true)}
               style={[styles.growth, { backgroundColor: palette.card }]}
             >
-              <Ring score={growth.data.ready ? growth.data.score ?? 0 : 0} track={palette.line} ink={palette.ink} />
+              <Ring score={growth.data.ready ? growth.data.score ?? 0 : 0} track={palette.line} ink={palette.ink} accent={palette.primary} />
               <View style={{ flex: 1 }}>
                 <Text style={[styles.growthTitle, { color: palette.ink }, lang === "hi" && styles.hindi]}>
                   {growth.data.ready ? t.growthScore : t.gettingStarted}
@@ -308,8 +311,8 @@ export default function HomeScreen() {
           <Text style={[styles.section, { color: palette.muted }, lang === "hi" && styles.hindi]}>{t.recentActivity}</Text>
           {quiet ? (
             <View style={[styles.rowCard, { backgroundColor: palette.card }]}>
-              <View style={[styles.ico, { backgroundColor: "#DCFCE7" }]}>
-                <Sparkles color="#0F7A37" size={18} strokeWidth={1.75} />
+              <View style={[styles.ico, { backgroundColor: palette.accentSoft }]}>
+                <Sparkles color={palette.deep} size={18} strokeWidth={1.75} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.growthTitle, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.thatsIt}</Text>
@@ -346,7 +349,7 @@ export default function HomeScreen() {
                   onPress={() => router.push("/(app)/feedback")}
                   style={[styles.rowCard, { backgroundColor: palette.card }]}
                 >
-                  <View style={[styles.avatar, { backgroundColor: palette.deep }]}>
+                  <View style={[styles.avatar, { backgroundColor: palette.primaryDeep }]}>
                     <Text style={styles.avatarText}>{(row.review.customerName || "?").slice(0, 1)}</Text>
                   </View>
                   <View style={{ flex: 1 }}>
@@ -467,7 +470,7 @@ export default function HomeScreen() {
   );
 }
 
-function Ring({ score, track, ink }: { score: number; track: string; ink: string }) {
+function Ring({ score, track, ink, accent }: { score: number; track: string; ink: string; accent: string }) {
   const radius = 20;
   const c = 2 * Math.PI * radius;
   const dash = c * (Math.max(0, Math.min(100, score)) / 100);
@@ -476,7 +479,7 @@ function Ring({ score, track, ink }: { score: number; track: string; ink: string
       <View style={{ transform: [{ rotate: "-90deg" }] }}>
         <Svg width={54} height={54}>
           <Circle cx={27} cy={27} r={radius} stroke={track} strokeWidth={4} fill="none" />
-          <Circle cx={27} cy={27} r={radius} stroke="#16A34A" strokeWidth={4} fill="none" strokeDasharray={`${dash} ${c}`} strokeLinecap="round" />
+          <Circle cx={27} cy={27} r={radius} stroke={accent} strokeWidth={4} fill="none" strokeDasharray={`${dash} ${c}`} strokeLinecap="round" />
         </Svg>
       </View>
       <Text style={[styles.ringText, { color: ink }]}>{Math.round(score)}</Text>
@@ -492,7 +495,7 @@ const styles = StyleSheet.create({
   switcher: { flexDirection: "row", alignItems: "center", gap: 6, minHeight: 44, alignSelf: "flex-start" },
   bizName: { color: "#F4EFE6", fontFamily: fonts.display, fontSize: 19, flexShrink: 1 },
   bell: { width: 44, height: 44, borderRadius: 14, backgroundColor: "rgba(255,255,255,0.1)", alignItems: "center", justifyContent: "center" },
-  bellDot: { position: "absolute", top: 9, right: 10, width: 8, height: 8, borderRadius: 4, backgroundColor: "#22C55E" },
+  bellDot: { position: "absolute", top: 9, right: 10, width: 8, height: 8, borderRadius: 4 },
   overlap: { marginTop: -40, paddingHorizontal: 14, gap: 10 },
   filters: { flexDirection: "row", gap: 8, alignItems: "center", flexWrap: "wrap" },
   kpiGrid: { flexDirection: "row", flexWrap: "wrap", marginHorizontal: -5 },
@@ -553,3 +556,9 @@ const styles = StyleSheet.create({
   done: { minHeight: 48, justifyContent: "center", paddingHorizontal: 12, borderRadius: 999 },
   hindi: { fontFamily: fonts.hindi }
 });
+
+export default function HomeScreen() {
+  return (
+    <Screen topInset={false}><HomeScreenContent /></Screen>
+  );
+}

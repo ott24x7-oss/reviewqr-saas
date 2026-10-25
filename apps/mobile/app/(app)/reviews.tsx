@@ -1,3 +1,4 @@
+import { Screen } from "../../src/ui/screen";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -16,7 +17,7 @@ type Review = { id: string; rating: number; customerName: string; staff: string;
 type Testimonial = { id: string; authorName: string; rating: number; message: string; isPublic: boolean };
 type Hint = { id: string; content: string };
 
-export default function ReviewsScreen() {
+function ReviewsScreenContent() {
   const { t, lang } = useI18n();
   const { palette } = useTheme();
   const { user } = useSession();
@@ -64,8 +65,8 @@ export default function ReviewsScreen() {
       <Text style={[styles.title, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.reviews}</Text>
       <View style={styles.row}>
         {["", "5", "4", "3", "2", "1"].map((score) => (
-          <Pressable key={score || "all"} accessibilityRole="button" onPress={() => setRating(score)} style={[styles.chip, { borderColor: palette.line, backgroundColor: rating === score ? palette.deep : palette.card }]}>
-            <Text style={{ color: rating === score ? "#FFFFFF" : palette.ink, fontFamily: fonts.bodyStrong }}>{score || t.dateAll}</Text>
+          <Pressable key={score || "all"} accessibilityRole="button" onPress={() => setRating(score)} style={[styles.chip, { borderColor: palette.line, backgroundColor: rating === score ? palette.primary : palette.card }]}>
+            <Text style={{ color: rating === score ? palette.onPrimary : palette.ink, fontFamily: fonts.bodyStrong }}>{score || t.dateAll}</Text>
           </Pressable>
         ))}
       </View>
@@ -119,3 +120,9 @@ const styles = StyleSheet.create({
   chip: { minHeight: 40, borderRadius: 999, borderWidth: 1, paddingHorizontal: 12, alignItems: "center", justifyContent: "center" },
   hindi: { fontFamily: fonts.hindi }
 });
+
+export default function ReviewsScreen() {
+  return (
+    <Screen topInset={true}><ReviewsScreenContent /></Screen>
+  );
+}

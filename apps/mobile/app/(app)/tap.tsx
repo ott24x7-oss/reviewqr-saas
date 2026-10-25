@@ -1,3 +1,4 @@
+import { Screen } from "../../src/ui/screen";
 import type { TapLink, TapPage } from "@reviewqr/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
@@ -27,7 +28,7 @@ import { Group, GroupRow, SectionHeader } from "../../src/ui/rows";
 
 const ADDABLE = ["menu", "whatsapp_chat", "call", "google", "website", "feedback", "custom"] as const;
 
-export default function TapScreen() {
+function TapScreenContent() {
   const { palette, reduceMotion, lowRam } = useTheme();
   const styles = useMemo(() => makeStyles(palette), [palette]);
   const glow = useSharedValue(0.35);
@@ -379,4 +380,10 @@ function makeStyles(colors: Palette) {
   glow: { position: "absolute", width: 220, height: 220, borderRadius: 28 },
   qr: { width: 200, height: 200, borderRadius: 16, backgroundColor: "#FFFFFF" }
 });
+}
+
+export default function TapScreen() {
+  return (
+    <Screen topInset={true}><TapScreenContent /></Screen>
+  );
 }

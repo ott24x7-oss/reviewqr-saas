@@ -1,3 +1,4 @@
+import { Screen } from "../../src/ui/screen";
 import { useQuery } from "@tanstack/react-query";
 import { ScrollView, Share, StyleSheet, Text } from "react-native";
 import { apiData } from "../../src/api/data";
@@ -11,7 +12,7 @@ import { useTheme } from "../../src/ui/theme";
 
 type Reward = { id: string; months: number; at: string };
 
-export default function ReferScreen() {
+function ReferScreenContent() {
   const { t, lang } = useI18n();
   const { palette } = useTheme();
   const { user } = useSession();
@@ -44,3 +45,9 @@ const styles = StyleSheet.create({
   card: { gap: 6 },
   hindi: { fontFamily: fonts.hindi }
 });
+
+export default function ReferScreen() {
+  return (
+    <Screen topInset={true}><ReferScreenContent /></Screen>
+  );
+}

@@ -1,3 +1,4 @@
+import { Screen } from "../../src/ui/screen";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
@@ -39,7 +40,7 @@ type Analytics = {
 
 const DAYS = ["S", "M", "T", "W", "T", "F", "S"];
 
-export default function AnalyticsScreen() {
+function AnalyticsScreenContent() {
   const palette = usePalette();
   const styles = useMemo(() => makeStyles(palette), [palette]);
   const { t, lang } = useI18n();
@@ -226,4 +227,10 @@ function makeStyles(colors: Palette) {
   heatCell: { width: 10, height: 10, borderRadius: 2 },
   hindi: { fontFamily: fonts.hindi }
 });
+}
+
+export default function AnalyticsScreen() {
+  return (
+    <Screen topInset={true}><AnalyticsScreenContent /></Screen>
+  );
 }

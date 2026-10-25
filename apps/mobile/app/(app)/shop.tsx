@@ -1,3 +1,4 @@
+import { Screen } from "../../src/ui/screen";
 import type { BillingSummary, ShopOrderDetail } from "@reviewqr/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as WebBrowser from "expo-web-browser";
@@ -41,7 +42,7 @@ function rupees(paise: number) {
   return `₹${Math.round(paise / 100)}`;
 }
 
-export default function ShopScreen() {
+function ShopScreenContent() {
   const palette = usePalette();
   const styles = useMemo(() => makeStyles(palette), [palette]);
   const { t, lang } = useI18n();
@@ -347,4 +348,10 @@ function makeStyles(colors: Palette) {
   error: { color: colors.danger, fontFamily: fonts.body },
   hindi: { fontFamily: fonts.hindi }
 });
+}
+
+export default function ShopScreen() {
+  return (
+    <Screen topInset={true}><ShopScreenContent /></Screen>
+  );
 }

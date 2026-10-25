@@ -1,3 +1,4 @@
+import { Screen } from "../../src/ui/screen";
 import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
@@ -22,7 +23,7 @@ type Article = {
   slug: string;
 };
 
-export default function HelpScreen() {
+function HelpScreenContent() {
   const { t, lang } = useI18n();
   const palette = usePalette();
   const { user } = useSession();
@@ -73,3 +74,9 @@ const styles = StyleSheet.create({
   back: { minHeight: 48, justifyContent: "center" },
   hindi: { fontFamily: fonts.hindi }
 });
+
+export default function HelpScreen() {
+  return (
+    <Screen topInset={true}><HelpScreenContent /></Screen>
+  );
+}

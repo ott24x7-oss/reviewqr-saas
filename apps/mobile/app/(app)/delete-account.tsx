@@ -1,3 +1,4 @@
+import { Screen } from "../../src/ui/screen";
 import { useEffect, useState , useMemo } from "react";
 import { ScrollView, StyleSheet, Text, TextInput } from "react-native";
 import { apiBaseUrl } from "../../src/api/instance";
@@ -15,7 +16,7 @@ import { PillButton } from "../../src/ui/controls";
 
 type Sent = { channel?: string; resendAfterSec?: number; devCode?: string; message?: string };
 
-export default function DeleteAccountScreen() {
+function DeleteAccountScreenContent() {
   const palette = usePalette();
   const styles = useMemo(() => makeStyles(palette), [palette]);
   const { t, lang } = useI18n();
@@ -145,4 +146,10 @@ function makeStyles(colors: Palette) {
   error: { color: colors.danger, fontFamily: fonts.body },
   hindi: { fontFamily: fonts.hindi }
 });
+}
+
+export default function DeleteAccountScreen() {
+  return (
+    <Screen topInset={true}><DeleteAccountScreenContent /></Screen>
+  );
 }

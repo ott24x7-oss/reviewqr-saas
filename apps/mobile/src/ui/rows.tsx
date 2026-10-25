@@ -46,7 +46,7 @@ export function GroupRow({
 }) {
   const { lang } = useI18n();
   const { palette } = useTheme();
-  const colors = rowTint[tint];
+  const colors = tint === "green" ? { bg: palette.accentSoft, fg: palette.deep } : rowTint[tint];
   const body = (
     <>
       <View style={[styles.ico, { backgroundColor: colors.bg }]}>

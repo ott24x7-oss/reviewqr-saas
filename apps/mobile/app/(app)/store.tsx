@@ -1,3 +1,4 @@
+import { Screen } from "../../src/ui/screen";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -47,7 +48,7 @@ function hoursFrom(raw: Settings["hours"] | undefined) {
   return hours;
 }
 
-export default function StoreScreen() {
+function StoreScreenContent() {
   const { palette } = useTheme();
   const { t, lang } = useI18n();
   const { user } = useSession();
@@ -127,8 +128,8 @@ export default function StoreScreen() {
           <Text style={[styles.name, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.storeDesign}</Text>
           <View style={styles.row}>
             {DESIGNS.map((design) => (
-              <Pressable key={design} accessibilityRole="button" onPress={() => setDraft({ ...form, design })} style={[styles.chip, { borderColor: palette.line, backgroundColor: form.design === design ? palette.deep : palette.card }]}>
-                <Text style={{ color: form.design === design ? "#fff" : palette.ink, fontFamily: fonts.bodyStrong }}>{design}</Text>
+              <Pressable key={design} accessibilityRole="button" onPress={() => setDraft({ ...form, design })} style={[styles.chip, { borderColor: palette.line, backgroundColor: form.design === design ? palette.primary : palette.card }]}>
+                <Text style={{ color: form.design === design ? palette.onPrimary : palette.ink, fontFamily: fonts.bodyStrong }}>{design}</Text>
               </Pressable>
             ))}
           </View>
@@ -157,3 +158,9 @@ const styles = StyleSheet.create({
   chip: { minHeight: 40, borderRadius: 999, borderWidth: 1, paddingHorizontal: 12, justifyContent: "center" },
   hindi: { fontFamily: fonts.hindi }
 });
+
+export default function StoreScreen() {
+  return (
+    <Screen topInset={true}><StoreScreenContent /></Screen>
+  );
+}

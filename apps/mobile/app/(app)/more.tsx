@@ -1,3 +1,4 @@
+import { Screen } from "../../src/ui/screen";
 import { router } from "expo-router";
 import {
   BarChart3,
@@ -31,7 +32,7 @@ import { fonts } from "../../src/theme";
 import { Group, GroupRow, SectionHeader } from "../../src/ui/rows";
 import { useTheme, type SchemeChoice } from "../../src/ui/theme";
 
-export default function MoreScreen() {
+function MoreScreenContent() {
   const { t, lang, choose } = useI18n();
   const { palette, choice, setChoice } = useTheme();
   const { user, logout, refreshUser } = useSession();
@@ -104,9 +105,9 @@ export default function MoreScreen() {
                 accessibilityLabel={item === "system" ? t.themeSystem : item === "light" ? t.themeLight : t.themeDark}
                 accessibilityState={{ selected: choice === item }}
                 onPress={() => setChoice(item)}
-                style={[styles.theme, { borderColor: palette.line, backgroundColor: choice === item ? palette.deep : palette.card }]}
+                style={[styles.theme, { borderColor: palette.line, backgroundColor: choice === item ? palette.primary : palette.card }]}
               >
-                <Text style={{ color: choice === item ? "#FFFFFF" : palette.ink, fontFamily: fonts.bodyStrong }}>
+                <Text style={{ color: choice === item ? palette.onPrimary : palette.ink, fontFamily: fonts.bodyStrong }}>
                   {item === "system" ? t.themeSystem : item === "light" ? t.themeLight : t.themeDark}
                 </Text>
               </Pressable>
@@ -152,3 +153,9 @@ const styles = StyleSheet.create({
   theme: { minHeight: 48, borderRadius: 999, borderWidth: 1, paddingHorizontal: 14, alignItems: "center", justifyContent: "center" },
   hindi: { fontFamily: fonts.hindi }
 });
+
+export default function MoreScreen() {
+  return (
+    <Screen topInset={true}><MoreScreenContent /></Screen>
+  );
+}

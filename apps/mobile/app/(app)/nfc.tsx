@@ -1,3 +1,4 @@
+import { Screen } from "../../src/ui/screen";
 import type { TapPage } from "@reviewqr/shared";
 import { useQuery } from "@tanstack/react-query";
 import LottieView from "lottie-react-native";
@@ -27,7 +28,7 @@ async function loadNfc() {
   }
 }
 
-export default function NfcScreen() {
+function NfcScreenContent() {
   const { t, lang } = useI18n();
   const { palette, reduceMotion, lowRam } = useTheme();
   const styles = useMemo(() => makeStyles(palette), [palette]);
@@ -142,7 +143,7 @@ export default function NfcScreen() {
         {!reduceMotion && !lowRam ? (
           <LottieView source={require("../../assets/lottie/nfc.json")} autoPlay loop style={styles.lottie} />
         ) : (
-          <HoldMark still={reduceMotion || lowRam} />
+          <HoldMark still={reduceMotion || lowRam} color={palette.deep} background={palette.accentSoft} />
         )}
         <Text style={[styles.holdTitle, lang === "hi" && styles.hindi]}>{t.holdTag}</Text>
         <Text style={[styles.note, lang === "hi" && styles.hindi]}>{safe ? url : path ? t.nfcUnsafeUrl : t.noQr}</Text>
@@ -175,7 +176,7 @@ export default function NfcScreen() {
   );
 }
 
-function HoldMark({ still }: { still: boolean }) {
+function HoldMark({ still, color, background }: { still: boolean; color: string; background: string }) {
   const scale = useSharedValue(still ? 1 : 0.92);
   useEffect(() => {
     if (still) return;
@@ -183,8 +184,8 @@ function HoldMark({ still }: { still: boolean }) {
   }, [scale, still]);
   const anim = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   return (
-    <Animated.View style={[stylesHold.ring, anim]}>
-      <Smartphone color="#0F7A37" size={36} strokeWidth={1.75} />
+    <Animated.View style={[stylesHold.ring, { backgroundColor: background }, anim]}>
+      <Smartphone color={color} size={36} strokeWidth={1.75} />
     </Animated.View>
   );
 }
@@ -194,7 +195,6 @@ const stylesHold = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: "#DCFCE7",
     alignItems: "center",
     justifyContent: "center"
   }
@@ -218,4 +218,10 @@ function makeStyles(colors: Palette) {
   },
   holdTitle: { fontFamily: fonts.title, fontSize: 18, color: colors.ink, textAlign: "center" }
 });
+}
+
+export default function NfcScreen() {
+  return (
+    <Screen topInset={true}><NfcScreenContent /></Screen>
+  );
 }

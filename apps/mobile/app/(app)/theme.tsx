@@ -1,3 +1,4 @@
+import { Screen } from "../../src/ui/screen";
 import { LinearGradient } from "expo-linear-gradient";
 import { Check } from "lucide-react-native";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -21,7 +22,7 @@ const accentLabels: Record<CinematicAccent, "accentGold" | "accentNeonTeal" | "a
   "electric-blue": "accentElectricBlue"
 };
 
-export default function ThemeScreen() {
+function ThemeScreenContent() {
   const { t, lang } = useI18n();
   const { palette, scheme, appTheme, cinematicAccent, setAppTheme, setCinematicAccent } = useTheme();
 
@@ -141,3 +142,9 @@ const styles = StyleSheet.create({
   accentLabel: { flex: 1, fontFamily: fonts.bodyStrong, fontSize: 14 },
   hindi: { fontFamily: fonts.hindi }
 });
+
+export default function ThemeScreen() {
+  return (
+    <Screen topInset={true}><ThemeScreenContent /></Screen>
+  );
+}

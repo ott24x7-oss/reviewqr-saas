@@ -1,3 +1,4 @@
+import { Screen } from "../../src/ui/screen";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ScrollView, StyleSheet, Text } from "react-native";
@@ -14,7 +15,7 @@ import { useTheme } from "../../src/ui/theme";
 
 type Campaign = { id: string; name: string; status: string; sent: number; whatsappTemplate: string | null };
 
-export default function CampaignsScreen() {
+function CampaignsScreenContent() {
   const { t, lang } = useI18n();
   const { palette } = useTheme();
   const { user } = useSession();
@@ -80,3 +81,9 @@ const styles = StyleSheet.create({
   card: { gap: 6 },
   hindi: { fontFamily: fonts.hindi }
 });
+
+export default function CampaignsScreen() {
+  return (
+    <Screen topInset={true}><CampaignsScreenContent /></Screen>
+  );
+}

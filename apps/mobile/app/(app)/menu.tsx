@@ -1,3 +1,4 @@
+import { Screen } from "../../src/ui/screen";
 import { FlashList } from "@shopify/flash-list";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
@@ -51,7 +52,7 @@ function photoUri(photo?: string | null) {
   return null;
 }
 
-export default function MenuTab() {
+function MenuTabContent() {
   const { t, lang } = useI18n();
   const { palette } = useTheme();
   const { user } = useSession();
@@ -230,9 +231,9 @@ export default function MenuTab() {
           accessibilityRole="button"
           accessibilityLabel={t.quickAdd}
           onPress={() => setOpen(true)}
-          style={[styles.fab, { backgroundColor: palette.deep }]}
+          style={[styles.fab, { backgroundColor: palette.primary }]}
         >
-          <Plus color="#FFFFFF" size={24} strokeWidth={1.75} />
+          <Plus color={palette.onPrimary} size={24} strokeWidth={1.75} />
         </Pressable>
       ) : null}
       <BottomSheet visible={open} title={t.quickAdd} onClose={() => setOpen(false)}>
@@ -482,3 +483,9 @@ const styles = StyleSheet.create({
   camera: { minHeight: 96, borderRadius: 16, borderWidth: 1, alignItems: "center", justifyContent: "center", gap: 6 },
   hit: { minHeight: 48, justifyContent: "center" }
 });
+
+export default function MenuTab() {
+  return (
+    <Screen topInset={true}><MenuTabContent /></Screen>
+  );
+}

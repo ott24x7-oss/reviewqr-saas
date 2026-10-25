@@ -1,3 +1,4 @@
+import { Screen } from "../../src/ui/screen";
 import { FlashList } from "@shopify/flash-list";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createAudioPlayer, type AudioPlayer } from "expo-audio";
@@ -113,9 +114,9 @@ function SwipeAdvance({ hint, onAdvance, children }: { hint: string; onAdvance: 
           width.value = event.nativeEvent.layout.width;
         }}
       >
-        <View style={[styles.reveal, { backgroundColor: palette.deep }]}>
-          <ChevronRight color="#FFFFFF" size={22} strokeWidth={1.75} />
-          <Text style={styles.revealText}>{hint}</Text>
+        <View style={[styles.reveal, { backgroundColor: palette.primary }]}>
+          <ChevronRight color={palette.onPrimary} size={22} strokeWidth={1.75} />
+          <Text style={[styles.revealText, { color: palette.onPrimary }]}>{hint}</Text>
         </View>
         <Animated.View style={card}>{children}</Animated.View>
       </View>
@@ -123,7 +124,7 @@ function SwipeAdvance({ hint, onAdvance, children }: { hint: string; onAdvance: 
   );
 }
 
-export default function OrdersScreen() {
+function OrdersScreenContent() {
   const { t, lang } = useI18n();
   const { palette } = useTheme();
   const { user } = useSession();
@@ -547,3 +548,9 @@ const styles = StyleSheet.create({
   revealText: { color: "#FFFFFF", fontFamily: fonts.bodyStrong },
   detail: { position: "absolute", left: 16, right: 16, bottom: 16, gap: 8 }
 });
+
+export default function OrdersScreen() {
+  return (
+    <Screen topInset={true}><OrdersScreenContent /></Screen>
+  );
+}

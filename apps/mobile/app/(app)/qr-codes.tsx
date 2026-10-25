@@ -1,3 +1,4 @@
+import { Screen } from "../../src/ui/screen";
 import type { TapLink } from "@reviewqr/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -15,7 +16,7 @@ import { useTheme } from "../../src/ui/theme";
 
 type Qr = { id: string; shortCode: string; label: string; type: string; scans: number; opensEn: string; directMode: string; directTarget: string };
 
-export default function QrCodesScreen() {
+function QrCodesScreenContent() {
   const { t, lang } = useI18n();
   const { palette } = useTheme();
   const { user } = useSession();
@@ -92,3 +93,9 @@ const styles = StyleSheet.create({
   card: { gap: 6 },
   hindi: { fontFamily: fonts.hindi }
 });
+
+export default function QrCodesScreen() {
+  return (
+    <Screen topInset={true}><QrCodesScreenContent /></Screen>
+  );
+}

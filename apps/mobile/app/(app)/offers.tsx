@@ -1,3 +1,4 @@
+import { Screen } from "../../src/ui/screen";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ScrollView, StyleSheet, Text } from "react-native";
@@ -15,7 +16,7 @@ import { useTheme } from "../../src/ui/theme";
 type Coupon = { id: string; code: string; kind: string; amount: number; active: boolean };
 type Banner = { id: string; title: string; body: string; active: boolean };
 
-export default function OffersScreen() {
+function OffersScreenContent() {
   const { t, lang } = useI18n();
   const { palette } = useTheme();
   const { user } = useSession();
@@ -84,3 +85,9 @@ const styles = StyleSheet.create({
   card: { gap: 6 },
   hindi: { fontFamily: fonts.hindi }
 });
+
+export default function OffersScreen() {
+  return (
+    <Screen topInset={true}><OffersScreenContent /></Screen>
+  );
+}

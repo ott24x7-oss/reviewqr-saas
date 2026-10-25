@@ -1,3 +1,4 @@
+import { Screen } from "../../src/ui/screen";
 import { FlashList } from "@shopify/flash-list";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MessageSquare } from "lucide-react-native";
@@ -47,8 +48,8 @@ function SwipeResolve({ hint, onResolve, children }: { hint: string; onResolve: 
   return (
     <GestureDetector gesture={pan}>
       <View onLayout={(event) => { width.value = event.nativeEvent.layout.width; }}>
-        <View style={[styles.reveal, { backgroundColor: palette.deep }]}>
-          <Text style={styles.revealText}>{hint}</Text>
+        <View style={[styles.reveal, { backgroundColor: palette.primary }]}>
+          <Text style={[styles.revealText, { color: palette.onPrimary }]}>{hint}</Text>
         </View>
         <Animated.View style={card}>{children}</Animated.View>
       </View>
@@ -56,7 +57,7 @@ function SwipeResolve({ hint, onResolve, children }: { hint: string; onResolve: 
   );
 }
 
-export default function FeedbackTab() {
+function FeedbackTabContent() {
   const { t, lang } = useI18n();
   const { palette } = useTheme();
   const { user } = useSession();
@@ -199,3 +200,9 @@ const styles = StyleSheet.create({
   },
   revealText: { color: "#FFFFFF", fontFamily: fonts.bodyStrong }
 });
+
+export default function FeedbackTab() {
+  return (
+    <Screen topInset={true}><FeedbackTabContent /></Screen>
+  );
+}

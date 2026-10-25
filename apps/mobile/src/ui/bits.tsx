@@ -56,7 +56,7 @@ export function Chip({
 }) {
   const { lang } = useI18n();
   const { palette } = useTheme();
-  const bg = selected || tone === "good" ? palette.deep : palette.card;
+  const bg = selected || tone === "good" ? palette.primary : palette.card;
   const fg = selected || tone === "good" ? palette.onPrimary : palette.ink;
   const border = tone === "live" ? palette.primary : palette.line;
   return (
@@ -93,7 +93,7 @@ export function Badge({ count, label }: { count: number; label: string }) {
       accessibilityLabel={`${count} ${label}`}
       style={[styles.badge, { backgroundColor: palette.danger }, anim]}
     >
-      <Text style={styles.badgeText}>{count > 9 ? "9+" : String(count)}</Text>
+      <Text style={[styles.badgeText, { color: palette.onDanger }]}>{count > 9 ? "9+" : String(count)}</Text>
     </Animated.View>
   );
 }
