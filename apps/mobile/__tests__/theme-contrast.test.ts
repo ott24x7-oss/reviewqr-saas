@@ -58,9 +58,8 @@ function readableAgainstSurfaces(theme: string, mode: string, palette: Palette) 
 }
 
 describe("owner app theme text contrast", () => {
-  it.each(APP_THEMES.flatMap((theme) => ["light", "dark"].map((mode) => [theme, mode] as const)))(
-    "%s %s has readable text and buttons",
-    (theme, mode) => {
+  const cases = APP_THEMES.flatMap((theme) => (["light", "dark"] as const).map((mode) => ({ theme, mode })));
+  it.each(cases)("$theme $mode has readable text and buttons", ({ theme, mode }) => {
       readableAgainstSurfaces(theme, mode, getThemePalette(theme, mode));
     }
   );

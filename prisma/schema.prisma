@@ -79,6 +79,8 @@ model User {
   phone          String?
   image          String?
   pushEnabled    Boolean   @default(true)
+  appTheme       String    @default("emerald")
+  cinematicAccent String   @default("gold")
   // Set when the account is anonymized. The row stays so Payment records can.
   deletedAt      DateTime?
   role           UserRole  @default(USER)

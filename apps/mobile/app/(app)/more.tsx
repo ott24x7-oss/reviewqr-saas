@@ -80,7 +80,7 @@ export default function MoreScreen() {
         <GroupRow icon={Share2} tint="green" title={t.offers} hint={t.campaigns} onPress={() => router.push("/(app)/offers")} />
         <GroupRow icon={Megaphone} tint="pink" title={t.campaigns} hint={t.sendCampaign} onPress={() => router.push("/(app)/campaigns")} />
         <GroupRow icon={Share2} tint="amber" title={t.referEarn} hint={t.shareLink} onPress={() => router.push("/(app)/refer")} />
-        <GroupRow icon={Palette} tint="pink" title={t.theme} hint={t.hintLook} onPress={() => router.push("/(app)/business-edit")} />
+        <GroupRow icon={Palette} tint="pink" title={t.businessDetails} hint={t.hintLook} onPress={() => router.push("/(app)/business-edit")} />
         <GroupRow icon={Store} tint="amber" title={t.storeSettings} hint={t.hintStoreRow} onPress={() => router.push("/(app)/store")} />
         <GroupRow icon={Users} tint="blue" title={t.staff} hint={t.hintStaffRow} onPress={() => router.push("/(app)/staff")} />
         <GroupRow icon={Nfc} tint="ink" title={t.devices} hint={t.hintDevices} onPress={() => router.push("/(app)/nfc")} />
@@ -113,6 +113,7 @@ export default function MoreScreen() {
             ))}
           </View>
         </View>
+        <GroupRow icon={Palette} tint="pink" title={t.theme} hint={t.hintAppTheme} onPress={() => router.push("/(app)/theme")} />
         <GroupRow
           icon={Languages}
           tint="blue"

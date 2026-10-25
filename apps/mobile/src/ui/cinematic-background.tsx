@@ -84,10 +84,10 @@ export function CinematicBackground({
 }
 
 const styles = StyleSheet.create({
-  root: { ...StyleSheet.absoluteFillObject, backgroundColor: "#050507", overflow: "hidden" },
-  base: { ...StyleSheet.absoluteFillObject, backgroundColor: "#050507" },
+  root: { position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: "#050507", overflow: "hidden" },
+  base: { position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: "#050507" },
   aurora: { position: "absolute", width: "145%", height: "64%", left: "-22%", top: "6%" },
   glowOne: { flex: 1, borderRadius: 999 },
   glowTwo: { flex: 1, borderRadius: 999 },
-  vignette: { ...StyleSheet.absoluteFillObject }
+  vignette: { position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }
 });

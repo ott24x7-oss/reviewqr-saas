@@ -105,6 +105,7 @@ function AppTabs() {
       <Tabs.Screen name="qr-codes" options={{ title: t.qrList, href: null }} />
       <Tabs.Screen name="inbox" options={{ title: t.inbox, href: null }} />
       <Tabs.Screen name="account" options={{ title: t.account, href: null }} />
+      <Tabs.Screen name="theme" options={{ title: t.theme, href: null }} />
       <Tabs.Screen name="agent" options={{ title: t.agentHome, href: null }} />
     </Tabs>
   );

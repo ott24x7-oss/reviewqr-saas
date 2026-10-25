@@ -88,6 +88,13 @@ export const mePatchSchema = z
     message: "Nothing to update"
   });
 
+export const appThemeSchema = z.enum(["emerald", "rose", "ocean", "crimson", "graphite", "sand", "sage", "cinematic"]);
+export const cinematicAccentSchema = z.enum(["gold", "neon-teal", "magenta", "electric-blue"]);
+export const mePreferencesSchema = z.object({
+  appTheme: appThemeSchema,
+  cinematicAccent: cinematicAccentSchema
+}).strict();
+
 export const deleteAccountSchema = z.object({
   confirm: z.literal("DELETE", { errorMap: () => ({ message: "Type DELETE to confirm." }) })
 });
