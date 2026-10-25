@@ -6,11 +6,23 @@ import { hoursFromPublished } from "../tap/links";
 import { addIstDays, istDayKey, istDayStart, istDaysEnding } from "../analytics/ist";
 import { ensureRollups } from "../analytics/build";
 import { businessAgeDays, scoreGrowth, type GrowthInput } from "./score";
+import { setupChecklist } from "./setup";
+
+function linksFrom(value: unknown) {
+  if (!value || typeof value !== "object") return [];
+  const links = (value as { links?: unknown }).links;
+  return Array.isArray(links) ? links : [];
+}
 
 function linkCount(value: unknown) {
-  if (!value || typeof value !== "object") return 0;
-  const links = (value as { links?: unknown }).links;
-  return Array.isArray(links) ? links.length : 0;
+  return linksFrom(value).length;
+}
+
+function buttonCount(value: unknown) {
+  return linksFrom(value).filter((link) => {
+    if (!link || typeof link !== "object") return false;
+    return (link as { enabled?: boolean }).enabled !== false;
+  }).length;
 }
 
 function hasHours(published: unknown, storeHours: unknown) {
@@ -31,18 +43,22 @@ export async function computeGrowth(businessId: string, now = new Date()) {
     select: {
       id: true,
       name: true,
+      slug: true,
+      phone: true,
+      address: true,
+      city: true,
       logo: true,
       ownerId: true,
       createdAt: true,
       archived: true,
       tapPage: { select: { published: true, draft: true } },
-      storeSettings: { select: { hours: true } }
+      storeSettings: { select: { hours: true, upiId: true } }
     }
   });
   if (!business || business.archived) return null;
   const today = istDayKey(now);
   const from = addIstDays(today, -13);
-  const [menuOn, storeOn, days, feedbacks, orders, menuItems, doneRows, historyRows] = await Promise.all([
+  const [menuOn, storeOn, days, feedbacks, orders, menuItems, doneRows, historyRows, scannedCodes] = await Promise.all([
     hasModule(business.ownerId, "MENU"),
     hasModule(business.ownerId, "STORE"),
     ensureRollups(business.id, from, today),
@@ -61,7 +77,8 @@ export async function computeGrowth(businessId: string, now = new Date()) {
       orderBy: { day: "desc" },
       take: 30,
       select: { day: true, score: true }
-    })
+    }),
+    prisma.qRCode.count({ where: { businessId, scans: { gt: 0 } } })
   ]);
   const createdKey = istDayKey(business.createdAt);
   const lived = days.filter((day) => day.day >= createdKey);
@@ -113,10 +130,23 @@ export async function computeGrowth(businessId: string, now = new Date()) {
       update: { score: scored.score, parts: scored.components }
     });
   }
+  const filled = [business.phone, business.address, business.city].some(
+    (value) => typeof value === "string" && value.trim().length > 0
+  );
   return {
     businessId: business.id,
     businessName: business.name,
     ...scored,
+    setup: setupChecklist({
+      hasDetails: filled,
+      hasLink: business.slug.trim().length > 0,
+      hasMenu: menuItems > 0,
+      menuOn,
+      hasButtons: Math.max(buttonCount(business.tapPage?.published), buttonCount(business.tapPage?.draft)) > 0,
+      hasHours: hasHours(published, business.storeSettings?.hours),
+      hasUpi: Boolean(business.storeSettings?.upiId?.trim()),
+      printed: scannedCodes > 0
+    }),
     history: historyRows
       .map((row) => ({ day: row.day.toISOString().slice(0, 10), score: row.score }))
       .reverse()
