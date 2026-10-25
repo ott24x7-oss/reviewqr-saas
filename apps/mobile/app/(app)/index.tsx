@@ -1,7 +1,7 @@
 import { Screen } from "../../src/ui/screen";
 import type { Dashboard } from "@reviewqr/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { router, type Href } from "expo-router";
+import { router, useFocusEffect, type Href } from "expo-router";
 import {
   Bell,
   Check,
@@ -16,13 +16,14 @@ import {
   Sparkles,
   Star
 } from "lucide-react-native";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Circle } from "react-native-svg";
 import { apiData } from "../../src/api/data";
 import { CoachTour } from "../../src/guide/coach";
 import { useI18n } from "../../src/i18n";
+import { businessDestinations } from "../../src/nav/business-destinations";
 import { accountKey } from "../../src/query/keys";
 import { useReviewMoment } from "../../src/review/watch";
 import { useBusiness } from "../../src/state/business";
@@ -30,11 +31,13 @@ import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
 import { BottomSheet, Card, Chip, KpiCard, Skeleton } from "../../src/ui/bits";
 import { TextButton } from "../../src/ui/buttons";
+import { rowTint } from "../../src/ui/rows";
 import { useTheme } from "../../src/ui/theme";
 import { writeWidgetSnapshot } from "../../src/widgets/cache";
 
 type Tip = { key: string; titleEn: string; titleHi: string; appHref: string; done?: boolean };
-type Growth = { ready: boolean; score: number | null; tips: Tip[]; checklist: Tip[] };
+type SetupStep = { key: string; done: boolean };
+type Growth = { ready: boolean; score: number | null; tips: Tip[]; checklist: Tip[]; setup?: SetupStep[] };
 type Note = { id: string; title: string; titleHi: string; body: string; bodyHi: string; link: string };
 type Analytics = {
   summary: { scans: number; orders: number | null; orderPaise: number | null; feedback: number };
@@ -104,6 +107,27 @@ function HomeScreenContent() {
   const hello = hour < 12 ? t.greetMorning : hour < 17 ? t.greetAfternoon : t.greetEvening;
   const tasks = growth.data ? (growth.data.ready ? growth.data.tips : growth.data.checklist) : [];
   const tasksLeft = tasks.filter((tip) => !tip.done).length;
+  const setup = growth.data?.setup ?? [];
+  const setupDone = setup.filter((step) => step.done).length;
+  const showSetup = setup.length > 0 && setupDone < setup.length;
+  const showGrowth = Boolean(growth.data && (growth.data.ready || !showSetup));
+  const growthBusinessId = business?.id;
+  const growthUserId = user?.id;
+  useFocusEffect(
+    useCallback(() => {
+      if (!growthUserId || !growthBusinessId) return;
+      client.invalidateQueries({ queryKey: accountKey(growthUserId, "growth", growthBusinessId) }).catch(() => undefined);
+    }, [client, growthBusinessId, growthUserId])
+  );
+  const setupRows: { key: string; label: string; href: Href; done: boolean }[] = [
+    { key: "details", label: t.businessDetails, href: "/(app)/business-edit", done: false },
+    { key: "link", label: t.pageLink, href: "/(app)/tap", done: false },
+    { key: "menu", label: t.menuItems, href: "/(app)/menu", done: false },
+    { key: "buttons", label: t.pageButtons, href: { pathname: "/(app)/tap", params: { section: "buttons" } }, done: false },
+    { key: "store", label: t.storeHoursUpi, href: "/(app)/store", done: false },
+    { key: "print", label: t.printYourQr, href: "/(app)/tap", done: false }
+  ].map((row) => ({ ...row, done: setup.find((step) => step.key === row.key)?.done === true }));
+  const tiles = businessDestinations(t);
   const noteCount = (notes.data ?? []).length;
   const recentOrders = orders.data?.items ?? [];
   const recentFeedback = feedback.data?.items ?? [];
@@ -199,6 +223,35 @@ function HomeScreenContent() {
         </View>
 
         <View style={styles.overlap}>
+          {showSetup ? (
+            <View style={[styles.growth, styles.setupCard, { backgroundColor: palette.card }]}>
+              <View style={styles.setupHead}>
+                <Ring score={Math.round((setupDone / setup.length) * 100)} track={palette.line} ink={palette.ink} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.growthTitle, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.setupTitle}</Text>
+                  <Text style={[styles.growthHint, { color: palette.muted }, lang === "hi" && styles.hindi]}>
+                    {t.setupProgress.replace("{done}", String(setupDone)).replace("{total}", String(setup.length))}
+                  </Text>
+                </View>
+              </View>
+              {setupRows.map((row) => (
+                <Pressable
+                  key={row.key}
+                  accessibilityRole="button"
+                  accessibilityLabel={row.label}
+                  accessibilityState={{ checked: row.done }}
+                  onPress={() => router.push(row.href)}
+                  style={styles.setupRow}
+                >
+                  <View style={[styles.setupMark, { borderColor: row.done ? palette.deep : palette.line, backgroundColor: row.done ? "#DCFCE7" : "transparent" }]}>
+                    {row.done ? <Check color={palette.deep} size={14} strokeWidth={2.6} /> : null}
+                  </View>
+                  <Text style={[styles.growthTitle, { color: palette.ink, flex: 1 }, lang === "hi" && styles.hindi]}>{row.label}</Text>
+                  <ChevronRight color={palette.muted} size={16} strokeWidth={2} />
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
           {home.isLoading ? (
             <View style={styles.kpiGrid}>
               <View style={styles.kpiCell}><Skeleton height={118} /></View>
@@ -256,7 +309,52 @@ function HomeScreenContent() {
             </View>
           )}
 
-          {growth.data ? (
+          <Text style={[styles.section, { color: palette.muted }, lang === "hi" && styles.hindi]}>{t.quickActions}</Text>
+          <View style={styles.actions}>
+            {actions.map((action) => {
+              const Icon = action.icon;
+              return (
+                <View key={action.label} style={styles.actionCell}>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={action.label}
+                    onPress={() => router.push(action.href as Href)}
+                    style={[styles.action, { backgroundColor: palette.card }]}
+                  >
+                    <View style={[styles.ico, { backgroundColor: action.bg }]}>
+                      <Icon color={action.fg} size={20} strokeWidth={1.75} />
+                    </View>
+                    <Text style={[styles.actionText, { color: palette.ink }, lang === "hi" && styles.hindi]}>{action.label}</Text>
+                  </Pressable>
+                </View>
+              );
+            })}
+          </View>
+
+          <Text style={[styles.section, { color: palette.muted }, lang === "hi" && styles.hindi]}>{t.yourBusiness}</Text>
+          <View style={styles.actions}>
+            {tiles.map((tile) => {
+              const Icon = tile.icon;
+              const colors = rowTint[tile.tint];
+              return (
+                <View key={tile.key} style={styles.tileCell}>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={tile.title}
+                    onPress={() => router.push(tile.href)}
+                    style={[styles.tile, { backgroundColor: palette.card }]}
+                  >
+                    <View style={[styles.ico, { backgroundColor: colors.bg }]}>
+                      <Icon color={colors.fg} size={20} strokeWidth={1.75} />
+                    </View>
+                    <Text style={[styles.tileText, { color: palette.ink }, lang === "hi" && styles.hindi]}>{tile.title}</Text>
+                  </Pressable>
+                </View>
+              );
+            })}
+          </View>
+
+          {showGrowth && growth.data ? (
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={growth.data.ready ? t.growthScore : t.gettingStarted}
@@ -284,28 +382,6 @@ function HomeScreenContent() {
             <Chip label={live ? t.liveView : range === "7d" ? t.range7 : t.range30} selected={!live} onPress={() => { setLive(false); setRange(range === "7d" ? "30d" : "7d"); }} />
             <Chip label={t.liveView} tone="live" selected={live} onPress={() => setLive(true)} />
             <TextButton label={t.analytics} onPress={() => router.push("/(app)/analytics")} />
-          </View>
-
-          <Text style={[styles.section, { color: palette.muted }, lang === "hi" && styles.hindi]}>{t.quickActions}</Text>
-          <View style={styles.actions}>
-            {actions.map((action) => {
-              const Icon = action.icon;
-              return (
-                <View key={action.label} style={styles.actionCell}>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={action.label}
-                    onPress={() => router.push(action.href as Href)}
-                    style={[styles.action, { backgroundColor: palette.card }]}
-                  >
-                    <View style={[styles.ico, { backgroundColor: action.bg }]}>
-                      <Icon color={action.fg} size={20} strokeWidth={1.75} />
-                    </View>
-                    <Text style={[styles.actionText, { color: palette.ink }, lang === "hi" && styles.hindi]}>{action.label}</Text>
-                  </Pressable>
-                </View>
-              );
-            })}
           </View>
 
           <Text style={[styles.section, { color: palette.muted }, lang === "hi" && styles.hindi]}>{t.recentActivity}</Text>
@@ -500,6 +576,26 @@ const styles = StyleSheet.create({
   filters: { flexDirection: "row", gap: 8, alignItems: "center", flexWrap: "wrap" },
   kpiGrid: { flexDirection: "row", flexWrap: "wrap", marginHorizontal: -5 },
   kpiCell: { width: "50%", padding: 5 },
+  setupCard: { flexDirection: "column", alignItems: "stretch" },
+  setupHead: { flexDirection: "row", alignItems: "center", gap: 12 },
+  setupRow: { minHeight: 48, flexDirection: "row", alignItems: "center", gap: 10 },
+  setupMark: { width: 22, height: 22, borderRadius: 11, borderWidth: 1.5, alignItems: "center", justifyContent: "center" },
+  tileCell: { width: "50%", padding: 5 },
+  tile: {
+    borderRadius: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    gap: 10,
+    minHeight: 72,
+    shadowColor: "#1C1813",
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2
+  },
+  tileText: { flex: 1, fontFamily: fonts.bodyStrong, fontSize: 13 },
   growth: {
     borderRadius: 20,
     padding: 12,

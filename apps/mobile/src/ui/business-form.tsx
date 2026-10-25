@@ -133,6 +133,7 @@ export function BusinessForm({ initial, businessId }: { initial?: BusinessCard |
   return (
     <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <Text style={[styles.title, lang === "hi" && styles.hindi]}>{t.businessDetails}</Text>
         <SectionHeader label={t.searchPlaces} />
         <View style={styles.card}>
           <FilledField label={t.searchPlaces} value={query} onChangeText={setQuery} />
@@ -178,6 +179,7 @@ function makeStyles(colors: Palette) {
   return StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.paper },
   content: { padding: 16, gap: 12, paddingBottom: 24 },
+  title: { fontFamily: fonts.display, fontSize: 28, color: colors.ink },
   card: { backgroundColor: colors.card, borderRadius: 20, padding: 12, gap: 10 },
   hit: { minHeight: 48, justifyContent: "center", backgroundColor: colors.paper, borderRadius: 14, paddingHorizontal: 14 },
   hitText: { fontFamily: fonts.body, color: colors.ink },

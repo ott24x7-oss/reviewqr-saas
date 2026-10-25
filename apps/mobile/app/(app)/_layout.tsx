@@ -88,7 +88,7 @@ function AppTabs() {
       <Tabs.Screen name="more" options={{ title: t.more }} />
       <Tabs.Screen name="shop" options={{ title: t.shop }} />
       <Tabs.Screen name="business-new" options={{ title: t.addBusiness }} />
-      <Tabs.Screen name="business-edit" options={{ title: t.businesses }} />
+      <Tabs.Screen name="business-edit" options={{ title: t.businessDetails }} />
       <Tabs.Screen name="tap" options={{ title: t.preview }} />
       <Tabs.Screen name="nfc" options={{ title: t.nfc }} />
       <Tabs.Screen name="delete-account" options={{ title: t.deleteAccount }} />

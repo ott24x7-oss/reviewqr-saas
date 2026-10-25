@@ -2,10 +2,10 @@ import { Screen } from "../../src/ui/screen";
 import type { TapLink, TapPage } from "@reviewqr/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
-import { router } from "expo-router";
-import { Link2, Palette as PaletteIcon, Plus } from "lucide-react-native";
+import { router, useLocalSearchParams } from "expo-router";
+import { Link2, Plus } from "lucide-react-native";
 import { useEffect, useRef, useState, useMemo } from "react";
-import { Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from "react-native-reanimated";
 import { WebView } from "react-native-webview";
 import * as WebBrowser from "expo-web-browser";
@@ -35,6 +35,8 @@ function TapScreenContent() {
   const reveal = useSharedValue(reduceMotion ? 1 : 0);
   const brightLevel = useRef<number | null>(null);
   const [bright, setBright] = useState(false);
+  const params = useLocalSearchParams<{ section?: string }>();
+  const section = typeof params.section === "string" ? params.section : "";
   const { t, lang } = useI18n();
   const { user } = useSession();
   const { business } = useBusiness();
@@ -60,6 +62,11 @@ function TapScreenContent() {
   const directOptions = shown.filter((link) => link.enabled && (link.type === "menu" || link.type === "whatsapp_order" || link.type === "vcard" || link.url.startsWith("https://")));
   const chosen = directOptions.find((link) => link.key === directTarget) || null;
   const theme = themeId ?? data?.themeId ?? "";
+  const chosenTheme = (data?.themes ?? []).find((item) => item.id === theme);
+  const previewBg = chosenTheme?.bg || "#F4EFE6";
+  const previewInk = chosenTheme?.ink || "#1C1813";
+  const previewButton = chosenTheme?.buttonBg || "#1C1813";
+  const previewButtonInk = chosenTheme?.buttonInk || "#F4EFE6";
   const bioText = bio ?? data?.bio ?? "";
   const base = apiBaseUrl();
   const preview = data?.publicPath && base ? `${base}${data.publicPath}` : "";
@@ -188,8 +195,79 @@ function TapScreenContent() {
 
   if (!business) return null;
 
+  const themeBlock = (
+      <View style={styles.stack}>
+        <SectionHeader label={t.pageTheme} />
+        <View style={[styles.phone, { backgroundColor: previewBg }]}>
+          <Text style={[styles.phoneKicker, { color: previewInk }, lang === "hi" && styles.hindi]}>{t.livePreview}</Text>
+          <Text style={[styles.phoneName, { color: previewInk }, lang === "hi" && styles.hindi]} numberOfLines={1}>
+            {business.name}
+          </Text>
+          <View style={[styles.phoneButton, { backgroundColor: previewButton }]}>
+            <Text style={[{ color: previewButtonInk, fontFamily: fonts.bodyStrong }, lang === "hi" && styles.hindi]}>{t.preview}</Text>
+          </View>
+        </View>
+        <View style={styles.gallery}>
+          {(data?.themes ?? []).map((item) => {
+            const selected = item.id === theme;
+            return (
+              <View key={item.id} style={styles.swatchCell}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={item.name}
+                  accessibilityState={{ selected }}
+                  onPress={() => setThemeId(item.id)}
+                  style={[styles.swatch, { backgroundColor: item.bg, borderColor: selected ? palette.deep : "transparent" }]}
+                >
+                  <Text style={{ color: item.ink, fontFamily: fonts.bodyStrong }} numberOfLines={2}>{item.name}</Text>
+                  <View style={[styles.swatchButton, { backgroundColor: item.buttonBg }]} />
+                </Pressable>
+              </View>
+            );
+          })}
+        </View>
+      </View>
+  );
+  const buttonBlock = (
+      <View style={styles.stack}>
+      <SectionHeader label={t.pageButtons} />
+      {shown.map((link, index) => (
+        <View key={`${link.key}-${index}`} style={styles.card}>
+          <GroupRow
+            icon={Link2}
+            tint={link.enabled ? "green" : "ink"}
+            title={link.labelEn || link.type}
+            hint={link.enabled ? t.available : t.inStock}
+            onPress={() => edit(index, { enabled: !link.enabled })}
+          />
+          <Field label={link.type} tone="paper" value={link.labelEn} onChangeText={(labelEn) => edit(index, { labelEn })} />
+          <Field label="URL" tone="paper" value={link.url} onChangeText={(url) => edit(index, { url })} autoCapitalize="none" />
+          <View style={styles.row}>
+            <PillButton label={t.moveUp} tone="outline" onPress={() => move(index, -1)} />
+            <PillButton label={t.moveDown} tone="outline" onPress={() => move(index, 1)} />
+          </View>
+        </View>
+      ))}
+      <SectionHeader label={t.sectionAddButton} />
+      <Group>
+        {ADDABLE.map((type) => (
+          <GroupRow
+            key={type}
+            icon={Plus}
+            tint="amber"
+            title={type}
+            hint={t.sectionAddButton}
+            onPress={() => setLinks([...shown, { key: type, type, labelEn: type, labelHi: "", enabled: true, url: "" }])}
+          />
+        ))}
+      </Group>
+      </View>
+  );
+
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+      {section === "theme" ? themeBlock : null}
+      {section === "buttons" ? buttonBlock : null}
       <View style={styles.titleRow}>
         <Text style={[styles.section, lang === "hi" && styles.hindi]}>{t.shareQr}</Text>
         <HelpButton title={t.coachQrShow} body={t.coachQrShowBody} />
@@ -253,51 +331,8 @@ function TapScreenContent() {
         <Text style={[styles.note, lang === "hi" && styles.hindi]}>{t.directHint}</Text>
       ) : null}
       <Field label={t.about} tone="paper" value={bioText} onChangeText={setBio} />
-      <SectionHeader label={t.theme} />
-      <Group>
-        {(data?.themes ?? []).map((item) => (
-          <GroupRow
-            key={item.id}
-            icon={PaletteIcon}
-            tint={item.id === theme ? "green" : "pink"}
-            title={item.name}
-            hint={t.theme}
-            selected={item.id === theme}
-            onPress={() => setThemeId(item.id)}
-          />
-        ))}
-      </Group>
-      <SectionHeader label={t.sectionButtons} />
-      {shown.map((link, index) => (
-        <View key={`${link.key}-${index}`} style={styles.card}>
-          <GroupRow
-            icon={Link2}
-            tint={link.enabled ? "green" : "ink"}
-            title={link.labelEn || link.type}
-            hint={link.enabled ? t.available : t.inStock}
-            onPress={() => edit(index, { enabled: !link.enabled })}
-          />
-          <Field label={link.type} tone="paper" value={link.labelEn} onChangeText={(labelEn) => edit(index, { labelEn })} />
-          <Field label="URL" tone="paper" value={link.url} onChangeText={(url) => edit(index, { url })} autoCapitalize="none" />
-          <View style={styles.row}>
-            <PillButton label={t.moveUp} tone="outline" onPress={() => move(index, -1)} />
-            <PillButton label={t.moveDown} tone="outline" onPress={() => move(index, 1)} />
-          </View>
-        </View>
-      ))}
-      <SectionHeader label={t.sectionAddButton} />
-      <Group>
-        {ADDABLE.map((type) => (
-          <GroupRow
-            key={type}
-            icon={Plus}
-            tint="amber"
-            title={type}
-            hint={t.sectionAddButton}
-            onPress={() => setLinks([...shown, { key: type, type, labelEn: type, labelHi: "", enabled: true, url: "" }])}
-          />
-        ))}
-      </Group>
+      {section === "theme" ? null : themeBlock}
+      {section === "buttons" ? null : buttonBlock}
       <SectionHeader label={t.customColour} />
       <Field label={t.customColour} tone="paper" value={bg} onChangeText={setBg} autoCapitalize="none" />
       <Field label={t.customLink} tone="paper" value={ink} onChangeText={setInk} autoCapitalize="none" />
@@ -364,6 +399,7 @@ function makeStyles(colors: Palette) {
   return StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.paper },
   content: { padding: 16, gap: 12 },
+  stack: { gap: 12 },
   section: { fontFamily: fonts.bodyStrong, color: colors.ink, fontSize: 16 },
   row: { gap: 8 },
   chip: { minHeight: 48, borderRadius: 999, paddingHorizontal: 14, justifyContent: "center", backgroundColor: colors.card },
@@ -372,6 +408,14 @@ function makeStyles(colors: Palette) {
   chipTextOn: { color: colors.onPrimary },
   card: { backgroundColor: colors.card, borderRadius: 20, padding: 12, gap: 8 },
   preview: { height: 480, borderRadius: 20, backgroundColor: colors.card },
+  phone: { borderRadius: 28, padding: 18, gap: 12, minHeight: 168 },
+  phoneKicker: { fontFamily: fonts.bodyStrong, fontSize: 12, opacity: 0.8 },
+  phoneName: { fontFamily: fonts.display, fontSize: 22 },
+  phoneButton: { minHeight: 44, borderRadius: 999, alignItems: "center", justifyContent: "center", paddingHorizontal: 16 },
+  gallery: { flexDirection: "row", flexWrap: "wrap", marginHorizontal: -4 },
+  swatchCell: { width: "50%", padding: 4 },
+  swatch: { borderRadius: 18, borderWidth: 2, padding: 12, gap: 10, minHeight: 92 },
+  swatchButton: { height: 28, borderRadius: 999 },
   note: { fontFamily: fonts.body, color: colors.inkSoft },
   error: { color: colors.danger, fontFamily: fonts.body },
   hindi: { fontFamily: fonts.hindi },

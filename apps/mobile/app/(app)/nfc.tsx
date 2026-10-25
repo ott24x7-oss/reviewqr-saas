@@ -138,7 +138,7 @@ function NfcScreenContent() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={[styles.title, lang === "hi" && styles.hindi]}>{t.nfc}</Text>
+      <Text style={[styles.title, lang === "hi" && styles.hindi]}>{t.nfcOne}</Text>
       <View style={styles.hold}>
         {!reduceMotion && !lowRam ? (
           <LottieView source={require("../../assets/lottie/nfc.json")} autoPlay loop style={styles.lottie} />

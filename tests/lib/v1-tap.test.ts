@@ -64,7 +64,9 @@ describe("v1 tap page", () => {
     expect(json.data.bio).toBe("Open late");
     expect(json.data.themeId).toBe("monochrome-luxe");
     expect(json.data.links[0].type).toBe("menu");
-    expect(json.data.themes.some((theme: { id: string }) => theme.id === "monochrome-luxe")).toBe(true);
+    const theme = json.data.themes.find((item: { id: string; bg?: string; buttonBg?: string }) => item.id === "monochrome-luxe");
+    expect(theme?.bg).toMatch(/^#/);
+    expect(theme?.buttonBg).toMatch(/^#/);
     } finally {
       if (previousAppUrl === undefined) delete process.env.NEXT_PUBLIC_APP_URL;
       else process.env.NEXT_PUBLIC_APP_URL = previousAppUrl;

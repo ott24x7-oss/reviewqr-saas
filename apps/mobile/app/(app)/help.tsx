@@ -35,6 +35,17 @@ function HelpScreenContent() {
     queryFn: () => apiData<Article[]>(`/api/v1/help?lang=${lang}&q=${encodeURIComponent(query)}`)
   });
   const rows = articles.data ?? [];
+  const needle = query.trim().toLowerCase();
+  const guides = [
+    { id: "setup", title: t.guideSetupTitle, body: t.guideSetupBody },
+    { id: "print", title: t.guidePrintTitle, body: t.guidePrintBody },
+    { id: "nfc", title: t.guideNfcTitle, body: t.guideNfcBody },
+    { id: "menu", title: t.guideMenuTitle, body: t.guideMenuBody },
+    { id: "orders", title: t.guideOrdersTitle, body: t.guideOrdersBody },
+    { id: "reviews", title: t.guideReviewsTitle, body: t.guideReviewsBody },
+    { id: "share", title: t.guideShareTitle, body: t.guideShareBody },
+    { id: "staff", title: t.guideStaffTitle, body: t.guideStaffBody }
+  ].filter((guide) => !needle || `${guide.title} ${guide.body}`.toLowerCase().includes(needle));
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: palette.paper }} contentContainerStyle={styles.content}>
@@ -48,13 +59,20 @@ function HelpScreenContent() {
         style={[styles.search, { color: palette.ink, backgroundColor: palette.card, borderColor: palette.line }]}
       />
       <PrimaryButton label={t.showTips} onPress={() => replayAllTours().then(() => router.back())} />
-      {rows.length === 0 ? <EmptyState icon={CircleHelp} title={t.noArticles} body={t.helpSearch} /> : null}
+      {rows.length === 0 && guides.length === 0 ? <EmptyState icon={CircleHelp} title={t.noArticles} body={t.helpSearch} /> : null}
       {rows.map((article) => (
         <Card key={article.id}>
           <Text style={[styles.cat, { color: palette.muted }]}>{article.category}</Text>
           <Text style={[styles.article, { color: palette.ink }, lang === "hi" && styles.hindi]}>{article.title}</Text>
           <Text style={[styles.body, { color: palette.muted }, lang === "hi" && styles.hindi]}>{article.body}</Text>
           {article.videoUrl ? <Text style={{ color: palette.deep, fontFamily: fonts.body }}>{article.videoUrl}</Text> : null}
+        </Card>
+      ))}
+      {guides.map((guide) => (
+        <Card key={guide.id}>
+          <Text style={[styles.cat, { color: palette.muted }, lang === "hi" && styles.hindi]}>{t.guideStarter}</Text>
+          <Text style={[styles.article, { color: palette.ink }, lang === "hi" && styles.hindi]}>{guide.title}</Text>
+          <Text style={[styles.body, { color: palette.muted }, lang === "hi" && styles.hindi]}>{guide.body}</Text>
         </Card>
       ))}
       <Pressable accessibilityRole="button" accessibilityLabel={t.wizardBack} onPress={() => router.back()} style={styles.back}>

@@ -48,7 +48,11 @@ export async function readTapPage(userId: string, businessId: string) {
   const themes = [...THEME_PRESETS, ...extra].map((theme) => ({
     id: theme.id,
     name: theme.name,
-    premium: theme.premium
+    premium: theme.premium,
+    bg: theme.tokens.bg,
+    ink: theme.tokens.ink,
+    buttonBg: theme.tokens.buttonBg,
+    buttonInk: theme.tokens.buttonInk
   }));
   const origin = publicAppOrigin(process.env.NEXT_PUBLIC_APP_URL);
   return ok({
