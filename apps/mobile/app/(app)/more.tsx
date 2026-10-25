@@ -6,10 +6,13 @@ import {
   Languages,
   LogOut,
   Bell,
+  Megaphone,
   Nfc,
   Palette,
   QrCode,
+  Share2,
   ShoppingBag,
+  Star,
   Store,
   Trash2,
   User,
@@ -71,6 +74,12 @@ export default function MoreScreen() {
       <SectionHeader label={t.sectionYourPage} />
       <Group>
         <GroupRow icon={QrCode} tint="green" title={t.pageQr} hint={t.hintPageQr} onPress={() => router.push("/(app)/tap")} />
+        <GroupRow icon={QrCode} tint="ink" title={t.qrList} hint={t.perQr} onPress={() => router.push("/(app)/qr-codes")} />
+        <GroupRow icon={Star} tint="amber" title={t.reviews} hint={t.testimonials} onPress={() => router.push("/(app)/reviews")} />
+        <GroupRow icon={Users} tint="blue" title={t.customers} hint={t.exportCsv} onPress={() => router.push("/(app)/customers")} />
+        <GroupRow icon={Share2} tint="green" title={t.offers} hint={t.campaigns} onPress={() => router.push("/(app)/offers")} />
+        <GroupRow icon={Megaphone} tint="pink" title={t.campaigns} hint={t.sendCampaign} onPress={() => router.push("/(app)/campaigns")} />
+        <GroupRow icon={Share2} tint="amber" title={t.referEarn} hint={t.shareLink} onPress={() => router.push("/(app)/refer")} />
         <GroupRow icon={Palette} tint="pink" title={t.theme} hint={t.hintLook} onPress={() => router.push("/(app)/business-edit")} />
         <GroupRow icon={Store} tint="amber" title={t.storeSettings} hint={t.hintStoreRow} onPress={() => router.push("/(app)/store")} />
         <GroupRow icon={Users} tint="blue" title={t.staff} hint={t.hintStaffRow} onPress={() => router.push("/(app)/staff")} />
@@ -122,7 +131,9 @@ export default function MoreScreen() {
 
       <SectionHeader label={t.sectionAccount} />
       <Group>
-        <GroupRow icon={User} tint="ink" title={t.account} hint={t.hintAccountRow} onPress={() => router.push("/(app)/delete-account")} />
+        <GroupRow icon={Bell} tint="amber" title={t.inbox} hint={t.recentActivity} onPress={() => router.push("/(app)/inbox")} />
+        <GroupRow icon={User} tint="ink" title={t.account} hint={t.hintAccountRow} onPress={() => router.push("/(app)/account")} />
+        {user?.role === "AGENT" ? <GroupRow icon={Users} tint="green" title={t.agentHome} hint={t.onboardBusiness} onPress={() => router.push("/(app)/agent")} /> : null}
         <GroupRow icon={Trash2} tint="pink" title={t.deleteAccount} hint={t.hintDeleteRow} danger onPress={() => router.push("/(app)/delete-account")} />
         <GroupRow icon={LogOut} tint="ink" title={t.signOut} hint={t.hintSignOut} onPress={() => logout()} />
       </Group>

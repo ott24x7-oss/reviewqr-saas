@@ -25,7 +25,16 @@ import {
   qrClaimSchema,
   qrPatchSchema,
   storeSettingsSchema,
-  uploadResultSchema
+  uploadResultSchema,
+  testimonialVisibilitySchema,
+  hintCreateSchema,
+  locationCreateSchema,
+  campaignCreateSchema,
+  aiSettingsSchema,
+  staffRenameSchema,
+  staffInviteSchema,
+  agentOnboardSchema,
+  themeActionSchema
 } from "@reviewqr/shared";
 import { businessSchema, qrCodeSchema } from "../validations";
 
@@ -542,5 +551,93 @@ export function registerResourcePaths(registry: OpenAPIRegistry, errorRef: JsonS
       ),
       401: unauthorized
     }
+  });
+
+  const businessPaths: { method: "get" | "post" | "put" | "patch" | "delete"; path: string; summary: string; body?: JsonSchema }[] = [
+    { method: "get", path: "/api/v1/businesses/{id}/reviews", summary: "Google review log, optional rating=1..5" },
+    { method: "get", path: "/api/v1/businesses/{id}/testimonials", summary: "Testimonials the owner can show or hide" },
+    { method: "post", path: "/api/v1/businesses/{id}/testimonials", summary: "Approve or hide a testimonial", body: testimonialVisibilitySchema },
+    { method: "get", path: "/api/v1/businesses/{id}/hints", summary: "Topic hints customers can copy" },
+    { method: "post", path: "/api/v1/businesses/{id}/hints", summary: "Add a topic hint", body: hintCreateSchema },
+    { method: "delete", path: "/api/v1/businesses/{id}/hints", summary: "Remove a topic hint (hintId query)" },
+    { method: "get", path: "/api/v1/businesses/{id}/locations", summary: "Active locations" },
+    { method: "post", path: "/api/v1/businesses/{id}/locations", summary: "Add a location", body: locationCreateSchema },
+    { method: "get", path: "/api/v1/businesses/{id}/campaigns", summary: "WhatsApp campaigns" },
+    { method: "post", path: "/api/v1/businesses/{id}/campaigns", summary: "Create a draft campaign", body: campaignCreateSchema },
+    { method: "post", path: "/api/v1/businesses/{id}/campaigns/{campaignId}/send", summary: "Send the template to consented customers. Rate limited." },
+    { method: "get", path: "/api/v1/businesses/{id}/ai", summary: "AI review assistant settings" },
+    { method: "put", path: "/api/v1/businesses/{id}/ai", summary: "Turn the AI review assistant on or off", body: aiSettingsSchema },
+    { method: "patch", path: "/api/v1/businesses/{id}/staff/{staffId}", summary: "Rename a staff member", body: staffRenameSchema },
+    { method: "delete", path: "/api/v1/businesses/{id}/staff/{staffId}", summary: "Remove a staff member" },
+    { method: "get", path: "/api/v1/businesses/{id}/staff/{staffId}/stats", summary: "Review count for one staff member" },
+    { method: "post", path: "/api/v1/businesses/{id}/invites", summary: "Invite an app login with the STAFF role", body: staffInviteSchema },
+    { method: "post", path: "/api/v1/businesses/{id}/theme", summary: "Save a theme or a custom colour", body: themeActionSchema }
+  ];
+  for (const item of businessPaths) {
+    const names = [...item.path.matchAll(/\{([^}]+)\}/g)].map((match) => match[1]);
+    const shape: Record<string, z.ZodString> = {};
+    for (const name of names) shape[name] = z.string();
+    registry.registerPath({
+      method: item.method,
+      path: item.path,
+      summary: item.summary,
+      security: bearer,
+      request: { params: z.object(shape), ...(item.body ? jsonBody(item.body) : {}) },
+      responses: {
+        200: jsonResponse("OK", dataSchema(loose)),
+        400: validation,
+        401: unauthorized,
+        404: notFound,
+        429: rateLimit
+      }
+    });
+  }
+
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/customers",
+    summary: "Consented customers you can call or message",
+    security: bearer,
+    request: { query: z.object({ businessId: z.string().optional() }) },
+    responses: { 200: jsonResponse("Customers", dataSchema(loose)), 401: unauthorized }
+  });
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/customers/export",
+    summary: "CSV of consented customers",
+    security: bearer,
+    request: { query: z.object({ businessId: z.string().optional() }) },
+    responses: { 200: jsonResponse("CSV text", dataSchema(z.object({ csv: z.string() }))), 401: unauthorized }
+  });
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/refer",
+    summary: "Owner referral link and rewards",
+    security: bearer,
+    responses: { 200: jsonResponse("Referral", dataSchema(loose)), 401: unauthorized }
+  });
+  registry.registerPath({
+    method: "post",
+    path: "/api/v1/me/phone",
+    summary: "Send an OTP to a new WhatsApp number",
+    security: bearer,
+    request: jsonBody(z.object({ phone: z.string() })),
+    responses: { 200: jsonResponse("Sent", dataSchema(loose)), 400: validation, 401: unauthorized, 429: rateLimit }
+  });
+  registry.registerPath({
+    method: "put",
+    path: "/api/v1/me/phone",
+    summary: "Confirm the OTP and save the new number",
+    security: bearer,
+    request: jsonBody(z.object({ phone: z.string(), code: z.string() })),
+    responses: { 200: jsonResponse("Updated", dataSchema(z.object({ phone: z.string() }))), 400: validation, 401: unauthorized }
+  });
+  registry.registerPath({
+    method: "post",
+    path: "/api/v1/agent/onboard",
+    summary: "Agent starts onboarding a business. The owner confirms by OTP.",
+    security: bearer,
+    request: jsonBody(agentOnboardSchema),
+    responses: { 200: jsonResponse("Started", dataSchema(loose)), 400: validation, 401: unauthorized, 403: forbidden }
   });
 }

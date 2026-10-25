@@ -1,15 +1,20 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import * as FileSystem from "expo-file-system/legacy";
+import * as Sharing from "expo-sharing";
 import { router } from "expo-router";
 import { QrCode } from "lucide-react-native";
 import { useState , useMemo } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { apiBaseUrl, mobileApi } from "../../src/api/instance";
 import { apiData } from "../../src/api/data";
+import { ApiError } from "../../src/api/http";
 import { useI18n } from "../../src/i18n";
 import { accountKey } from "../../src/query/keys";
 import { useBusiness } from "../../src/state/business";
 import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
 import { EmptyState } from "../../src/ui/bits";
+import { PillButton } from "../../src/ui/controls";
 import { usePalette } from "../../src/ui/theme";
 import type { Palette } from "../../src/ui/tokens";
 
@@ -27,6 +32,8 @@ type Analytics = {
   };
   trend: { day: string; scans: number }[];
   heatmap: number[][];
+  topItems: { itemId: string; name: string; views: number }[];
+  byQr: { qrId: string; label: string; scans: number }[];
   modules: { store: boolean };
 };
 
@@ -38,7 +45,9 @@ export default function AnalyticsScreen() {
   const { t, lang } = useI18n();
   const { user } = useSession();
   const { business } = useBusiness();
+  const client = useQueryClient();
   const [range, setRange] = useState<"7d" | "30d">("7d");
+  const [reportError, setReportError] = useState<string | null>(null);
   const id = business?.id;
   const query = useQuery({
     queryKey: accountKey(user?.id ?? "", "analytics", id, range),
@@ -51,6 +60,27 @@ export default function AnalyticsScreen() {
   const maxScan = Math.max(1, ...trend.map((row) => row.scans));
   const heat = query.data?.heatmap ?? [];
   const heatMax = Math.max(1, ...heat.flat());
+  const prefs = useQuery({
+    queryKey: accountKey(user?.id ?? "", "report-prefs"),
+    enabled: !!user,
+    queryFn: () => apiData<{ whatsappOptIn: boolean }>("/api/v1/reports/preferences")
+  });
+
+  async function sharePdf() {
+    if (!id) return;
+    setReportError(null);
+    try {
+      const token = mobileApi.getAccessToken();
+      const month = new Date(Date.now() + 5.5 * 60 * 60 * 1000).toISOString().slice(0, 7);
+      const dest = `${FileSystem.cacheDirectory}report-${month}.pdf`;
+      await FileSystem.downloadAsync(`${apiBaseUrl()}/api/v1/reports/monthly?businessId=${id}&month=${month}`, dest, {
+        headers: token ? { authorization: `Bearer ${token}` } : {}
+      });
+      await Sharing.shareAsync(dest, { mimeType: "application/pdf", UTI: "com.adobe.pdf" });
+    } catch (err) {
+      setReportError(err instanceof ApiError ? err.message : "Could not share the report");
+    }
+  }
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -115,8 +145,31 @@ export default function AnalyticsScreen() {
           </View>
         </ScrollView>
       </View>
+      <View style={styles.panel}>
+        <Text style={[styles.panelTitle, lang === "hi" && styles.hindi]}>{t.topItems}</Text>
+        {(query.data?.topItems ?? []).map((row) => (
+          <Text key={row.itemId} style={styles.heatLabel}>{row.name} · {row.views}</Text>
+        ))}
+      </View>
+      <View style={styles.panel}>
+        <Text style={[styles.panelTitle, lang === "hi" && styles.hindi]}>{t.perQr}</Text>
+        {(query.data?.byQr ?? []).map((row) => (
+          <Text key={row.qrId} style={styles.heatLabel}>{row.label || row.qrId} · {row.scans}</Text>
+        ))}
+      </View>
       </>
       )}
+      <PillButton
+        label={t.weeklyReport}
+        tone={prefs.data?.whatsappOptIn ? "dark" : "outline"}
+        onPress={() =>
+          apiData("/api/v1/reports/preferences", { method: "PUT", body: JSON.stringify({ whatsappOptIn: !prefs.data?.whatsappOptIn }) })
+            .then(() => client.invalidateQueries({ queryKey: accountKey(user?.id ?? "", "report-prefs") }))
+            .catch((err) => setReportError(err instanceof ApiError ? err.message : "Could not save"))
+        }
+      />
+      <PillButton label={t.monthlyPdf} tone="outline" onPress={sharePdf} />
+      {reportError ? <Text style={styles.heatLabel}>{reportError}</Text> : null}
     </ScrollView>
   );
 }
