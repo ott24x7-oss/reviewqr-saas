@@ -96,17 +96,17 @@ function AppTabs() {
       <Tabs.Screen name="plan" options={{ title: t.plans }} />
       <Tabs.Screen name="staff" options={{ title: t.staff }} />
       <Tabs.Screen name="store" options={{ title: t.storeSettings }} />
-      <Tabs.Screen name="order-detail" options={{ title: t.viewDetails, href: null }} />
-      <Tabs.Screen name="reviews" options={{ title: t.reviews, href: null }} />
-      <Tabs.Screen name="customers" options={{ title: t.customers, href: null }} />
-      <Tabs.Screen name="offers" options={{ title: t.offers, href: null }} />
-      <Tabs.Screen name="campaigns" options={{ title: t.campaigns, href: null }} />
-      <Tabs.Screen name="refer" options={{ title: t.referEarn, href: null }} />
-      <Tabs.Screen name="qr-codes" options={{ title: t.qrList, href: null }} />
-      <Tabs.Screen name="inbox" options={{ title: t.inbox, href: null }} />
-      <Tabs.Screen name="account" options={{ title: t.account, href: null }} />
-      <Tabs.Screen name="theme" options={{ title: t.theme, href: null }} />
-      <Tabs.Screen name="agent" options={{ title: t.agentHome, href: null }} />
+      <Tabs.Screen name="order-detail" options={{ title: t.viewDetails }} />
+      <Tabs.Screen name="reviews" options={{ title: t.reviews }} />
+      <Tabs.Screen name="customers" options={{ title: t.customers }} />
+      <Tabs.Screen name="offers" options={{ title: t.offers }} />
+      <Tabs.Screen name="campaigns" options={{ title: t.campaigns }} />
+      <Tabs.Screen name="refer" options={{ title: t.referEarn }} />
+      <Tabs.Screen name="qr-codes" options={{ title: t.qrList }} />
+      <Tabs.Screen name="inbox" options={{ title: t.inbox }} />
+      <Tabs.Screen name="account" options={{ title: t.account }} />
+      <Tabs.Screen name="theme" options={{ title: t.theme }} />
+      <Tabs.Screen name="agent" options={{ title: t.agentHome }} />
     </Tabs>
   );
 }
