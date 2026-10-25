@@ -268,6 +268,31 @@ export default function ShopScreen() {
                   {event.at.slice(0, 16).replace("T", " ")} · {event.label}
                 </Text>
               ))}
+              {detail.data.status === "PROOF_SENT" ? (
+                <View style={styles.stack}>
+                  <PillButton
+                    label={t.approveProof}
+                    tone="dark"
+                    onPress={() =>
+                      apiData(`/api/v1/shop/orders/${detail.data!.id}/proof`, { method: "POST", body: JSON.stringify({ action: "approve" }) })
+                        .then(() => client.invalidateQueries({ queryKey: accountKey(userId, "shop-order", detail.data!.id) }))
+                        .catch((err) => setError(err instanceof ApiError ? err.message : "Could not approve"))
+                    }
+                  />
+                  <PillButton
+                    label={t.requestChanges}
+                    tone="outline"
+                    onPress={() =>
+                      apiData(`/api/v1/shop/orders/${detail.data!.id}/proof`, {
+                        method: "POST",
+                        body: JSON.stringify({ action: "changes", comment: "Please adjust the print" })
+                      })
+                        .then(() => client.invalidateQueries({ queryKey: accountKey(userId, "shop-order", detail.data!.id) }))
+                        .catch((err) => setError(err instanceof ApiError ? err.message : "Could not send"))
+                    }
+                  />
+                </View>
+              ) : null}
               {detail.data.status === "DELIVERED" ? (
                 <PillButton
                   label={t.reprint}

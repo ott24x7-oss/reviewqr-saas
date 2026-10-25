@@ -25,7 +25,7 @@ import type { Palette } from "../../src/ui/tokens";
 import { Field, PillButton } from "../../src/ui/controls";
 import { Group, GroupRow, SectionHeader } from "../../src/ui/rows";
 
-const ADDABLE = ["menu", "whatsapp_chat", "call", "google", "website", "feedback"] as const;
+const ADDABLE = ["menu", "whatsapp_chat", "call", "google", "website", "feedback", "custom"] as const;
 
 export default function TapScreen() {
   const { palette, reduceMotion, lowRam } = useTheme();
@@ -49,6 +49,8 @@ export default function TapScreen() {
   const [directOn, setDirectOn] = useState<boolean | null>(null);
   const [directKey, setDirectKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [bg, setBg] = useState("#1C1813");
+  const [ink, setInk] = useState("#F4EFE6");
   const [busy, setBusy] = useState(false);
   const data = tap.data;
   const shown = links ?? data?.links ?? [];
@@ -60,6 +62,28 @@ export default function TapScreen() {
   const bioText = bio ?? data?.bio ?? "";
   const base = apiBaseUrl();
   const preview = data?.publicPath && base ? `${base}${data.publicPath}` : "";
+
+  function move(index: number, step: number) {
+    const nextIndex = index + step;
+    if (nextIndex < 0 || nextIndex >= shown.length) return;
+    const next = [...shown];
+    const [row] = next.splice(index, 1);
+    next.splice(nextIndex, 0, row);
+    setLinks(next);
+  }
+
+  async function saveColour() {
+    if (!business) return;
+    setError(null);
+    try {
+      await apiData(`/api/v1/businesses/${business.id}/theme`, {
+        method: "POST",
+        body: JSON.stringify({ action: "save", themeId: theme || "minimal", bg, ink, buttonBg: bg, buttonInk: ink, backgroundType: "solid" })
+      });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not save the colour");
+    }
+  }
 
   function edit(index: number, patch: Partial<TapLink>) {
     setLinks(shown.map((link, i) => (i === index ? { ...link, ...patch } : link)));
@@ -254,6 +278,10 @@ export default function TapScreen() {
           />
           <Field label={link.type} tone="paper" value={link.labelEn} onChangeText={(labelEn) => edit(index, { labelEn })} />
           <Field label="URL" tone="paper" value={link.url} onChangeText={(url) => edit(index, { url })} autoCapitalize="none" />
+          <View style={styles.row}>
+            <PillButton label={t.moveUp} tone="outline" onPress={() => move(index, -1)} />
+            <PillButton label={t.moveDown} tone="outline" onPress={() => move(index, 1)} />
+          </View>
         </View>
       ))}
       <SectionHeader label={t.sectionAddButton} />
@@ -269,6 +297,10 @@ export default function TapScreen() {
           />
         ))}
       </Group>
+      <SectionHeader label={t.customColour} />
+      <Field label={t.customColour} tone="paper" value={bg} onChangeText={setBg} autoCapitalize="none" />
+      <Field label={t.customLink} tone="paper" value={ink} onChangeText={setInk} autoCapitalize="none" />
+      <PillButton label={t.save} tone="outline" onPress={saveColour} />
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <PillButton label={t.publish} onPress={publish} disabled={busy} hint={t.hintWait} tone="dark" />
       {data?.code ? (
