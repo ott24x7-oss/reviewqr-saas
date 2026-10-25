@@ -31,6 +31,7 @@ export type Palette = {
   warning: string;
   danger: string;
   buttonGradient: readonly [string, string];
+  cinematic: boolean;
   /** Backwards-compatible aliases used by the existing screen components. */
   deep: string;
   bright: string;
@@ -50,7 +51,7 @@ export type Palette = {
   glass: string;
 };
 
-type PaletteSeed = Omit<Palette, "deep" | "bright" | "ink" | "paper" | "card" | "star" | "white" | "inkSoft" | "chip" | "scrim" | "header" | "headerInk" | "navy" | "cyan" | "cyanSoft" | "glass"> & {
+type PaletteSeed = Omit<Palette, "deep" | "bright" | "ink" | "paper" | "card" | "star" | "white" | "inkSoft" | "chip" | "scrim" | "header" | "headerInk" | "navy" | "cyan" | "cyanSoft" | "glass" | "cinematic"> & {
   header?: string;
   headerInk?: string;
   cinematic?: boolean;
@@ -60,6 +61,7 @@ function createPalette(seed: PaletteSeed): Palette {
   const header = seed.header ?? seed.primaryDeep;
   return {
     ...seed,
+    cinematic: seed.cinematic ?? false,
     deep: seed.primaryDeep,
     bright: seed.buttonGradient[1],
     ink: seed.text,

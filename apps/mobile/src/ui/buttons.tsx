@@ -28,16 +28,17 @@ type PressProps = {
 
 export function PrimaryButton({ label, onPress, disabled, hint, icon: Icon, testID, style, accessibilityLabel }: PressProps) {
   const { lang } = useI18n();
-  const { palette, reduceMotion } = useTheme();
+  const { palette, reduceMotion, lowRam } = useTheme();
   const off = !!disabled;
+  const limitedMotion = reduceMotion || (palette.cinematic && lowRam);
   const scale = useSharedValue(1);
   const sheen = useSharedValue(-1.2);
 
   useEffect(() => {
-    if (reduceMotion || off) return;
+    if (limitedMotion || off) return;
     sheen.value = -1.2;
     sheen.value = withTiming(1.4, { duration: 900, easing: Easing.out(Easing.cubic) });
-  }, [reduceMotion, sheen, off]);
+  }, [limitedMotion, sheen, off]);
 
   const scaleStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   const sheenStyle = useAnimatedStyle(() => ({
@@ -47,13 +48,13 @@ export function PrimaryButton({ label, onPress, disabled, hint, icon: Icon, test
   const face = (
     <View style={styles.row}>
       {Icon ? <Icon color={off ? "#6B6358" : palette.onPrimary} size={20} strokeWidth={1.75} /> : null}
-      <Text style={[off ? styles.disabledText : styles.primaryText, lang === "hi" && styles.hindi]}>{label}</Text>
+      <Text style={[off ? styles.disabledText : [styles.primaryText, { color: palette.onPrimary }], lang === "hi" && styles.hindi]}>{label}</Text>
     </View>
   );
 
   return (
     <Animated.View style={[scaleStyle, style]}>
-      <View style={off ? undefined : styles.glow}>
+      <View style={off ? undefined : [styles.glow, { shadowColor: palette.primary }]}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={accessibilityLabel || label}
@@ -76,14 +77,14 @@ export function PrimaryButton({ label, onPress, disabled, hint, icon: Icon, test
             <View style={[styles.primary, styles.disabledFill]}>{face}</View>
           ) : (
             <LinearGradient
-              colors={[palette.bright, palette.primary, palette.deep]}
-              locations={[0, 0.55, 1]}
+              colors={[...palette.buttonGradient]}
+              locations={[0, 1]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.primary}
             >
               <View style={styles.highlight} />
-              {reduceMotion ? null : <Animated.View pointerEvents="none" style={[styles.sheen, sheenStyle]} />}
+              {limitedMotion ? null : <Animated.View pointerEvents="none" style={[styles.sheen, sheenStyle]} />}
               {face}
             </LinearGradient>
           )}
@@ -189,7 +190,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.28)"
   },
   row: { flexDirection: "row", alignItems: "center", gap: 8 },
-  primaryText: { color: "#FFFFFF", fontFamily: fonts.bodyStrong, fontSize: 16 },
+  primaryText: { fontFamily: fonts.bodyStrong, fontSize: 16 },
   disabledText: { color: "#3F3A34", fontFamily: fonts.bodyStrong, fontSize: 16 },
   hint: { marginTop: 8, textAlign: "center", fontFamily: fonts.body, fontSize: 13, lineHeight: 18 },
   secondary: {

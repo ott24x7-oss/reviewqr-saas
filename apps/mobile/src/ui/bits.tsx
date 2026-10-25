@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { LucideIcon } from "lucide-react-native";
 import { Check } from "lucide-react-native";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 import { Modal, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
@@ -13,7 +13,7 @@ import Animated, {
   withSequence,
   withTiming
 } from "react-native-reanimated";
-import Svg, { Polyline } from "react-native-svg";
+import Svg, { Defs, LinearGradient as SvgLinearGradient, Polyline, Stop, Text as SvgText } from "react-native-svg";
 import { useI18n } from "../i18n";
 import { fonts } from "../theme";
 import { PrimaryButton } from "./buttons";
@@ -28,7 +28,11 @@ export function Card({ children, raised, style }: { children: ReactNode; raised?
         styles.card,
         {
           backgroundColor: palette.card,
-          shadowOpacity: raised ? 0.12 : 0.06,
+          borderColor: palette.line,
+          borderWidth: palette.cinematic ? 1 : 0,
+          borderRadius: palette.cinematic ? 24 : 20,
+          shadowColor: palette.cinematic ? palette.primary : "#1C1813",
+          shadowOpacity: palette.cinematic ? (raised ? 0.16 : 0.08) : raised ? 0.12 : 0.06,
           elevation: raised ? 8 : 2
         },
         style
@@ -136,14 +140,14 @@ export function OptionTile({
           }
         ]}
       >
-        <View style={[styles.iconCircle, { backgroundColor: selected ? "rgba(22,163,74,0.14)" : palette.paper }]}>
+        <View style={[styles.iconCircle, { backgroundColor: selected ? palette.accentSoft : palette.paper }]}>
           <Icon color={selected ? palette.deep : palette.ink} size={22} strokeWidth={1.75} />
         </View>
         <Text style={[styles.tileTitle, { color: palette.ink }, lang === "hi" && styles.hindi]}>{title}</Text>
         {hint ? <Text style={[styles.tileHint, { color: palette.muted }, lang === "hi" && styles.hindiBody]}>{hint}</Text> : null}
         {selected ? (
-          <View style={[styles.check, { backgroundColor: palette.deep }]}>
-            <Check color="#FFFFFF" size={14} strokeWidth={2.4} />
+          <View style={[styles.check, { backgroundColor: palette.primary }]}>
+            <Check color={palette.onPrimary} size={14} strokeWidth={2.4} />
           </View>
         ) : null}
       </Pressable>
@@ -244,6 +248,7 @@ export function KpiCard({
       .catch(() => undefined);
   }, [count, reduceMotion]);
   const counted = useCountUp(count ?? null, animate);
+  const gradientId = useId().replace(/:/g, "");
   const arrow = trend === "up" ? "↑" : trend === "down" ? "↓" : "";
   const arrowColor = trend === "down" ? palette.danger : palette.deep;
   const shown = count == null || counted == null ? value : `${prefix ?? ""}${counted}`;
@@ -254,7 +259,19 @@ export function KpiCard({
         {Icon ? <Icon color={palette.muted} size={16} strokeWidth={1.75} /> : null}
       </View>
       <View style={styles.kpiRow}>
-        <Text style={[styles.kpiValue, { color: palette.ink }]}>{shown}</Text>
+        {palette.cinematic ? (
+          <View accessibilityLabel={shown} accessible>
+            <Svg width={Math.max(52, Math.min(174, shown.length * 18))} height={36}>
+              <Defs>
+                <SvgLinearGradient id={gradientId} x1="0" y1="0" x2="1" y2="0">
+                  <Stop offset="0" stopColor={palette.buttonGradient[0]} />
+                  <Stop offset="1" stopColor={palette.buttonGradient[1]} />
+                </SvgLinearGradient>
+              </Defs>
+              <SvgText x={0} y={28} fill={`url(#${gradientId})`} fontFamily={fonts.display} fontSize={26}>{shown}</SvgText>
+            </Svg>
+          </View>
+        ) : <Text style={[styles.kpiValue, { color: palette.ink }]}>{shown}</Text>}
         {!trendLabel && arrow ? (
           <Text accessibilityLabel={trend} style={[styles.arrow, { color: arrowColor }]}>
             {arrow}

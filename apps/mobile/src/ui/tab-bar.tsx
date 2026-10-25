@@ -1,5 +1,6 @@
 import { useEffect, type ComponentType, type ReactNode } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { BlurView } from "expo-blur";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useI18n } from "../i18n";
@@ -57,7 +58,16 @@ export function PremiumTabBar({
   }));
 
   return (
-    <View style={[styles.bar, { backgroundColor: palette.card, borderColor: palette.line, paddingBottom: Math.max(8, insets.bottom) }]}>
+    <View style={[styles.bar, {
+      backgroundColor: palette.cinematic
+        ? Platform.OS === "android" || Platform.OS === "web" ? "rgba(20,20,24,0.85)" : "rgba(5,5,7,0.42)"
+        : palette.card,
+      borderColor: palette.line,
+      paddingBottom: Math.max(8, insets.bottom)
+    }]}>
+      {palette.cinematic && Platform.OS !== "android" && Platform.OS !== "web" ? (
+        <BlurView tint="dark" intensity={48} style={StyleSheet.absoluteFill} />
+      ) : null}
       <View
         style={styles.row}
         onLayout={(event) => {
@@ -99,7 +109,7 @@ export function PremiumTabBar({
             pointerEvents="none"
             style={[
               styles.pill,
-              { backgroundColor: "rgba(22,163,74,0.12)", width: `${100 / Math.max(1, routes.length)}%` as `${number}%` },
+              { backgroundColor: palette.accentSoft, width: `${100 / Math.max(1, routes.length)}%` as `${number}%` },
               pill
             ]}
           />
@@ -110,7 +120,7 @@ export function PremiumTabBar({
 }
 
 const styles = StyleSheet.create({
-  bar: { borderTopWidth: 1, paddingTop: 6 },
+  bar: { borderTopWidth: 1, paddingTop: 6, overflow: "hidden" },
   row: { flexDirection: "row", minHeight: 56, position: "relative" },
   tab: { flex: 1, minHeight: 48, alignItems: "center", justifyContent: "center", gap: 2, zIndex: 1 },
   iconWrap: { width: 28, height: 28, alignItems: "center", justifyContent: "center" },
