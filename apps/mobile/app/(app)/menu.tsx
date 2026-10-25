@@ -19,17 +19,26 @@ import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
 import { BottomSheet, Card, Chip, EmptyState, Skeleton } from "../../src/ui/bits";
 import { PrimaryButton } from "../../src/ui/buttons";
-import { Field } from "../../src/ui/controls";
+import { Field, PillButton } from "../../src/ui/controls";
 import { LockedModuleCard } from "../../src/ui/locked-module";
 import { useTheme } from "../../src/ui/theme";
 
+type Category = { id: string; name: string };
+type Variant = { id: string; label: string; pricePaise: number };
+type AddOn = { id: string; name: string; pricePaise: number };
 type Product = {
   id: string;
   name: string;
   pricePaise: number;
+  mrpPaise?: number | null;
   photo?: string | null;
   photos?: string[];
   available?: boolean;
+  bestseller?: boolean;
+  veg?: string;
+  categoryId?: string | null;
+  variants?: Variant[];
+  addOns?: AddOn[];
 };
 
 function photoUri(photo?: string | null) {
@@ -51,6 +60,15 @@ export default function MenuTab() {
   const client = useQueryClient();
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
+  const [mrp, setMrp] = useState("");
+  const [search, setSearch] = useState("");
+  const [categoryName, setCategoryName] = useState("");
+  const [categoryId, setCategoryId] = useState<string | null>(null);
+  const [editing, setEditing] = useState<Product | null>(null);
+  const [variantName, setVariantName] = useState("");
+  const [variantPrice, setVariantPrice] = useState("");
+  const [addonName, setAddonName] = useState("");
+  const [addonPrice, setAddonPrice] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [grid, setGrid] = useState(true);
@@ -62,7 +80,7 @@ export default function MenuTab() {
   const items = useQuery({
     queryKey: accountKey(user?.id ?? "", "menu", id),
     enabled: !!user && !!id && !locked,
-    queryFn: () => apiData<{ items: Product[] }>(`/api/v1/businesses/${id}/menu?limit=50`)
+    queryFn: () => apiData<{ items: Product[]; categories: Category[] }>(`/api/v1/businesses/${id}/menu?limit=50`)
   });
 
   async function add(another: boolean) {
@@ -73,7 +91,14 @@ export default function MenuTab() {
     try {
       await apiData(`/api/v1/businesses/${id}/menu`, {
         method: "POST",
-        body: JSON.stringify({ action: "item", name: name.trim(), priceRupees })
+        body: JSON.stringify({
+          action: "item",
+          name: name.trim(),
+          priceRupees,
+          ...(mrp.trim() ? { mrpRupees: Number(mrp) } : {}),
+          ...(categoryId ? { categoryId } : {}),
+          ...(categoryName.trim() && !categoryId ? { category: categoryName.trim() } : {})
+        })
       });
       setName("");
       setPrice("");
@@ -124,7 +149,19 @@ export default function MenuTab() {
     }
   }
 
-  const rows = items.data?.items ?? [];
+  async function menuPost(body: Record<string, unknown>) {
+    if (!id) return;
+    setError(null);
+    await apiData(`/api/v1/businesses/${id}/menu`, { method: "POST", body: JSON.stringify(body) });
+    await client.invalidateQueries({ queryKey: accountKey(user?.id ?? "", "menu", id) });
+  }
+
+  const categories = items.data?.categories ?? [];
+  const rows = (items.data?.items ?? []).filter((item) => {
+    const matchesName = item.name.toLowerCase().includes(search.trim().toLowerCase());
+    const matchesCategory = !categoryId || item.categoryId === categoryId;
+    return matchesName && matchesCategory;
+  });
 
   return (
     <View style={[styles.screen, { backgroundColor: palette.paper }]}>
@@ -144,6 +181,20 @@ export default function MenuTab() {
               <Chip label={t.gridView} selected={grid} onPress={() => setGrid(true)} />
               <Chip label={t.listView} selected={!grid} onPress={() => setGrid(false)} />
             </View>
+            {!locked ? <Field label={t.search} tone="paper" value={search} onChangeText={setSearch} /> : null}
+            {!locked ? (
+              <View style={styles.row}>
+                <Chip label={t.dateAll} selected={!categoryId} onPress={() => setCategoryId(null)} />
+                {categories.map((category) => (
+                  <Chip
+                    key={category.id}
+                    label={category.name}
+                    selected={categoryId === category.id}
+                    onPress={() => setCategoryId(category.id)}
+                  />
+                ))}
+              </View>
+            ) : null}
             {locked ? <LockedModuleCard moduleId="MENU" /> : null}
             {items.isLoading ? <Skeleton height={120} /> : null}
             {!locked && !items.isLoading && rows.length === 0 ? (
@@ -169,6 +220,7 @@ export default function MenuTab() {
               offLabel={t.soldOut}
               busy={savingId === item.id}
               onToggle={() => toggleAvailable(item)}
+              onOpen={() => setEditing(item)}
             />
           </View>
         )}
@@ -195,6 +247,18 @@ export default function MenuTab() {
           {suggesting ? <Skeleton height={18} /> : null}
           <Field label={t.name} tone="paper" value={name} onChangeText={setName} />
           <Field label={t.price} tone="paper" value={price} onChangeText={setPrice} keyboardType="decimal-pad" />
+          <Field label={t.mrp} tone="paper" value={mrp} onChangeText={setMrp} keyboardType="decimal-pad" />
+          <Field label={t.categoryName} tone="paper" value={categoryName} onChangeText={setCategoryName} />
+          <PillButton
+            label={t.addCategory}
+            tone="outline"
+            onPress={() => {
+              if (!categoryName.trim()) return;
+              menuPost({ action: "category", name: categoryName.trim() }).then(() => setCategoryName("")).catch((err) => {
+                setError(err instanceof ApiError ? err.message : "Could not save");
+              });
+            }}
+          />
           {error ? <Text style={{ color: palette.danger, fontFamily: fonts.body }}>{error}</Text> : null}
           <PrimaryButton
             label={t.saveAnother}
@@ -203,6 +267,97 @@ export default function MenuTab() {
             hint={t.hintNamePrice}
           />
         </View>
+      </BottomSheet>
+      <BottomSheet visible={!!editing} title={editing?.name || t.saveItem} onClose={() => setEditing(null)}>
+        {editing ? (
+          <View style={styles.stack}>
+            <Field label={t.name} tone="paper" value={editing.name} onChangeText={(value) => setEditing({ ...editing, name: value })} />
+            <Field
+              label={t.price}
+              tone="paper"
+              value={String(Math.round(editing.pricePaise / 100))}
+              keyboardType="decimal-pad"
+              onChangeText={(value) => setEditing({ ...editing, pricePaise: Math.round(Number(value || 0) * 100) })}
+            />
+            <View style={styles.row}>
+              <Chip label={t.veg} selected={editing.veg === "VEG"} onPress={() => setEditing({ ...editing, veg: "VEG" })} />
+              <Chip label={t.nonVeg} selected={editing.veg === "NON_VEG"} onPress={() => setEditing({ ...editing, veg: "NON_VEG" })} />
+              <Chip label={t.bestseller} selected={!!editing.bestseller} onPress={() => setEditing({ ...editing, bestseller: !editing.bestseller })} />
+            </View>
+            <PillButton
+              label={t.saveItem}
+              onPress={() => {
+                menuPost({
+                  action: "update",
+                  id: editing.id,
+                  name: editing.name,
+                  priceRupees: editing.pricePaise / 100,
+                  mrpRupees: mrp.trim() ? Number(mrp) : null,
+                  veg: editing.veg || "NONE",
+                  bestseller: !!editing.bestseller,
+                  categoryId: categoryId
+                }).then(() => setEditing(null)).catch((err) => setError(err instanceof ApiError ? err.message : "Could not save"));
+              }}
+            />
+            <Field label={t.variant} tone="paper" value={variantName} onChangeText={setVariantName} />
+            <Field label={t.price} tone="paper" value={variantPrice} onChangeText={setVariantPrice} keyboardType="decimal-pad" />
+            <PillButton
+              label={t.variant}
+              tone="outline"
+              onPress={() => {
+                if (!variantName.trim()) return;
+                menuPost({ action: "variant", id: editing.id, name: variantName.trim(), priceRupees: Number(variantPrice || 0) })
+                  .then(() => { setVariantName(""); setVariantPrice(""); })
+                  .catch((err) => setError(err instanceof ApiError ? err.message : "Could not save"));
+              }}
+            />
+            <Field label={t.addon} tone="paper" value={addonName} onChangeText={setAddonName} />
+            <Field label={t.price} tone="paper" value={addonPrice} onChangeText={setAddonPrice} keyboardType="decimal-pad" />
+            <PillButton
+              label={t.addon}
+              tone="outline"
+              onPress={() => {
+                if (!addonName.trim()) return;
+                menuPost({ action: "addon", id: editing.id, name: addonName.trim(), priceRupees: Number(addonPrice || 0) })
+                  .then(() => { setAddonName(""); setAddonPrice(""); })
+                  .catch((err) => setError(err instanceof ApiError ? err.message : "Could not save"));
+              }}
+            />
+            <PillButton label={t.duplicate} tone="outline" onPress={() => menuPost({ action: "duplicate", id: editing.id, kind: "item" }).catch((err) => setError(err instanceof ApiError ? err.message : "Could not save"))} />
+            <PillButton label={t.removeItem} tone="outline" onPress={() => menuPost({ action: "delete", id: editing.id, kind: "item" }).then(() => setEditing(null)).catch((err) => setError(err instanceof ApiError ? err.message : "Could not save"))} />
+            {categoryId ? (
+              <PillButton label={t.removeCategory} tone="outline" onPress={() => menuPost({ action: "delete", id: categoryId, kind: "category" }).then(() => setCategoryId(null)).catch((err) => setError(err instanceof ApiError ? err.message : "Could not save"))} />
+            ) : null}
+            {categoryId ? (
+              <PillButton
+                label={t.rename}
+                tone="outline"
+                onPress={() => {
+                  const current = categories.find((category) => category.id === categoryId);
+                  if (!current || !categoryName.trim()) return;
+                  menuPost({ action: "category-rename", id: current.id, name: categoryName.trim() }).catch((err) => setError(err instanceof ApiError ? err.message : "Could not save"));
+                }}
+              />
+            ) : null}
+            {categories.length > 1 ? (
+              <PillButton
+                label={t.moveUp}
+                tone="outline"
+                onPress={() => {
+                  if (!categoryId) return;
+                  const ids = categories.map((category) => category.id);
+                  const index = ids.indexOf(categoryId);
+                  if (index <= 0) return;
+                  const next = ids.slice();
+                  const [picked] = next.splice(index, 1);
+                  next.splice(index - 1, 0, picked);
+                  menuPost({ action: "category-reorder", ids: next }).catch((err) => setError(err instanceof ApiError ? err.message : "Could not save"));
+                }}
+              />
+            ) : null}
+            {error ? <Text style={{ color: palette.danger, fontFamily: fonts.body }}>{error}</Text> : null}
+          </View>
+        ) : null}
       </BottomSheet>
       <CoachTour screen="menu" steps={[{ title: t.coachMenuAdd, body: t.coachMenuAddBody, top: 96 }]} />
     </View>
@@ -242,7 +397,8 @@ function ProductCard({
   onLabel,
   offLabel,
   busy,
-  onToggle
+  onToggle,
+  onOpen
 }: {
   item: Product;
   grid: boolean;
@@ -252,6 +408,7 @@ function ProductCard({
   offLabel: string;
   busy: boolean;
   onToggle: () => void;
+  onOpen: () => void;
 }) {
   const { palette } = useTheme();
   const on = item.available !== false;
@@ -267,19 +424,16 @@ function ProductCard({
       thumbColor="#FFFFFF"
     />
   );
-  if (!grid) {
-    return (
-      <Card style={styles.listCard}>
-        <ProductPhoto uri={uri} tall={false} />
-        <View style={styles.listCopy}>
-          <Text style={[styles.item, { color: palette.ink }, lang === "hi" && styles.hindi]} numberOfLines={1}>{item.name}</Text>
-          <Text style={[styles.note, { color: palette.muted }]}>{price}</Text>
-        </View>
-        {toggle}
-      </Card>
-    );
-  }
-  return (
+  const body = !grid ? (
+    <Card style={styles.listCard}>
+      <ProductPhoto uri={uri} tall={false} />
+      <View style={styles.listCopy}>
+        <Text style={[styles.item, { color: palette.ink }, lang === "hi" && styles.hindi]} numberOfLines={1}>{item.name}</Text>
+        <Text style={[styles.note, { color: palette.muted }]}>{price}</Text>
+      </View>
+      {toggle}
+    </Card>
+  ) : (
     <Card style={styles.gridCard}>
       <ProductPhoto uri={uri} tall />
       <Text style={[styles.item, { color: palette.ink }, lang === "hi" && styles.hindi]} numberOfLines={2}>{item.name}</Text>
@@ -289,6 +443,11 @@ function ProductCard({
       </View>
     </Card>
   );
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={item.name} onPress={onOpen}>
+      {body}
+    </Pressable>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -297,7 +456,7 @@ const styles = StyleSheet.create({
   header: { gap: 12, marginBottom: 12 },
   titleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   title: { fontFamily: fonts.display, fontSize: 28 },
-  row: { flexDirection: "row", gap: 8 },
+  row: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
   stack: { gap: 12 },
   cell: { flex: 1, padding: 6 },
   gridCard: { padding: 10, gap: 8, overflow: "hidden" },

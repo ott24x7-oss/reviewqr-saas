@@ -17,9 +17,12 @@ export const menuActionSchema = z.object({
     "addon-update",
     "addon-delete",
     "bulk-price",
-    "duplicate"
+    "duplicate",
+    "category-rename",
+    "category-reorder"
   ]),
   id: z.string().optional(),
+  ids: z.array(z.string()).max(40).optional(),
   kind: z.enum(["item", "category", "variant"]).optional(),
   name: z.string().max(80).optional(),
   nameHi: z.string().max(80).optional(),
