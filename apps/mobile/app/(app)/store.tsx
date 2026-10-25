@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { apiData } from "../../src/api/data";
 import { ApiError } from "../../src/api/http";
@@ -71,15 +71,14 @@ export default function StoreScreen() {
     enabled: !!user && !!id,
     queryFn: () => apiData<{ items: { id: string; name: string; city: string }[] }>(`/api/v1/businesses/${id}/locations`)
   });
-  useEffect(() => {
-    if (settings.data && !draft) setDraft({ ...settings.data, hours: hoursFrom(settings.data.hours), upiId: settings.data.upiId || "" });
-  }, [settings.data, draft]);
+  const form = draft ?? (settings.data ? { ...settings.data, hours: hoursFrom(settings.data.hours), upiId: settings.data.upiId || "" } : null);
 
   async function save() {
-    if (!id || !draft) return;
+    if (!id || !form) return;
     setError(null);
     try {
-      await apiData(`/api/v1/businesses/${id}/store`, { method: "PUT", body: JSON.stringify({ ...draft, upiId: draft.upiId || "" }) });
+      await apiData(`/api/v1/businesses/${id}/store`, { method: "PUT", body: JSON.stringify({ ...form, upiId: form.upiId || "" }) });
+      setDraft(null);
       await client.invalidateQueries({ queryKey: accountKey(user?.id ?? "", "store", id) });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not save");
@@ -102,34 +101,34 @@ export default function StoreScreen() {
     <ScrollView style={{ flex: 1, backgroundColor: palette.paper }} contentContainerStyle={styles.content}>
       <Text style={[styles.title, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.storeSettings}</Text>
       {modules && !hasModule(modules, "STORE") ? <LockedModuleCard moduleId="STORE" /> : null}
-      {draft ? (
+      {form ? (
         <>
-          <PillButton label={draft.holiday ? t.holidayMode : t.available} tone={draft.holiday ? "dark" : "outline"} onPress={() => setDraft({ ...draft, holiday: !draft.holiday })} />
+          <PillButton label={form.holiday ? t.holidayMode : t.available} tone={form.holiday ? "dark" : "outline"} onPress={() => setDraft({ ...form, holiday: !form.holiday })} />
           {DAYS.map((day) => {
-            const slot = draft.hours[day];
+            const slot = form.hours[day];
             return (
               <Card key={day} style={styles.card}>
                 <Text style={[styles.name, { color: palette.ink }]}>{day}</Text>
-                <PillButton label={slot ? t.available : t.closedDay} tone="outline" onPress={() => setDraft({ ...draft, hours: { ...draft.hours, [day]: slot ? null : { open: "09:00", close: "21:00" } } })} />
+                <PillButton label={slot ? t.available : t.closedDay} tone="outline" onPress={() => setDraft({ ...form, hours: { ...form.hours, [day]: slot ? null : { open: "09:00", close: "21:00" } } })} />
                 {slot ? (
                   <View style={styles.row}>
-                    <Field label={t.available} tone="paper" value={slot.open} onChangeText={(openTime) => setDraft({ ...draft, hours: { ...draft.hours, [day]: { ...slot, open: openTime } } })} />
-                    <Field label={t.closedDay} tone="paper" value={slot.close} onChangeText={(close) => setDraft({ ...draft, hours: { ...draft.hours, [day]: { ...slot, close } } })} />
+                    <Field label={t.available} tone="paper" value={slot.open} onChangeText={(openTime) => setDraft({ ...form, hours: { ...form.hours, [day]: { ...slot, open: openTime } } })} />
+                    <Field label={t.closedDay} tone="paper" value={slot.close} onChangeText={(close) => setDraft({ ...form, hours: { ...form.hours, [day]: { ...slot, close } } })} />
                   </View>
                 ) : null}
               </Card>
             );
           })}
-          <Field label={t.upiId} tone="paper" value={draft.upiId || ""} onChangeText={(upiId) => setDraft({ ...draft, upiId })} autoCapitalize="none" />
-          <PillButton label={t.dineIn} tone={draft.dineIn ? "dark" : "outline"} onPress={() => setDraft({ ...draft, dineIn: !draft.dineIn })} />
-          <PillButton label={t.pickup} tone={draft.takeaway ? "dark" : "outline"} onPress={() => setDraft({ ...draft, takeaway: !draft.takeaway })} />
-          <PillButton label={t.delivery} tone={draft.delivery ? "dark" : "outline"} onPress={() => setDraft({ ...draft, delivery: !draft.delivery })} />
-          <Field label={t.minOrder} tone="paper" value={String(draft.minOrderRupees)} onChangeText={(value) => setDraft({ ...draft, minOrderRupees: Number(value) || 0 })} keyboardType="number-pad" />
+          <Field label={t.upiId} tone="paper" value={form.upiId || ""} onChangeText={(upiId) => setDraft({ ...form, upiId })} autoCapitalize="none" />
+          <PillButton label={t.dineIn} tone={form.dineIn ? "dark" : "outline"} onPress={() => setDraft({ ...form, dineIn: !form.dineIn })} />
+          <PillButton label={t.pickup} tone={form.takeaway ? "dark" : "outline"} onPress={() => setDraft({ ...form, takeaway: !form.takeaway })} />
+          <PillButton label={t.delivery} tone={form.delivery ? "dark" : "outline"} onPress={() => setDraft({ ...form, delivery: !form.delivery })} />
+          <Field label={t.minOrder} tone="paper" value={String(form.minOrderRupees)} onChangeText={(value) => setDraft({ ...form, minOrderRupees: Number(value) || 0 })} keyboardType="number-pad" />
           <Text style={[styles.name, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.storeDesign}</Text>
           <View style={styles.row}>
             {DESIGNS.map((design) => (
-              <Pressable key={design} accessibilityRole="button" onPress={() => setDraft({ ...draft, design })} style={[styles.chip, { borderColor: palette.line, backgroundColor: draft.design === design ? palette.deep : palette.card }]}>
-                <Text style={{ color: draft.design === design ? "#fff" : palette.ink, fontFamily: fonts.bodyStrong }}>{design}</Text>
+              <Pressable key={design} accessibilityRole="button" onPress={() => setDraft({ ...form, design })} style={[styles.chip, { borderColor: palette.line, backgroundColor: form.design === design ? palette.deep : palette.card }]}>
+                <Text style={{ color: form.design === design ? "#fff" : palette.ink, fontFamily: fonts.bodyStrong }}>{design}</Text>
               </Pressable>
             ))}
           </View>
