@@ -81,7 +81,15 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         android: {
           compileSdkVersion: 37,
           targetSdkVersion: 36,
-          minSdkVersion: 24
+          minSdkVersion: 24,
+          // R8 strips the Room database WorkManager builds by reflection (pulled in by the
+          // home-screen widget), which crashed the release app on launch. Keep it.
+          extraProguardRules: [
+            "-keep class * extends androidx.room.RoomDatabase { <init>(); }",
+            "-keep class androidx.work.impl.WorkDatabase_Impl { *; }",
+            "-keep class androidx.work.** { *; }",
+            "-dontwarn androidx.work.**"
+          ].join(String.fromCharCode(10))
         }
       }
     ],
