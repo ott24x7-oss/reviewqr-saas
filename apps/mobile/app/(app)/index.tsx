@@ -169,7 +169,15 @@ export default function HomeScreen() {
                 onPress={() => setPicker(true)}
                 style={styles.switcher}
               >
-                <Text style={[styles.bizName, lang === "hi" && styles.hindi]} numberOfLines={1}>
+                <Text
+                  style={{
+                    color: palette.headerInk,
+                    fontFamily: lang === "hi" ? fonts.hindiStrong : fonts.bodyStrong,
+                    fontSize: 19,
+                    flexShrink: 1
+                  }}
+                  numberOfLines={1}
+                >
                   {business?.name || t.businesses}
                 </Text>
                 <ChevronDown color="#F4EFE6" size={18} strokeWidth={2.2} />

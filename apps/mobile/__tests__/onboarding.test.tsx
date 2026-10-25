@@ -3,7 +3,11 @@ import {
   emptyDraft,
   lockedModuleText,
   mergeDraft,
+  normalizeSlug,
+  pastedLinkRejected,
   resumeStep,
+  skipSlugChoice,
+  slugCandidates,
   slugProblem,
   wizardIssues
 } from "@reviewqr/shared";
@@ -24,6 +28,14 @@ describe("onboarding resume and validation", () => {
     expect(slugProblem("a")).toBe("invalid");
     expect(slugProblem("my-cafe")).toBeNull();
     expect(mergeDraft({ slug: "My Cafe!" }).slug).toBe("my-cafe");
+    expect(pastedLinkRejected("https://chat.whatsapp.com/gsgecvjdzctggrwv")).toBe(true);
+    expect(normalizeSlug("https://chat.whatsapp.com/gsgecvjdzctggrwv")).toBe("");
+    expect(normalizeSlug("http://example.com/cafe")).toBe("");
+    expect(normalizeSlug("cafe.menu")).toBe("");
+    expect(slugCandidates("Mango Cafe")[0]).toBe("mango-cafe");
+    expect(skipSlugChoice("mango-cafe", true, ["mango-cafe-2"])).toBe("mango-cafe");
+    expect(skipSlugChoice("mango-cafe", false, ["mango-cafe-2"])).toBe("mango-cafe-2");
+    expect(skipSlugChoice("", false, [])).toBeNull();
   });
 
   it("requires a name, category, city, and WhatsApp number", () => {

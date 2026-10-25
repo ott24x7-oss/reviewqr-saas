@@ -10,6 +10,7 @@ import { getPendingOtp, patchPendingOtp, setPendingOtp } from "../../src/auth/pe
 import { useI18n } from "../../src/i18n";
 import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
+import { PrimaryButton } from "../../src/ui/buttons";
 import { OtpCodeForm } from "../../src/ui/otp-form";
 import { usePalette } from "../../src/ui/theme";
 import type { TokenPair } from "@reviewqr/shared";
@@ -95,7 +96,9 @@ export default function CodeScreen() {
     <SafeAreaView style={[styles.screen, { backgroundColor: palette.paper }]}>
       <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.line }]}>
         <Text style={[styles.title, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.codeOnWhatsapp}</Text>
-        <Text style={[styles.sent, { color: palette.muted }, lang === "hi" && styles.hindi]}>{t.sentTo}</Text>
+        <Text style={[styles.sent, { color: palette.muted }, lang === "hi" && styles.hindi]}>
+          {challenge.mode === "login" ? t.codeMaybe : t.sentTo}
+        </Text>
         <OtpCodeForm
           channel={challenge.channel}
           devCode={challenge.devCode}
@@ -110,6 +113,13 @@ export default function CodeScreen() {
           submitting={busy}
           error={error}
         />
+        {challenge.mode === "login" ? (
+          <PrimaryButton
+            testID="create-account"
+            label={t.createAccountPrompt}
+            onPress={() => router.replace("/(auth)/signup")}
+          />
+        ) : null}
       </View>
     </SafeAreaView>
   );

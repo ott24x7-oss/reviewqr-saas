@@ -5,7 +5,9 @@ import {
   emptyDraft,
   mergeDraft,
   normalizeSlug,
+  pastedLinkRejected,
   resumeStep,
+  skipSlugChoice,
   wizardIssues,
   type WizardDraft
 } from "@reviewqr/shared";
@@ -16,7 +18,7 @@ import { router } from "expo-router";
 import LottieView from "lottie-react-native";
 import { Camera, Download, Image as ImageIcon, Share2, ShoppingBag, Store, Utensils } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
-import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { trackAppEvent } from "../../src/analytics/events";
@@ -39,7 +41,7 @@ type Progress = {
   draft: WizardDraft;
 };
 
-type SlugCheck = { slug: string; available: boolean; reason: string | null; url: string };
+type SlugCheck = { slug: string; available: boolean; reason: string | null; url: string; suggestions?: string[] };
 type PlaceHit = { placeId: string; description: string };
 type Done = { businessId: string; name: string; publicUrl: string; scanUrl: string; qrDataUrl: string };
 
@@ -108,17 +110,27 @@ export default function WizardScreen() {
   }, [ready, step, draft]);
 
   useEffect(() => {
-    if (step !== 3 || draft.slug.length < 3) return;
+    if (step !== 3 || draft.slug || !draft.name) return;
+    const next = normalizeSlug(draft.name);
+    if (next) patch({ slug: next });
+    // Prefill once when the link step opens with an empty address.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
+
+  useEffect(() => {
+    if (step !== 3) return;
     const slugQuery = draft.slug;
+    const name = draft.name;
     const timer = setTimeout(() => {
-      apiData<SlugCheck>(`/api/v1/slugs/availability?slug=${encodeURIComponent(slugQuery)}`)
+      const query = `slug=${encodeURIComponent(slugQuery)}&name=${encodeURIComponent(name)}`;
+      apiData<SlugCheck>(`/api/v1/slugs/availability?${query}`)
         .then((row) => {
           if (row.slug === slugQuery) setSlug(row);
         })
         .catch(() => setSlug(null));
     }, 300);
     return () => clearTimeout(timer);
-  }, [step, draft.slug]);
+  }, [step, draft.slug, draft.name]);
 
   function patch(partial: Partial<WizardDraft>) {
     setDraft((current) => ({ ...current, ...partial }));
@@ -185,21 +197,56 @@ export default function WizardScreen() {
     setPhoto(`data:image/jpeg;base64,${shot.assets[0].base64}`);
   }
 
-  async function persist(nextStep: number) {
-    const issues = wizardIssues(nextStep, draft);
+  async function persist(nextStep: number, source: WizardDraft = draft) {
+    const issues = wizardIssues(nextStep, source);
     if (issues.length) {
       setError(issues[0]);
       return false;
     }
-    if (nextStep === 3 && (slug?.slug !== draft.slug || !slug?.available)) {
-      setError(slug?.slug === draft.slug && slug?.reason === "reserved" ? t.slugReserved : t.slugTaken);
-      return false;
+    if (nextStep === 3 && (slug?.slug !== source.slug || !slug?.available)) {
+      const fresh = await apiData<SlugCheck>(
+        `/api/v1/slugs/availability?slug=${encodeURIComponent(source.slug)}&name=${encodeURIComponent(source.name)}`
+      ).catch(() => null);
+      if (fresh) setSlug(fresh);
+      const ok = fresh?.slug === source.slug && fresh.available;
+      if (!ok) {
+        setError(fresh?.reason === "reserved" ? t.slugReserved : fresh?.reason === "invalid" ? t.slugUrl : t.slugTaken);
+        return false;
+      }
     }
     await apiData("/api/v1/onboarding", {
       method: "PUT",
-      body: JSON.stringify({ step: nextStep, draft })
+      body: JSON.stringify({ step: nextStep, draft: source })
     });
     return true;
+  }
+
+  async function finish(source: WizardDraft) {
+    const created = await apiData<Done>("/api/v1/onboarding/finish", { method: "POST", body: "{}" });
+    if (photo) {
+      try {
+        const snapped = await apiData<{ item: { name?: string; priceRupees?: number } }>(
+          `/api/v1/businesses/${created.businessId}/menu/snap`,
+          { method: "POST", body: JSON.stringify({ image: photo }) }
+        );
+        if (snapped.item?.name) {
+          await apiData(`/api/v1/businesses/${created.businessId}/menu`, {
+            method: "POST",
+            body: JSON.stringify({
+              action: "item",
+              name: snapped.item.name,
+              priceRupees: snapped.item.priceRupees || 0
+            })
+          });
+        }
+      } catch (err) {
+        setError(err instanceof ApiError ? err.message : "Type the menu items yourself");
+      }
+    }
+    await AsyncStorage.removeItem(WIZARD_LOCAL_KEY).catch(() => undefined);
+    void trackAppEvent("setup_complete");
+    setDone(created);
+    return source;
   }
 
   async function next() {
@@ -216,30 +263,49 @@ export default function WizardScreen() {
         setStep(step + 1);
         return;
       }
-      const created = await apiData<Done>("/api/v1/onboarding/finish", { method: "POST", body: "{}" });
-      if (photo) {
-        try {
-          const snapped = await apiData<{ item: { name?: string; priceRupees?: number } }>(
-            `/api/v1/businesses/${created.businessId}/menu/snap`,
-            { method: "POST", body: JSON.stringify({ image: photo }) }
-          );
-          if (snapped.item?.name) {
-            await apiData(`/api/v1/businesses/${created.businessId}/menu`, {
-              method: "POST",
-              body: JSON.stringify({
-                action: "item",
-                name: snapped.item.name,
-                priceRupees: snapped.item.priceRupees || 0
-              })
-            });
-          }
-        } catch (err) {
-          setError(err instanceof ApiError ? err.message : "Type the menu items yourself");
-        }
+      await finish(draft);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not save this step");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function skip() {
+    if (step < 2) return;
+    setBusy(true);
+    setError(null);
+    try {
+      let source = draft;
+      if (step === 4) {
+        const reviewOk = !draft.googleReviewUrl || /^https?:\/\//i.test(draft.googleReviewUrl);
+        source = {
+          ...draft,
+          googleReviewUrl: reviewOk ? draft.googleReviewUrl : "",
+          items: draft.items.filter((item) => item.name.trim() && /^\d+(\.\d{1,2})?$/.test(item.price.trim()))
+        };
+        setDraft(source);
       }
-      await AsyncStorage.removeItem(WIZARD_LOCAL_KEY).catch(() => undefined);
-      void trackAppEvent("setup_complete");
-      setDone(created);
+      if (step === 3) {
+        const fresh = await apiData<SlugCheck>(
+          `/api/v1/slugs/availability?slug=${encodeURIComponent(draft.slug)}&name=${encodeURIComponent(draft.name)}`
+        );
+        setSlug(fresh);
+        const chosen = skipSlugChoice(fresh.slug, fresh.available, fresh.suggestions || []);
+        if (!chosen) {
+          setError(t.slugTaken);
+          return;
+        }
+        source = { ...draft, slug: chosen };
+        setDraft(source);
+      }
+      const saved = await persist(step, source);
+      if (!saved) return;
+      if (step < 4) {
+        setStep(step + 1);
+        return;
+      }
+      await finish(source);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not save this step");
     } finally {
@@ -290,7 +356,12 @@ export default function WizardScreen() {
           <Animated.View style={[styles.qrCard, { backgroundColor: palette.card }, qrAnim]}>
             <Image source={{ uri: done.qrDataUrl }} style={styles.qr} />
           </Animated.View>
+          <PrimaryButton testID="go-dashboard" label={t.goDashboard} onPress={() => router.replace("/(app)")} />
           <View style={styles.actions}>
+            <Pressable accessibilityRole="button" accessibilityLabel={t.openPage} onPress={() => Linking.openURL(done.publicUrl)} style={styles.action}>
+              <Store color={palette.deep} size={22} strokeWidth={1.75} />
+              <Text style={[styles.actionText, { color: palette.ink }]}>{t.openPage}</Text>
+            </Pressable>
             <Pressable accessibilityRole="button" accessibilityLabel={t.shareWhatsapp} onPress={() => Linking.openURL(`https://wa.me/?text=${encodeURIComponent(done.publicUrl)}`)} style={styles.action}>
               <Share2 color={palette.deep} size={22} strokeWidth={1.75} />
               <Text style={[styles.actionText, { color: palette.ink }]}>{t.shareWhatsapp}</Text>
@@ -304,8 +375,6 @@ export default function WizardScreen() {
               <Text style={[styles.actionText, { color: palette.ink }]}>{t.orderStand}</Text>
             </Pressable>
           </View>
-          <PrimaryButton label={t.openPage} onPress={() => Linking.openURL(done.publicUrl)} />
-          <TextButton label={t.goDashboard} onPress={() => router.replace("/(app)")} />
         </ScrollView>
       </SafeAreaView>
     );
@@ -362,17 +431,48 @@ export default function WizardScreen() {
         ) : null}
         {step === 3 ? (
           <View style={styles.stack}>
-            <Field
-              label={t.pageLink}
-              tone="paper"
-              value={draft.slug}
-              autoCapitalize="none"
-              onChangeText={(value) => patch({ slug: normalizeSlug(value) })}
-            />
-            {slug?.slug === draft.slug && slug.url ? <Text style={styles.url}>{slug.url}</Text> : null}
+            <Text style={[styles.title, { fontSize: 28 }, lang === "hi" && styles.hindi]}>{t.pageAddress}</Text>
+            <Text style={[styles.note, lang === "hi" && styles.hindi]}>{t.pageAddressHelp}</Text>
+            <View style={[styles.prefixRow, { backgroundColor: palette.card, borderColor: palette.line }]}>
+              <Text style={[styles.prefix, { color: palette.muted }]}>qr24x7.in/</Text>
+              <TextInput
+                accessibilityLabel={t.pageLink}
+                value={draft.slug}
+                autoCapitalize="none"
+                autoCorrect={false}
+                placeholder="mango-cafe"
+                placeholderTextColor={palette.muted}
+                onChangeText={(value) => {
+                  if (pastedLinkRejected(value)) {
+                    setError(t.slugUrl);
+                    patch({ slug: "" });
+                    return;
+                  }
+                  setError(null);
+                  patch({ slug: normalizeSlug(value) });
+                }}
+                style={[styles.prefixInput, { color: palette.ink }]}
+              />
+            </View>
+            <Text style={styles.url}>{draft.slug ? `qr24x7.in/${draft.slug}` : "qr24x7.in/"}</Text>
             {slug?.slug === draft.slug ? (
-              <Text style={styles.note}>{slug.available ? t.slugFree : slug.reason === "reserved" ? t.slugReserved : t.slugTaken}</Text>
+              <Text style={styles.note}>
+                {slug.available ? t.slugFree : slug.reason === "reserved" ? t.slugReserved : slug.reason === "invalid" ? t.slugUrl : t.slugTaken}
+              </Text>
             ) : null}
+            <View style={styles.row}>
+              {(slug?.suggestions || []).map((item) => (
+                <Pressable
+                  key={item}
+                  accessibilityRole="button"
+                  accessibilityLabel={item}
+                  onPress={() => patch({ slug: item })}
+                  style={[styles.chip, draft.slug === item && styles.chipOn]}
+                >
+                  <Text style={[styles.chipText, draft.slug === item && styles.chipTextOn]}>{item}</Text>
+                </Pressable>
+              ))}
+            </View>
           </View>
         ) : null}
         {step === 4 ? (
@@ -423,6 +523,7 @@ export default function WizardScreen() {
         </Animated.View>
         {error ? <Text style={styles.error}>{error}</Text> : null}
         <PrimaryButton label={step === 4 ? t.finish : t.wizardNext} onPress={next} disabled={busy} hint={t.hintWait} />
+        {step > 1 ? <TextButton label={t.skipForNow} onPress={skip} /> : null}
         {step > 1 ? (
           <PillButton
             label={t.wizardBack}
@@ -466,6 +567,9 @@ function makeStyles(colors: Palette) {
   previewButtonText: { color: colors.white, fontFamily: fonts.bodyStrong },
   swatch: { width: 48, height: 48, borderRadius: 24, borderWidth: 1, borderColor: "#DDD6C8" },
   swatchOn: { borderColor: colors.ink, borderWidth: 3 },
+  prefixRow: { minHeight: 56, borderRadius: 16, borderWidth: 1, flexDirection: "row", alignItems: "center", paddingHorizontal: 12, gap: 4 },
+  prefix: { fontFamily: fonts.bodyStrong, fontSize: 16 },
+  prefixInput: { flex: 1, minHeight: 48, fontFamily: fonts.body, fontSize: 16 },
   url: { fontFamily: fonts.body, color: colors.ink },
   note: { fontFamily: fonts.body, color: colors.inkSoft },
   error: { color: colors.danger, fontFamily: fonts.body },

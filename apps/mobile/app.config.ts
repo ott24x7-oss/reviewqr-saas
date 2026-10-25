@@ -88,7 +88,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
             "-keep class * extends androidx.room.RoomDatabase { <init>(); }",
             "-keep class androidx.work.impl.WorkDatabase_Impl { *; }",
             "-keep class androidx.work.** { *; }",
-            "-dontwarn androidx.work.**"
+            "-dontwarn androidx.work.**",
+            "-keep class com.horcrux.svg.** { *; }",
+            "-dontwarn com.horcrux.svg.**"
           ].join(String.fromCharCode(10))
         }
       }

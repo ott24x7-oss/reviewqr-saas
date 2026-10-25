@@ -502,4 +502,32 @@ export function registerResourcePaths(registry: OpenAPIRegistry, errorRef: JsonS
       429: rateLimit
     }
   });
+
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/slugs/availability",
+    summary: "Check a page address and suggest free names",
+    security: bearer,
+    request: {
+      query: z.object({
+        slug: z.string().optional(),
+        name: z.string().optional()
+      })
+    },
+    responses: {
+      200: jsonResponse(
+        "Availability. A pasted URL is invalid. suggestions are free addresses.",
+        dataSchema(
+          z.object({
+            slug: z.string(),
+            available: z.boolean(),
+            reason: z.enum(["empty", "invalid", "reserved", "taken"]).nullable(),
+            url: z.string(),
+            suggestions: z.array(z.string())
+          })
+        )
+      ),
+      401: unauthorized
+    }
+  });
 }

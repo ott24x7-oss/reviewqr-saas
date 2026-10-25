@@ -8,7 +8,9 @@ export const dynamic = "force-dynamic";
 async function getHandler(req: NextRequest) {
   const auth = await requireV1User(req);
   if (!auth.ok) return auth.response;
-  return v1Data(await checkSlug(req.nextUrl.searchParams.get("slug") || ""));
+  return v1Data(
+    await checkSlug(req.nextUrl.searchParams.get("slug") || "", req.nextUrl.searchParams.get("name") || "")
+  );
 }
 
 export const GET = observe(getHandler);

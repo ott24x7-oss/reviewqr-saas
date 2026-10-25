@@ -1,5 +1,4 @@
-import { ClipboardList, Ellipsis, Home, MessageSquare, UtensilsCrossed } from "lucide-react-native";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, type ComponentType, type ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -7,6 +6,7 @@ import { useI18n } from "../i18n";
 import { fonts } from "../theme";
 import { Badge } from "./bits";
 import { tapLight } from "./haptics";
+import { FeedbackTabIcon, HomeTabIcon, MenuTabIcon, MoreTabIcon, OrdersTabIcon } from "./tab-icons";
 import { useTheme } from "./theme";
 
 function TabIcon({ focused, children }: { focused: boolean; children: ReactNode }) {
@@ -20,13 +20,13 @@ function TabIcon({ focused, children }: { focused: boolean; children: ReactNode 
   return <Animated.View style={anim}>{children}</Animated.View>;
 }
 
-const ICONS = {
-  index: Home,
-  orders: ClipboardList,
-  menu: UtensilsCrossed,
-  feedback: MessageSquare,
-  more: Ellipsis
-} as const;
+const ICONS: Record<string, ComponentType<{ color: string }>> = {
+  index: HomeTabIcon,
+  orders: OrdersTabIcon,
+  menu: MenuTabIcon,
+  feedback: FeedbackTabIcon,
+  more: MoreTabIcon
+};
 
 type TabRoute = { key: string; name: string };
 
@@ -84,7 +84,7 @@ export function PremiumTabBar({
             >
               <TabIcon focused={focused}>
                 <View style={styles.iconWrap}>
-                  <Icon color={focused ? palette.deep : palette.muted} size={22} strokeWidth={1.75} />
+                  <Icon color={focused ? palette.deep : palette.muted} />
                   <View style={styles.badgeSlot}>
                     <Badge count={badge} label={label} />
                   </View>
