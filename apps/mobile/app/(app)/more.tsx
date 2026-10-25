@@ -9,6 +9,7 @@ import {
   Bell,
   Megaphone,
   Nfc,
+  Palette,
   QrCode,
   Share2,
   ShoppingBag,

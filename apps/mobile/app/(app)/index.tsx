@@ -226,7 +226,7 @@ function HomeScreenContent() {
           {showSetup ? (
             <View style={[styles.growth, styles.setupCard, { backgroundColor: palette.card }]}>
               <View style={styles.setupHead}>
-                <Ring score={Math.round((setupDone / setup.length) * 100)} track={palette.line} ink={palette.ink} />
+                <Ring score={Math.round((setupDone / setup.length) * 100)} track={palette.line} ink={palette.ink} accent={palette.primary} />
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.growthTitle, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.setupTitle}</Text>
                   <Text style={[styles.growthHint, { color: palette.muted }, lang === "hi" && styles.hindi]}>
