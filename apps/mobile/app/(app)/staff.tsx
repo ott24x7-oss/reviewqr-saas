@@ -24,8 +24,15 @@ export default function StaffScreen() {
   const { business } = useBusiness();
   const client = useQueryClient();
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [picked, setPicked] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const id = business?.id;
+  const stats = useQuery({
+    queryKey: accountKey(user?.id ?? "", "staff-stats", id, picked),
+    enabled: !!user && !!id && !!picked,
+    queryFn: () => apiData<{ reviews: number }>(`/api/v1/businesses/${id}/staff/${picked}/stats`)
+  });
   const rows = useQuery({
     queryKey: accountKey(user?.id ?? "", "staff", id),
     enabled: !!user && !!id,
@@ -55,6 +62,17 @@ export default function StaffScreen() {
         <View style={styles.card}>
           <FilledField label={t.name} value={name} onChangeText={setName} />
         </View>
+        {picked ? (
+          <View style={styles.card}>
+            <PillButton label={t.rename} tone="outline" onPress={() => id && apiData(`/api/v1/businesses/${id}/staff/${picked}`, { method: "PATCH", body: JSON.stringify({ name: name.trim() }) }).then(() => client.invalidateQueries({ queryKey: accountKey(user?.id ?? "", "staff", id) })).catch((err) => setError(err instanceof ApiError ? err.message : "Could not save"))} />
+            <PillButton label={t.removeItem} tone="outline" onPress={() => id && apiData(`/api/v1/businesses/${id}/staff/${picked}`, { method: "DELETE" }).then(() => { setPicked(null); return client.invalidateQueries({ queryKey: accountKey(user?.id ?? "", "staff", id) }); }).catch((err) => setError(err instanceof ApiError ? err.message : "Could not remove"))} />
+          </View>
+        ) : null}
+        <SectionHeader label={t.inviteStaff} />
+        <View style={styles.card}>
+          <FilledField label={t.hintEmail} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
+          <PillButton label={t.inviteStaff} tone="dark" disabled={!email.includes("@")} onPress={() => id && apiData(`/api/v1/businesses/${id}/invites`, { method: "POST", body: JSON.stringify({ email: email.trim() }) }).then(() => setEmail("")).catch((err) => setError(err instanceof ApiError ? err.message : "Could not invite"))} />
+        </View>
         {error ? <Text style={styles.error}>{error}</Text> : null}
         <SectionHeader label={t.sectionTeam} />
         <Group>
@@ -62,7 +80,7 @@ export default function StaffScreen() {
             <GroupRow icon={User} tint="blue" title={t.staff} hint={t.hintNoStaff} />
           ) : (
             (rows.data?.items ?? []).map((row) => (
-              <GroupRow key={row.id} icon={User} tint="blue" title={row.name} hint={row.role || t.hintStaffRow} />
+              <GroupRow key={row.id} icon={User} tint="blue" title={row.name} hint={picked === row.id && stats.data ? `${stats.data.reviews}` : row.role || t.hintStaffRow} onPress={() => { setPicked(row.id); setName(row.name); }} />
             ))
           )}
         </Group>

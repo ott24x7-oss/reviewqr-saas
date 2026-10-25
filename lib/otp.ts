@@ -203,6 +203,59 @@ export async function verifyLoginOtp(rawPhone: string, code: string) {
   return { ok: true as const, otpToken };
 }
 
+function phoneChangeId(userId: string, key: string) {
+  return `phone:${userId}:${key}`;
+}
+
+/** Sends a code to a new WhatsApp number. The signed-in user must confirm it. */
+export async function requestPhoneChange(userId: string, rawPhone: string) {
+  const key = phoneKey(rawPhone);
+  if (!key) return { ok: false as const, error: "Enter a valid mobile number" };
+  const current = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, phone: true, deletedAt: true }
+  });
+  if (!current || current.deletedAt) return { ok: false as const, error: "Not found" };
+  if (phoneKey(current.phone || "") === key) return { ok: false as const, error: "That is already your number" };
+  const taken = await findUserByPhone(rawPhone);
+  if (taken && taken.id !== userId) return { ok: false as const, error: "That number is already used" };
+  const code = randomOtpCode();
+  const identifier = phoneChangeId(userId, key);
+  await prisma.emailOtp.deleteMany({ where: { identifier, purpose: "phone-change" } });
+  await prisma.emailOtp.create({
+    data: {
+      identifier,
+      tokenHash: hashToken(code),
+      channel: "phone",
+      purpose: "phone-change",
+      expires: new Date(Date.now() + OTP_TTL_MS),
+      attempts: 0
+    }
+  });
+  const channel = await deliverCode({ phone: rawPhone, email: null, code });
+  return { ok: true as const, issuedCode: code, channel };
+}
+
+/** Confirms the code and stores the new number. Login OTP is a different purpose. */
+export async function confirmPhoneChange(userId: string, rawPhone: string, code: string) {
+  const key = phoneKey(rawPhone);
+  if (!key || !/^\d{6}$/.test(code.trim())) return { ok: false as const, error: "Invalid code" };
+  const identifier = phoneChangeId(userId, key);
+  const row = await prisma.emailOtp.findFirst({
+    where: { identifier, purpose: "phone-change" },
+    orderBy: { createdAt: "desc" }
+  });
+  const blocked = await rejectIfUnusable(row);
+  if (blocked) return blocked;
+  if (!row) return { ok: false as const, error: "Invalid code" };
+  if (row.tokenHash !== hashToken(code.trim())) return noteWrongCode(row);
+  const taken = await findUserByPhone(rawPhone);
+  if (taken && taken.id !== userId) return { ok: false as const, error: "That number is already used" };
+  await prisma.emailOtp.deleteMany({ where: { identifier, purpose: "phone-change" } });
+  await prisma.user.update({ where: { id: userId }, data: { phone: key } });
+  return { ok: true as const, phone: key };
+}
+
 export async function createOtpSession(userId: string) {
   const otpToken = randomToken();
   await prisma.emailOtp.create({

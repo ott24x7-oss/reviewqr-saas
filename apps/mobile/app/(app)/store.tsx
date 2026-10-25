@@ -1,64 +1,160 @@
-import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { CalendarOff, Palette as PaletteIcon, Wallet } from "lucide-react-native";
-import { ScrollView, StyleSheet, Text } from "react-native";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { apiData } from "../../src/api/data";
+import { ApiError } from "../../src/api/http";
 import { useI18n } from "../../src/i18n";
 import { accountKey } from "../../src/query/keys";
 import { useBusiness } from "../../src/state/business";
 import { hasModule, useEntitlement } from "../../src/state/entitlement";
 import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
-import { usePalette } from "../../src/ui/theme";
-import type { Palette } from "../../src/ui/tokens";
+import { Card } from "../../src/ui/bits";
+import { Field, PillButton } from "../../src/ui/controls";
 import { LockedModuleCard } from "../../src/ui/locked-module";
-import { Group, GroupRow, SectionHeader } from "../../src/ui/rows";
+import { useTheme } from "../../src/ui/theme";
 
-type StoreSettings = { holiday?: boolean; upiId?: string; design?: string };
+const DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
+type Day = (typeof DAYS)[number];
+type Slot = { open: string; close: string } | null;
+type Settings = {
+  holiday: boolean;
+  hours: Partial<Record<Day, Slot>>;
+  dineIn: boolean;
+  takeaway: boolean;
+  delivery: boolean;
+  deliveryPincodes: string;
+  deliveryChargeRupees: number;
+  freeDeliveryAboveRupees: number | null;
+  minOrderRupees: number;
+  packingChargeRupees: number;
+  gstEnabled: boolean;
+  gstPercent: number;
+  pricesIncludeGst: boolean;
+  prepMinutes: number;
+  upiId?: string;
+  layout: "AUTO" | "FOOD" | "SHOP" | "SERVICES";
+  design: "CLASSIC" | "PREMIUM" | "MINIMAL" | "BOLD";
+};
+
+const DESIGNS = ["CLASSIC", "PREMIUM", "MINIMAL", "BOLD"] as const;
+
+function hoursFrom(raw: Settings["hours"] | undefined) {
+  const hours = {} as Record<Day, Slot>;
+  for (const day of DAYS) {
+    hours[day] = raw && Object.prototype.hasOwnProperty.call(raw, day) ? raw[day] ?? null : { open: "09:00", close: "21:00" };
+  }
+  return hours;
+}
 
 export default function StoreScreen() {
-  const palette = usePalette();
-  const styles = useMemo(() => makeStyles(palette), [palette]);
+  const { palette } = useTheme();
   const { t, lang } = useI18n();
   const { user } = useSession();
   const { business } = useBusiness();
+  const client = useQueryClient();
   const entitlement = useEntitlement();
   const modules = entitlement.data?.modules;
   const open = !!business && (!modules || hasModule(modules, "STORE"));
+  const id = business?.id;
+  const [draft, setDraft] = useState<Settings | null>(null);
+  const [place, setPlace] = useState("");
+  const [city, setCity] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const settings = useQuery({
-    queryKey: accountKey(user?.id ?? "", "store", business?.id),
+    queryKey: accountKey(user?.id ?? "", "store", id),
     enabled: !!user && open,
-    queryFn: () => apiData<StoreSettings>(`/api/v1/businesses/${business?.id}/store`)
+    queryFn: () => apiData<Settings>(`/api/v1/businesses/${id}/store`)
   });
+  const locations = useQuery({
+    queryKey: accountKey(user?.id ?? "", "locations", id),
+    enabled: !!user && !!id,
+    queryFn: () => apiData<{ items: { id: string; name: string; city: string }[] }>(`/api/v1/businesses/${id}/locations`)
+  });
+  useEffect(() => {
+    if (settings.data && !draft) setDraft({ ...settings.data, hours: hoursFrom(settings.data.hours), upiId: settings.data.upiId || "" });
+  }, [settings.data, draft]);
+
+  async function save() {
+    if (!id || !draft) return;
+    setError(null);
+    try {
+      await apiData(`/api/v1/businesses/${id}/store`, { method: "PUT", body: JSON.stringify({ ...draft, upiId: draft.upiId || "" }) });
+      await client.invalidateQueries({ queryKey: accountKey(user?.id ?? "", "store", id) });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not save");
+    }
+  }
+
+  async function addLocation() {
+    if (!id || place.trim().length < 2) return;
+    setError(null);
+    try {
+      await apiData(`/api/v1/businesses/${id}/locations`, { method: "POST", body: JSON.stringify({ name: place.trim(), city: city.trim() }) });
+      setPlace("");
+      await client.invalidateQueries({ queryKey: accountKey(user?.id ?? "", "locations", id) });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not add");
+    }
+  }
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={[styles.title, lang === "hi" && styles.hindi]}>{t.storeSettings}</Text>
+    <ScrollView style={{ flex: 1, backgroundColor: palette.paper }} contentContainerStyle={styles.content}>
+      <Text style={[styles.title, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.storeSettings}</Text>
       {modules && !hasModule(modules, "STORE") ? <LockedModuleCard moduleId="STORE" /> : null}
-      {open ? (
+      {draft ? (
         <>
-          <SectionHeader label={t.sectionCounter} />
-          <Group>
-            <GroupRow icon={PaletteIcon} tint="pink" title={t.hintDesign} hint={settings.data?.design || t.storeSettings} />
-            <GroupRow icon={Wallet} tint="amber" title={t.hintUpi} hint={settings.data?.upiId || t.hintStoreRow} />
-            <GroupRow
-              icon={CalendarOff}
-              tint={settings.data?.holiday ? "ink" : "green"}
-              title={settings.data?.holiday ? t.cancel : t.available}
-              hint={settings.data?.holiday ? t.hintClosed : t.hintOpen}
-            />
-          </Group>
+          <PillButton label={draft.holiday ? t.holidayMode : t.available} tone={draft.holiday ? "dark" : "outline"} onPress={() => setDraft({ ...draft, holiday: !draft.holiday })} />
+          {DAYS.map((day) => {
+            const slot = draft.hours[day];
+            return (
+              <Card key={day} style={styles.card}>
+                <Text style={[styles.name, { color: palette.ink }]}>{day}</Text>
+                <PillButton label={slot ? t.available : t.closedDay} tone="outline" onPress={() => setDraft({ ...draft, hours: { ...draft.hours, [day]: slot ? null : { open: "09:00", close: "21:00" } } })} />
+                {slot ? (
+                  <View style={styles.row}>
+                    <Field label={t.available} tone="paper" value={slot.open} onChangeText={(openTime) => setDraft({ ...draft, hours: { ...draft.hours, [day]: { ...slot, open: openTime } } })} />
+                    <Field label={t.closedDay} tone="paper" value={slot.close} onChangeText={(close) => setDraft({ ...draft, hours: { ...draft.hours, [day]: { ...slot, close } } })} />
+                  </View>
+                ) : null}
+              </Card>
+            );
+          })}
+          <Field label={t.upiId} tone="paper" value={draft.upiId || ""} onChangeText={(upiId) => setDraft({ ...draft, upiId })} autoCapitalize="none" />
+          <PillButton label={t.dineIn} tone={draft.dineIn ? "dark" : "outline"} onPress={() => setDraft({ ...draft, dineIn: !draft.dineIn })} />
+          <PillButton label={t.pickup} tone={draft.takeaway ? "dark" : "outline"} onPress={() => setDraft({ ...draft, takeaway: !draft.takeaway })} />
+          <PillButton label={t.delivery} tone={draft.delivery ? "dark" : "outline"} onPress={() => setDraft({ ...draft, delivery: !draft.delivery })} />
+          <Field label={t.minOrder} tone="paper" value={String(draft.minOrderRupees)} onChangeText={(value) => setDraft({ ...draft, minOrderRupees: Number(value) || 0 })} keyboardType="number-pad" />
+          <Text style={[styles.name, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.storeDesign}</Text>
+          <View style={styles.row}>
+            {DESIGNS.map((design) => (
+              <Pressable key={design} accessibilityRole="button" onPress={() => setDraft({ ...draft, design })} style={[styles.chip, { borderColor: palette.line, backgroundColor: draft.design === design ? palette.deep : palette.card }]}>
+                <Text style={{ color: draft.design === design ? "#fff" : palette.ink, fontFamily: fonts.bodyStrong }}>{design}</Text>
+              </Pressable>
+            ))}
+          </View>
+          <PillButton label={t.save} tone="dark" onPress={save} />
         </>
       ) : null}
+      <Text style={[styles.name, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.locations}</Text>
+      <Field label={t.addLocation} tone="paper" value={place} onChangeText={setPlace} />
+      <Field label={t.city} tone="paper" value={city} onChangeText={setCity} />
+      <PillButton label={t.addLocation} tone="outline" onPress={addLocation} />
+      {(locations.data?.items ?? []).map((row) => (
+        <Text key={row.id} style={[styles.note, { color: palette.muted }]}>{row.name}{row.city ? ` · ${row.city}` : ""}</Text>
+      ))}
+      {error ? <Text style={{ color: palette.danger, fontFamily: fonts.body }}>{error}</Text> : null}
     </ScrollView>
   );
 }
 
-function makeStyles(colors: Palette) {
-  return StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.paper },
-  content: { padding: 16, gap: 12 },
-  title: { fontFamily: fonts.display, fontSize: 28, color: colors.ink },
+const styles = StyleSheet.create({
+  content: { padding: 16, paddingBottom: 120, gap: 10 },
+  title: { fontFamily: fonts.display, fontSize: 28 },
+  name: { fontFamily: fonts.bodyStrong, fontSize: 16 },
+  note: { fontFamily: fonts.body, fontSize: 14 },
+  card: { gap: 6 },
+  row: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  chip: { minHeight: 40, borderRadius: 999, borderWidth: 1, paddingHorizontal: 12, justifyContent: "center" },
   hindi: { fontFamily: fonts.hindi }
 });
-}
