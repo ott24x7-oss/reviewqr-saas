@@ -5,6 +5,7 @@ import { consentedPhone } from "./order-status";
 
 export type CustomerRow = {
   id: string;
+  businessId: string;
   businessName: string;
   name: string;
   phone: string;
@@ -28,7 +29,7 @@ function dayLabel(value: Date | null) {
 }
 
 /** Creates a contact for each consented order or review phone that is not saved yet. */
-export async function loadCustomers(userId: string, now = new Date()): Promise<CustomerRow[]> {
+export async function loadCustomers(userId: string, now = new Date(), businessId?: string): Promise<CustomerRow[]> {
   const scope = readableBusinessWhere(userId);
   const [reviews, orders] = await Promise.all([
     prisma.review.findMany({
@@ -111,8 +112,10 @@ export async function loadCustomers(userId: string, now = new Date()): Promise<C
     if (!contact.phone) return [];
     const stat = stats.get(`${contact.businessId}:${contact.phone}`);
     const role = accessRole(contact.business.ownerId, userId, contact.business.members[0]?.role, contact.business.agentId);
+    if (businessId && contact.businessId !== businessId) return [];
     return [{
       id: contact.id,
+      businessId: contact.businessId,
       businessName: contact.business.name,
       name: contact.name || "",
       phone: contact.phone,

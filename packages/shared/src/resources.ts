@@ -122,7 +122,66 @@ export const orderStatusSchema = z.object({
 export const feedbackPatchSchema = z.object({
   status: z.enum(["NEW", "IN_PROGRESS", "RESOLVED", "IGNORED"]).optional(),
   internalNote: z.string().max(1000).optional(),
-  eraseContact: z.boolean().optional()
+  eraseContact: z.boolean().optional(),
+  tags: z.array(z.string().trim().min(1).max(24)).max(8).optional()
+});
+
+export const testimonialVisibilitySchema = z.object({
+  id: z.string().min(1),
+  isPublic: z.boolean()
+});
+
+export const hintCreateSchema = z.object({
+  content: z.string().trim().min(2).max(280)
+});
+
+export const locationCreateSchema = z.object({
+  name: z.string().trim().min(2).max(80),
+  city: z.string().trim().max(80).optional()
+});
+
+export const campaignCreateSchema = z.object({
+  name: z.string().trim().min(2).max(80),
+  template: z.string().trim().min(2).max(1000)
+});
+
+export const aiSettingsSchema = z.object({
+  enabled: z.boolean(),
+  services: z.string().max(500)
+});
+
+export const staffRenameSchema = z.object({
+  name: z.string().trim().min(2).max(80)
+});
+
+export const staffInviteSchema = z.object({
+  email: z.string().trim().email().max(160)
+});
+
+export const agentOnboardSchema = z.object({
+  phone: z.string().min(10).max(20),
+  businessName: z.string().trim().min(2).max(80)
+});
+
+export const themeActionSchema = z.object({
+  action: z.enum(["save", "reset", "duplicate"]).default("save"),
+  themeId: z.string().min(1).max(40).optional(),
+  bg: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+  ink: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+  buttonBg: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+  buttonInk: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+  font: z.string().optional(),
+  buttons: z.enum(["filled", "outline", "soft", "glass", "pill", "square", "raised"]).optional(),
+  avatar: z.enum(["circle", "rounded", "square"]).optional(),
+  entrance: z.enum(["none", "fade", "rise"]).optional(),
+  radius: z.enum(["0px", "12px", "16px", "24px", "999px"]).optional(),
+  backgroundType: z.enum(["preset", "solid", "gradient", "image", "pattern", "video"]).optional(),
+  backgroundTo: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+  imageUrl: z.string().max(400).optional().or(z.literal("")),
+  video: z.string().max(400).optional().or(z.literal("")),
+  seasonalFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal("")),
+  seasonalTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal("")),
+  duplicateName: z.string().max(40).optional()
 });
 
 export const qrClaimSchema = z.object({

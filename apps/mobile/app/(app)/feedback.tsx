@@ -15,7 +15,7 @@ import { hasModule, useEntitlement } from "../../src/state/entitlement";
 import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
 import { Card, Chip, EmptyState } from "../../src/ui/bits";
-import { PillButton } from "../../src/ui/controls";
+import { Field, PillButton } from "../../src/ui/controls";
 import { LockedModuleCard } from "../../src/ui/locked-module";
 import { useTheme } from "../../src/ui/theme";
 
@@ -23,6 +23,8 @@ type FeedbackRow = {
   id: string;
   message: string;
   status: string;
+  internalNote: string | null;
+  tags: { tag: { name: string } }[];
   review: { rating: number; customerName: string | null; customerPhone: string | null };
 };
 
@@ -63,6 +65,9 @@ export default function FeedbackTab() {
   const client = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [reply, setReply] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [note, setNote] = useState("");
+  const [tagText, setTagText] = useState("");
   const modules = entitlement.data?.modules;
   const id = business?.id;
   const locked = !!(modules && !hasModule(modules, "REVIEWS"));
@@ -84,6 +89,20 @@ export default function FeedbackTab() {
       if (phone.length >= 8) await Linking.openURL(`https://wa.me/${phone}?text=${encodeURIComponent(data.whatsappReply)}`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "A reply draft isn't available right now.");
+    }
+  }
+
+  async function saveDetail(row: FeedbackRow, status = row.status) {
+    setError(null);
+    try {
+      const tags = tagText.split(",").map((part) => part.trim()).filter(Boolean);
+      await apiData(`/api/v1/feedback/${row.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status, internalNote: note, tags })
+      });
+      await client.invalidateQueries({ queryKey: accountKey(user?.id ?? "", "feedback", id) });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not save");
     }
   }
 
@@ -119,9 +138,26 @@ export default function FeedbackTab() {
         renderItem={({ item }) => (
           <SwipeResolve hint={t.resolved} onResolve={() => resolve(item)}>
             <Card style={styles.card}>
-              <Text style={[styles.name, { color: palette.ink }, lang === "hi" && styles.hindi]}>
+              <Text
+                style={[styles.name, { color: palette.ink }, lang === "hi" && styles.hindi]}
+                onPress={() => {
+                  setOpenId(item.id);
+                  setNote(item.internalNote || "");
+                  setTagText((item.tags || []).map((tag) => tag.tag.name).join(", "));
+                }}
+              >
                 {item.review.customerName || t.feedback} · {item.review.rating}
               </Text>
+              {openId === item.id ? (
+                <View style={styles.row}>
+                  {(["NEW", "IN_PROGRESS", "RESOLVED", "IGNORED"] as const).map((status) => (
+                    <Chip key={status} label={status} onPress={() => saveDetail(item, status)} />
+                  ))}
+                  <Field label={t.internalNote} tone="paper" value={note} onChangeText={setNote} />
+                  <Field label={t.tags} tone="paper" value={tagText} onChangeText={setTagText} />
+                  <PillButton label={t.save} tone="dark" onPress={() => saveDetail(item)} />
+                </View>
+              ) : null}
               <Text style={[styles.note, { color: palette.muted }]}>{item.message}</Text>
               <Text style={[styles.note, { color: palette.inkSoft }]}>{item.status}</Text>
               {reply ? <Text style={[styles.note, { color: palette.ink }]}>{reply}</Text> : null}
