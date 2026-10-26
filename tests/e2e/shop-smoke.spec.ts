@@ -60,7 +60,7 @@ test("owner buys a combo, approves the proof, and the board shows Printing", asy
     await manage.click();
     await page.getByRole("link", { name: "QR codes & NFC" }).click();
     await page.getByRole("link", { name: "Create a code" }).click();
-    await page.getByLabel("Label").fill("Front counter");
+    await page.getByLabel(/^Label/).fill("Front counter");
     await page.getByRole("button", { name: "Create QR code" }).click();
     await expect(page.getByText("Short URL")).toBeVisible();
     const shortUrl = await page.locator("code").first().innerText();

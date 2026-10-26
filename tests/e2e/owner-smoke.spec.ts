@@ -63,7 +63,7 @@ test("owner registers, collects a private review, and sees UPI checkout", async 
   await page.goBack();
   await page.getByRole("link", { name: "QR codes & NFC" }).click();
   await page.getByRole("link", { name: "Create a code" }).click();
-  await page.getByLabel("Label").fill("Front counter");
+  await page.getByLabel(/^Label/).fill("Front counter");
   await page.getByRole("button", { name: "Create QR code" }).click();
   await expect(page.getByText("Short URL")).toBeVisible();
   const shortUrl = await page.locator("code").first().innerText();
