@@ -86,6 +86,15 @@ test("admin web search, inbox, payout step-up, export, and redirects", async ({ 
     await page.context().clearCookies();
     await signInWithEmail(page, email, password);
 
+    const pairingWithoutStepUp = await page.request.post("/api/admin/whatsapp/baileys/connect");
+    expect(pairingWithoutStepUp.status()).toBe(403);
+    expect(await pairingWithoutStepUp.json()).toMatchObject({ stepUp: "whatsapp_pairing" });
+    await page.goto("/admin/whatsapp", { timeout: 120_000 });
+    await page.getByRole("button", { name: /Start & show QR|Reconnect/ }).click();
+    await expect(page.getByRole("dialog", { name: "Confirm WhatsApp pairing" })).toBeVisible();
+    await expect(page.getByLabel("WhatsApp code")).toBeVisible();
+    await page.getByRole("button", { name: "Cancel" }).click();
+
     await page.goto("/admin", { timeout: 120_000 });
     await page.getByRole("button", { name: /Search/ }).click();
     await page.getByPlaceholder("Search pages, customers, businesses, payments, agents, orders").fill(customerName);
