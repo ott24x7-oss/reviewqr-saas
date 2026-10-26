@@ -9,7 +9,7 @@ import { DetailLayout, Drawer, MetaCard, Timeline } from "@/components/admin/ui/
 import { ConfirmReason, StepUpDialog } from "@/components/admin/ui/dialogs";
 import { Field, FormSection, StickySave, fieldClass } from "@/components/admin/ui/form-section";
 import { FadeIn, Stagger } from "@/components/admin/ui/motion";
-import { FunnelBars, MixDonut, RevenueChart } from "@/components/admin/ui/charts";
+import { FunnelBars, PlanMixBreakdown, RevenueChart } from "@/components/admin/ui/charts";
 import { KpiCard, Money, PageHeader, RelativeTime, Skeleton, StatStrip, StatusBadge, TableSkeleton } from "@/components/admin/ui/primitives";
 
 type Sample = { id: string; name: string; status: string; amount: number };
@@ -68,7 +68,7 @@ export function KitGallery() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="rounded-[14px] border border-zinc-200 p-4 dark:border-zinc-800">
             <h2 className="mb-2 text-sm font-semibold">Plan mix</h2>
-            <MixDonut rows={[{ name: "Growth", count: 12 }, { name: "Starter", count: 7 }]} />
+            <PlanMixBreakdown rows={[{ planId: "growth", name: "Growth", count: 12, mrrPaise: 120000 }, { planId: "starter", name: "Starter", count: 7, mrrPaise: 35000 }]} />
           </div>
           <div className="rounded-[14px] border border-zinc-200 p-4 dark:border-zinc-800">
             <h2 className="mb-2 text-sm font-semibold">Funnel</h2>

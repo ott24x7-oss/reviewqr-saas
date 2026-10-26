@@ -210,8 +210,8 @@ export function DataTable<T>({
           ))}
         </div>
       ) : null}
-      <div className="overflow-x-auto rounded-[14px] border border-zinc-200 dark:border-zinc-800">
-        <table className="w-full text-sm">
+      <div className="admin-card overflow-x-auto">
+        <table className="admin-table w-full border-separate border-spacing-0 text-sm">
           <thead className="sticky top-0 bg-zinc-50 text-left text-xs text-zinc-500 dark:bg-zinc-900">
             {table.getHeaderGroups().map((group) => (
               <tr key={group.id}>

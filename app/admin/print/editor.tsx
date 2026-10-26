@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/admin/ui/controls";
 import { tapFontClass } from "@/components/brand/tap-font";
 import { tapText } from "@/lib/tap/i18n";
 import { THEME_PRESETS } from "@/lib/tap/themes";

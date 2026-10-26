@@ -94,6 +94,21 @@ These stay. Part 1 adds thin cookie routes that call the same `lib/admin` servic
 | `POST /api/admin/users/[id]` | Customer actions that the old user editor still posts. The new detail page calls `lib/admin/people.ts` through a cookie route. |
 | `whatsapp/baileys/connect|disconnect|status`, `whatsapp/test` | Part 2 WhatsApp. |
 
+## Part 2 completion map (2026-10-26)
+
+| Screen | Current route | Shared service / retained capability |
+|---|---|---|
+| Orders pipeline and detail | `/admin/orders`, `/admin/orders/[id]` | `lib/admin/orders.ts` owns safe filters, server pagination, masked customer data, detail and status audit timeline. Board actions keep using audited order endpoints. Table/board, proof links, tracking, NFC queue, reports and shipping are reachable from Orders. |
+| Catalogue | `/admin/catalogue` | `lib/admin/catalogue.ts` loads catalogue, stock status and checkout settings. Existing product/variant editor and checkout settings remain mounted. |
+| Print & NFC tools | `/admin/tools?tab=qr|print|nfc` | `lib/admin/tools.ts` owns QR stock filters; existing QR assignment, print editor and NFC writer remain available. `/admin/print/paper` remains reachable from the print editor. |
+| WhatsApp, Email, AI reviews | `/admin/whatsapp`, `/admin/email`, `/admin/ai` | Existing forms remain. WhatsApp web pairing requires the action-bound, single-use `whatsapp_pairing` step-up before connect or disconnect. |
+| Website | `/admin/site?tab=settings|branding` | Existing site and platform branding editors are merged in one page. `lib/admin/site-admin.ts` loads platform branding. |
+| Tap themes | `/admin/themes?tab=themes|presets` | Existing theme and industry preset editors are merged; saved settings load through `lib/admin/site-admin.ts`. |
+| Help centre | `/admin/help` | Help manager supports create and edit as well as publish, announcements and settings. Existing help API endpoints remain. |
+| Support tickets | `/admin/support`, `/admin/support/[id]` | `lib/admin/support-admin.ts` provides masked, paginated list and detail data plus replies. |
+
+Legacy routes permanently redirect in `next.config.mjs`: production and shipping screens to Orders tabs, shop to Catalogue, QR/print/NFC to Tools tabs, branding to Website, and presets to Tap themes. The removed page files in `REMOVALS.md` were deleted after the importer and route search check.
+
 ## Services already shared with the admin API
 
 Part 1 pages call these instead of querying Prisma in the page:

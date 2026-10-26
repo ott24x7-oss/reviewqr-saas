@@ -3,11 +3,11 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ImageUpload } from "@/components/ui/image-upload";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/components/admin/ui/controls";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/admin/ui/controls";
+import { ImageUpload } from "@/components/admin/ui/image-upload";
+import { Input } from "@/components/admin/ui/controls";
+import { Label } from "@/components/admin/ui/controls";
 
 type VariantRow = {
   id: string;

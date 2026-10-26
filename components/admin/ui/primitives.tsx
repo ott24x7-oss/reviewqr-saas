@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { motion } from "framer-motion";
 import { Area, AreaChart, ResponsiveContainer } from "recharts";
 import { formatDate, formatINR } from "@/lib/utils";
 import { useMotionSafe } from "./motion";
@@ -43,7 +44,7 @@ const BADGE: Record<string, string> = {
 
 export function StatusBadge({ value }: { value: string }) {
   const tone = BADGE[value] || "bg-zinc-100 text-zinc-700 ring-zinc-500/15 dark:bg-zinc-800 dark:text-zinc-200";
-  return <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${tone}`}>{value}</span>;
+  return <span className={`admin-badge ${tone}`}><span className="admin-badge__dot" aria-hidden />{value}</span>;
 }
 
 export function Money({ paise, compact = false }: { paise: number; compact?: boolean }) {
@@ -68,7 +69,9 @@ export function RelativeTime({ value }: { value: string | Date | null }) {
 }
 
 export function Skeleton({ className = "" }: { className?: string }) {
-  return <div className={`animate-pulse rounded-md bg-zinc-200/80 dark:bg-zinc-800 ${className}`} />;
+  const reduce = useMotionSafe();
+  if (reduce) return <div className={`admin-skeleton rounded-md bg-zinc-200/80 dark:bg-zinc-800 ${className}`} />;
+  return <motion.div className={`admin-skeleton rounded-md bg-zinc-200/80 dark:bg-zinc-800 ${className}`} animate={{ backgroundPositionX: ["0%", "220%"] }} transition={{ duration: 1.35, ease: "linear", repeat: Infinity }} />;
 }
 
 export function TableSkeleton() {
@@ -85,41 +88,61 @@ export function KpiCard({
   label,
   value,
   delta,
-  series
+  series,
+  icon,
+  hero = false
 }: {
   label: string;
   value: string;
   delta?: number | null;
   series?: number[];
+  icon?: React.ReactNode;
+  hero?: boolean;
 }) {
   const reduce = useMotionSafe();
+  const gradientId = `kpi-${React.useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
   const data = (series || []).map((point, index) => ({ index, point }));
   const up = (delta || 0) >= 0;
+  const zeroValue = Number(value.replace(/[^\d.-]/g, "")) === 0;
   return (
-    <article className="rounded-[14px] border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-      <div className="text-xs font-medium text-zinc-500">{label}</div>
-      <div className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-zinc-950 dark:text-zinc-50">
+    <article className={`admin-card admin-kpi-card ${hero ? "admin-kpi-card--hero" : ""}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="text-xs font-semibold tracking-wide text-zinc-500">{label}</div>
+        {icon ? <div className="admin-kpi-icon">{icon}</div> : null}
+      </div>
+      <div className="mt-1 text-xl font-semibold tabular-nums tracking-tight text-zinc-950 dark:text-zinc-50 sm:text-[26px]">
         <CountUp value={value} reduce={reduce} />
       </div>
       {delta != null ? (
-        <div className={`mt-1 text-xs font-medium ${up ? "text-emerald-600" : "text-rose-600"}`}>
-          {up ? "▲" : "▼"} {Math.abs(Math.round(delta))}% vs previous
+        <div className="mt-1">
+          <span className="admin-kpi-delta" data-trend={up ? "up" : "down"}>
+            {up ? "↑" : "↓"} {Math.abs(Math.round(delta))}%
+          </span>
+          <span className="ml-1.5 text-[11px] text-zinc-500">vs previous</span>
         </div>
       ) : (
-        <div className="mt-1 text-xs text-zinc-400"> </div>
+        <div className="mt-1 min-h-[21px] text-[11px] text-zinc-400">{zeroValue || (data.length > 1 && data.every((point) => point.point === 0)) ? "No activity yet" : " "}</div>
       )}
-      <div className="mt-3 h-12">
+      <div className="admin-kpi-spark">
         {data.length > 1 ? (
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data}>
+              <defs>
+                <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--admin-brand)" stopOpacity={0.42} />
+                  <stop offset="100%" stopColor="var(--admin-brand)" stopOpacity={0.015} />
+                </linearGradient>
+              </defs>
               <Area
                 type="monotone"
                 dataKey="point"
-                stroke="#16A34A"
-                fill="#16A34A"
-                fillOpacity={0.12}
-                strokeWidth={1.5}
+                stroke="var(--admin-brand)"
+                fill={`url(#${gradientId})`}
+                strokeWidth={1.8}
+                dot={false}
+                activeDot={false}
                 isAnimationActive={!reduce}
+                animationDuration={700}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -141,7 +164,7 @@ function CountUp({ value, reduce }: { value: string; reduce: boolean }) {
     const started = performance.now();
     let frame = 0;
     const tick = (now: number) => {
-      const progress = Math.min(1, (now - started) / 150);
+      const progress = Math.min(1, (now - started) / 700);
       if (progress >= 1) {
         setShown(value);
         return;
@@ -156,13 +179,13 @@ function CountUp({ value, reduce }: { value: string; reduce: boolean }) {
   return <>{shown}</>;
 }
 
-export function StatStrip({ items }: { items: { label: string; value: string }[] }) {
+export function StatStrip({ items }: { items: { label: string; value: string; delta?: number | null }[] }) {
   return (
-    <div className="grid gap-px overflow-hidden rounded-[14px] border border-zinc-200 bg-zinc-200 dark:border-zinc-800 dark:bg-zinc-800 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="admin-stat-strip grid gap-px sm:grid-cols-2 lg:grid-cols-4">
       {items.map((item) => (
-        <div key={item.label} className="bg-white px-4 py-3 dark:bg-zinc-900">
+        <div key={item.label} className="px-4 py-3">
           <div className="text-xs text-zinc-500">{item.label}</div>
-          <div className="mt-1 text-lg font-semibold tabular-nums">{item.value}</div>
+          <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5"><div className="text-lg font-semibold tabular-nums">{item.value}</div>{item.delta != null ? <span className={`text-[10px] font-semibold ${item.delta >= 0 ? "text-emerald-600" : "text-rose-600"}`}>{item.delta >= 0 ? "↑" : "↓"} {Math.abs(item.delta)}%</span> : null}</div>
         </div>
       ))}
     </div>

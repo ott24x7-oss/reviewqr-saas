@@ -1,8 +1,7 @@
-import { prisma } from "@/lib/db";
 import { requireAdminPage } from "@/lib/admin";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/admin/ui/controls";
 import { StockBoard } from "./stock-board";
-import type { QrStatus } from "@prisma/client";
+import { loadAdminQrStock } from "@/lib/admin/tools";
 
 export const dynamic = "force-dynamic";
 
@@ -12,35 +11,7 @@ export default async function AdminQrPage({
   searchParams: { status?: string; q?: string };
 }) {
   await requireAdminPage();
-  const status = searchParams.status === "UNASSIGNED" || searchParams.status === "ACTIVE" || searchParams.status === "DISABLED"
-    ? searchParams.status
-    : "";
-  const q = (searchParams.q || "").trim();
-  const [codes, businesses, unassigned] = await Promise.all([
-    prisma.qRCode.findMany({
-      where: {
-        ...(status ? { status: status as QrStatus } : {}),
-        ...(q
-          ? {
-              OR: [
-                { shortCode: { contains: q, mode: "insensitive" } },
-                { label: { contains: q, mode: "insensitive" } }
-              ]
-            }
-          : {})
-      },
-      include: { business: { select: { id: true, name: true } } },
-      orderBy: { createdAt: "desc" },
-      take: 100
-    }),
-    prisma.business.findMany({
-      where: { archived: false },
-      select: { id: true, name: true },
-      orderBy: { name: "asc" },
-      take: 300
-    }),
-    prisma.qRCode.count({ where: { status: "UNASSIGNED" } })
-  ]);
+  const { status, q, codes, businesses, unassigned } = await loadAdminQrStock(searchParams);
 
   return (
     <div className="space-y-5">

@@ -1,8 +1,8 @@
-# Admin web removals (part 1)
+# Admin web removals
 
-Nothing in this list was deleted. Part 2 deletes a file only after a search shows it has no remaining import and its route is no longer the one a screen renders.
+Part 2 removed the verified page files listed below. Supporting forms and APIs remain where another screen uses them.
 
-Old URLs that moved are permanent redirects in `next.config.mjs`. The page files stay on disk so a redirect target can still import a form from them.
+Old URLs that moved are permanent redirects in `next.config.mjs`. A redirect target imports retained forms directly; it does not need the old route page module.
 
 | Path | Why it can go in part 2 | Replaced by |
 |---|---|---|
@@ -13,9 +13,22 @@ Old URLs that moved are permanent redirects in `next.config.mjs`. The page files
 | `app/admin/_legacy/overview.tsx` | Copy of the old home page. Not a route. Nothing imports it. | `app/admin/page.tsx` on `loadAdminDashboard`. |
 | `app/admin/_legacy/audit.tsx` | Copy of the old audit page. Not a route. Nothing imports it. | `app/admin/audit/page.tsx` on `listAdminAuditPage`. |
 
-These stay until part 2 rebuilds them. The new sidebar still links to the current URL:
+The merged part 2 routes are now live. `next.config.mjs` permanently redirects the relevant legacy URLs:
 
-`app/admin/production`, `app/admin/production/nfc`, `app/admin/shop`, `app/admin/shop/reports`, `app/admin/qr`, `app/admin/print`, `app/admin/print/paper`, `app/admin/nfc`, `app/admin/shipping`, `app/admin/whatsapp`, `app/admin/email`, `app/admin/ai`, `app/admin/site`, `app/admin/branding`, `app/admin/themes`, `app/admin/presets`, `app/admin/help`, `app/admin/support`, and the cookie routes under `app/api/admin` that those screens post to.
+`/admin/users`, `/admin/users/:id`, `/admin/pricing`, `/admin/app`, `/admin/production`, `/admin/production/nfc`, `/admin/shop`, `/admin/shop/reports`, `/admin/qr`, `/admin/print`, `/admin/nfc`, `/admin/shipping`, `/admin/branding`, and `/admin/presets`. `/admin/print/paper` and the existing WhatsApp, Email, AI, Website, Tap themes, Help, and Support routes remain available.
+
+## Deleted in part 2 (verified)
+
+| Deleted path | Evidence and replacement |
+|---|---|
+| `app/admin/users/page.tsx` | `rg` found no import of the page. `/admin/users` permanently redirects to `/admin/customers`; the API routes under `app/api/admin/users` remain. |
+| `app/admin/users/[id]/page.tsx` | The page itself had no importer. `/admin/users/:id` permanently redirects to `/admin/customers/:id`. `user-edit.tsx` stays because the customer detail imports it. |
+| `app/admin/pricing/page.tsx` | No page import found. `/admin/pricing` permanently redirects to `/admin/plans?tab=copy`; `pricing-form.tsx` remains in use there. |
+| `app/admin/app/page.tsx` | No page import found. `/admin/app` permanently redirects to `/admin/apps`; `app-form.tsx` and `devices.tsx` remain in use there and in the device E2E flow. |
+| `app/admin/_legacy/overview.tsx` | `rg` found no import or route reference to this non-route file. The live `/admin` page uses `loadAdminDashboard`. |
+| `app/admin/_legacy/audit.tsx` | `rg` found no import or route reference to this non-route file. The live `/admin/audit` page uses `listAdminAudit`. |
+
+The removed files were rechecked with `rg` after removal. No Prisma models or data were changed.
 
 `components/admin/production-board.tsx`, `components/admin/help-manager.tsx`, `components/admin/shop-checkout-settings.tsx`, and `components/admin/shop-credit-form.tsx` are still imported by those screens.
 

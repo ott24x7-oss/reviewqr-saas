@@ -8,7 +8,7 @@ function pdfResponse(bytes: Buffer) {
   return new NextResponse(new Uint8Array(bytes), {
     headers: {
       "content-type": "application/pdf",
-      "content-disposition": 'attachment; filename="proof.pdf"',
+      "content-disposition": 'inline; filename="proof.pdf"',
       "cache-control": "private, no-store"
     }
   });

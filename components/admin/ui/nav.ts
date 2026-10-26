@@ -44,7 +44,6 @@ export const ADMIN_PINNED: AdminNavItem[] = [
   { href: "/admin/inbox", label: "Inbox", icon: "inbox", badge: "inbox" }
 ];
 
-/** Part 2 screens keep their current URLs so those tools stay one click away. */
 export const ADMIN_NAV: AdminNavGroup[] = [
   {
     label: "Customers",
@@ -72,13 +71,9 @@ export const ADMIN_NAV: AdminNavGroup[] = [
   {
     label: "Hardware",
     items: [
-      { href: "/admin/production", label: "Orders", icon: "orders" },
-      { href: "/admin/shop", label: "Catalogue", icon: "catalogue", exact: true },
-      { href: "/admin/shop/reports", label: "Shop reports", icon: "reports" },
-      { href: "/admin/qr", label: "QR stock", icon: "qr" },
-      { href: "/admin/print", label: "Print studio", icon: "print" },
-      { href: "/admin/nfc", label: "NFC writer", icon: "nfc" },
-      { href: "/admin/shipping", label: "Shipping", icon: "shipping" }
+      { href: "/admin/orders", label: "Orders", icon: "orders" },
+      { href: "/admin/catalogue", label: "Catalogue", icon: "catalogue" },
+      { href: "/admin/tools", label: "Print & NFC tools", icon: "qr" }
     ]
   },
   {
@@ -93,9 +88,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
     label: "Content",
     items: [
       { href: "/admin/site", label: "Website", icon: "site" },
-      { href: "/admin/branding", label: "Branding", icon: "branding" },
       { href: "/admin/themes", label: "Tap themes", icon: "themes" },
-      { href: "/admin/presets", label: "Presets", icon: "presets" },
       { href: "/admin/help", label: "Help centre", icon: "help" }
     ]
   },

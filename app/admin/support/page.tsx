@@ -1,46 +1,16 @@
-import { prisma } from "@/lib/db";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { SupportReplyForm } from "./reply-form";
+import Link from "next/link";
+import { requireAdminPage } from "@/lib/admin";
+import { listAdminTickets } from "@/lib/admin/support-admin";
+import { AdminCard, AdminEmptyState, AdminButton } from "@/components/admin/ui/controls";
+import { PageHeader, RelativeTime, StatusBadge } from "@/components/admin/ui/primitives";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminSupportPage() {
-  const tickets = await prisma.supportTicket.findMany({
-    orderBy: { updatedAt: "desc" },
-    take: 50,
-    include: {
-      user: { select: { email: true, name: true } },
-      messages: { orderBy: { createdAt: "asc" }, include: { author: { select: { email: true, role: true } } } }
-    }
-  });
-
-  return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold font-display">Support</h1>
-        <p className="text-sm text-muted-foreground">{tickets.length} threads</p>
-      </div>
-      {tickets.length === 0 && <p className="text-sm text-muted-foreground">No tickets yet.</p>}
-      {tickets.map((ticket) => (
-        <Card key={ticket.id}>
-          <CardHeader>
-            <CardTitle className="text-base">
-              {ticket.subject} · {ticket.status.toLowerCase()} · {ticket.user.email}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {ticket.messages.map((message) => (
-              <div key={message.id} className="text-sm">
-                <div className="text-xs text-muted-foreground">
-                  {message.author.role === "ADMIN" ? "You" : message.author.email}
-                </div>
-                <p className="whitespace-pre-wrap">{message.body}</p>
-              </div>
-            ))}
-            <SupportReplyForm ticketId={ticket.id} status={ticket.status} />
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
+  await requireAdminPage();
+  const result = await listAdminTickets(new URLSearchParams("limit=50"));
+  if (!result.ok) throw new Error(result.error);
+  return <div className="space-y-5"><PageHeader title="Support tickets" subtitle={`${result.data.items.length} recent customer conversations`} />
+    {result.data.items.length ? <div className="space-y-3">{result.data.items.map((ticket) => <AdminCard key={ticket.id} className="flex flex-wrap items-center justify-between gap-4 p-4"><div className="min-w-0"><Link className="font-semibold underline-offset-4 hover:underline" href={`/admin/support/${ticket.id}`}>{ticket.subject}</Link><p className="mt-1 text-sm text-zinc-500">{ticket.name || ticket.email} · {ticket.email} · updated <RelativeTime value={ticket.updatedAt} /></p></div><div className="flex items-center gap-3"><StatusBadge value={ticket.status} /><Link href={`/admin/support/${ticket.id}`}><AdminButton variant="outline">Open ticket</AdminButton></Link></div></AdminCard>)}</div> : <AdminEmptyState title="No support tickets" description="Customer conversations will show here when they need help." />}
+  </div>;
 }

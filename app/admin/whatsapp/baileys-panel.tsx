@@ -1,11 +1,12 @@
 "use client";
 import * as React from "react";
 import { toast } from "sonner";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/admin/ui/controls";
+import { Button } from "@/components/admin/ui/controls";
+import { Badge } from "@/components/admin/ui/controls";
 import { Loader2, Power, RefreshCw, Smartphone, Link2Off, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { StepUpDialog } from "@/components/admin/ui/dialogs";
 
 type Status =
   | "idle"
@@ -38,6 +39,7 @@ const POLL_MS = 2500;
 export function BaileysPanel() {
   const [info, setInfo] = React.useState<Info | null>(null);
   const [busy, setBusy] = React.useState(false);
+  const [stepUpAction, setStepUpAction] = React.useState<"connect" | "disconnect" | "logout" | null>(null);
 
   const refresh = React.useCallback(async () => {
     try {
@@ -52,14 +54,16 @@ export function BaileysPanel() {
     return () => clearInterval(id);
   }, [refresh]);
 
-  async function connect() {
+  async function runPairingAction(action: "connect" | "disconnect" | "logout") {
     setBusy(true);
     try {
-      const res = await fetch("/api/admin/whatsapp/baileys/connect", { method: "POST" });
+      const res = action === "connect"
+        ? await fetch("/api/admin/whatsapp/baileys/connect", { method: "POST" })
+        : await fetch(`/api/admin/whatsapp/baileys/disconnect${action === "logout" ? "?logout=1" : ""}`, { method: "POST" });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Failed");
       setInfo(j.info);
-      toast.success("Connecting…");
+      toast.success(action === "connect" ? "Connecting…" : action === "logout" ? "Logged out" : "Disconnected");
     } catch (e: any) {
       toast.error(e.message);
     } finally {
@@ -67,24 +71,10 @@ export function BaileysPanel() {
     }
   }
 
-  async function disconnect(logout: boolean) {
-    if (logout && !confirm("Log out and forget the paired phone? You'll need to scan again."))
+  function requestPairingAction(action: "connect" | "disconnect" | "logout") {
+    if (action === "logout" && !confirm("Log out and forget the paired phone? You'll need to scan again."))
       return;
-    setBusy(true);
-    try {
-      const res = await fetch(
-        `/api/admin/whatsapp/baileys/disconnect${logout ? "?logout=1" : ""}`,
-        { method: "POST" }
-      );
-      const j = await res.json();
-      if (!res.ok) throw new Error(j.error || "Failed");
-      setInfo(j.info);
-      toast.success(logout ? "Logged out" : "Disconnected");
-    } catch (e: any) {
-      toast.error(e.message);
-    } finally {
-      setBusy(false);
-    }
+    setStepUpAction(action);
   }
 
   const status = info?.status ?? "idle";
@@ -160,7 +150,7 @@ export function BaileysPanel() {
           {status === "connected" || status === "connecting" || status === "qr-pending" ? (
             <>
               <Button
-                onClick={() => disconnect(false)}
+                onClick={() => requestPairingAction("disconnect")}
                 disabled={busy}
                 variant="outline"
                 size="sm"
@@ -168,7 +158,7 @@ export function BaileysPanel() {
                 <Power className="h-3.5 w-3.5" /> Disconnect
               </Button>
               <Button
-                onClick={() => disconnect(true)}
+                onClick={() => requestPairingAction("logout")}
                 disabled={busy}
                 variant="ghost"
                 size="sm"
@@ -178,7 +168,7 @@ export function BaileysPanel() {
               </Button>
             </>
           ) : (
-            <Button onClick={connect} disabled={busy} variant="gradient" size="sm">
+            <Button onClick={() => requestPairingAction("connect")} disabled={busy} variant="gradient" size="sm">
               {busy ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
@@ -200,6 +190,15 @@ export function BaileysPanel() {
           connection.
         </p>
       </CardContent>
+      <StepUpDialog
+        open={stepUpAction !== null}
+        title={stepUpAction === "connect" ? "Confirm WhatsApp pairing" : stepUpAction === "logout" ? "Confirm logout" : "Confirm disconnect"}
+        action="whatsapp_pairing"
+        onClose={() => setStepUpAction(null)}
+        onConfirmed={async () => {
+          if (stepUpAction) await runPairingAction(stepUpAction);
+        }}
+      />
     </Card>
   );
 }

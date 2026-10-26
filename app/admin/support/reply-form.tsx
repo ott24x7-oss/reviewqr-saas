@@ -3,8 +3,8 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/admin/ui/controls";
+import { Textarea } from "@/components/admin/ui/controls";
 
 export function SupportReplyForm({ ticketId, status }: { ticketId: string; status: string }) {
   const router = useRouter();

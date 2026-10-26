@@ -4,7 +4,8 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/admin/ui/controls";
+import { ProofViewerButton } from "@/components/admin/ui/proof-viewer";
 import {
   SHOP_ORDER_STATUSES,
   moveAllowed,
@@ -210,9 +211,7 @@ export function ProductionBoard({ cards, carrierState }: { cards: ProductionCard
                       {line.hasProof && (
                         <>
                           {" "}
-                          <a className="underline" href={`/api/admin/shop/orders/${card.id}/proof?line=${line.id}`}>
-                            View proof
-                          </a>
+                          <ProofViewerButton url={`/api/admin/shop/orders/${card.id}/proof?line=${line.id}`} />
                         </>
                       )}
                     </p>

@@ -1,11 +1,10 @@
-import { getEmailConfig } from "@/lib/settings";
-import { maskSecret } from "@/lib/admin";
+import { loadAdminEmailSettings } from "@/lib/admin/channel-settings";
 import { EmailConfigForm } from "./email-form";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminEmailPage() {
-  const cfg = await getEmailConfig();
+  const cfg = await loadAdminEmailSettings();
   return (
     <div className="space-y-5">
       <div>
@@ -14,13 +13,7 @@ export default async function AdminEmailPage() {
           Configure outbound email — PHP relay (recommended on Railway) or direct SMTP.
         </p>
       </div>
-      <EmailConfigForm
-        initial={{
-          ...cfg,
-          smtpPass: maskSecret(cfg.smtpPass),
-          relaySecret: maskSecret(cfg.relaySecret)
-        }}
-      />
+      <EmailConfigForm initial={cfg} />
     </div>
   );
 }

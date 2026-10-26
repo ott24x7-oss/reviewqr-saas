@@ -47,7 +47,7 @@ async function shoot(page: Page, name: string) {
     await page.evaluate((value) => localStorage.setItem("qr24-admin-theme", value), theme);
     await page.reload({ timeout: 120_000 });
     await expect(page.getByRole("button", { name: theme === "dark" ? "Use light theme" : "Use dark theme" })).toBeVisible({ timeout: 30_000 });
-    await page.waitForTimeout(200);
+    await page.waitForTimeout(900);
     for (const width of [1440, 390]) {
       await page.setViewportSize({ width, height: width === 1440 ? 900 : 844 });
       await page.screenshot({ path: path.join("docs", "admin-web", `${name}-${theme}-${width}.png`) });
@@ -66,10 +66,19 @@ test("admin web search, inbox, payout step-up, export, and redirects", async ({ 
   const prisma = new PrismaClient({ datasources: { db: { url: databaseUrl() } } });
   const extraUsers: string[] = [];
   let paymentId = "";
+  let shopOrderId = "";
+  let articleId = "";
+  let supportTicketId = "";
 
   try {
     await registerWithEmail(page, { name: "Web Admin", business: `Web Cafe ${stamp}`, email, password });
     const admin = await prisma.user.update({ where: { email }, data: { role: "ADMIN", phone: `8${String(stamp).slice(-9)}` } });
+    const supportTicket = await prisma.supportTicket.create({ data: {
+      userId: admin.id,
+      subject: `Sample setup question ${stamp}`,
+      messages: { create: { authorId: admin.id, body: "How do I update the store hours?" } }
+    } });
+    supportTicketId = supportTicket.id;
     const business = await prisma.business.findFirst({ where: { ownerId: admin.id }, select: { id: true } });
     const customer = await prisma.user.create({ data: { email: `find-${stamp}@example.com`, name: customerName, phone: "9111122222", role: "USER" } });
     extraUsers.push(customer.id);
@@ -81,10 +90,46 @@ test("admin web search, inbox, payout step-up, export, and redirects", async ({ 
     });
     const payment = await prisma.payment.create({ data: { userId: admin.id, amount: 10000, tier: "STARTER", status: "PENDING" } });
     paymentId = payment.id;
+    const shopOrder = await prisma.shopOrder.create({ data: {
+      userId: admin.id, status: "PAID", paymentStatus: "PAID", invoiceNumber: `AW-${stamp}`,
+      subtotalPaise: 1000, discountPaise: 0, totalPaise: 1000, taxablePaise: 1000, cgstPaise: 0,
+      sgstPaise: 0, igstPaise: 0, advancePaise: 0, balancePaise: 1000,
+      lines: { create: { sku: `AW-${stamp}`, name: "Test acrylic QR", qty: 1, unitPaise: 1000, hsn: "", gstPercent: 0, discountPaise: 0, netPaise: 1000, taxablePaise: 1000, cgstPaise: 0, sgstPaise: 0, igstPaise: 0, ships: false, needsDesign: false, needsNfc: false, weightGrams: 0 } }
+    } });
+    shopOrderId = shopOrder.id;
     const plan = await prisma.plan.findFirst({ select: { id: true } });
 
     await page.context().clearCookies();
     await signInWithEmail(page, email, password);
+
+    const pairingWithoutStepUp = await page.request.post("/api/admin/whatsapp/baileys/connect");
+    expect(pairingWithoutStepUp.status()).toBe(403);
+    expect(await pairingWithoutStepUp.json()).toMatchObject({ stepUp: "whatsapp_pairing" });
+    await page.goto("/admin/whatsapp", { timeout: 120_000 });
+    await page.getByRole("button", { name: /Start & show QR|Reconnect/ }).click();
+    await expect(page.getByRole("dialog", { name: "Confirm WhatsApp pairing" })).toBeVisible();
+    await expect(page.getByLabel("WhatsApp code")).toBeVisible();
+    await page.getByRole("button", { name: "Cancel" }).click();
+
+    await page.goto(`/admin/orders?view=board&status=PAID&q=${shopOrderId}`, { timeout: 120_000 });
+    await page.getByRole("button", { name: "Move to Cancelled" }).click();
+    await expect.poll(async () => prisma.shopOrder.findUnique({ where: { id: shopOrderId }, select: { status: true } })).toMatchObject({ status: "CANCELLED" });
+    await expect.poll(async () => prisma.auditLog.count({ where: { action: "shop.order.move", entityId: shopOrderId, userId: admin.id, metadata: { path: ["from"], equals: "PAID" } } })).toBeGreaterThan(0);
+
+    await page.goto("/admin/help", { timeout: 120_000 });
+    const articleTitle = `How to track ${stamp}`;
+    await page.getByLabel("Article title").fill(articleTitle);
+    await page.getByPlaceholder("Slug").fill(`track-${stamp}`);
+    await page.getByLabel("Article body").fill("Open orders to follow the shipment.");
+    await page.getByRole("button", { name: "Create article" }).click();
+    const articleRow = page.locator("li").filter({ hasText: articleTitle });
+    await expect(articleRow).toBeVisible();
+    await articleRow.getByRole("button", { name: "Edit" }).click();
+    await page.getByLabel("Article title").fill(`${articleTitle} updated`);
+    await page.getByRole("button", { name: "Save article" }).click();
+    await expect(page.getByText(`${articleTitle} updated`)).toBeVisible();
+    const helpArticle = await prisma.helpArticle.findFirst({ where: { slug: `track-${stamp}` }, select: { id: true } });
+    articleId = helpArticle?.id || "";
 
     await page.goto("/admin", { timeout: 120_000 });
     await page.getByRole("button", { name: /Search/ }).click();
@@ -131,13 +176,38 @@ test("admin web search, inbox, payout step-up, export, and redirects", async ({ 
       ["/admin/users", /\/admin\/customers$/],
       [`/admin/users/${customer.id}`, new RegExp(`/admin/customers/${customer.id}`)],
       ["/admin/pricing", /\/admin\/plans\?tab=copy/],
-      ["/admin/app", /\/admin\/apps$/]
+      ["/admin/app", /\/admin\/apps$/],
+      ["/admin/production", /\/admin\/orders$/],
+      ["/admin/production/nfc", /\/admin\/orders\?tab=nfc$/],
+      ["/admin/shop", /\/admin\/catalogue$/],
+      ["/admin/shop/reports", /\/admin\/orders\?tab=reports$/],
+      ["/admin/shipping", /\/admin\/orders\?tab=shipping$/],
+      ["/admin/qr", /\/admin\/tools\?tab=qr$/],
+      ["/admin/print", /\/admin\/tools\?tab=print$/],
+      ["/admin/nfc", /\/admin\/tools\?tab=nfc$/],
+      ["/admin/branding", /\/admin\/site\?tab=branding$/],
+      ["/admin/presets", /\/admin\/themes\?tab=presets$/]
     ];
     for (const [from, to] of redirects) {
       await page.goto(from, { timeout: 120_000 });
       await expect(page).toHaveURL(to, { timeout: 30_000 });
+      if (from === "/admin/app") await expect(page.getByRole("heading", { name: "Admin devices" })).toBeVisible();
     }
-    await expect(page.getByRole("heading", { name: "Admin devices" })).toBeVisible();
+
+    await page.goto("/admin?range=qtd", { timeout: 120_000 });
+    const compareSwitch = page.getByRole("switch", { name: "Compare to previous" });
+    await expect(compareSwitch).toHaveAttribute("aria-checked", "true");
+    await compareSwitch.click();
+    await expect(page).toHaveURL(/compare=0/);
+    await expect(page.getByText("Daily paid amount", { exact: false })).toBeVisible();
+    await expect(page.getByText("dotted line is the previous period")).toHaveCount(0);
+    await compareSwitch.click();
+    await expect(page).not.toHaveURL(/compare=0/);
+    await expect(page.getByText("dotted line is the previous period")).toBeVisible();
+    await page.getByRole("button", { name: "Custom range" }).click();
+    const rangeDialog = page.getByRole("dialog", { name: "Choose custom date range" });
+    await expect(rangeDialog.locator("h3")).toHaveCount(2);
+    await rangeDialog.getByRole("button", { name: "Cancel" }).click();
 
     const shots: Array<[string, string]> = [
       ["/admin", "home"],
@@ -157,7 +227,24 @@ test("admin web search, inbox, payout step-up, export, and redirects", async ({ 
       ["/admin/audit", "audit"],
       ["/admin/settings", "settings"],
       ["/admin/apps", "apps"],
-      ["/admin/_kit", "kit"]
+      ["/admin/_kit", "kit"],
+      ["/admin/orders?view=board", "orders-board"],
+      ["/admin/orders?view=table", "orders"],
+      [`/admin/orders/${shopOrderId}`, "order-detail"],
+      ["/admin/catalogue", "catalogue"],
+      ["/admin/tools?tab=qr", "tools-qr"],
+      ["/admin/tools?tab=print", "tools-print"],
+      ["/admin/tools?tab=nfc", "tools-nfc"],
+      ["/admin/whatsapp", "whatsapp"],
+      ["/admin/email", "email"],
+      ["/admin/ai", "ai"],
+      ["/admin/site", "site"],
+      ["/admin/site?tab=branding", "site-branding"],
+      ["/admin/themes", "themes"],
+      ["/admin/themes?tab=presets", "theme-presets"],
+      ["/admin/help", "help"],
+      ["/admin/support", "support"],
+      [`/admin/support/${supportTicketId}`, "support-ticket"]
     ];
     if (business) shots.splice(5, 0, [`/admin/businesses/${business.id}`, "business"]);
     if (plan) shots.splice(10, 0, [`/admin/plans/${plan.id}`, "plan"]);
@@ -166,6 +253,9 @@ test("admin web search, inbox, payout step-up, export, and redirects", async ({ 
       await shoot(page, name);
     }
   } finally {
+    if (supportTicketId) await prisma.supportTicket.deleteMany({ where: { id: supportTicketId } });
+    if (articleId) await prisma.helpArticle.deleteMany({ where: { id: articleId } });
+    if (shopOrderId) await prisma.shopOrder.deleteMany({ where: { id: shopOrderId } });
     if (paymentId) await prisma.payment.deleteMany({ where: { id: paymentId } });
     await prisma.shopCommission.deleteMany({ where: { agentId: { in: extraUsers } } });
     const admin = await prisma.user.findUnique({ where: { email }, select: { id: true, phone: true } });

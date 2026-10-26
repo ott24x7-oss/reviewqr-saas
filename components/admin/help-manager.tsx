@@ -2,9 +2,9 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/admin/ui/controls";
+import { Input } from "@/components/admin/ui/controls";
+import { Textarea } from "@/components/admin/ui/controls";
 
 type Article = {
   id: string;
@@ -56,6 +56,7 @@ export function HelpManager() {
     reportMaxPerMinute: 20
   });
   const [draft, setDraft] = React.useState(emptyArticle);
+  const [editingId, setEditingId] = React.useState<string | null>(null);
   const [note, setNote] = React.useState({
     title: "",
     titleHi: "",
@@ -83,9 +84,9 @@ export function HelpManager() {
   async function saveArticle(event: React.FormEvent) {
     event.preventDefault();
     const res = await fetch("/api/admin/help", {
-      method: "POST",
+      method: editingId ? "PATCH" : "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(draft)
+      body: JSON.stringify(editingId ? { ...draft, id: editingId } : draft)
     });
     const json = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -93,7 +94,8 @@ export function HelpManager() {
       return;
     }
     setDraft(emptyArticle);
-    toast.success("Article saved");
+    setEditingId(null);
+    toast.success(editingId ? "Article updated" : "Article created");
     await load();
   }
 
@@ -174,8 +176,8 @@ export function HelpManager() {
         <Button type="submit" className="sm:col-span-2">Save support settings</Button>
       </form>
       <form onSubmit={saveArticle} className="grid gap-3 rounded-2xl border p-4">
-        <h2 className="font-semibold">New article</h2>
-        <Input placeholder="Title" value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} required />
+        <h2 className="font-semibold">{editingId ? "Edit article" : "New article"}</h2>
+        <Input aria-label="Article title" placeholder="Title" value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} required />
         <Input placeholder="Slug" value={draft.slug} onChange={(event) => setDraft({ ...draft, slug: event.target.value })} />
         <div className="grid gap-3 sm:grid-cols-3">
           <Input placeholder="Category" value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value })} />
@@ -189,22 +191,22 @@ export function HelpManager() {
           Sort order
           <Input type="number" value={draft.sortOrder} onChange={(event) => setDraft({ ...draft, sortOrder: Number(event.target.value) || 0 })} />
         </label>
-        <Textarea placeholder="Article" value={draft.body} onChange={(event) => setDraft({ ...draft, body: event.target.value })} />
+        <Textarea aria-label="Article body" placeholder="Article" value={draft.body} onChange={(event) => setDraft({ ...draft, body: event.target.value })} />
         <Input placeholder="YouTube or Vimeo URL" value={draft.videoUrl} onChange={(event) => setDraft({ ...draft, videoUrl: event.target.value })} />
         <input type="file" accept="video/mp4,video/webm" onChange={(event) => { const file = event.target.files?.[0]; if (file) uploadVideo(file).catch(() => undefined); }} />
         <label className="flex min-h-11 items-center gap-2 text-sm">
           <input type="checkbox" checked={draft.published} onChange={(event) => setDraft({ ...draft, published: event.target.checked })} />
           Published
         </label>
-        <Button type="submit">Create article</Button>
+        <div className="flex flex-wrap gap-2"><Button type="submit">{editingId ? "Save article" : "Create article"}</Button>{editingId ? <Button type="button" variant="outline" onClick={() => { setEditingId(null); setDraft(emptyArticle); }}>Cancel edit</Button> : null}</div>
       </form>
       <ul className="space-y-2">
         {articles.map((article) => (
           <li key={article.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border p-3 text-sm">
             <span>{article.language} · {article.category} · {article.title} {article.published ? "" : "(draft)"}</span>
-            <Button type="button" size="sm" variant="outline" onClick={() => toggleArticle(article)}>
+            <div className="flex gap-2"><Button type="button" size="sm" variant="outline" onClick={() => { setEditingId(article.id); setDraft({ slug: article.slug, category: article.category, language: article.language, title: article.title, body: article.body, videoUrl: article.videoUrl, contextKey: article.contextKey, sortOrder: article.sortOrder, published: article.published }); }}>Edit</Button><Button type="button" size="sm" variant="outline" onClick={() => toggleArticle(article)}>
               {article.published ? "Unpublish" : "Publish"}
-            </Button>
+            </Button></div>
           </li>
         ))}
       </ul>

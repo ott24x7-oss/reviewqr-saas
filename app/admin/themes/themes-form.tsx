@@ -3,10 +3,10 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/components/admin/ui/controls";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/admin/ui/controls";
+import { Input } from "@/components/admin/ui/controls";
+import { Label } from "@/components/admin/ui/controls";
 import type { ThemePreset } from "@/lib/tap/themes";
 
 export function AdminThemesForm({ presets, extra }: { presets: ThemePreset[]; extra: ThemePreset[] }) {
