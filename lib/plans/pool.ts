@@ -6,8 +6,8 @@ import { splitCommissionPool, type ChainMember, type EarnerStatus } from "./team
 
 export type CommissionDb = Prisma.TransactionClient | typeof prisma;
 
-function earnsStatus(status: "PENDING" | "ACTIVE" | "PAUSED", active: boolean): EarnerStatus {
-  if (status === "PENDING") return "PENDING";
+function earnsStatus(status: "PENDING" | "ACTIVE" | "PAUSED" | "REJECTED", active: boolean): EarnerStatus {
+  if (status === "PENDING" || status === "REJECTED") return "PENDING";
   if (status === "PAUSED" || !active) return "PAUSED";
   return "ACTIVE";
 }
@@ -22,7 +22,7 @@ export async function loadSellerChain(sellerId: string, db: CommissionDb = prism
     seen.add(userId);
     const profile: {
       userId: string;
-      status: "PENDING" | "ACTIVE" | "PAUSED";
+      status: "PENDING" | "ACTIVE" | "PAUSED" | "REJECTED";
       active: boolean;
       sharePercent: number | null;
       depth: number;

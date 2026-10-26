@@ -192,7 +192,7 @@ export async function applyInboxAction(input: {
   let changed = 0;
   for (const id of ids) {
     if (input.segment === "agents" && (input.action === "approve" || input.action === "reject")) {
-      const result = await setAgentTeamStatus(id, input.action === "approve" ? "ACTIVE" : "PAUSED");
+      const result = await setAgentTeamStatus(id, input.action === "approve" ? "ACTIVE" : "REJECTED", input.actorId);
       if (result.ok) changed += 1;
       continue;
     }

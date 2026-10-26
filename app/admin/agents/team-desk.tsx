@@ -13,7 +13,7 @@ export type TeamAgent = {
   userId: string;
   name: string;
   phone: string;
-  status: "PENDING" | "ACTIVE" | "PAUSED";
+  status: "PENDING" | "ACTIVE" | "PAUSED" | "REJECTED";
   active: boolean;
   sharePercent: number | null;
   depth: number;
@@ -76,6 +76,11 @@ export function TeamDesk({ agents, settings }: { agents: TeamAgent[]; settings: 
               {agent.status === "PAUSED" ? (
                 <Button type="button" variant="outline" onClick={() => void run(agent.id, { action: "resume" })}>
                   Resume
+                </Button>
+              ) : null}
+              {agent.status === "REJECTED" ? (
+                <Button type="button" variant="outline" onClick={() => void run(agent.id, { action: "approve" })}>
+                  Approve
                 </Button>
               ) : null}
             </div>

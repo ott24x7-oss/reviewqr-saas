@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const agentStatusSchema = z.enum(["PENDING", "ACTIVE", "PAUSED"]);
+export const agentStatusSchema = z.enum(["PENDING", "ACTIVE", "PAUSED", "REJECTED"]);
 export const agentCommissionKindSchema = z.enum(["SALE", "RENEWAL", "HARDWARE", "TEAM_OVERRIDE"]);
 
 export const agentHomeSchema = z.object({

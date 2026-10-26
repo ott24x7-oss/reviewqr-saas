@@ -16,6 +16,7 @@ import { POST as joinPost } from "../../app/api/v1/agent/join/route";
 import { openApiDocument } from "../../lib/api/openapi";
 import { issueTokenPair } from "../../lib/auth/sessions";
 import { prisma } from "../../lib/db";
+import { applyAdminTeamAction } from "../../lib/admin/team-admin";
 
 describe("agent team API", () => {
   const users: string[] = [];
@@ -184,6 +185,15 @@ describe("agent team API", () => {
       { params: { memberId: joiner.id } }
     );
     expect(resumePending.status).toBe(400);
+    const pausePending = await memberPatch(
+      call(`http://127.0.0.1/api/v1/agent/team/${joiner.id}`, leaderToken, {
+        method: "PATCH",
+        body: JSON.stringify({ action: "pause" })
+      }),
+      { params: { memberId: joiner.id } }
+    );
+    expect(pausePending.status).toBe(400);
+    expect((await prisma.agentProfile.findUnique({ where: { userId: joiner.id } }))?.status).toBe("PENDING");
 
     await prisma.agentProfile.update({ where: { userId: joiner.id }, data: { status: "ACTIVE", active: true } });
     const shared = await memberPatch(
@@ -276,7 +286,41 @@ describe("agent team API", () => {
       { params: { memberId: joiner.id } }
     );
     expect(paused.status).toBe(200);
+    expect((await prisma.agentProfile.findUnique({ where: { userId: joiner.id } }))).toMatchObject({
+      status: "PAUSED",
+      pausedBy: leader.id
+    });
+    const patchAs = (action: "pause" | "resume") =>
+      memberPatch(
+        call(`http://127.0.0.1/api/v1/agent/team/${joiner.id}`, leaderToken, {
+          method: "PATCH",
+          body: JSON.stringify({ action })
+        }),
+        { params: { memberId: joiner.id } }
+      );
+    expect((await patchAs("resume")).status).toBe(200);
+    expect((await prisma.agentProfile.findUnique({ where: { userId: joiner.id } }))).toMatchObject({
+      status: "ACTIVE",
+      active: true,
+      pausedBy: null
+    });
+
+    const joinerProfile = await prisma.agentProfile.findUniqueOrThrow({ where: { userId: joiner.id } });
+    await applyAdminTeamAction(joinerProfile.id, { action: "pause" }, "admin-user");
+    expect((await patchAs("pause")).status).toBe(200);
+    expect((await prisma.agentProfile.findUnique({ where: { userId: joiner.id } }))?.pausedBy).toBe("admin-user");
+    const resumeAdminPause = await patchAs("resume");
+    expect(resumeAdminPause.status).toBe(403);
     expect((await prisma.agentProfile.findUnique({ where: { userId: joiner.id } }))?.status).toBe("PAUSED");
+
+    await applyAdminTeamAction(joinerProfile.id, { action: "reject" }, "admin-user");
+    expect((await prisma.agentProfile.findUnique({ where: { userId: joiner.id } }))).toMatchObject({
+      status: "REJECTED",
+      active: false
+    });
+    expect((await patchAs("resume")).status).toBe(400);
+    expect((await patchAs("pause")).status).toBe(400);
+    expect((await prisma.agentProfile.findUnique({ where: { userId: joiner.id } }))?.status).toBe("REJECTED");
 
     for (let i = 0; i < 9; i += 1) {
       const extra = await invitePost(

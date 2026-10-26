@@ -1775,6 +1775,7 @@ enum AgentStatus {
   PENDING
   ACTIVE
   PAUSED
+  REJECTED
 }
 
 // One credit per agent, kind, and source. An order and a renewal never share a source.
@@ -1932,6 +1933,8 @@ model AgentProfile {
   leader       AgentProfile?  @relation("AgentTeam", fields: [leaderId], references: [id], onDelete: SetNull)
   members      AgentProfile[] @relation("AgentTeam")
   status       AgentStatus    @default(ACTIVE)
+  /// User who paused this agent. A leader can resume only a pause they made.
+  pausedBy     String?
   sharePercent Int?
   depth        Int            @default(1)
   /// PAN, encrypted with the platform secret helper. Readers show the last 4 only.

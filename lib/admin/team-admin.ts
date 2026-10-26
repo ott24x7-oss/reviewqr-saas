@@ -23,10 +23,10 @@ function fromTeam(result: { ok: true } | { ok: false; error: string }) {
 }
 
 /** Same actions as the web agent screen. `id` is the agent profile id. */
-export async function applyAdminTeamAction(id: string, body: TeamAction) {
+export async function applyAdminTeamAction(id: string, body: TeamAction, actorUserId: string | null = null) {
   const before = await prisma.agentProfile.findUnique({
     where: { id },
-    select: { status: true, active: true, sharePercent: true, leaderId: true, city: true }
+    select: { status: true, active: true, sharePercent: true, leaderId: true, city: true, pausedBy: true }
   });
   if (body.action === "reassign") {
     const problem = fromTeam(await reassignBusinessAgent(body.businessId || "", body.agentUserId || id));
@@ -34,8 +34,11 @@ export async function applyAdminTeamAction(id: string, body: TeamAction) {
   } else if (body.action === "approve" || body.action === "resume") {
     const problem = fromTeam(await setAgentTeamStatus(id, "ACTIVE"));
     if (problem) return problem;
-  } else if (body.action === "reject" || body.action === "pause") {
-    const problem = fromTeam(await setAgentTeamStatus(id, "PAUSED"));
+  } else if (body.action === "reject") {
+    const problem = fromTeam(await setAgentTeamStatus(id, "REJECTED", actorUserId));
+    if (problem) return problem;
+  } else if (body.action === "pause") {
+    const problem = fromTeam(await setAgentTeamStatus(id, "PAUSED", actorUserId));
     if (problem) return problem;
   } else if (body.action === "share") {
     const problem = fromTeam(await setAgentShare(id, body.sharePercent ?? -1));
@@ -51,7 +54,8 @@ export async function applyAdminTeamAction(id: string, body: TeamAction) {
       data: {
         ...(body.upiId !== undefined ? { upiId: body.upiId } : {}),
         ...(body.city !== undefined ? { city: body.city } : {}),
-        ...(body.active !== undefined ? { active: body.active } : {})
+        // An admin on/off switch takes the pause away from the leader.
+        ...(body.active !== undefined ? { active: body.active, pausedBy: null } : {})
       }
     });
     if (body.name) {

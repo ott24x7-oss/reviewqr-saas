@@ -117,12 +117,20 @@ export async function setAgentShare(profileId: string, sharePercent: number) {
   return { ok: true as const };
 }
 
-export async function setAgentTeamStatus(profileId: string, status: "ACTIVE" | "PAUSED") {
+/**
+ * Admin status change. An admin pause records the admin as `pausedBy`, so a leader
+ * cannot undo it. A rejection is REJECTED, which a leader can never resume.
+ */
+export async function setAgentTeamStatus(
+  profileId: string,
+  status: "ACTIVE" | "PAUSED" | "REJECTED",
+  actorUserId: string | null = null
+) {
   const profile = await prisma.agentProfile.findUnique({ where: { id: profileId }, select: { id: true } });
   if (!profile) return { ok: false as const, error: "Agent not found" };
   await prisma.agentProfile.update({
     where: { id: profileId },
-    data: { status, active: status === "ACTIVE" }
+    data: { status, active: status === "ACTIVE", pausedBy: status === "PAUSED" ? actorUserId : null }
   });
   return { ok: true as const };
 }

@@ -1,4 +1,4 @@
-export type AgentStatus = "ACTIVE" | "PENDING" | "PAUSED";
+export type AgentStatus = "ACTIVE" | "PENDING" | "PAUSED" | "REJECTED";
 export type AgentCommissionKind = "SALE" | "RENEWAL" | "HARDWARE" | "TEAM_OVERRIDE";
 
 export type AgentHome = {

@@ -22,7 +22,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const parsed = schema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
 
-  const result = await applyAdminTeamAction(params.id, parsed.data);
+  const result = await applyAdminTeamAction(params.id, parsed.data, guard.user.id);
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
 
   await logAudit({

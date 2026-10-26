@@ -8,6 +8,7 @@ export function formatRupees(paise: number, lang: "en" | "hi" = "en") {
 export function agentStatusLabel(status: AgentStatus | string, t: Record<string, string>) {
   if (status === "PENDING") return t.agentStatusPending;
   if (status === "PAUSED") return t.agentStatusPaused;
+  if (status === "REJECTED") return t.agentStatusRejected;
   if (status === "TRIAL") return t.agentStatusTrial;
   if (status === "EXPIRED") return t.agentStatusExpired;
   return t.agentStatusActive;

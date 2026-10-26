@@ -20,7 +20,7 @@ async function postHandler(req: NextRequest) {
   const parsed = await parseJson(req, adminTeamActionSchema);
   if (!parsed.ok) return parsed.response;
   const { id, ...body } = parsed.data;
-  return commitAdminWrite(auth.actor, req, await applyAdminTeamAction(id, body), {
+  return commitAdminWrite(auth.actor, req, await applyAdminTeamAction(id, body, auth.actor.user.id), {
     action: "agent.update",
     entity: "AgentProfile",
     entityId: id,

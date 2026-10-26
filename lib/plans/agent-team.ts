@@ -22,7 +22,7 @@ const INVITE_DAYS = 14;
 type ProfileRow = {
   id: string;
   userId: string;
-  status: "PENDING" | "ACTIVE" | "PAUSED";
+  status: "PENDING" | "ACTIVE" | "PAUSED" | "REJECTED";
   active: boolean;
   depth: number;
   sharePercent: number | null;
@@ -505,15 +505,29 @@ export async function patchTeamMember(
   const found = await memberForLeader(leaderUserId, memberUserId);
   if (!found.ok) return found;
   if (input.action) {
-    if (input.action === "resume" && found.data.member.status === "PENDING") {
-      return fail(400, "This member is waiting for approval");
+    const member = found.data.member;
+    if (member.status === "PENDING") return fail(400, "This member is waiting for approval");
+    if (member.status === "REJECTED") return fail(400, "This member was not approved");
+    if (input.action === "pause") {
+      if (member.status === "PAUSED") return ok({ status: "PAUSED" });
+      if (!member.active) return fail(403, "Only an admin can change this member");
+      // Only an active member can be paused, and the pause is stamped with this leader.
+      const paused = await prisma.agentProfile.updateMany({
+        where: { id: member.id, status: "ACTIVE", active: true },
+        data: { status: "PAUSED", active: false, pausedBy: leaderUserId }
+      });
+      if (paused.count !== 1) return fail(409, "This member changed. Refresh and try again");
+      return ok({ status: "PAUSED" });
     }
-    const status = input.action === "pause" ? "PAUSED" : "ACTIVE";
-    await prisma.agentProfile.update({
-      where: { id: found.data.member.id },
-      data: { status, active: status === "ACTIVE" }
+    if (member.status === "ACTIVE") return ok({ status: "ACTIVE" });
+    // A leader can undo only their own pause. An admin pause stays until an admin resumes it.
+    if (member.pausedBy !== leaderUserId) return fail(403, "Only an admin can resume this member");
+    const resumed = await prisma.agentProfile.updateMany({
+      where: { id: member.id, status: "PAUSED", pausedBy: leaderUserId },
+      data: { status: "ACTIVE", active: true, pausedBy: null }
     });
-    return ok({ status });
+    if (resumed.count !== 1) return fail(409, "This member changed. Refresh and try again");
+    return ok({ status: "ACTIVE" });
   }
   const settings = await getTeamProgramSettings();
   const share = input.sharePercent ?? -1;
@@ -524,7 +538,7 @@ export async function patchTeamMember(
   return ok({ sharePercent: share });
 }
 
-export async function joinTeam(userId: string, codeRaw: string): Promise<ServiceResult<{ status: "PENDING" | "ACTIVE" | "PAUSED"; leaderName: string }>> {
+export async function joinTeam(userId: string, codeRaw: string): Promise<ServiceResult<{ status: "PENDING" | "ACTIVE" | "PAUSED" | "REJECTED"; leaderName: string }>> {
   const code = normalizeCode(codeRaw);
   if (!code) return fail(400, "Enter a valid team code");
   const invite = await prisma.agentInvite.findUnique({
