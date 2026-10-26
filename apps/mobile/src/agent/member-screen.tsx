@@ -64,7 +64,7 @@ function MemberScreenContent() {
   const client = useQueryClient();
   const [shareDraft, setShareDraft] = useState<number | null>(null);
   const [saveError, setSaveError] = useState(false);
-  const value = shareDraft ?? member.data?.member.sharePercent ?? 70;
+  const value = shareDraft ?? member.data?.sharePercent ?? 70;
   const min = team.data?.minSharePercent ?? 50;
   const max = team.data?.maxSharePercent ?? 90;
   const split = commissionSplit(20000, value);
@@ -88,7 +88,7 @@ function MemberScreenContent() {
 
   async function changeMemberStatus() {
     if (!id || !member.data) return;
-    const action = member.data.member.status === "PAUSED" ? "resume" : "pause";
+    const action = member.data.status === "PAUSED" ? "resume" : "pause";
     try {
       await agentRequests.updateMember(id, { action });
       await Promise.all([
@@ -103,7 +103,7 @@ function MemberScreenContent() {
   return (
     <Screen>
       <ScrollView style={{ flex: 1, backgroundColor: palette.paper }} contentContainerStyle={styles.content}>
-        <AgentPage title={member.data?.member.name ?? t.agentTeamTab} subtitle={member.data?.member.phoneMasked}>
+        <AgentPage title={member.data?.name ?? t.agentTeamTab} subtitle={member.data?.phoneMasked}>
           {member.isLoading ? <><Skeleton height={140} /><Skeleton height={200} /></> : null}
           {member.isError ? <LoadErrorCard onRetry={() => member.refetch().catch(() => undefined)} /> : null}
           {member.data ? (
@@ -111,12 +111,11 @@ function MemberScreenContent() {
               <Card style={styles.memberSummary}>
                 <View style={styles.summaryTop}>
                   <View style={[styles.summaryIcon, { backgroundColor: palette.accentSoft }]}><UsersRound color={palette.deep} size={23} /></View>
-                  <AgentStatusChip status={member.data.member.status} />
+                  <AgentStatusChip status={member.data.status} />
                 </View>
                 <View style={styles.statsRow}>
-                  <Metric label={t.agentToday} paise={member.data.stats.todaySalesPaise} />
-                  <Metric label={t.agentMonthSales} paise={member.data.stats.monthSalesPaise} />
-                  <Metric label={t.agentMyOverride} paise={member.data.stats.monthOverridePaise} />
+                  <Metric label={t.agentMonthSales} paise={member.data.monthSalesPaise} />
+                  <Metric label={t.agentMyOverride} paise={member.data.monthOverridePaise} />
                 </View>
               </Card>
               <Card style={styles.shareCard}>
@@ -129,7 +128,7 @@ function MemberScreenContent() {
                 <PillButton label={t.agentSaveShare} tone="dark" onPress={saveShare} disabled={value < min || value > max} />
               </Card>
               <PillButton
-                label={member.data.member.status === "PAUSED" ? t.agentResume : t.agentPause}
+                label={member.data.status === "PAUSED" ? t.agentResume : t.agentPause}
                 tone="outline"
                 onPress={changeMemberStatus}
               />

@@ -113,7 +113,7 @@ function AgentTeamContent() {
                       <AgentStatusChip status={member.status} />
                     </View>
                     <View style={[styles.memberStats, { borderTopColor: palette.line }]}>
-                      <Stat label={t.agentSharePercent} value={`${member.sharePercent}%`} palette={palette} />
+                      <Stat label={t.agentSharePercent} value={member.sharePercent == null ? "—" : `${member.sharePercent}%`} palette={palette} />
                       <Stat label={t.agentMonthSales} value={formatRupees(member.monthSalesPaise, lang)} palette={palette} />
                       <Stat label={t.agentMyOverride} value={formatRupees(member.monthOverridePaise, lang)} palette={palette} />
                     </View>

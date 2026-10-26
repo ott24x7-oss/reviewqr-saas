@@ -6,6 +6,8 @@ import { useAdminDashboard } from "./api";
 import { AdminKpiGrid, AdminPlanDonut, AdminRevenueChart } from "./charts";
 import { useAdminCopy } from "./copy";
 import { formatAdminCompact } from "./format";
+import { dashboardHealth, dashboardKpis, dashboardPlanMix, dashboardRevenue } from "./view";
+import type { AdminRange } from "./types";
 import { Field } from "../ui/controls";
 import { useI18n } from "../i18n";
 import { fonts } from "../theme";
@@ -13,16 +15,16 @@ import { useTheme } from "../ui/theme";
 import { withOpacity } from "../ui/tokens";
 import { AdminAction, AdminFrame, AdminLoadState, openAdminWeb } from "./screen-kit";
 
-const ranges = ["today", "7d", "30d", "mtd", "custom"] as const;
+const ranges: AdminRange[] = ["today", "7d", "30d", "mtd", "custom"];
 
 export function AdminHomeScreen() {
   const t = useAdminCopy();
   const { lang } = useI18n();
   const { palette } = useTheme();
-  const [range, setRange] = useState("30d");
+  const [range, setRange] = useState<AdminRange>("30d");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  function chooseRange(next: string) {
+  function chooseRange(next: AdminRange) {
     if (next === "custom" && (!from || !to)) {
       const today = new Date();
       setTo(today.toISOString().slice(0, 10));
@@ -32,7 +34,7 @@ export function AdminHomeScreen() {
   }
   const dashboard = useAdminDashboard(range, range === "custom" ? from : undefined, range === "custom" ? to : undefined);
   const queryRange = range === "30d" ? t.thirtyDays : range === "7d" ? t.sevenDays : range === "today" ? t.today : range === "custom" ? t.custom : t.mtd;
-  const trend = dashboard.data?.revenue ?? [];
+  const trend = dashboard.data ? dashboardRevenue(dashboard.data) : [];
   return (
     <AdminFrame title={t.home} subtitle={t.dashboardSubtitle} refreshing={dashboard.isRefetching} onRefresh={() => dashboard.refetch()} form={range === "custom"} right={<Pressable accessibilityLabel={t.openWeb} onPress={() => openAdminWeb("dashboard")} style={[styles.webButton, { borderColor: palette.line, backgroundColor: palette.card }]}><ExternalLink color={palette.primary} size={18} /></Pressable>}>
       <View style={styles.rangeRow}>
@@ -44,21 +46,21 @@ export function AdminHomeScreen() {
         {dashboard.data ? <>
           <AdminCard style={[styles.hero, { backgroundColor: palette.header }]}>
             <View style={styles.heroTop}><View style={[styles.heroIcon, { backgroundColor: withOpacity(palette.headerInk, 0.1) }]}><Activity color={palette.headerInk} size={18} /></View><Text style={[styles.heroEyebrow, { color: palette.headerInk }]}>{t.revenue} · {queryRange}</Text><ArrowUpRight color={palette.success} size={20} /></View>
-            <Text style={[styles.heroAmount, { color: palette.headerInk }]}>{formatAdminCompact(dashboard.data.kpis.find((item) => item.key === "revenue")?.value ?? 0, lang)}</Text>
+            <Text style={[styles.heroAmount, { color: palette.headerInk }]}>{formatAdminCompact(dashboard.data.kpis.revenuePaise, lang)}</Text>
             <Text style={[styles.heroFoot, { color: withOpacity(palette.headerInk, 0.76) }]}>{t.dashboardRevenueCaption}</Text>
           </AdminCard>
-          <AdminKpiGrid items={dashboard.data.kpis} />
+          <AdminKpiGrid items={dashboardKpis(dashboard.data)} />
           <AdminSection title={t.revenueTrend} />
           <AdminRevenueChart points={trend} />
           <AdminSection title={t.planMix} />
-          <AdminPlanDonut data={dashboard.data.planMix} />
+          <AdminPlanDonut data={dashboardPlanMix(dashboard.data)} />
           <AdminSection title={t.topAgents} action={<Text style={[styles.viewAll, { color: palette.primary }]}>{t.thisMonth}</Text>} />
           <AdminCard style={styles.listCard}>
-            {dashboard.data.topAgents.map((agent, index) => <AdminRow key={agent.id} icon={Users} title={`${index + 1}. ${agent.name}`} subtitle={`${agent.businesses} ${t.businesses.toLowerCase()} · ${formatAdminCompact(agent.salesPaise, lang)}`} trailing={<Text style={[styles.agentRank, { color: palette.primary }]}>#{index + 1}</Text>} />)}
+            {dashboard.data.leaderboard.rows.map((agent, index) => <AdminRow key={agent.agentId} icon={Users} title={`${index + 1}. ${agent.name}`} subtitle={`${dashboard.data?.leaderboard.label} · ${formatAdminCompact(agent.amountPaise, lang)}`} trailing={<Text style={[styles.agentRank, { color: palette.primary }]}>#{index + 1}</Text>} />)}
           </AdminCard>
           <AdminSection title={t.systemHealth} />
           <AdminCard style={styles.healthCard}>
-            {dashboard.data.health.map((item) => <View key={item.key} style={[styles.healthRow, { borderBottomColor: palette.line }]}>
+            {dashboardHealth(dashboard.data).map((item) => <View key={item.key} style={[styles.healthRow, { borderBottomColor: palette.line }]}>
               <View style={[styles.healthIcon, { backgroundColor: item.healthy ? `${palette.success}18` : `${palette.danger}18` }]}>{item.healthy ? <CircleCheck size={17} color={palette.success} /> : <CircleAlert size={17} color={palette.danger} />}</View>
               <View style={{ flex: 1 }}><Text style={[styles.healthTitle, { color: palette.ink }]}>{healthLabel(item.key, t)}</Text><Text style={[styles.healthValue, { color: palette.muted }]}>{item.value}</Text></View>
               <View style={[styles.healthDot, { backgroundColor: item.healthy ? palette.success : palette.danger }]} />

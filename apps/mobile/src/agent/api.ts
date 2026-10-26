@@ -15,6 +15,7 @@ import type {
   AgentPayout,
   AgentProfile,
   AgentProfileUpdate,
+  AgentMemberUpdate,
   AgentTeam
 } from "./types";
 
@@ -28,7 +29,7 @@ export function useAgentHome() {
   return useQuery({
     queryKey: accountKey(user?.id ?? "", "agent", "home"),
     enabled: user?.role === "AGENT",
-    queryFn: () => agentRequest<AgentHome>("/agent/home")
+    queryFn: () => agentRequests.home()
   });
 }
 
@@ -37,7 +38,7 @@ export function useAgentBusinesses() {
   return useQuery({
     queryKey: accountKey(user?.id ?? "", "agent", "businesses"),
     enabled: user?.role === "AGENT",
-    queryFn: async () => (await agentRequest<{ items: AgentBusiness[] }>("/agent/businesses")).items
+    queryFn: async () => (await agentRequests.businesses()).items
   });
 }
 
@@ -47,7 +48,7 @@ export function useAgentCommissions() {
     queryKey: accountKey(user?.id ?? "", "agent", "commissions"),
     enabled: user?.role === "AGENT",
     initialPageParam: null as string | null,
-    queryFn: ({ pageParam }) => agentRequest<AgentCommissionsPage>(`/agent/commissions${pageParam ? `?cursor=${encodeURIComponent(pageParam)}` : ""}`),
+    queryFn: ({ pageParam }) => agentRequests.commissions(pageParam),
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined
   });
 }
@@ -57,7 +58,7 @@ export function useAgentPayouts() {
   return useQuery({
     queryKey: accountKey(user?.id ?? "", "agent", "payouts"),
     enabled: user?.role === "AGENT",
-    queryFn: async () => (await agentRequest<{ items: AgentPayout[] }>("/agent/payouts")).items
+    queryFn: async () => (await agentRequests.payouts()).items
   });
 }
 
@@ -66,7 +67,7 @@ export function useAgentProfile() {
   return useQuery({
     queryKey: accountKey(user?.id ?? "", "agent", "profile"),
     enabled: user?.role === "AGENT",
-    queryFn: () => agentRequest<AgentProfile>("/agent/profile")
+    queryFn: () => agentRequests.profile()
   });
 }
 
@@ -75,7 +76,7 @@ export function useAgentTeam(enabled = true) {
   return useQuery({
     queryKey: accountKey(user?.id ?? "", "agent", "team"),
     enabled: enabled && user?.role === "AGENT",
-    queryFn: () => agentRequest<AgentTeam>("/agent/team")
+    queryFn: () => agentRequests.team()
   });
 }
 
@@ -84,14 +85,23 @@ export function useAgentMember(memberId: string | undefined) {
   return useQuery({
     queryKey: accountKey(user?.id ?? "", "agent", "member", memberId),
     enabled: user?.role === "AGENT" && !!memberId,
-    queryFn: () => agentRequest<AgentMemberDetail>(`/agent/team/${encodeURIComponent(memberId!)}`)
+    queryFn: () => agentRequests.member(memberId!)
   });
 }
 
+/** One function per /api/v1/agent route the app uses. Shapes come from @reviewqr/shared. */
 export const agentRequests = {
+  home: () => agentRequest<AgentHome>("/agent/home"),
+  businesses: () => agentRequest<{ items: AgentBusiness[] }>("/agent/businesses"),
+  commissions: (cursor?: string | null) => agentRequest<AgentCommissionsPage>(`/agent/commissions${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`),
+  payouts: () => agentRequest<{ items: AgentPayout[] }>("/agent/payouts"),
+  profile: () => agentRequest<AgentProfile>("/agent/profile"),
+  team: () => agentRequest<AgentTeam>("/agent/team"),
+  member: (memberId: string) => agentRequest<AgentMemberDetail>(`/agent/team/${encodeURIComponent(memberId)}`),
   updateProfile: (body: AgentProfileUpdate) => agentRequest<AgentProfile>("/agent/profile", { method: "PUT", body: JSON.stringify(body) }),
   onboardBusiness: (phone: string, businessName: string) => agentRequest<AgentOnboardResponse>("/agent/onboard", { method: "POST", body: JSON.stringify({ phone, businessName }) }),
   invite: (phone?: string) => agentRequest<AgentInviteResponse>("/agent/team/invite", { method: "POST", body: JSON.stringify(phone ? { phone } : {}) }),
-  updateMember: (memberId: string, body: { sharePercent?: number; action?: "pause" | "resume" }) => agentRequest(`/agent/team/${encodeURIComponent(memberId)}`, { method: "PATCH", body: JSON.stringify(body) }),
+  /** Send either a share percent or pause/resume, never both. */
+  updateMember: (memberId: string, body: AgentMemberUpdate) => agentRequest<{ status: string } | { sharePercent: number }>(`/agent/team/${encodeURIComponent(memberId)}`, { method: "PATCH", body: JSON.stringify(body) }),
   join: (code: string) => agentRequest<AgentJoinResponse>("/agent/join", { method: "POST", body: JSON.stringify({ code }) })
 };

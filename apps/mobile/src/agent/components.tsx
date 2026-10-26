@@ -1,6 +1,6 @@
 import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
-import type { AgentCommission } from "./types";
+import type { AgentSaleRow } from "./types";
 import { useI18n } from "../i18n";
 import { fonts } from "../theme";
 import { Card, Chip } from "../ui/bits";
@@ -62,7 +62,7 @@ export function AgentStatusChip({ status }: { status: string }) {
   );
 }
 
-export function AgentCommissionRow({ row, compact = false }: { row: AgentCommission; compact?: boolean }) {
+export function AgentCommissionRow({ row, compact = false }: { row: AgentSaleRow; compact?: boolean }) {
   const { t, lang } = useI18n();
   const { palette } = useTheme();
   return (

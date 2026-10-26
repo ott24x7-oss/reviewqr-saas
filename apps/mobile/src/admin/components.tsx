@@ -85,7 +85,8 @@ export function AdminTabBar({ state, descriptors }: { state: { index: number; ro
   const { lang } = useI18n();
   const { palette } = useTheme();
   const insets = useSafeAreaInsets();
-  const inbox = useAdminInbox("all");
+  // Every inbox response carries the counts for all segments.
+  const inbox = useAdminInbox("agents");
   const inboxBadge = Object.values(inbox.data?.counts ?? {}).reduce((sum, count) => sum + count, 0);
   const labels: Record<string, string> = { home: t.home, inbox: t.inbox, search: t.search, money: t.money, more: t.more };
   return (

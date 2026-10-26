@@ -14,7 +14,7 @@ export function AdminMoreScreen() {
   const t = useAdminCopy();
   const { lang, choose } = useI18n();
   const { palette, choice, setChoice, appTheme } = useTheme();
-  const { admin, signOut } = useAdminSession();
+  const { admin, device, signOut } = useAdminSession();
   const routes = [
     { title: t.plans, icon: WalletCards, path: "/(admin)/plans" },
     { title: t.team, icon: Users, path: "/(admin)/team" },
@@ -32,7 +32,7 @@ export function AdminMoreScreen() {
     <AdminFrame title={t.more} subtitle={t.moreSubtitle}>
       <AdminCard style={styles.profile}>
         <View style={[styles.avatar, { backgroundColor: palette.accentSoft }]}><ShieldCheck color={palette.primary} size={21} /></View>
-        <View style={{ flex: 1 }}><Text style={[styles.profileName, { color: palette.ink }]}>{admin?.name ?? t.admin}</Text><Text style={[styles.profilePhone, { color: palette.muted }]}>{admin?.phoneMasked ?? t.adminOnly}</Text></View>
+        <View style={{ flex: 1 }}><Text style={[styles.profileName, { color: palette.ink }]}>{device?.name ?? t.admin}</Text><Text style={[styles.profilePhone, { color: palette.muted }]}>{admin?.phoneMasked ?? t.adminOnly}</Text></View>
         <View style={[styles.secure, { backgroundColor: `${palette.success}18` }]}><Text style={[styles.secureText, { color: palette.success }]}>{t.secure}</Text></View>
       </AdminCard>
       <Text style={[styles.label, { color: palette.muted }]}>{t.appearance}</Text>

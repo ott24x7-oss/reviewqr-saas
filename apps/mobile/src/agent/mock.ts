@@ -6,6 +6,7 @@ import type {
   AgentInviteResponse,
   AgentJoinResponse,
   AgentMemberDetail,
+  AgentOnboardResponse,
   AgentPayout,
   AgentProfile,
   AgentTeam,
@@ -108,7 +109,14 @@ export async function agentMockRequest<T>(path: string, init: RequestInit = {}):
   } else if (pathname === "/agent/profile" && method === "GET") {
     result = profile;
   } else if (pathname === "/agent/profile" && method === "PUT") {
-    profile = { ...profile, ...body, pan: typeof body.pan === "string" ? `•••••${body.pan.slice(-4)}` : profile.pan } as AgentProfile;
+    // Like the server: PAN and bank account come back masked, never in full.
+    profile = {
+      name: String(body.name ?? profile.name),
+      city: String(body.city ?? profile.city),
+      upiId: String(body.upiId ?? profile.upiId),
+      pan: typeof body.pan === "string" && body.pan ? `•••••${body.pan.slice(-4)}` : profile.pan,
+      bankLast4: typeof body.bankAccount === "string" && body.bankAccount ? body.bankAccount.slice(-4) : profile.bankLast4
+    } satisfies AgentProfile;
     result = profile;
   } else if (pathname === "/agent/team" && method === "GET") {
     const team: AgentTeam = { canRecruit: true, minSharePercent: 50, maxSharePercent: 90, inviteLink: "https://qr24x7.in/agent/join/AMIT7X", members };
@@ -120,12 +128,12 @@ export async function agentMockRequest<T>(path: string, init: RequestInit = {}):
     result = invite;
   } else if (pathname === "/agent/join" && method === "POST") {
     home.status = "PENDING";
-    result = { status: "PENDING" } satisfies AgentJoinResponse;
+    result = { status: "PENDING", leaderName: "Amit Verma" } satisfies AgentJoinResponse;
   } else if (pathname === "/agent/onboard" && method === "POST") {
     const item = { id: `shop-${businesses.length + 1}`, name: String(body.businessName ?? "New business"), planName: "Starter", status: "PENDING", endsAt: null, lastPaymentAt: null } satisfies AgentBusiness;
     businesses = [item, ...businesses];
     home.businesses = businesses.length;
-    result = { business: { id: item.id, name: item.name } };
+    result = { id: item.id, sent: true, channel: "whatsapp" } satisfies AgentOnboardResponse;
   } else {
     const memberRoute = pathname.match(/^\/agent\/team\/([^/]+)(?:\/([^/]+))?$/);
     if (!memberRoute || !["GET", "PATCH"].includes(method)) throw new Error(`Unmocked agent request: ${method} ${pathname}`);
@@ -134,15 +142,21 @@ export async function agentMockRequest<T>(path: string, init: RequestInit = {}):
     if (!member) throw new Error(`Unknown mock team member: ${memberId}`);
     if (method === "GET" && !extra) {
       result = {
-        member,
-        stats: { todaySalesPaise: 42000, monthSalesPaise: member.monthSalesPaise, monthOverridePaise: member.monthOverridePaise },
-        sales: commissions.filter((row) => row.fromAgentName === member.name)
+        ...member,
+        sales: commissions
+          .filter((row) => row.fromAgentName === member.name)
+          .map(({ id, kind, amountPaise, businessName, status, createdAt }) => ({ id, kind, amountPaise, businessName, status, createdAt }))
       } satisfies AgentMemberDetail;
     } else if (method === "PATCH") {
-      if (typeof body.sharePercent === "number") member.sharePercent = body.sharePercent;
-      if (body.action === "pause") member.status = "PAUSED";
-      if (body.action === "resume") member.status = "ACTIVE";
-      result = member;
+      // Like the server: exactly one of sharePercent or action.
+      if ((typeof body.sharePercent === "number") === (body.action != null)) throw new Error("Send a share percent or pause/resume");
+      if (typeof body.sharePercent === "number") {
+        member.sharePercent = body.sharePercent;
+        result = { sharePercent: body.sharePercent };
+      } else {
+        member.status = body.action === "pause" ? "PAUSED" : "ACTIVE";
+        result = { status: member.status };
+      }
     } else {
       throw new Error(`Unmocked agent request: ${method} ${pathname}`);
     }

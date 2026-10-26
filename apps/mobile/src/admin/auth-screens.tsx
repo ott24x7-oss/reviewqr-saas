@@ -4,6 +4,8 @@ import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from "r
 import { ShieldCheck, Fingerprint, Smartphone, LockKeyhole, Mail } from "lucide-react-native";
 import { useAdminSession } from "./session";
 import { adminMockEnabled } from "./env";
+import { devCodeFrom } from "../auth/otp";
+import { devSurfaceAllowed } from "../auth/dev-surface";
 import { useAdminCopy } from "./copy";
 import { AdminCard } from "./components";
 import { useI18n } from "../i18n";
@@ -14,12 +16,13 @@ import { useTheme } from "../ui/theme";
 
 export function AdminLoginScreen() {
   const t = useAdminCopy();
-  const { lang } = useI18n();
+  const { lang, t: appT } = useI18n();
   const { palette } = useTheme();
   const { sendOtp, verifyOtp } = useAdminSession();
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
-  const [challengeId, setChallengeId] = useState("");
+  const [sent, setSent] = useState(false);
+  const [devCode, setDevCode] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
 
@@ -27,11 +30,11 @@ export function AdminLoginScreen() {
     if (phone.replace(/\D/g, "").length < 10) return;
     setBusy(true);
     setError(false);
-    try { setChallengeId(await sendOtp(phone)); } catch { setError(true); } finally { setBusy(false); }
+    try { const result = await sendOtp(phone); setSent(result.sent); setDevCode(devCodeFrom(result)); } catch { setError(true); } finally { setBusy(false); }
   }
 
   async function confirmCode() {
-    if (!challengeId || code.trim().length < 4) return;
+    if (!sent || !/^\d{6}$/.test(code.trim())) return;
     setBusy(true);
     setError(false);
     try { await verifyOtp(phone, code); } catch { setError(true); } finally { setBusy(false); }
@@ -46,13 +49,14 @@ export function AdminLoginScreen() {
           <Text style={[styles.authTitle, { color: palette.ink }, lang === "hi" && styles.hindiStrong]}>{t.signIn}</Text>
           <Text style={[styles.authBody, { color: palette.muted }, lang === "hi" && styles.hindi]}>{t.signInBody}</Text>
           <AdminCard style={styles.authCard}>
-            <Field label={t.phone} value={phone} onChangeText={setPhone} keyboardType="phone-pad" returnKeyType="done" editable={!challengeId} />
-            {challengeId ? <Text style={[styles.info, { color: palette.success }, lang === "hi" && styles.hindi]}>{t.otpSent}</Text> : null}
-            {challengeId ? <Field label={t.otp} value={code} onChangeText={setCode} keyboardType="number-pad" maxLength={8} returnKeyType="done" /> : null}
+            <Field label={t.phone} value={phone} onChangeText={setPhone} keyboardType="phone-pad" returnKeyType="done" editable={!sent} />
+            {sent ? <Text style={[styles.info, { color: palette.success }, lang === "hi" && styles.hindi]}>{t.otpSent}</Text> : null}
+            {sent ? <Field label={t.otp} value={code} onChangeText={setCode} keyboardType="number-pad" maxLength={6} returnKeyType="done" /> : null}
             {adminMockEnabled() ? <Text style={[styles.mockHint, { color: palette.muted }]}>{lang === "hi" ? "स्थानीय मॉक · 123456" : "Local mock · 123456"}</Text> : null}
+            {devCode && devSurfaceAllowed() ? <Text style={[styles.mockHint, { color: palette.muted }]}>{appT.devHint} · {devCode}</Text> : null}
             {error ? <Text accessibilityRole="alert" style={[styles.error, { color: palette.danger }]}>{t.actionFailed}</Text> : null}
             {busy ? <ActivityIndicator color={palette.primary} /> : null}
-            {!challengeId ? <PillButton label={t.requestOtp} tone="dark" onPress={() => requestCode().catch(() => undefined)} disabled={phone.replace(/\D/g, "").length < 10 || busy} /> : <PillButton label={t.verifyOtp} tone="dark" onPress={() => confirmCode().catch(() => undefined)} disabled={code.trim().length < 4 || busy} />}
+            {!sent ? <PillButton label={t.requestOtp} tone="dark" onPress={() => requestCode().catch(() => undefined)} disabled={phone.replace(/\D/g, "").length < 10 || busy} /> : <PillButton label={t.verifyOtp} tone="dark" onPress={() => confirmCode().catch(() => undefined)} disabled={!/^\d{6}$/.test(code.trim()) || busy} />}
           </AdminCard>
           <View style={styles.securityNote}><LockKeyhole color={palette.muted} size={17} /><Text style={[styles.noteText, { color: palette.muted }]}>{t.adminOnly}</Text></View>
         </View>
@@ -65,7 +69,7 @@ export function AdminWaitingScreen() {
   const t = useAdminCopy();
   const { lang } = useI18n();
   const { palette } = useTheme();
-  const { admin, refreshStatus, signOut } = useAdminSession();
+  const { admin, device, refreshStatus, signOut } = useAdminSession();
   const [checking, setChecking] = useState(false);
   async function check() { setChecking(true); try { await refreshStatus(); } finally { setChecking(false); } }
   return (
@@ -75,7 +79,7 @@ export function AdminWaitingScreen() {
           <View style={[styles.largeIcon, { backgroundColor: palette.accentSoft }]}><Smartphone color={palette.primary} size={30} /></View>
           <Text style={[styles.authTitle, { color: palette.ink, textAlign: "center" }, lang === "hi" && styles.hindiStrong]}>{t.devicePending}</Text>
           <Text style={[styles.authBody, { color: palette.muted, textAlign: "center" }, lang === "hi" && styles.hindi]}>{t.devicePendingBody}</Text>
-          {admin ? <Text style={[styles.noteText, { color: palette.muted }]}>{admin.name} · {admin.phoneMasked}</Text> : null}
+          {admin || device ? <Text style={[styles.noteText, { color: palette.muted }]}>{[device?.name, admin?.phoneMasked].filter(Boolean).join(" · ")}</Text> : null}
           <Pressable accessibilityRole="button" onPress={() => Linking.openURL(`mailto:${t.supportEmail}`).catch(() => undefined)} style={styles.supportRow}><Mail color={palette.primary} size={17} /><Text style={[styles.supportText, { color: palette.primary }, lang === "hi" && styles.hindi]}>{t.supportContact} · {t.supportEmail}</Text></Pressable>
           {checking ? <ActivityIndicator color={palette.primary} /> : null}
           <PillButton label={t.refreshStatus} tone="dark" onPress={() => check().catch(() => undefined)} disabled={checking} />
@@ -90,7 +94,7 @@ export function AdminLockScreen() {
   const t = useAdminCopy();
   const { lang } = useI18n();
   const { palette } = useTheme();
-  const { admin, unlock, signOut } = useAdminSession();
+  const { admin, device, unlock, signOut } = useAdminSession();
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   async function open() { setBusy(true); setFailed(false); const ok = await unlock(); setFailed(!ok); setBusy(false); }
@@ -100,7 +104,7 @@ export function AdminLockScreen() {
         <AdminCard style={styles.centerCard}>
           <View style={[styles.largeIcon, { backgroundColor: palette.accentSoft }]}><Fingerprint color={palette.primary} size={34} /></View>
           <Text style={[styles.authTitle, { color: palette.ink, textAlign: "center" }, lang === "hi" && styles.hindiStrong]}>{t.unlock}</Text>
-          <Text style={[styles.authBody, { color: palette.muted, textAlign: "center" }, lang === "hi" && styles.hindi]}>{admin?.name ?? t.unlockBody}</Text>
+          <Text style={[styles.authBody, { color: palette.muted, textAlign: "center" }, lang === "hi" && styles.hindi]}>{admin ? [device?.name, admin.phoneMasked].filter(Boolean).join(" · ") : t.unlockBody}</Text>
           {failed ? <Text style={[styles.error, { color: palette.danger }]}>{t.unlockFailed}</Text> : null}
           {busy ? <ActivityIndicator color={palette.primary} /> : null}
           <PillButton label={t.unlockButton} tone="dark" onPress={() => open().catch(() => undefined)} disabled={busy} />

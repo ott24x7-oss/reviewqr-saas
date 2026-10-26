@@ -7,19 +7,24 @@ import { router } from "expo-router";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AppState, Platform } from "react-native";
 import { useQueryClient } from "@tanstack/react-query";
-import { adminAuth, AdminApiError, clearAdminTokens, forgetAdminDevice, readAdminAccessToken, readAdminDevice, rememberAdminDevice, writeAdminTokens } from "./api";
+import {
+  adminApi, clearAdminTokens, forgetAdminDevice, readAdminAccessToken, readAdminDevice, readAdminPhone, readAdminRefreshToken,
+  refreshAdminSession, rememberAdminDevice, setAdminDeviceName, setAdminSessionListener, writeAdminPhone, writeAdminTokens
+} from "./api";
 import { adminMockEnabled } from "./env";
-import type { AdminAuthRequest, AdminAuthStatus, AdminDeviceStatus } from "./types";
+import { maskPhone } from "./view";
+import type { AdminDevice, AdminDeviceStatus, AdminOtpSent, AdminPlatform } from "./types";
 
-export type AdminSessionStatus = AdminDeviceStatus | "SIGNED_OUT" | "REVOKED";
-type AdminIdentity = AdminAuthStatus["admin"] | null;
+export type AdminSessionStatus = AdminDeviceStatus | "SIGNED_OUT";
+/** The server returns no admin profile on sign-in, so the app shows the phone it signed in with. */
+type AdminIdentity = { phoneMasked: string } | null;
 type AdminSessionValue = {
   ready: boolean;
   status: AdminSessionStatus;
   admin: AdminIdentity;
-  deviceId: string | null;
+  device: AdminDevice | null;
   unlocked: boolean;
-  sendOtp: (phone: string) => Promise<string>;
+  sendOtp: (phone: string) => Promise<AdminOtpSent>;
   verifyOtp: (phone: string, code: string) => Promise<void>;
   refreshStatus: () => Promise<void>;
   unlock: () => Promise<boolean>;
@@ -27,67 +32,84 @@ type AdminSessionValue = {
 };
 
 const AdminSessionContext = createContext<AdminSessionValue | null>(null);
+/** POST /auth/refresh is limited to 120 per 10 minutes per IP; poll well under that. */
+const PENDING_POLL_MS = 10_000;
+
+export function adminPlatform(os: string = Platform.OS): AdminPlatform {
+  return os === "ios" || os === "web" ? os : "android";
+}
+
+function adminDeviceName() {
+  return (Device.deviceName || Device.modelName || `${Platform.OS} device`).slice(0, 80);
+}
 
 export function AdminSessionProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const [ready, setReady] = useState(false);
   const [status, setStatus] = useState<AdminSessionStatus>("SIGNED_OUT");
   const [admin, setAdmin] = useState<AdminIdentity>(null);
-  const [deviceId, setDeviceId] = useState<string | null>(null);
+  const [device, setDevice] = useState<AdminDevice | null>(null);
   const [unlocked, setUnlocked] = useState(false);
   const statusRef = useRef(status);
   const checking = useRef(false);
   const backgroundAt = useRef<number | null>(null);
   const lockTimeoutMs = useRef(120_000);
-  const revokedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => { statusRef.current = status; }, [status]);
+  useEffect(() => { setAdminDeviceName(adminDeviceName()); }, []);
 
-  const signOut = useCallback(async () => {
-    if (revokedTimer.current) clearTimeout(revokedTimer.current);
+  const resetLocal = useCallback(async () => {
     await clearAdminTokens();
     queryClient.removeQueries({ queryKey: ["admin"] });
     setAdmin(null);
-    setDeviceId(null);
+    setDevice(null);
     setUnlocked(false);
     setStatus("SIGNED_OUT");
     router.replace("/(admin)/login");
   }, [queryClient]);
 
-  const markRevoked = useCallback(async () => {
-    await Promise.all([clearAdminTokens(), forgetAdminDevice()]);
-    setUnlocked(false);
-    setStatus("REVOKED");
-    if (!revokedTimer.current) revokedTimer.current = setTimeout(() => signOut().catch(() => undefined), 1200);
-  }, [signOut]);
+  const signOut = useCallback(async () => {
+    const refreshToken = await readAdminRefreshToken();
+    if (refreshToken) await adminApi.logout(refreshToken).catch(() => undefined);
+    await resetLocal();
+  }, [resetLocal]);
 
-  const applyStatus = useCallback((next: AdminAuthStatus) => {
+  /** A revoked phone cannot be reused: forget its secret so the next sign-in registers a new one. */
+  const markRevoked = useCallback(async () => {
+    await forgetAdminDevice();
+    await resetLocal();
+  }, [resetLocal]);
+
+  const applyDevice = useCallback((next: AdminDevice) => {
+    setDevice(next);
     setStatus(next.status);
-    setAdmin(next.admin);
-    setDeviceId(next.deviceId);
     if (next.status !== "ACTIVE") setUnlocked(false);
     if (next.status === "REVOKED") markRevoked().catch(() => undefined);
   }, [markRevoked]);
 
+  useEffect(() => {
+    setAdminSessionListener({
+      onDevice: applyDevice,
+      onSignedOut: () => { resetLocal().catch(() => undefined); },
+      onDeviceCode: (code) => {
+        if (code === "DEVICE_REVOKED") markRevoked().catch(() => undefined);
+        else { setStatus("PENDING"); setUnlocked(false); }
+      }
+    });
+    return () => setAdminSessionListener({});
+  }, [applyDevice, markRevoked, resetLocal]);
+
+  /** There is no status route: a refresh returns the device and rotates the token pair. */
   const refreshStatus = useCallback(async () => {
-    if (checking.current || !(await readAdminAccessToken())) return;
+    if (checking.current || !(await readAdminRefreshToken())) return;
     checking.current = true;
     try {
-      const next = await adminAuth.status();
-      applyStatus(next);
-    } catch (error) {
-      if (error instanceof AdminApiError && ["DEVICE_REVOKED", "ADMIN_DEVICE_REVOKED"].includes(error.code)) await markRevoked();
-      else if (error instanceof AdminApiError && error.code === "DEVICE_PENDING") setStatus("PENDING");
-      else if (error instanceof AdminApiError && error.status === 401) await signOut();
+      await refreshAdminSession();
     } finally {
       checking.current = false;
     }
-  }, [applyStatus, markRevoked, signOut]);
-
-  const sendOtp = useCallback(async (phone: string) => {
-    const request: AdminAuthRequest = { phase: "request", phone: phone.replace(/\D/g, "") };
-    const response = await adminAuth.requestOtp(request);
-    return response.challengeId;
   }, []);
+
+  const sendOtp = useCallback((phone: string) => adminApi.requestOtp(phone.replace(/\D/g, "")), []);
 
   const verifyOtp = useCallback(async (phone: string, code: string) => {
     let pushToken: string | undefined;
@@ -102,23 +124,23 @@ export function AdminSessionProvider({ children }: { children: ReactNode }) {
       } catch { /* sign-in remains available if notifications are disabled */ }
     }
     const saved = await readAdminDevice();
-    const response = await adminAuth.verifyOtp({
-      phase: "verify",
-      phone: phone.replace(/\D/g, ""),
+    const digits = phone.replace(/\D/g, "");
+    const session = await adminApi.verifyOtp({
+      phone: digits,
       code: code.trim(),
-      deviceName: Device.deviceName || `${Platform.OS} device`,
-      platform: Platform.OS,
-      pushToken,
+      deviceName: adminDeviceName(),
+      platform: adminPlatform(),
+      ...(pushToken ? { pushToken: pushToken.slice(0, 240) } : {}),
       ...(saved ?? {})
     });
-    await writeAdminTokens(response.accessToken, response.refreshToken);
-    await rememberAdminDevice(response);
-    setAdmin(response.admin);
-    setDeviceId(response.deviceId);
-    setStatus(response.status);
+    await writeAdminTokens(session);
+    await rememberAdminDevice(session);
+    const phoneMasked = maskPhone(digits);
+    await writeAdminPhone(phoneMasked);
+    setAdmin({ phoneMasked });
     setUnlocked(false);
-    if (response.status === "REVOKED") await markRevoked();
-  }, [markRevoked]);
+    applyDevice(session.device);
+  }, [applyDevice]);
 
   const unlock = useCallback(async () => {
     if (adminMockEnabled()) {
@@ -143,10 +165,11 @@ export function AdminSessionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let live = true;
-    readAdminAccessToken()
-      .then(async (token) => {
-        if (!live) return;
-        if (token) await refreshStatus();
+    Promise.all([readAdminAccessToken(), readAdminPhone()])
+      .then(async ([token, phoneMasked]) => {
+        if (!live || !token) return;
+        if (phoneMasked) setAdmin({ phoneMasked });
+        await refreshStatus();
       })
       .catch(() => undefined)
       .finally(() => { if (live) setReady(true); });
@@ -155,7 +178,7 @@ export function AdminSessionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (status !== "PENDING") return;
-    const timer = setInterval(() => refreshStatus().catch(() => undefined), 5000);
+    const timer = setInterval(() => refreshStatus().catch(() => undefined), PENDING_POLL_MS);
     return () => clearInterval(timer);
   }, [refreshStatus, status]);
 
@@ -177,7 +200,7 @@ export function AdminSessionProvider({ children }: { children: ReactNode }) {
     return () => subscription.remove();
   }, [refreshStatus]);
 
-  const value = useMemo<AdminSessionValue>(() => ({ ready, status, admin, deviceId, unlocked, sendOtp, verifyOtp, refreshStatus, unlock, signOut }), [ready, status, admin, deviceId, unlocked, sendOtp, verifyOtp, refreshStatus, unlock, signOut]);
+  const value = useMemo<AdminSessionValue>(() => ({ ready, status, admin, device, unlocked, sendOtp, verifyOtp, refreshStatus, unlock, signOut }), [ready, status, admin, device, unlocked, sendOtp, verifyOtp, refreshStatus, unlock, signOut]);
   return <AdminSessionContext.Provider value={value}>{children}</AdminSessionContext.Provider>;
 }
 

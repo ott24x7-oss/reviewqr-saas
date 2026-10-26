@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { Building2, CreditCard, Package, Search, UserRound, Users } from "lucide-react-native";
 import type { AdminSearchResult } from "./types";
 import { useAdminSearch } from "./api";
+import { searchResults } from "./view";
 import { useAdminCopy } from "./copy";
 import { AdminCard, AdminChip, AdminRow } from "./components";
 import { AdminFrame, AdminLoadState } from "./screen-kit";
@@ -22,13 +23,13 @@ export function AdminSearchScreen() {
   const [filter, setFilter] = useState<SearchFilter>("all");
   const [recent, setRecent] = useState<string[]>([]);
   const search = useAdminSearch(query);
-  const results = useMemo(() => (search.data?.items ?? []).filter((item) => filter === "all" || item.type === filter), [filter, search.data]);
+  const results = useMemo(() => searchResults(search.data).filter((item) => filter === "all" || item.type === filter), [filter, search.data]);
   function openResult(item: AdminSearchResult) {
     setRecent((current) => [item.title, ...current.filter((saved) => saved !== item.title)].slice(0, 5));
     if (item.type === "user" || item.type === "business") router.push({ pathname: "/(admin)/account", params: { kind: item.type, id: item.id } });
     else if (item.type === "payment") router.push("/(admin)/(tabs)/money?tab=payments");
     else if (item.type === "agent") router.push({ pathname: "/(admin)/team", params: { id: item.id } });
-    else router.push("/(admin)/shop");
+    else router.push({ pathname: "/(admin)/shop", params: { id: item.id } });
   }
   const icon = (item: AdminSearchResult) => item.type === "user" ? UserRound : item.type === "business" ? Building2 : item.type === "payment" ? CreditCard : item.type === "agent" ? Users : Package;
   const typeLabel: Record<AdminSearchResult["type"], string> = { user: t.users, business: t.businesses, payment: t.payments, agent: t.agents, order: t.orders };
@@ -38,7 +39,7 @@ export function AdminSearchScreen() {
         <View style={[styles.searchField, { backgroundColor: palette.paper, borderColor: palette.line }]}><Search color={palette.muted} size={19} /><TextInput accessibilityLabel={t.searchHint} placeholder={t.searchHint} placeholderTextColor={palette.muted} value={query} onChangeText={setQuery} autoCapitalize="none" returnKeyType="search" style={[styles.input, { color: palette.ink }]} /></View>
       </AdminCard>
       <View style={styles.filters}>{filters.map((item) => <AdminChip key={item} label={item === "all" ? t.all : typeLabel[item]} selected={filter === item} onPress={() => setFilter(item)} />)}</View>
-      {!query.trim() ? <>
+      {query.trim().length < 2 ? <>
         <Text style={[styles.sectionTitle, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.recentSearches}</Text>
         {recent.length ? <AdminCard style={styles.recentCard}>{recent.map((item) => <Pressable key={item} onPress={() => setQuery(item)} style={[styles.recentRow, { borderBottomColor: palette.line }]}><Search size={16} color={palette.muted} /><Text style={[styles.recentText, { color: palette.ink }]}>{item}</Text></Pressable>)}</AdminCard> : <View style={[styles.tip, { backgroundColor: palette.card }]}><Text style={[styles.tipText, { color: palette.muted }]}>{t.searchTip}</Text></View>}
       </> : <AdminLoadState loading={search.isLoading} error={search.isError} retry={() => search.refetch()} empty={search.isSuccess && results.length === 0}>

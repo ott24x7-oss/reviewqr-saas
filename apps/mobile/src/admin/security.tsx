@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { Modal, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import * as ScreenCapture from "expo-screen-capture";
-import { adminAuth } from "./api";
+import { adminApi, isStepUpRequired } from "./api";
 import { useAdminCopy } from "./copy";
 import { fonts } from "../theme";
 import { Card, LoadErrorCard } from "../ui/bits";
@@ -11,9 +11,21 @@ import { useI18n } from "../i18n";
 import { useTheme } from "../ui/theme";
 import type { AdminStepUpAction } from "./types";
 
-// The action is sent with the code, and the token that comes back works for that action once.
-type PendingStepUp = { action: AdminStepUpAction; target?: string; challengeId: string; resolve: (token: string | null) => void };
-type SecurityValue = { requestStepUpToken: (action: AdminStepUpAction, target?: string) => Promise<string | null> };
+/*
+ * POST /step-up {} sends a WhatsApp code. POST /step-up { code, action } returns a
+ * token that works once, for that action only, sent as X-Step-Up.
+ */
+type PendingStepUp = { action: AdminStepUpAction; resolve: (token: string | null) => void };
+type SecurityValue = {
+  /** Asks for a code and returns a single-use token for `action`, or null if cancelled. */
+  requestStepUpToken: (action: AdminStepUpAction) => Promise<string | null>;
+  /**
+   * Runs `call` and, if the server answers STEP_UP_REQUIRED, asks for a code and
+   * runs it once more with the token. `required` skips the first try when the
+   * step-up is known to be needed. Resolves to null when the admin cancels.
+   */
+  withStepUp: <T>(action: AdminStepUpAction, call: (stepUp: string | null) => Promise<T>, required?: boolean) => Promise<T | null>;
+};
 const SecurityContext = createContext<SecurityValue | null>(null);
 
 export function AdminSecurityProvider({ children }: { children: ReactNode }) {
@@ -24,12 +36,25 @@ export function AdminSecurityProvider({ children }: { children: ReactNode }) {
   const [code, setCode] = useState("");
   const [error, setError] = useState(false);
 
-  const requestStepUpToken = useCallback(async (action: AdminStepUpAction, target?: string) => {
-    const challenge = await adminAuth.requestStepUp(action, target);
+  const requestStepUpToken = useCallback(async (action: AdminStepUpAction) => {
+    await adminApi.sendStepUp();
     setError(false);
     setCode("");
-    return new Promise<string | null>((resolve) => setPending({ action, target, challengeId: challenge.challengeId, resolve }));
+    return new Promise<string | null>((resolve) => setPending({ action, resolve }));
   }, []);
+
+  const withStepUp = useCallback(async <T,>(action: AdminStepUpAction, call: (stepUp: string | null) => Promise<T>, required = false) => {
+    if (!required) {
+      try {
+        return await call(null);
+      } catch (failure) {
+        if (!isStepUpRequired(failure)) throw failure;
+      }
+    }
+    const token = await requestStepUpToken(action);
+    if (!token) return null;
+    return call(token);
+  }, [requestStepUpToken]);
 
   const cancel = useCallback(() => {
     pending?.resolve(null);
@@ -37,10 +62,10 @@ export function AdminSecurityProvider({ children }: { children: ReactNode }) {
   }, [pending]);
 
   const confirm = useCallback(async () => {
-    if (!pending || code.trim().length < 4) return;
+    if (!pending || !/^\d{6}$/.test(code.trim())) return;
     setError(false);
     try {
-      const verified = await adminAuth.verifyStepUp(pending.action, pending.challengeId, code.trim());
+      const verified = await adminApi.verifyStepUp(pending.action, code.trim());
       pending.resolve(verified.stepUpToken);
       setPending(null);
       setCode("");
@@ -49,7 +74,7 @@ export function AdminSecurityProvider({ children }: { children: ReactNode }) {
     }
   }, [code, pending]);
 
-  const value = useMemo(() => ({ requestStepUpToken }), [requestStepUpToken]);
+  const value = useMemo(() => ({ requestStepUpToken, withStepUp }), [requestStepUpToken, withStepUp]);
   return (
     <SecurityContext.Provider value={value}>
       {children}
@@ -62,9 +87,9 @@ export function AdminSecurityProvider({ children }: { children: ReactNode }) {
               <Text style={[styles.title, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.stepUpTitle}</Text>
               <Text style={[styles.body, { color: palette.muted }, lang === "hi" && styles.hindiBody]}>{t.stepUpBody}</Text>
               {pending?.action ? <Text style={[styles.action, { color: palette.primary }]}>{pending.action}</Text> : null}
-              <Field label={t.stepUpCode} value={code} onChangeText={setCode} keyboardType="number-pad" maxLength={8} returnKeyType="done" />
+              <Field label={t.stepUpCode} value={code} onChangeText={setCode} keyboardType="number-pad" maxLength={6} returnKeyType="done" />
               {error ? <LoadErrorCard onRetry={() => confirm().catch(() => undefined)} /> : null}
-              <PillButton label={t.stepUpConfirm} tone="dark" onPress={() => confirm().catch(() => undefined)} disabled={code.trim().length < 4} />
+              <PillButton label={t.stepUpConfirm} tone="dark" onPress={() => confirm().catch(() => undefined)} disabled={!/^\d{6}$/.test(code.trim())} />
               <PillButton label={t.stepUpCancel} tone="outline" onPress={cancel} />
             </Card>
           </KeyboardAwareScrollView>

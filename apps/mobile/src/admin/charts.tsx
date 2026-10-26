@@ -57,10 +57,10 @@ export function AdminKpiGrid({ items }: { items: AdminKpi[] }) {
     <View style={styles.kpiGrid}>
       {items.map((kpi) => (
         <AdminCard key={kpi.key} style={styles.kpiCard}>
-          <View style={styles.kpiTop}><Text style={[styles.kpiLabel, { color: palette.muted }, lang === "hi" && styles.hindi]} numberOfLines={1}>{labels[kpi.key]}</Text><Sparkline values={kpi.series} color={palette.primary} /></View>
+          <View style={styles.kpiTop}><Text style={[styles.kpiLabel, { color: palette.muted }, lang === "hi" && styles.hindi]} numberOfLines={1}>{labels[kpi.key]}</Text>{kpi.series.length > 1 ? <Sparkline values={kpi.series} color={palette.primary} /> : null}</View>
           <View style={styles.kpiBottom}>
             <KpiValue kpi={kpi} style={[styles.kpiValue, { color: palette.ink }]} />
-            <Text style={[styles.kpiChange, { color: kpi.changePercent >= 0 ? palette.success : palette.danger }]}>{kpi.changePercent > 0 ? "+" : ""}{kpi.changePercent}%</Text>
+            {kpi.changePercent === null ? null : <Text style={[styles.kpiChange, { color: kpi.changePercent >= 0 ? palette.success : palette.danger }]}>{kpi.changePercent > 0 ? "+" : ""}{kpi.changePercent}%</Text>}
           </View>
         </AdminCard>
       ))}
