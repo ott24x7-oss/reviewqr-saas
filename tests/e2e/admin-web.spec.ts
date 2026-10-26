@@ -109,6 +109,7 @@ test("admin web search, inbox, payout step-up, export, and redirects", async ({ 
     await payRow.getByRole("button", { name: "Mark paid" }).click();
     await payRow.getByLabel("UTR").fill("UTR123456");
     await payRow.getByLabel("Note").fill("Paid outside the app");
+    await payRow.getByLabel("Reason").fill("Monthly payout");
     await payRow.getByRole("button", { name: "Record payout" }).click();
     await expect(payRow.getByRole("alert")).toContainText("WhatsApp code", { timeout: 30_000 });
     const still = await prisma.shopCommission.findUnique({ where: { id: commission.id }, select: { status: true } });

@@ -4,6 +4,7 @@ import { adminStepUpActionSchema } from "@reviewqr/shared";
 import { requireAdminApi } from "@/lib/admin";
 import { consumeAdminStepUp, sendAdminStepUp } from "@/lib/admin/step-up";
 import { WEB_STEP_COOKIE, WEB_STEP_DEVICE } from "@/lib/admin/web-step";
+import { devOtpCode } from "@/lib/auth/dev-otp";
 
 const schema = z.object({
   code: z.string().trim().min(4).max(8).optional(),
@@ -19,7 +20,9 @@ export async function POST(req: NextRequest) {
   if (!parsed.data.code) {
     const sent = await sendAdminStepUp(guard.user.id);
     if (!sent.ok) return NextResponse.json({ error: sent.error }, { status: sent.status });
-    return NextResponse.json({ ok: true });
+    // Same guard as every other dev code: never revealed when NODE_ENV is production.
+    const devCode = sent.issuedCode ? devOtpCode(sent.issuedCode) : undefined;
+    return NextResponse.json(devCode ? { ok: true, devCode } : { ok: true });
   }
   if (!parsed.data.action) return NextResponse.json({ error: "Choose what this code confirms" }, { status: 400 });
   const consumed = await consumeAdminStepUp(guard.user.id, WEB_STEP_DEVICE, parsed.data.code, parsed.data.action);
