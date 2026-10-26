@@ -19,12 +19,14 @@ export async function PublicMenu({
   code,
   channel,
   homeHref,
-  hideTable
+  hideTable,
+  view = "menu"
 }: {
   code: string;
   channel: "q" | "t";
   homeHref?: string;
   hideTable?: boolean;
+  view?: "menu" | "services";
 }) {
   if (!isLookupCode(code)) notFound();
   const record = await loadPublicTap(code);
@@ -68,7 +70,10 @@ export async function PublicMenu({
       },
       select: { id: true, code: true, kind: true, amount: true, expiresAt: true, active: true }
     }),
-    prisma.business.findUnique({ where: { id: record.businessId }, select: { industry: true, logo: true, ownerId: true } })
+    prisma.business.findUnique({
+      where: { id: record.businessId },
+      select: { industry: true, logo: true, ownerId: true, catalogMode: true }
+    })
   ]);
   const catalogue = profile ? await publicCatalogue(profile.ownerId) : null;
   const showCatalogue = !!catalogue?.showCatalogue;
@@ -142,6 +147,8 @@ export async function PublicMenu({
         homeHref={homeHref}
         canOrder={canOrder}
         askBase={whatsAppNumberUrl(record.business.whatsappNumber) || ""}
+        catalogMode={profile?.catalogMode || "MENU"}
+        initialView={view}
       />
     </div>
   );
@@ -165,6 +172,9 @@ function toItem(item: {
   photos: string[];
   brand: string;
   durationMinutes: number | null;
+  kind: StoreItem["kind"];
+  priceType: StoreItem["priceType"];
+  bookable: boolean;
   createdAt: Date;
   veg: StoreItem["veg"];
   variants: {
@@ -175,6 +185,7 @@ function toItem(item: {
     colour: string;
     pricePaise: number;
     inStock: boolean;
+    durationMinutes: number | null;
   }[];
   addOns: {
     id: string;
@@ -197,6 +208,9 @@ function toItem(item: {
     photos: item.photos || [],
     brand: item.brand || "",
     durationMinutes: item.durationMinutes,
+    kind: item.kind,
+    priceType: item.priceType,
+    bookable: item.bookable,
     createdAt: item.createdAt.toISOString(),
     veg: item.veg,
     variants: item.variants.map((variant) => ({
@@ -206,7 +220,8 @@ function toItem(item: {
       size: variant.size,
       colour: variant.colour,
       pricePaise: variant.pricePaise,
-      inStock: variant.inStock
+      inStock: variant.inStock,
+      durationMinutes: variant.durationMinutes
     })),
     addOns: item.addOns.map((addOn) => ({
       id: addOn.id,
