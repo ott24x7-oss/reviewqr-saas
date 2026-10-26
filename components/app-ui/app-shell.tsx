@@ -66,6 +66,7 @@ const ownerGroups: NavGroup[] = [
 
 const agentGroup: NavGroup = { key: "agent", items: [
   { href: "/dashboard/agent", key: "agentHome", icon: LayoutDashboard, exact: true },
+  { href: "/dashboard/agent/businesses", key: "agentBusinesses", icon: Building2 },
   { href: "/dashboard/agent/team", key: "team", icon: Users },
   { href: "/dashboard/agent/earnings", key: "earnings", icon: Activity },
   { href: "/dashboard/agent/payouts", key: "payouts", icon: CreditCard },
@@ -80,7 +81,7 @@ const labels: Record<string, [string, string]> = {
   printStands: ["Print & order stands", "प्रिंट और स्टैंड"], insights: ["Insights", "जानकारी"], analytics: ["Analytics", "एनालिटिक्स"],
   account: ["Account", "खाता"], billing: ["Plan & billing", "प्लान और बिलिंग"], refer: ["Refer & earn", "रेफ़र करें और कमाएँ"],
   settings: ["Settings", "सेटिंग"], help: ["Help", "मदद"], agent: ["Agent", "एजेंट"],
-  agentHome: ["Agent home", "एजेंट होम"], team: ["Team", "टीम"], earnings: ["Earnings", "कमाई"],
+  agentHome: ["Agent home", "एजेंट होम"], agentBusinesses: ["Businesses", "कारोबार"], team: ["Team", "टीम"], earnings: ["Earnings", "कमाई"],
   payouts: ["Payouts", "भुगतान"], profile: ["Profile", "प्रोफ़ाइल"]
 };
 
