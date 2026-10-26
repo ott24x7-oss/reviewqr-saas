@@ -395,6 +395,51 @@ describe("service booking", () => {
     expect(limited.status).toBe(429);
   }, 20000);
 
+  it("rate-limits one business even when every request uses a new IP and phone", async () => {
+    const stamp = Date.now().toString(36);
+    const owner = await prisma.user.create({ data: { email: `svc-biz-${stamp}@example.test`, role: "USER" } });
+    userIds.push(owner.id);
+    const business = await prisma.business.create({
+      data: { ownerId: owner.id, name: "Busy", slug: `svc-biz-${stamp}`, whatsappNumber: "9876543210" }
+    });
+    businessIds.push(business.id);
+    const code = `SB${stamp}`.slice(0, 12).toUpperCase();
+    await prisma.qRCode.create({ data: { businessId: business.id, label: "Desk", shortCode: code } });
+    const item = await prisma.menuItem.create({
+      data: { businessId: business.id, name: "Trim", pricePaise: 20000, kind: "SERVICE", durationMinutes: 20 }
+    });
+    const today = istDayKey(new Date());
+    for (let n = 1; n <= 20; n += 1) {
+      const ip = `198.51.101.${n}`;
+      ips.push(ip);
+      const saved = await publicBook(
+        bookReq(ip, {
+          code,
+          itemId: item.id,
+          preferredDate: today,
+          customerPhone: `8${String(n).padStart(9, "0")}`,
+          customerName: `Guest ${n}`
+        })
+      );
+      expect(saved.status, `attempt ${n}`).toBe(200);
+      bookingIds.push((await saved.json()).id);
+    }
+    const ip = "198.51.101.21";
+    ips.push(ip);
+    const limited = await publicBook(
+      bookReq(ip, {
+        code,
+        itemId: item.id,
+        preferredDate: today,
+        customerPhone: "8111111111",
+        customerName: "Guest 21"
+      })
+    );
+    expect(limited.status).toBe(429);
+    expect(await limited.json()).toEqual({ error: "Too many requests" });
+    expect(await prisma.bookingRequest.count({ where: { businessId: business.id } })).toBe(20);
+  }, 40000);
+
   it("locks booking when the catalogue plan omits Menu", async () => {
     const stamp = Date.now().toString(36);
     const ip = `198.51.100.${(stamp.length % 50) + 20}`;
