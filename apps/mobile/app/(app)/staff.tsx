@@ -2,7 +2,8 @@ import { Screen } from "../../src/ui/screen";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState , useMemo } from "react";
 import { User } from "lucide-react-native";
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
+import { StyleSheet, Text, View } from "react-native";
 import { apiData } from "../../src/api/data";
 import { ApiError } from "../../src/api/http";
 import { useI18n } from "../../src/i18n";
@@ -56,8 +57,8 @@ function StaffScreenContent() {
   }
 
   return (
-    <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <View style={styles.screen}>
+      <KeyboardAwareScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" bottomOffset={12}>
         <Text style={[styles.title, lang === "hi" && styles.hindi]}>{t.staff}</Text>
         <SectionHeader label={t.name} />
         <View style={styles.card}>
@@ -85,11 +86,11 @@ function StaffScreenContent() {
             ))
           )}
         </Group>
-      </ScrollView>
+      </KeyboardAwareScrollView>
       <StickyAction>
         <PillButton label={t.addItem} onPress={add} disabled={name.trim().length < 2} hint={t.hintName} tone="dark" />
       </StickyAction>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 

@@ -6,6 +6,7 @@ import * as ImagePicker from "expo-image-picker";
 import { Camera, Plus, UtensilsCrossed } from "lucide-react-native";
 import { useState } from "react";
 import { Pressable, StyleSheet, Switch, Text, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import Svg, { Circle, Rect } from "react-native-svg";
 import { apiBaseUrl } from "../../src/api/instance";
 import { apiData } from "../../src/api/data";
@@ -182,7 +183,11 @@ function MenuTabContent() {
               <Chip label={t.gridView} selected={grid} onPress={() => setGrid(true)} />
               <Chip label={t.listView} selected={!grid} onPress={() => setGrid(false)} />
             </View>
-            {!locked ? <Field label={t.search} tone="paper" value={search} onChangeText={setSearch} /> : null}
+            {!locked ? (
+              <KeyboardAwareScrollView style={styles.searchScroll} contentContainerStyle={styles.searchContent} keyboardShouldPersistTaps="handled" bottomOffset={12}>
+                <Field label={t.search} tone="paper" value={search} onChangeText={setSearch} />
+              </KeyboardAwareScrollView>
+            ) : null}
             {!locked ? (
               <View style={styles.row}>
                 <Chip label={t.dateAll} selected={!categoryId} onPress={() => setCategoryId(null)} />
@@ -457,6 +462,8 @@ const styles = StyleSheet.create({
   header: { gap: 12, marginBottom: 12 },
   titleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   title: { fontFamily: fonts.display, fontSize: 28 },
+  searchScroll: { flexGrow: 0 },
+  searchContent: { flexGrow: 0 },
   row: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
   stack: { gap: 12 },
   cell: { flex: 1, padding: 6 },

@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { StyleSheet, Text, TextInput, View, type TextInputProps } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { KeyboardStickyView } from "react-native-keyboard-controller";
 import { useI18n } from "../i18n";
 import { fonts } from "../theme";
 import { PrimaryButton, SecondaryButton, TextButton } from "./buttons";
@@ -79,7 +80,7 @@ export function StickyAction({ children }: { children: ReactNode }) {
   const palette = usePalette();
   const insets = useSafeAreaInsets();
   return (
-    <View
+    <KeyboardStickyView
       style={[
         styles.sticky,
         {
@@ -90,7 +91,7 @@ export function StickyAction({ children }: { children: ReactNode }) {
       ]}
     >
       {children}
-    </View>
+    </KeyboardStickyView>
   );
 }
 

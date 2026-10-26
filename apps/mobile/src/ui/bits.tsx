@@ -3,6 +3,7 @@ import type { LucideIcon } from "lucide-react-native";
 import { Check } from "lucide-react-native";
 import { useEffect, useId, useState, type ReactNode } from "react";
 import { Modal, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   Easing,
@@ -428,7 +429,14 @@ export function BottomSheet({
           <Animated.View style={[styles.sheet, { backgroundColor: palette.card }, sheet]}>
             <View style={[styles.handle, { backgroundColor: palette.line }]} />
             <Text style={[styles.sheetTitle, { color: palette.ink }, lang === "hi" && styles.hindi]}>{title}</Text>
-            {children}
+            <KeyboardAwareScrollView
+              style={styles.sheetScroll}
+              contentContainerStyle={styles.sheetContent}
+              keyboardShouldPersistTaps="handled"
+              bottomOffset={12}
+            >
+              {children}
+            </KeyboardAwareScrollView>
           </Animated.View>
         </GestureDetector>
       </View>
@@ -477,7 +485,9 @@ const styles = StyleSheet.create({
   emptyBody: { fontFamily: fonts.body, fontSize: 15, lineHeight: 22, textAlign: "center" },
   sheetRoot: { flex: 1, justifyContent: "flex-end" },
   scrim: { ...StyleSheet.absoluteFill },
-  sheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, gap: 12, paddingBottom: 28 },
+  sheet: { maxHeight: "92%", borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, gap: 12, paddingBottom: 28 },
+  sheetScroll: { flexShrink: 1 },
+  sheetContent: { gap: 12, paddingBottom: 20 },
   handle: { alignSelf: "center", width: 40, height: 4, borderRadius: 2 },
   sheetTitle: { fontFamily: fonts.title, fontSize: 20 },
   hindi: { fontFamily: fonts.hindiStrong },

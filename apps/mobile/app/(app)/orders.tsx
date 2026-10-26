@@ -7,6 +7,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { ChevronRight, ClipboardList } from "lucide-react-native";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Linking, StyleSheet, Text, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withDelay, withSpring, withTiming } from "react-native-reanimated";
 import { apiData } from "../../src/api/data";
@@ -375,13 +376,13 @@ function OrdersScreenContent() {
       {error ? <Text style={[styles.error, { color: palette.danger }]}>{error}</Text> : null}
       {locked ? <LockedModuleCard moduleId={tab === "products" ? "MENU" : tab === "orders" ? "STORE" : "REVIEWS"} /> : null}
       {tab === "products" && !locked ? (
-        <View style={styles.stack}>
+        <KeyboardAwareScrollView style={styles.inlineFormScroll} contentContainerStyle={styles.stack} keyboardShouldPersistTaps="handled" bottomOffset={12}>
           <Field label={t.name} tone="paper" value={name} onChangeText={setName} />
           <Field label={t.price} tone="paper" value={price} onChangeText={setPrice} keyboardType="decimal-pad" />
           <PillButton label={t.quickAdd} onPress={addProduct} disabled={!name.trim() || !price.trim()} hint={t.hintNamePrice} tone="dark" />
           <PillButton label={t.photo} onPress={() => fromPhoto("camera")} tone="outline" />
           <PillButton label={t.gallery} onPress={() => fromPhoto("library")} tone="outline" />
-        </View>
+        </KeyboardAwareScrollView>
       ) : null}
       {showSkeleton ? (
         <View style={styles.stack}>
@@ -521,6 +522,7 @@ const styles = StyleSheet.create({
   listPad: { padding: 16, paddingBottom: 120 },
   header: { gap: 12, marginBottom: 12 },
   stack: { gap: 12 },
+  inlineFormScroll: { flexGrow: 0, maxHeight: 280 },
   row: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   titleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
   screenTitle: { fontFamily: fonts.display, fontSize: 28 },

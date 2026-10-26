@@ -3,12 +3,14 @@ import { router } from "expo-router";
 import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { apiData } from "../../src/api/data";
 import { ApiError } from "../../src/api/http";
 import { useI18n } from "../../src/i18n";
 import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
 import { PrimaryButton, TextButton } from "../../src/ui/buttons";
+import { StickyAction } from "../../src/ui/controls";
 import { Field } from "../../src/ui/controls";
 import { usePalette } from "../../src/ui/theme";
 
@@ -39,26 +41,31 @@ export default function EmailScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.screen, { backgroundColor: palette.paper }]}>
-      <View style={styles.body}>
+    <SafeAreaView style={[styles.screen, { backgroundColor: palette.paper }]} edges={["top"]}>
+      <KeyboardAwareScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" bottomOffset={12}>
+        <View style={styles.body}>
         <Text style={[styles.title, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.emailInstead}</Text>
         <Field label={t.email} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoComplete="email" />
         <Field label={t.password} value={password} onChangeText={setPassword} secureTextEntry autoComplete="password" />
         {error ? <Text style={[styles.error, { color: palette.danger }]}>{error}</Text> : null}
+        <TextButton label={t.phoneInstead} onPress={() => router.back()} />
+        </View>
+      </KeyboardAwareScrollView>
+      <StickyAction>
         <PrimaryButton
           label={t.signIn}
           onPress={submit}
           disabled={busy || !email.includes("@") || password.length < 1}
           hint={!email.includes("@") || password.length < 1 ? t.hintEmail : t.hintWait}
         />
-        <TextButton label={t.phoneInstead} onPress={() => router.back()} />
-      </View>
+      </StickyAction>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
+  scrollContent: { flexGrow: 1 },
   body: { padding: 22, gap: 14 },
   title: { fontFamily: fonts.display, fontSize: 28 },
   error: { fontFamily: fonts.body },

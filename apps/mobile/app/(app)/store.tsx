@@ -1,7 +1,8 @@
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { Screen } from "../../src/ui/screen";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { apiData } from "../../src/api/data";
 import { ApiError } from "../../src/api/http";
 import { useI18n } from "../../src/i18n";
@@ -99,7 +100,7 @@ function StoreScreenContent() {
   }
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: palette.paper }} contentContainerStyle={styles.content}>
+    <KeyboardAwareScrollView style={{ flex: 1, backgroundColor: palette.paper }} contentContainerStyle={styles.content}>
       <Text style={[styles.title, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.storeSettings}</Text>
       {modules && !hasModule(modules, "STORE") ? <LockedModuleCard moduleId="STORE" /> : null}
       {form ? (
@@ -144,7 +145,7 @@ function StoreScreenContent() {
         <Text key={row.id} style={[styles.note, { color: palette.muted }]}>{row.name}{row.city ? ` · ${row.city}` : ""}</Text>
       ))}
       {error ? <Text style={{ color: palette.danger, fontFamily: fonts.body }}>{error}</Text> : null}
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 

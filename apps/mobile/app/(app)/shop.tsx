@@ -1,10 +1,11 @@
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { Screen } from "../../src/ui/screen";
 import type { BillingSummary, ShopOrderDetail } from "@reviewqr/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as WebBrowser from "expo-web-browser";
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState , useMemo } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { apiData } from "../../src/api/data";
 import { ApiError } from "../../src/api/http";
 import { useI18n } from "../../src/i18n";
@@ -205,7 +206,7 @@ function ShopScreenContent() {
   const needsAddress = lines.some((line) => line.ships);
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <KeyboardAwareScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.row}>
         {(["catalogue", "orders", "plan"] as const).map((item) => (
           <Pressable key={item} accessibilityRole="button" accessibilityState={{ selected: tab === item }} accessibilityLabel={item === "catalogue" ? t.catalogue : item === "orders" ? t.orders : t.plans} onPress={() => setTab(item)} style={[styles.chip, tab === item && styles.chipOn]}>
@@ -328,7 +329,7 @@ function ShopScreenContent() {
           ))}
         </View>
       ) : null}
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 

@@ -8,6 +8,7 @@ import { StatusBar } from "expo-status-bar";
 import { Stack, usePathname } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { KeyboardProvider } from "react-native-keyboard-controller";
 import { AppOpenEvent } from "../src/analytics/open";
 import { I18nProvider } from "../src/i18n";
 import { OrderStatusSync } from "../src/orders/sync";
@@ -54,18 +55,20 @@ function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <I18nProvider>
-        <PersistQueryClientProvider client={queryClient} persistOptions={queryPersistOptions}>
-          <SessionProvider>
-            <ThemeProvider>
-              <AppOpenEvent />
-              <OrderStatusSync />
-              <AppUpdateCheck />
-              <Boot fontsReady={Boolean(loaded)} />
-            </ThemeProvider>
-          </SessionProvider>
-        </PersistQueryClientProvider>
-      </I18nProvider>
+      <KeyboardProvider>
+        <I18nProvider>
+          <PersistQueryClientProvider client={queryClient} persistOptions={queryPersistOptions}>
+            <SessionProvider>
+              <ThemeProvider>
+                <AppOpenEvent />
+                <OrderStatusSync />
+                <AppUpdateCheck />
+                <Boot fontsReady={Boolean(loaded)} />
+              </ThemeProvider>
+            </SessionProvider>
+          </PersistQueryClientProvider>
+        </I18nProvider>
+      </KeyboardProvider>
     </GestureHandlerRootView>
   );
 }

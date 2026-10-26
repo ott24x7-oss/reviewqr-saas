@@ -1,7 +1,8 @@
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { Screen } from "../../src/ui/screen";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { apiData } from "../../src/api/data";
 import { ApiError } from "../../src/api/http";
 import { useI18n } from "../../src/i18n";
@@ -61,7 +62,7 @@ function ReviewsScreenContent() {
   }
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: palette.paper }} contentContainerStyle={styles.content}>
+    <KeyboardAwareScrollView style={{ flex: 1, backgroundColor: palette.paper }} contentContainerStyle={styles.content}>
       <Text style={[styles.title, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.reviews}</Text>
       <View style={styles.row}>
         {["", "5", "4", "3", "2", "1"].map((score) => (
@@ -105,7 +106,7 @@ function ReviewsScreenContent() {
         onPress={() => run(() => apiData(`/api/v1/businesses/${id}/ai`, { method: "PUT", body: JSON.stringify({ enabled: !ai.data?.enabled, services: services || ai.data?.services || "" }) }), "ai")}
       />
       {error ? <Text style={{ color: palette.danger, fontFamily: fonts.body }}>{error}</Text> : null}
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 

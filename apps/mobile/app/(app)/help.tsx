@@ -1,8 +1,9 @@
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { Screen } from "../../src/ui/screen";
 import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput } from "react-native";
+import { Pressable, StyleSheet, Text, TextInput } from "react-native";
 import { apiData } from "../../src/api/data";
 import { replayAllTours } from "../../src/guide/store";
 import { useI18n } from "../../src/i18n";
@@ -48,7 +49,7 @@ function HelpScreenContent() {
   ].filter((guide) => !needle || `${guide.title} ${guide.body}`.toLowerCase().includes(needle));
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: palette.paper }} contentContainerStyle={styles.content}>
+    <KeyboardAwareScrollView style={{ flex: 1, backgroundColor: palette.paper }} contentContainerStyle={styles.content}>
       <Text style={[styles.title, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.helpCenter}</Text>
       <TextInput
         accessibilityLabel={t.helpSearch}
@@ -78,7 +79,7 @@ function HelpScreenContent() {
       <Pressable accessibilityRole="button" accessibilityLabel={t.wizardBack} onPress={() => router.back()} style={styles.back}>
         <Text style={{ color: palette.deep, fontFamily: fonts.bodyStrong }}>{t.wizardBack}</Text>
       </Pressable>
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 

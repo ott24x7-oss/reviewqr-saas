@@ -1,3 +1,4 @@
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   BUSINESS_CATEGORIES,
@@ -18,7 +19,7 @@ import { router } from "expo-router";
 import LottieView from "lottie-react-native";
 import { Camera, Download, Image as ImageIcon, Share2, ShoppingBag, Store, Utensils } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
-import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Image, Linking, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { trackAppEvent } from "../../src/analytics/events";
@@ -347,7 +348,7 @@ export default function WizardScreen() {
   if (done) {
     return (
       <SafeAreaView style={styles.screen} testID="wizard-success">
-        <ScrollView contentContainerStyle={styles.content}>
+        <KeyboardAwareScrollView style={{ flex: 1 }} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" bottomOffset={12}>
           {!reduceMotion && !lowRam ? (
             <LottieView source={require("../../assets/lottie/confetti.json")} autoPlay loop={false} style={styles.confetti} />
           ) : null}
@@ -375,7 +376,7 @@ export default function WizardScreen() {
               <Text style={[styles.actionText, { color: palette.ink }]}>{t.orderStand}</Text>
             </Pressable>
           </View>
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </SafeAreaView>
     );
   }
@@ -384,7 +385,7 @@ export default function WizardScreen() {
 
   return (
     <SafeAreaView style={styles.screen} testID={`wizard-step-${step}`}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <KeyboardAwareScrollView style={{ flex: 1 }} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" bottomOffset={12}>
         <ProgressSteps labels={[t.stepBusiness, t.stepLook, t.stepLink, t.stepMenu]} step={step} />
         <Animated.View style={stepShift}>
         {step === 1 ? (
@@ -537,7 +538,7 @@ export default function WizardScreen() {
             }}
           />
         ) : null}
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 }

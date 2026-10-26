@@ -2,7 +2,8 @@ import type { PlaceDetails, PlacesSearch } from "@reviewqr/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useState , useMemo } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { apiData } from "../api/data";
 import { ApiError } from "../api/http";
 import { useI18n } from "../i18n";
@@ -131,8 +132,8 @@ export function BusinessForm({ initial, businessId }: { initial?: BusinessCard |
   }
 
   return (
-    <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <View style={styles.screen}>
+      <KeyboardAwareScrollView style={{ flex: 1 }} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" bottomOffset={12}>
         <Text style={[styles.title, lang === "hi" && styles.hindi]}>{t.businessDetails}</Text>
         <SectionHeader label={t.searchPlaces} />
         <View style={styles.card}>
@@ -161,7 +162,7 @@ export function BusinessForm({ initial, businessId }: { initial?: BusinessCard |
           <FilledField label={t.reviewUrl} value={draft.googleReviewUrl} onChangeText={(googleReviewUrl) => patch({ googleReviewUrl })} autoCapitalize="none" />
         </View>
         {error ? <Text style={styles.error}>{error}</Text> : null}
-      </ScrollView>
+      </KeyboardAwareScrollView>
       <StickyAction>
         <PillButton
           label={t.save}
@@ -171,7 +172,7 @@ export function BusinessForm({ initial, businessId }: { initial?: BusinessCard |
           tone="dark"
         />
       </StickyAction>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 

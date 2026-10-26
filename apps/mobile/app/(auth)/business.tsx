@@ -1,8 +1,9 @@
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import type { TokenPair } from "@reviewqr/shared";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import { useEffect, useRef, useState , useMemo } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { trackAppEvent } from "../../src/analytics/events";
 import { apiData } from "../../src/api/data";
@@ -66,8 +67,8 @@ export default function BusinessNameScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={["top"]}>
-      <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <View style={styles.screen}>
+        <KeyboardAwareScrollView style={{ flex: 1 }} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" bottomOffset={12}>
           <Text style={[styles.title, lang === "hi" && styles.hindi]}>{t.signupTitle}</Text>
           <SectionHeader label={t.name} />
           <View style={styles.card}>
@@ -75,11 +76,11 @@ export default function BusinessNameScreen() {
             <FilledField label={t.businessName} value={businessName} onChangeText={setBusinessName} />
           </View>
           {error ? <Text style={styles.error}>{error}</Text> : null}
-        </ScrollView>
+        </KeyboardAwareScrollView>
         <StickyAction>
           <PillButton label={t.finish} onPress={finish} disabled={busy || name.trim().length < 2} hint={name.trim().length < 2 ? t.hintName : t.hintWait} />
         </StickyAction>
-      </KeyboardAvoidingView>
+      </View>
     </SafeAreaView>
   );
 }

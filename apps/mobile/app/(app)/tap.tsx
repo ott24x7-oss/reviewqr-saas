@@ -1,3 +1,4 @@
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { Screen } from "../../src/ui/screen";
 import type { TapLink, TapPage } from "@reviewqr/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -5,7 +6,7 @@ import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { Link2, Plus } from "lucide-react-native";
 import { useEffect, useRef, useState, useMemo } from "react";
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from "react-native-reanimated";
 import { WebView } from "react-native-webview";
 import * as WebBrowser from "expo-web-browser";
@@ -265,7 +266,7 @@ function TapScreenContent() {
   );
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <KeyboardAwareScrollView style={styles.screen} contentContainerStyle={styles.content}>
       {section === "theme" ? themeBlock : null}
       {section === "buttons" ? buttonBlock : null}
       <View style={styles.titleRow}>
@@ -355,7 +356,7 @@ function TapScreenContent() {
           { title: t.coachQrNfc, body: t.coachQrNfcBody, top: 360 }
         ]}
       />
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 

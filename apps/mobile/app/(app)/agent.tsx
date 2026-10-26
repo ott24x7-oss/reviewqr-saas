@@ -1,7 +1,8 @@
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { Screen } from "../../src/ui/screen";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { ScrollView, Share, StyleSheet, Text } from "react-native";
+import { Share, StyleSheet, Text } from "react-native";
 import { apiData } from "../../src/api/data";
 import { ApiError } from "../../src/api/http";
 import { useI18n } from "../../src/i18n";
@@ -43,7 +44,7 @@ function AgentScreenContent() {
 
   const totals = home.data?.totals;
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: palette.paper }} contentContainerStyle={styles.content}>
+    <KeyboardAwareScrollView style={{ flex: 1, backgroundColor: palette.paper }} contentContainerStyle={styles.content}>
       <Text style={[styles.title, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.agentHome}</Text>
       <Text style={[styles.note, { color: palette.muted }]}>{home.data?.code}</Text>
       <PillButton label={t.shareLink} tone="dark" disabled={!home.data?.link} onPress={() => home.data && Share.share({ message: home.data.shareText })} />
@@ -66,7 +67,7 @@ function AgentScreenContent() {
         <Text key={row.id} style={[styles.note, { color: palette.ink }]}>{t.rupee}{Math.round(row.amountPaise / 100)} · {row.utr} · {String(row.paidAt).slice(0, 10)}</Text>
       ))}
       {error ? <Text style={{ color: palette.danger, fontFamily: fonts.body }}>{error}</Text> : null}
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 

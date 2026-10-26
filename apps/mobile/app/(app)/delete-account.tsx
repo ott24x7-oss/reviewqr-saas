@@ -1,6 +1,7 @@
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { Screen } from "../../src/ui/screen";
 import { useEffect, useState , useMemo } from "react";
-import { ScrollView, StyleSheet, Text, TextInput } from "react-native";
+import { StyleSheet, Text, TextInput } from "react-native";
 import { apiBaseUrl } from "../../src/api/instance";
 import { apiData } from "../../src/api/data";
 import { ApiError } from "../../src/api/http";
@@ -77,7 +78,7 @@ function DeleteAccountScreenContent() {
   }
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <KeyboardAwareScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Text style={[styles.title, lang === "hi" && styles.hindi]}>{t.deleteAccount}</Text>
       <Text style={[styles.note, lang === "hi" && styles.hindi]}>{t.deleteHint}</Text>
       <Text style={[styles.note, lang === "hi" && styles.hindi]}>{t.privacyWeb}</Text>
@@ -119,7 +120,7 @@ function DeleteAccountScreenContent() {
           <PillButton label={secondsLeft > 0 ? `${t.resendIn} ${secondsLeft}s` : t.resend} onPress={() => { void requestCode(); }} disabled={busy || secondsLeft > 0} tone="outline" />
         </>
       ) : null}
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 

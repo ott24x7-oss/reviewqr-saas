@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MessageSquare } from "lucide-react-native";
 import { useState } from "react";
 import { Linking, StyleSheet, Text, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 import { apiData } from "../../src/api/data";
@@ -154,9 +155,11 @@ function FeedbackTabContent() {
                   {(["NEW", "IN_PROGRESS", "RESOLVED", "IGNORED"] as const).map((status) => (
                     <Chip key={status} label={status} onPress={() => saveDetail(item, status)} />
                   ))}
+                  <KeyboardAwareScrollView style={styles.inlineFormScroll} contentContainerStyle={styles.inlineFormContent} keyboardShouldPersistTaps="handled" bottomOffset={12}>
                   <Field label={t.internalNote} tone="paper" value={note} onChangeText={setNote} />
                   <Field label={t.tags} tone="paper" value={tagText} onChangeText={setTagText} />
                   <PillButton label={t.save} tone="dark" onPress={() => saveDetail(item)} />
+                  </KeyboardAwareScrollView>
                 </View>
               ) : null}
               <Text style={[styles.note, { color: palette.muted }]}>{item.message}</Text>
@@ -187,6 +190,8 @@ const styles = StyleSheet.create({
   note: { fontFamily: fonts.body, fontSize: 15, lineHeight: 22 },
   hindi: { fontFamily: fonts.hindi },
   row: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  inlineFormScroll: { flexGrow: 0, width: "100%", maxHeight: 260 },
+  inlineFormContent: { gap: 8 },
   card: { marginBottom: 12, gap: 8 },
   reveal: {
     position: "absolute",
