@@ -51,7 +51,7 @@ export async function findUserByPhone(raw: string) {
 export async function preferredOtpChannel(): Promise<"whatsapp" | "email"> {
   try {
     const { getBaileys } = await import("./whatsapp-baileys");
-    if (getBaileys().isConnected()) return "whatsapp";
+    if (await getBaileys().ensureConnected(3_000)) return "whatsapp";
   } catch {
     /* try Cloud next */
   }
@@ -94,7 +94,7 @@ async function deliverCode(opts: { phone: string; email?: string | null; code: s
   let baileysConnected = false;
   try {
     const { getBaileys } = await import("./whatsapp-baileys");
-    baileysConnected = getBaileys().isConnected();
+    baileysConnected = await getBaileys().ensureConnected();
   } catch {
     baileysConnected = false;
   }

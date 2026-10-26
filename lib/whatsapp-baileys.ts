@@ -27,6 +27,11 @@ type Status =
   | "unavailable";
 
 const AUTH_KEY = "whatsapp.baileys.auth";
+// Set when an admin presses Disconnect, so a restart doesn't reconnect against their wish.
+const PAUSED_KEY = "whatsapp.baileys.paused";
+const WATCHDOG_MS = 60_000;
+// Two Railway containers overlap during a deploy and kick each other off; back off longer then.
+const REPLACED_BACKOFF_MS = 30_000;
 
 class BaileysManager {
   private socket: any = null;
@@ -39,6 +44,7 @@ class BaileysManager {
   private _lastEvent: string | null = null;
   private _manualStop = false;
   private _downTimer: ReturnType<typeof setTimeout> | null = null;
+  private _watchdog: ReturnType<typeof setInterval> | null = null;
 
   getInfo() {
     return {
@@ -55,9 +61,46 @@ class BaileysManager {
     return this._status === "connected" && !!this.socket;
   }
 
-  async start(): Promise<void> {
+  /**
+   * Reconnects with the saved login after a restart or deploy, and keeps checking every minute.
+   * Does nothing without saved creds (pair once from Admin → WhatsApp) or after a manual Disconnect.
+   */
+  autoStart() {
+    if (!this._watchdog) {
+      this._watchdog = setInterval(() => {
+        this.resumeIfPaired().catch(() => {});
+      }, WATCHDOG_MS);
+      this._watchdog.unref?.();
+    }
+    return this.resumeIfPaired();
+  }
+
+  private async resumeIfPaired() {
+    if (this.isConnected() || this._manualStop) return false;
+    if (["starting", "connecting", "qr-pending", "unavailable"].includes(this._status)) return false;
+    if (await isPaused()) return false;
+    if (!(await loadAuthBlob())) return false;
+    await this.start({ auto: true });
+    return true;
+  }
+
+  /** OTP and alert path: reconnect if needed and wait briefly so the message can still go out. */
+  async ensureConnected(waitMs = 8_000) {
+    if (this.isConnected()) return true;
+    await this.resumeIfPaired().catch(() => false);
+    const until = Date.now() + waitMs;
+    while (Date.now() < until) {
+      if (this.isConnected()) return true;
+      if (!["starting", "connecting"].includes(this._status)) break;
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+    return this.isConnected();
+  }
+
+  async start(opts: { auto?: boolean } = {}): Promise<void> {
     if (this._status === "starting" || this._status === "connecting") return;
     if (this._status === "connected") return;
+    if (!opts.auto) await setPaused(false);
 
     this._status = "starting";
     this._manualStop = false;
@@ -221,9 +264,10 @@ class BaileysManager {
         } else {
           this._status = "disconnected";
           // Auto-reconnect for transient drops
+          const wait = code === DisconnectReason.connectionReplaced ? REPLACED_BACKOFF_MS : 5000;
           setTimeout(() => {
-            if (this._status === "disconnected" && !this._manualStop) this.start().catch(() => {});
-          }, 5000);
+            if (this._status === "disconnected" && !this._manualStop) this.start({ auto: true }).catch(() => {});
+          }, wait);
         }
         if (!this._manualStop) {
           if (reason === "logged-out") this.alertDown(reason);
@@ -247,6 +291,7 @@ class BaileysManager {
 
   async stop(opts: { logout?: boolean } = {}): Promise<void> {
     this._manualStop = true;
+    await setPaused(true);
     if (this._downTimer) {
       clearTimeout(this._downTimer);
       this._downTimer = null;
@@ -319,6 +364,25 @@ async function saveAuthBlob(blob: { creds: any; keys: any }) {
     create: { key: AUTH_KEY, value },
     update: { value }
   });
+}
+
+async function isPaused() {
+  try {
+    const row = await prisma.appSetting.findUnique({ where: { key: PAUSED_KEY } });
+    return row?.value === "1";
+  } catch {
+    return false;
+  }
+}
+
+async function setPaused(paused: boolean) {
+  if (paused) {
+    await prisma.appSetting
+      .upsert({ where: { key: PAUSED_KEY }, create: { key: PAUSED_KEY, value: "1" }, update: { value: "1" } })
+      .catch(() => {});
+  } else {
+    await prisma.appSetting.deleteMany({ where: { key: PAUSED_KEY } }).catch(() => {});
+  }
 }
 
 async function clearAuthBlob() {

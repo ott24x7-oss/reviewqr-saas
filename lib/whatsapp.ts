@@ -58,7 +58,7 @@ export async function sendWhatsAppCloud(payload: WhatsAppPayload) {
 async function sendWhatsAppBaileys(payload: WhatsAppPayload) {
   const { getBaileys } = await import("./whatsapp-baileys");
   const mgr = getBaileys();
-  if (!mgr.isConnected()) {
+  if (!(await mgr.ensureConnected())) {
     throw new Error("Baileys not connected — open Admin → WhatsApp to pair.");
   }
   await mgr.send(payload.to, payload.message);
@@ -110,7 +110,7 @@ export async function sendWhatsAppReport(payload: WhatsAppPayload) {
   try {
     const { getBaileys } = await import("./whatsapp-baileys");
     const manager = getBaileys();
-    if (manager.isConnected()) {
+    if (await manager.ensureConnected()) {
       await manager.send(payload.to, payload.message);
       return { ok: true as const, via: "baileys" as const };
     }
