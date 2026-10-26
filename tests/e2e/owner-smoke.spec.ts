@@ -37,14 +37,18 @@ test("owner registers, collects a private review, and sees UPI checkout", async 
   await page.getByRole("button", { name: "Create account" }).click();
   await page.waitForURL("**/dashboard**");
 
-  await page.goto("/dashboard/businesses");
-  await page.getByRole("link", { name: "Manage", exact: true }).click();
-  await page.getByRole("link", { name: "Edit" }).click();
+  await page.goto("/dashboard/account/settings?section=businesses");
+  const manageLink = page.getByRole("link", { name: "Manage", exact: true });
+  const manageHref = await manageLink.getAttribute("href");
+  const businessId = manageHref?.match(/\/dashboard\/businesses\/([^/?#]+)/)?.[1];
+  expect(businessId).toBeTruthy();
+  await manageLink.click();
+  await page.getByRole("link", { name: "Edit business details" }).click();
   await page.getByLabel("Google review URL").fill("https://search.google.com/local/writereview?placeid=smoke");
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(page.getByText("Saved")).toBeVisible();
   await page.goBack();
-  const reviewHref = await page.getByRole("link", { name: "View page" }).getAttribute("href");
+  const reviewHref = await page.getByRole("link", { name: "Open live page" }).getAttribute("href");
   const reviewPath = new URL(reviewHref || "http://localhost/r/missing").pathname;
   await page.goto(reviewPath);
   await page.getByRole("button", { name: "2 stars" }).click();
@@ -57,7 +61,8 @@ test("owner registers, collects a private review, and sees UPI checkout", async 
   await expect(page.getByRole("heading", { name: "Leave a public review" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Tell the owner privately" })).toBeVisible();
   await page.goBack();
-  await page.getByRole("main").getByRole("link", { name: /^QR codes/ }).click();
+  await page.getByRole("link", { name: "QR codes & NFC" }).click();
+  await page.getByRole("link", { name: "Create a code" }).click();
   await page.getByLabel("Label").fill("Front counter");
   await page.getByRole("button", { name: "Create QR code" }).click();
   await expect(page.getByText("Short URL")).toBeVisible();
@@ -80,15 +85,12 @@ test("owner registers, collects a private review, and sees UPI checkout", async 
 
   await page.setViewportSize({ width: 360, height: 800 });
   await page.route(/https:\/\/wa\.me\//, (route) => route.abort());
-  await page.goto("/dashboard/businesses");
-  await page.getByRole("link", { name: "Manage", exact: true }).click();
-  await page.getByRole("link", { name: "Store settings" }).click();
+  await page.goto(`/dashboard/account/settings?section=store&businessId=${businessId}`);
   await expect(page.getByLabel("Store layout"), page.url()).toBeVisible();
   await page.getByLabel("Store layout").selectOption("FOOD");
   await page.getByRole("button", { name: "Save store settings" }).click();
   await expect(page.getByText("Store settings saved")).toBeVisible();
-  await page.goBack();
-  await page.getByRole("link", { name: /^Menu/ }).click();
+  await page.goto(`/dashboard/sell/menu?businessId=${businessId}`);
   await page.getByLabel("Item name").fill("Smoke Coffee");
   await page.getByLabel("Price in rupees").fill("80");
   await page.getByRole("button", { name: "Add item" }).click();
@@ -104,9 +106,7 @@ test("owner registers, collects a private review, and sees UPI checkout", async 
   await expect(page.getByRole("listitem").filter({ hasText: "New" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Reorder" })).toBeVisible();
 
-  await page.goto("/dashboard/businesses");
-  await page.getByRole("link", { name: "Manage", exact: true }).click();
-  await page.getByRole("link", { name: "Store settings" }).click();
+  await page.goto(`/dashboard/account/settings?section=store&businessId=${businessId}`);
   await page.getByLabel("Store layout").selectOption("SHOP");
   await page.getByRole("button", { name: "Save store settings" }).click();
   await expect(page.getByText("Store settings saved")).toBeVisible();
@@ -119,9 +119,7 @@ test("owner registers, collects a private review, and sees UPI checkout", async 
   const shopNumber = (await page.getByRole("heading", { level: 1 }).innerText()).trim();
   expect(shopNumber).not.toBe(foodNumber);
 
-  await page.goto("/dashboard/businesses");
-  await page.getByRole("link", { name: "Manage", exact: true }).click();
-  await page.getByRole("link", { name: "Store settings" }).click();
+  await page.goto(`/dashboard/account/settings?section=store&businessId=${businessId}`);
   await page.getByRole("button", { name: "Premium Store" }).click();
   await page.getByRole("button", { name: "Save store settings" }).click();
   await expect(page.getByText("Store settings saved")).toBeVisible();
@@ -134,12 +132,13 @@ test("owner registers, collects a private review, and sees UPI checkout", async 
   expect(premiumNumber).toBeTruthy();
   expect(premiumNumber).not.toBe(shopNumber);
 
-  await page.goto("/dashboard/orders");
+  await page.goto("/dashboard/sell/orders");
   await expect(page.getByText(foodNumber, { exact: true })).toBeVisible();
   await expect(page.getByText(shopNumber, { exact: true })).toBeVisible();
-  const foodCard = page.getByText(foodNumber, { exact: true }).locator("xpath=ancestor::*[.//a[normalize-space()='Bill 58mm']][1]");
+  await page.getByRole("button", { name: foodNumber, exact: true }).click();
+  const drawer = page.getByRole("dialog");
   const popupPromise = page.waitForEvent("popup");
-  await foodCard.getByRole("link", { name: "Bill 58mm" }).click();
+  await drawer.getByRole("link", { name: "Bill 58mm" }).click();
   const bill = await popupPromise;
   await expect(bill.getByText(`BILL ${foodNumber}`)).toBeVisible();
   await expect(bill.getByText("Smoke Coffee")).toBeVisible();
@@ -149,9 +148,7 @@ test("owner registers, collects a private review, and sees UPI checkout", async 
   const pageCss = await bill.locator("style").evaluateAll((nodes) => nodes.map((node) => node.textContent || "").join("\n"));
   expect(pageCss).toContain("size: 58mm");
 
-  await page.goto("/dashboard/businesses");
-  await page.getByRole("link", { name: "Manage", exact: true }).click();
-  await page.getByRole("link", { name: /^Menu/ }).click();
+  await page.goto(`/dashboard/sell/menu?businessId=${businessId}`);
   await page.getByLabel("Quick add name").fill("Smoke Bun");
   await page.getByLabel("Quick add price").fill("40");
   await page.getByLabel("Quick add price").press("Enter");
@@ -161,14 +158,10 @@ test("owner registers, collects a private review, and sees UPI checkout", async 
   await expect(page.getByLabel("Draft name 1")).toHaveValue("Smoke Toast");
   await expect(page.getByLabel("Draft price 1")).toHaveValue("45");
 
-  await page.goto("/dashboard/billing");
+  await page.goto("/dashboard/account/plan");
   await page.getByRole("button", { name: "Upgrade" }).first().click();
   await expect(page.getByText(/Pay with UPI|GPay, PhonePe/)).toBeVisible();
 
-  await page.goto("/dashboard/businesses");
-  const href = await page.getByRole("link", { name: "Manage", exact: true }).getAttribute("href");
-  const businessId = href?.match(/\/dashboard\/businesses\/([^/?#]+)/)?.[1];
-  expect(businessId).toBeTruthy();
   const printed = await page.request.post(`/api/businesses/${businessId}/print`, {
     data: {
       templateId: "cr80",
@@ -204,7 +197,7 @@ test("owner registers, collects a private review, and sees UPI checkout", async 
     await prisma.device.create({
       data: { shortCode: stock, kind: "CARD", status: "IN_STOCK", tableLabel: "Stock" }
     });
-    await page.goto("/dashboard/qr-codes");
+    await page.goto("/dashboard/page/qr?tab=activate");
     await page.getByPlaceholder("Printed code or QR link").fill(stock);
     await page.getByRole("button", { name: "Check code" }).click();
     await page.getByRole("button", { name: "Activate", exact: true }).click();
