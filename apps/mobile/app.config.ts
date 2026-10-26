@@ -17,11 +17,20 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   userInterfaceStyle: "automatic",
   ios: {
     supportsTablet: false,
-    bundleIdentifier: packageName
+    bundleIdentifier: packageName,
+    associatedDomains: ["applinks:qr24x7.in"]
   },
   android: {
     package: packageName,
     versionCode: 5,
+    intentFilters: [
+      {
+        action: "VIEW",
+        autoVerify: true,
+        data: [{ scheme: "https", host: "qr24x7.in", pathPrefix: "/agent/join" }],
+        category: ["BROWSABLE", "DEFAULT"]
+      }
+    ],
     adaptiveIcon: {
       foregroundImage: "./assets/adaptive-icon.png",
       backgroundImage: "./assets/adaptive-icon-background.png",
