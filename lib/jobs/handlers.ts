@@ -8,7 +8,7 @@ import { expireStale, reconcileAllPending } from "../manual-payments";
 import { deliverNegativeFeedback } from "../notify";
 import { scanAdminPaymentAlerts } from "../admin/push";
 import { sendPushToUsers, type PushPayload } from "../push";
-import { deliverNewOrder, deliverOrderStatus } from "../store/order-alert";
+import { deliverNewBooking, deliverNewOrder, deliverOrderStatus } from "../store/order-alert";
 import type { OrderStatus } from "../store/order-status";
 import { runShopJob } from "../shop/ship-order";
 import type { ClaimedJob } from "./store";
@@ -35,6 +35,16 @@ export async function handleJob(job: ClaimedJob) {
         businessName: text(payload.businessName),
         totalPaise: Number(payload.totalPaise) || 0,
         orderId: text(payload.orderId)
+      });
+      return { ok: true };
+    case "notify.booking":
+      await deliverNewBooking({
+        businessId: text(payload.businessId),
+        ownerId: text(payload.ownerId),
+        businessName: text(payload.businessName),
+        serviceName: text(payload.serviceName),
+        customerName: text(payload.customerName),
+        bookingId: text(payload.bookingId)
       });
       return { ok: true };
     case "notify.orderStatus":

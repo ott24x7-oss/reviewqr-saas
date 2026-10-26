@@ -36,6 +36,8 @@ export type TapBusinessFields = {
   aiReviewsEnabled?: boolean;
   whatsappNumber: string | null;
   menuCount: number;
+  catalogMode?: "MENU" | "SERVICES" | "BOTH";
+  serviceCount?: number;
   published: unknown;
 };
 
@@ -89,8 +91,18 @@ export function synthesizeLinks(input: TapBusinessFields & { channel: "q" | "t";
     : null;
   const menuHref = input.menuCount > 0 ? menuPath(input.channel, input.code) : externalMenu;
   if (menuHref) {
-    links.push(link("menu", "menu", "View Menu", "मेनू देखें", menuHref, true, 10));
+    const mode = input.catalogMode || "MENU";
+    const menuLabel =
+      mode === "SERVICES"
+        ? (["Services", "सेवाएँ"] as const)
+        : mode === "BOTH"
+          ? (["Menu & services", "मेनू और सेवाएँ"] as const)
+          : (["View Menu", "मेनू देखें"] as const);
+    links.push(link("menu", "menu", menuLabel[0], menuLabel[1], menuHref, true, 10));
     links.push(link("order", "whatsapp_order", "Order on WhatsApp", "WhatsApp पर ऑर्डर", menuHref, true, 20));
+    if (mode === "MENU" && (input.serviceCount || 0) > 0) {
+      links.push(link("services", "services", "Services", "सेवाएँ", `${menuHref}?view=services`, true, 15));
+    }
   }
   links.push(link("feedback", "feedback", "Give Feedback", "प्रतिक्रिया दें", null, true, 30));
 
@@ -289,6 +301,12 @@ export function hideGatedReviewLinks(links: PublicLink[], fields: TapBusinessFie
   });
 }
 
+function withServiceButton(links: PublicLink[], fields: TapBusinessFields, channel: "q" | "t", code: string) {
+  if ((fields.catalogMode || "MENU") !== "MENU" || !(fields.serviceCount && fields.serviceCount > 0)) return links;
+  if (links.some((item) => item.type === "services")) return links;
+  return [...links, link("services", "services", "Services", "सेवाएँ", `${menuPath(channel, code)}?view=services`, false, 15)];
+}
+
 export function presentBusiness(fields: TapBusinessFields, channel: "q" | "t", code: string, now = new Date()): PresentedTap {
   const published = fields.published;
   const bioPublished = published && typeof published === "object" ? plain((published as { bio?: unknown }).bio, 400) : "";
@@ -302,9 +320,14 @@ export function presentBusiness(fields: TapBusinessFields, channel: "q" | "t", c
     bio: bioPublished || plain(fields.description, 400),
     bioHi,
     open: isOpenAt(hours, now),
-    links: hideGatedReviewLinks(
-      resolveLinks(published, synthesizeLinks({ ...fields, channel, code }), channel, code, now, fields.slug),
-      fields
+    links: withServiceButton(
+      hideGatedReviewLinks(
+        resolveLinks(published, synthesizeLinks({ ...fields, channel, code }), channel, code, now, fields.slug),
+        fields
+      ),
+      fields,
+      channel,
+      code
     ),
     gallery: galleryFromPublished(published),
     call: telUrl(fields.phone),

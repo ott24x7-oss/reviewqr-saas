@@ -14,6 +14,9 @@ import {
   okSchema,
   orderCardSchema,
   orderStatusSchema,
+  bookingCardSchema,
+  bookingStatusPatchSchema,
+  publicBookingBodySchema,
   pageQuerySchema,
   placeDetailsSchema,
   placesSearchSchema,
@@ -350,6 +353,79 @@ export function registerResourcePaths(registry: OpenAPIRegistry, errorRef: JsonS
   });
 
   registry.registerPath({
+    method: "post",
+    path: "/api/public/bookings",
+    summary: "Save a service booking and return the WhatsApp link. Bots are ignored. Consent is required.",
+    request: jsonBody(publicBookingBodySchema),
+    responses: {
+      200: jsonResponse(
+        "Saved or ignored",
+        z.object({
+          ok: z.literal(true),
+          id: z.string().optional(),
+          whatsappUrl: z.string().nullable().optional(),
+          ignored: z.boolean().optional()
+        })
+      ),
+      400: validation,
+      403: forbidden,
+      404: notFound,
+      429: rateLimit
+    }
+  });
+
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/bookings",
+    summary: "Booking requests you can read, newest first",
+    security: bearer,
+    request: {
+      query: pageQuerySchema.extend({
+        businessId: z.string().optional(),
+        status: z.string().optional(),
+        date: z.string().optional(),
+        today: z.string().optional()
+      })
+    },
+    responses: {
+      200: jsonResponse("Bookings", dataSchema(listSchema(bookingCardSchema))),
+      400: validation,
+      401: unauthorized,
+      403: forbidden,
+      404: notFound
+    }
+  });
+
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/bookings/{id}",
+    summary: "One booking request, including call and WhatsApp links when the phone was consented",
+    security: bearer,
+    request: { params: idParams },
+    responses: {
+      200: jsonResponse("Booking", dataSchema(bookingCardSchema)),
+      401: unauthorized,
+      403: forbidden,
+      404: notFound
+    }
+  });
+
+  registry.registerPath({
+    method: "post",
+    path: "/api/v1/bookings/{id}/status",
+    summary: "Change a booking status. Staff who can only read receive 404.",
+    security: bearer,
+    request: { params: idParams, ...jsonBody(bookingStatusPatchSchema) },
+    responses: {
+      200: jsonResponse("Updated booking", dataSchema(bookingCardSchema)),
+      400: validation,
+      401: unauthorized,
+      403: forbidden,
+      404: notFound
+    }
+  });
+
+  registry.registerPath({
     method: "get",
     path: "/api/v1/feedback",
     summary: "Private feedback you can read",
@@ -465,7 +541,7 @@ export function registerResourcePaths(registry: OpenAPIRegistry, errorRef: JsonS
   registry.registerPath({
     method: "get",
     path: "/api/v1/dashboard",
-    summary: "Today's orders, feedback, scans, and the current plan",
+    summary: "Today's orders, feedback, scans, bookings, and the current plan",
     security: bearer,
     request: { query: z.object({ businessId: z.string().optional() }) },
     responses: {

@@ -1,0 +1,16 @@
+import { NextRequest, NextResponse } from "next/server";
+import { requireUser } from "@/lib/auth";
+import { planDeniedResponse } from "@/lib/plans/feature-gate";
+import { setBookingStatus } from "@/lib/store/bookings";
+
+export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+  const user = await requireUser().catch(() => null);
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const raw = await req.json().catch(() => ({}));
+  const result = await setBookingStatus(user.id, params.id, raw);
+  if (!result.ok) {
+    if (result.code === "PLAN_REQUIRED") return planDeniedResponse(result);
+    return NextResponse.json({ error: result.error }, { status: result.status });
+  }
+  return NextResponse.json(result.data);
+}

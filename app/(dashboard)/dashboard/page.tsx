@@ -10,6 +10,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { readableBusinessWhere } from "@/lib/tenant";
 import { hasModule } from "@/lib/plans/entitlements";
 import { setupChecklist } from "@/lib/growth/setup";
+import { bookingTimeLabel } from "@reviewqr/shared";
 import { addIstDays, istDayKey, istDayRange } from "@/lib/analytics/ist";
 import { kolkataDayWindow } from "@/lib/store/day";
 import { PageHeader, KpiCard, SetupStepper, type SetupStep, EmptyState, RelativeTime, StatusBadge } from "@/components/app-ui/primitives";
@@ -88,7 +89,7 @@ export default async function DashboardOverview({
   const todayKey = istDayKey(new Date());
   const weekFrom = istDayRange(addIstDays(todayKey, -6)).start;
 
-  const [userPlan, menuOn, printedMark, scannedQr, todayScans, todayOrders, todayReviews, todaySales, openOrders, openFeedback, lowRatings, weeklyDays, recentOrderRows, recentReviewRows, recentFeedbackRows] = await Promise.all([
+  const [userPlan, menuOn, printedMark, scannedQr, todayScans, todayOrders, todayReviews, todaySales, openOrders, openFeedback, lowRatings, weeklyDays, recentOrderRows, recentReviewRows, recentFeedbackRows, todayBookingCount, todayBookingRows] = await Promise.all([
     prisma.user.findUnique({ where: { id: user.id }, select: { subscriptionEndsAt: true, subscriptionStatus: true } }),
     hasModule(activeBusiness.ownerId, "MENU"),
     prisma.onboardingMark.findUnique({ where: { userId_kind: { userId: user.id, kind: "printed_qr" } }, select: { id: true } }),
@@ -103,7 +104,14 @@ export default async function DashboardOverview({
     prisma.analyticsDaily.findMany({ where: { businessId: { in: businessIds }, day: { gte: weekFrom } }, select: { day: true, scans: true, orderCount: true, ratingCount: true, orderPaise: true }, orderBy: { day: "asc" } }),
     prisma.menuOrder.findMany({ where: { businessId: { in: businessIds } }, select: { id: true, number: true, status: true, createdAt: true, business: { select: { name: true } } }, orderBy: { createdAt: "desc" }, take: 4 }),
     prisma.review.findMany({ where: { businessId: { in: businessIds } }, select: { id: true, customerName: true, rating: true, createdAt: true, business: { select: { name: true } } }, orderBy: { createdAt: "desc" }, take: 4 }),
-    prisma.feedback.findMany({ where: { businessId: { in: businessIds } }, select: { id: true, message: true, createdAt: true, business: { select: { name: true } } }, orderBy: { createdAt: "desc" }, take: 4 })
+    prisma.feedback.findMany({ where: { businessId: { in: businessIds } }, select: { id: true, message: true, createdAt: true, business: { select: { name: true } } }, orderBy: { createdAt: "desc" }, take: 4 }),
+    prisma.bookingRequest.count({ where: { businessId: { in: businessIds }, preferredDate: todayKey, status: { not: "CANCELLED" } } }),
+    prisma.bookingRequest.findMany({
+      where: { businessId: { in: businessIds }, preferredDate: todayKey, status: { not: "CANCELLED" } },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      select: { id: true, customerName: true, status: true, preferredSlot: true, preferredTime: true, item: { select: { name: true } } }
+    })
   ]);
 
   const hours = activeBusiness.storeSettings?.hours;
@@ -167,6 +175,24 @@ export default async function DashboardOverview({
           <KpiCard label={<AppText en="Reviews" hi="रिव्यू" />} value={todayReviews} delta={<AppText en="New today" hi="आज के नए" />} data={valueArray(weeklyDays, "ratingCount", 7)} />
           <KpiCard label={<AppText en="Sales" hi="बिक्री" />} value={Number(todaySales._sum.totalPaise || 0) / 100} format="inr" delta={<AppText en="Paid and open orders" hi="भुगतान और खुले ऑर्डर" />} data={valueArray(weeklyDays, "orderPaise", 7).map((value) => value / 100)} />
         </div>
+        <Link href="/dashboard/sell/bookings" className="mt-3 block rounded-xl border bg-card p-4 hover:bg-muted/40">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-sm font-semibold"><AppText en="Bookings today" hi="आज की बुकिंग" /></h3>
+            <span className="text-sm font-semibold tabular-nums">{todayBookingCount}</span>
+          </div>
+          {todayBookingRows.length ? (
+            <ul className="mt-2 space-y-1 text-sm">
+              {todayBookingRows.map((row) => (
+                <li key={row.id}>
+                  {row.customerName} · {row.item.name}
+                  {bookingTimeLabel(row.preferredSlot, row.preferredTime, "en") ? ` · ${bookingTimeLabel(row.preferredSlot, row.preferredTime, "en")}` : ""}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-1 text-sm text-muted-foreground"><AppText en="No bookings for today yet." hi="आज अभी कोई बुकिंग नहीं है।" /></p>
+          )}
+        </Link>
       </section>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">

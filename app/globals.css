@@ -2065,6 +2065,135 @@
   border-bottom: 1px dashed #e4dccf;
 }
 .store-service-actions { display: flex; gap: 8px; flex: none; }
+.svc-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+.svc-tabs button {
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--store-muted, #e4dccf);
+  background: var(--store-card, #fff);
+  color: var(--store-ink, #1c1813);
+  font: inherit;
+  font-weight: 700;
+}
+.svc-tabs button[aria-selected="true"] {
+  background: var(--store-cta, #1f7a45);
+  color: var(--store-cta-ink, #fff);
+  border-color: transparent;
+}
+.svc-chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; }
+.svc-chips button {
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--store-muted, #e4dccf);
+  background: var(--store-card, #fff);
+  color: var(--store-ink, #1c1813);
+  font: inherit;
+  white-space: nowrap;
+}
+.svc-chips button[aria-pressed="true"] {
+  background: var(--store-cta, #1f7a45);
+  color: var(--store-cta-ink, #fff);
+  border-color: transparent;
+}
+.svc-list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 12px; }
+.svc-card {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 16px;
+  background: var(--store-card, #fff);
+  color: var(--store-ink, #1c1813);
+  border: 1px solid color-mix(in srgb, var(--store-muted, #8a8175) 35%, transparent);
+}
+.svc-photo { width: 84px; height: 84px; object-fit: cover; border-radius: 12px; flex: none; }
+.svc-card-body { min-width: 0; flex: 1; }
+.svc-card h3 { margin: 0 0 4px; font-size: 1.05rem; }
+.svc-meta { margin: 0; color: var(--store-muted, #5c564e); display: flex; gap: 8px; flex-wrap: wrap; }
+.svc-desc { margin: 8px 0 0; white-space: pre-wrap; }
+.svc-desc-clip { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.svc-more, .svc-book {
+  min-height: 44px;
+  margin-top: 8px;
+  border-radius: 12px;
+  font: inherit;
+  font-weight: 700;
+}
+.svc-more { border: 0; background: transparent; color: var(--store-cta, #1f7a45); padding: 0; }
+.svc-book {
+  border: 0;
+  background: var(--store-cta, #1f7a45);
+  color: var(--store-cta-ink, #fff);
+  padding: 0 16px;
+}
+.svc-options { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.svc-options span {
+  border: 1px solid var(--store-muted, #e4dccf);
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 0.85rem;
+}
+.svc-sheet-back {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in srgb, var(--store-ink, #1c1813) 45%, transparent);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 40;
+}
+.svc-sheet {
+  width: min(560px, 100%);
+  max-height: min(92vh, 760px);
+  overflow: auto;
+  background: var(--store-bg, #fff);
+  color: var(--store-ink, #1c1813);
+  border-radius: 20px 20px 0 0;
+  padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+  display: grid;
+  gap: 10px;
+}
+.svc-sheet-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.svc-sheet-head h2 { margin: 0; font-size: 1.1rem; }
+.svc-sheet-head button { min-width: 44px; min-height: 44px; border: 0; background: transparent; color: inherit; font-size: 1.5rem; }
+.svc-sheet label, .svc-choice { display: grid; gap: 6px; }
+.svc-sheet input, .svc-sheet textarea {
+  width: 100%;
+  min-height: 44px;
+  border-radius: 12px;
+  border: 1px solid var(--store-muted, #d9d1c7);
+  background: var(--store-card, #fff);
+  color: inherit;
+  font: inherit;
+  padding: 8px 12px;
+}
+.svc-choice { border: 0; margin: 0; padding: 0; }
+.svc-choice button {
+  min-height: 40px;
+  border-radius: 999px;
+  border: 1px solid var(--store-muted, #d9d1c7);
+  background: var(--store-card, #fff);
+  color: inherit;
+  font: inherit;
+}
+.svc-choice button[aria-pressed="true"] {
+  background: var(--store-cta, #1f7a45);
+  color: var(--store-cta-ink, #fff);
+  border-color: transparent;
+}
+.svc-consent { grid-template-columns: auto 1fr; align-items: center; }
+.svc-error { color: #9f1239; margin: 0; }
+.svc-saved { margin: 0; }
+.svc-fine { margin: 0; color: var(--store-muted, #5c564e); }
+@media (min-width: 800px) {
+  .svc-sheet-back { align-items: center; }
+  .svc-sheet { border-radius: 20px; }
+}
 .store-service-actions a,
 .store-service-actions button {
   min-height: 44px;

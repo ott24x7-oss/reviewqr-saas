@@ -42,8 +42,9 @@ export async function decideDirectScan(input: {
   if (!qr?.business || !qr.isActive || qr.status !== "ACTIVE") return { action: "page" };
   if (!qr.business.isActive || qr.business.archived) return { action: "page" };
   const access = tapAccess(qr.business.owner);
-  const [menuCount, tapPage, entitlement] = await Promise.all([
+  const [menuCount, serviceCount, tapPage, entitlement] = await Promise.all([
     prisma.menuItem.count({ where: { businessId: qr.business.id } }),
+    prisma.menuItem.count({ where: { businessId: qr.business.id, kind: "SERVICE" } }),
     prisma.tapPage.findUnique({ where: { businessId: qr.business.id }, select: { published: true } }),
     loadEntitlement(qr.business.owner.id)
   ]);
@@ -66,6 +67,8 @@ export async function decideDirectScan(input: {
     aiReviewsEnabled: qr.business.aiReviewsEnabled,
     whatsappNumber: qr.business.whatsappNumber,
     menuCount,
+    catalogMode: qr.business.catalogMode,
+    serviceCount,
     published: tapPage?.published ?? null
   };
   const decision = resolveDirect({

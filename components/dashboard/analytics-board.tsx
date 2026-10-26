@@ -29,6 +29,11 @@ type Payload = {
   byTable: Array<{ table: string; scans: number; orders: number }>;
   byStaff: Array<{ staffId: string; name: string; scans: number; feedback: number }>;
   buttonClicks: Record<string, number>;
+  bookings?: {
+    count: number;
+    byService: Array<{ itemId: string; name: string; count: number }>;
+    conversion: number | null;
+  } | null;
 };
 
 const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -47,6 +52,8 @@ const copy = {
     trend: "Trend",
     ratings: "Rating distribution",
     items: "Top menu items",
+    bookings: "Bookings",
+    conversion: "Views to booking",
     hours: "Busiest hours",
     places: "QR codes and devices",
     tables: "Tables",
@@ -74,6 +81,8 @@ const copy = {
     trend: "रुझान",
     ratings: "रेटिंग बाँट",
     items: "टॉप मेनू आइटम",
+    bookings: "बुकिंग",
+    conversion: "व्यू से बुकिंग",
     hours: "सबसे व्यस्त घंटे",
     places: "QR और डिवाइस",
     tables: "टेबल",
@@ -317,6 +326,23 @@ export function AnalyticsBoard({ businesses }: { businesses: Business[] }) {
           ))
         )}
       </section>
+      {data?.bookings ? (
+        <section className="space-y-2" data-testid="analytics-bookings">
+          <h2 className="text-sm font-semibold">{text.bookings}</h2>
+          <article className="rounded-2xl border bg-white p-3 text-sm">
+            <p>{data.bookings.count}</p>
+            <p>
+              {text.conversion}: {data.bookings.conversion == null ? "—" : `${data.bookings.conversion}%`}
+            </p>
+          </article>
+          {data.bookings.byService.map((row) => (
+            <article key={row.itemId} className="rounded-2xl border bg-white p-3 text-sm">
+              <p className="font-medium">{row.name}</p>
+              <p>{row.count}</p>
+            </article>
+          ))}
+        </section>
+      ) : null}
       <section className="space-y-2">
         <h2 className="text-sm font-semibold">{text.places}</h2>
         <article className="rounded-2xl border bg-white p-3 text-sm">
