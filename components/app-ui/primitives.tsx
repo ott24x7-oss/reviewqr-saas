@@ -37,13 +37,13 @@ export function KpiCard({
   value,
   delta,
   data = [],
-  formatValue
+  format
 }: {
   label: React.ReactNode;
   value: React.ReactNode;
   delta?: React.ReactNode;
   data?: number[];
-  formatValue?: (value: number) => string;
+  format?: "inr";
 }) {
   const points = data.map((amount, index) => ({ index, amount }));
   return (
@@ -51,7 +51,7 @@ export function KpiCard({
       <p className="text-sm text-muted-foreground">{label}</p>
       <div className="mt-2 flex items-end justify-between gap-2">
         <p className="min-w-0 truncate text-2xl font-semibold tabular-nums tracking-tight">
-          {typeof value === "number" ? <CountUp value={value} format={formatValue} /> : value}
+          {typeof value === "number" ? <CountUp value={value} format={format} /> : value}
         </p>
         {points.length > 1 ? (
           <div className="h-10 w-24 shrink-0" aria-hidden="true">
@@ -69,19 +69,25 @@ export function KpiCard({
   );
 }
 
-function CountUp({ value, format }: { value: number; format?: (value: number) => string }) {
+function formatKpiValue(value: number, format?: "inr") {
+  return new Intl.NumberFormat("en-IN", format === "inr"
+    ? { style: "currency", currency: "INR", maximumFractionDigits: 0 }
+    : undefined).format(value);
+}
+
+function CountUp({ value, format }: { value: number; format?: "inr" }) {
   const motionValue = useMotionValue(0);
   const rounded = useTransform(motionValue, (current) => Math.round(current));
   const reducedMotion = useReducedMotion();
-  const [shown, setShown] = React.useState(() => format?.(0) ?? new Intl.NumberFormat("en-IN").format(0));
+  const [shown, setShown] = React.useState(() => formatKpiValue(0, format));
 
   React.useEffect(() => {
     if (reducedMotion) {
-      setShown(format?.(value) ?? new Intl.NumberFormat("en-IN").format(value));
+      setShown(formatKpiValue(value, format));
       return;
     }
     const unsubscribe = rounded.on("change", (current) => {
-      setShown(format?.(current) ?? new Intl.NumberFormat("en-IN").format(current));
+      setShown(formatKpiValue(current, format));
     });
     const controls = animate(motionValue, value, { duration: 0.55, ease: "easeOut" });
     return () => {

@@ -165,7 +165,7 @@ export default async function DashboardOverview({
           <KpiCard label={<AppText en="Scans" hi="स्कैन" />} value={todayScans} delta={<AppText en="QR and NFC visits" hi="QR और NFC विज़िट" />} data={valueArray(weeklyDays, "scans", 7)} />
           <KpiCard label={<AppText en="Orders" hi="ऑर्डर" />} value={todayOrders} delta={<AppText en="Today" hi="आज" />} data={valueArray(weeklyDays, "orderCount", 7)} />
           <KpiCard label={<AppText en="Reviews" hi="रिव्यू" />} value={todayReviews} delta={<AppText en="New today" hi="आज के नए" />} data={valueArray(weeklyDays, "ratingCount", 7)} />
-          <KpiCard label={<AppText en="Sales" hi="बिक्री" />} value={Number(todaySales._sum.totalPaise || 0) / 100} formatValue={(amount) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(amount)} delta={<AppText en="Paid and open orders" hi="भुगतान और खुले ऑर्डर" />} data={valueArray(weeklyDays, "orderPaise", 7).map((value) => value / 100)} />
+          <KpiCard label={<AppText en="Sales" hi="बिक्री" />} value={Number(todaySales._sum.totalPaise || 0) / 100} format="inr" delta={<AppText en="Paid and open orders" hi="भुगतान और खुले ऑर्डर" />} data={valueArray(weeklyDays, "orderPaise", 7).map((value) => value / 100)} />
         </div>
       </section>
 

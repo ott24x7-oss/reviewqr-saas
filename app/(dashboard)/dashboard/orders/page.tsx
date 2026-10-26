@@ -9,7 +9,6 @@ import { decodeCursor } from "@/lib/api/cursor";
 import Link from "next/link";
 import { PageHeader, KpiCard } from "@/components/app-ui/primitives";
 import { AppText } from "@/components/app-ui/i18n";
-import { formatRupees } from "@/lib/tap/order-message";
 import { InlineError } from "@/components/app-ui/primitives";
 
 export const dynamic = "force-dynamic";
@@ -44,7 +43,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: { sta
       <PageHeader title={<AppText en="Orders" hi="ऑर्डर" />} description={<AppText en="See what customers ordered and update each order." hi="ग्राहकों के ऑर्डर देखें और उनकी स्थिति अपडेट करें।" />} />
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <KpiCard label={<AppText en="Orders today" hi="आज के ऑर्डर" />} value={summary.count} delta={<AppText en="Excluding rejected orders" hi="रद्द ऑर्डर शामिल नहीं" />} />
-        <KpiCard label={<AppText en="Sales today" hi="आज की बिक्री" />} value={summary.totalPaise / 100} formatValue={(amount) => formatRupees(Math.round(amount * 100))} delta={<AppText en="Open and paid orders" hi="खुले और भुगतान किए ऑर्डर" />} />
+        <KpiCard label={<AppText en="Sales today" hi="आज की बिक्री" />} value={summary.totalPaise / 100} format="inr" delta={<AppText en="Open and paid orders" hi="खुले और भुगतान किए ऑर्डर" />} />
         <KpiCard label={<AppText en="Showing" hi="दिखाए जा रहे हैं" />} value={orders.length} delta={<AppText en="Latest matching orders" hi="नए मिलते-जुलते ऑर्डर" />} />
         <KpiCard label={<AppText en="Needs attention" hi="ध्यान देना है" />} value={orders.filter((order) => order.status === "NEW").length} delta={<AppText en="New orders on this page" hi="इस पेज पर नए ऑर्डर" />} />
       </div>
