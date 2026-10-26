@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { apiBaseUrl } from "../../src/api/instance";
 import { apiData } from "../../src/api/data";
 import { ApiError } from "../../src/api/http";
@@ -11,6 +12,7 @@ import { setPendingOtp } from "../../src/auth/pending";
 import { useI18n } from "../../src/i18n";
 import { fonts } from "../../src/theme";
 import { PrimaryButton, TextButton } from "../../src/ui/buttons";
+import { StickyAction } from "../../src/ui/controls";
 import { BLURHASH } from "../../src/ui/tokens";
 import { useTheme } from "../../src/ui/theme";
 
@@ -52,9 +54,10 @@ export default function LoginScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.screen, { backgroundColor: palette.paper }]}>
-      <Image source={require("../../assets/onboarding/photo-cafe.webp")} style={styles.strip} contentFit="cover" placeholder={{ blurhash: BLURHASH }} />
-      <View style={styles.body}>
+    <SafeAreaView style={[styles.screen, { backgroundColor: palette.paper }]} edges={["top"]}>
+      <KeyboardAwareScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" bottomOffset={12}>
+        <Image source={require("../../assets/onboarding/photo-cafe.webp")} style={styles.strip} contentFit="cover" placeholder={{ blurhash: BLURHASH }} />
+        <View style={styles.body}>
         <Pressable accessibilityRole="button" accessibilityLabel={t.language} accessibilityState={{ selected: lang === "hi" }} onPress={toggle} style={styles.lang}>
           <Text style={[styles.langText, { color: palette.deep }]}>{t.language}</Text>
         </Pressable>
@@ -78,21 +81,25 @@ export default function LoginScreen() {
           />
         </View>
         {error ? <Text style={[styles.error, { color: palette.danger }]}>{error}</Text> : null}
+        <TextButton label={t.haveAccount} onPress={() => router.push("/(auth)/signup")} />
+        <TextButton label={t.emailInstead} onPress={() => router.push("/(auth)/email")} />
+        </View>
+      </KeyboardAwareScrollView>
+      <StickyAction>
         <PrimaryButton
           label={t.sendCode}
           onPress={send}
           disabled={busy || phone.trim().length < 10}
           hint={phone.trim().length < 10 ? t.hintPhone : t.hintWait}
         />
-        <TextButton label={t.haveAccount} onPress={() => router.push("/(auth)/signup")} />
-        <TextButton label={t.emailInstead} onPress={() => router.push("/(auth)/email")} />
-      </View>
+      </StickyAction>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
+  scrollContent: { flexGrow: 1 },
   strip: { height: 180, width: "100%" },
   body: { padding: 22, gap: 12 },
   lang: { alignSelf: "flex-end", minHeight: 48, justifyContent: "center", paddingHorizontal: 8 },

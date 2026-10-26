@@ -1,13 +1,15 @@
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { Screen } from "../../src/ui/screen";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { ScrollView, StyleSheet, Text } from "react-native";
+import { StyleSheet, Text } from "react-native";
 import { apiData } from "../../src/api/data";
 import { ApiError } from "../../src/api/http";
 import { useI18n } from "../../src/i18n";
 import { accountKey } from "../../src/query/keys";
 import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
+import { LoadErrorCard, Skeleton } from "../../src/ui/bits";
 import { Field, PillButton } from "../../src/ui/controls";
 import { useTheme } from "../../src/ui/theme";
 
@@ -70,7 +72,7 @@ function AccountScreenContent() {
   }
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: palette.paper }} contentContainerStyle={styles.content}>
+    <KeyboardAwareScrollView style={{ flex: 1, backgroundColor: palette.paper }} contentContainerStyle={styles.content}>
       <Text style={[styles.title, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.account}</Text>
       <Text style={[styles.note, { color: palette.muted }]}>{user?.phone}</Text>
       <Field label={t.profileName} tone="paper" value={name} onChangeText={setName} />
@@ -85,10 +87,12 @@ function AccountScreenContent() {
         </>
       ) : null}
       <PillButton label={lang === "en" ? t.hindi : t.english} tone="outline" onPress={() => choose(lang === "en" ? "hi" : "en")} />
+      {prefs.isLoading ? <Skeleton height={54} /> : null}
+      {prefs.isError ? <LoadErrorCard onRetry={() => prefs.refetch().catch(() => undefined)} /> : null}
       <PillButton label={prefs.data?.whatsappOptIn ? t.weeklyReport : t.weeklyReport} tone={prefs.data?.whatsappOptIn ? "dark" : "outline"} onPress={() => weekly(!prefs.data?.whatsappOptIn)} />
       <PillButton label={t.logoutEverywhere} tone="outline" onPress={async () => { await apiData("/api/v1/me/sessions", { method: "DELETE" }).catch(() => undefined); await logout(); }} />
       {error ? <Text style={{ color: palette.danger, fontFamily: fonts.body }}>{error}</Text> : null}
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 

@@ -18,6 +18,7 @@ import { LaunchOverlay } from "../src/ui/launch";
 import { PrimaryButton } from "../src/ui/buttons";
 import { Badge, BottomSheet, EmptyState, KpiCard, OptionTile, ProgressSteps, Skeleton, Sparkline } from "../src/ui/bits";
 import { useTheme } from "../src/ui/theme";
+import { withOpacity } from "../src/ui/tokens";
 
 /** Dev-only stage so each catalogue animation can be recorded on its own. */
 export default function MotionLab() {
@@ -123,7 +124,7 @@ export default function MotionLab() {
       {id === "3" ? (
         <Animated.View style={[styles.row, shaken]}>
           {Array.from({ length: 6 }, (_, index) => (
-            <OtpBox key={index} index={index} reduceMotion={reduceMotion} color={palette.card} line={palette.line} ink={palette.ink} />
+            <OtpBox key={index} index={index} reduceMotion={reduceMotion} color={palette.card} line={palette.line} ink={palette.ink} successColor={palette.accentSoft} />
           ))}
           <Check color={palette.deep} size={22} strokeWidth={2} />
         </Animated.View>
@@ -180,7 +181,7 @@ export default function MotionLab() {
       ) : null}
       {id === "11" ? (
         <View style={[styles.tabs, { backgroundColor: palette.card }]}>
-          <Animated.View style={[styles.pill, { backgroundColor: "rgba(22,163,74,0.16)" }, tabPill]} />
+          <Animated.View style={[styles.pill, { backgroundColor: withOpacity(palette.primary, 0.16) }, tabPill]} />
           <Text style={[styles.tab, { color: palette.muted }]}>Home</Text>
           <Text style={[styles.tab, { color: palette.ink }]}>Orders</Text>
         </View>
@@ -189,7 +190,7 @@ export default function MotionLab() {
       {id === "13" ? (
         <View style={styles.coach}>
           <View style={[styles.scrim, { backgroundColor: palette.scrim }]} />
-          <Animated.View style={[styles.hole, spotlight]} />
+          <Animated.View style={[styles.hole, { backgroundColor: palette.paper }, spotlight]} />
           <Animated.View style={[styles.tip, { backgroundColor: palette.card }, tooltip]}>
             <Text style={{ color: palette.ink }}>Show your QR</Text>
           </Animated.View>
@@ -217,7 +218,7 @@ export default function MotionLab() {
   );
 }
 
-function OtpBox({ index, reduceMotion, color, line, ink }: { index: number; reduceMotion: boolean; color: string; line: string; ink: string }) {
+function OtpBox({ index, reduceMotion, color, line, ink, successColor }: { index: number; reduceMotion: boolean; color: string; line: string; ink: string; successColor: string }) {
   const scale = useSharedValue(reduceMotion ? 1 : 0.82);
   const [ok, setOk] = useState(false);
   useEffect(() => {
@@ -226,7 +227,7 @@ function OtpBox({ index, reduceMotion, color, line, ink }: { index: number; redu
     return () => clearTimeout(timer);
   }, [index, reduceMotion, scale]);
   const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
-  return <Animated.View style={[styles.box, { backgroundColor: ok ? "#DCFCE7" : color, borderColor: line }, style]}><Text style={{ color: ink }}>{index + 1}</Text></Animated.View>;
+  return <Animated.View style={[styles.box, { backgroundColor: ok ? successColor : color, borderColor: line }, style]}><Text style={{ color: ink }}>{index + 1}</Text></Animated.View>;
 }
 
 function EnterRow({ index, reduceMotion, color }: { index: number; reduceMotion: boolean; color: string }) {
@@ -263,7 +264,7 @@ const styles = StyleSheet.create({
   pill: { position: "absolute", left: 8, top: 8, bottom: 8, width: 80, borderRadius: 12 },
   coach: { height: 280 },
   scrim: { position: "absolute", left: 0, right: 0, top: 0, bottom: 0, borderRadius: 16 },
-  hole: { position: "absolute", left: 24, width: 120, height: 48, borderRadius: 12, backgroundColor: "#F4EFE6" },
+  hole: { position: "absolute", left: 24, width: 120, height: 48, borderRadius: 12 },
   tip: { position: "absolute", left: 24, top: 80, borderRadius: 16, padding: 12 },
   qrFrame: { width: 180, height: 180, alignItems: "center", justifyContent: "center" },
   glow: { position: "absolute", width: 170, height: 170, borderRadius: 24 },

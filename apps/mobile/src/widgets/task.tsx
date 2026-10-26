@@ -11,7 +11,7 @@ export async function widgetTaskHandler({ widgetInfo, widgetAction, renderWidget
   const snapshot = parseSnapshot(raw);
   const wide = widgetInfo.width >= 250;
   if (widgetInfo.widgetName === "MyQr") {
-    renderWidget(<MyQrWidget />);
+    renderWidget(<MyQrWidget palette={snapshot.palette} />);
     return;
   }
   renderWidget(<TodayWidget snapshot={snapshot} wide={wide} />);

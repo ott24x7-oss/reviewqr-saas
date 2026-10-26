@@ -1,7 +1,9 @@
 import { Screen } from "../../src/ui/screen";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { ScrollView, StyleSheet, Text } from "react-native";
+import { MessageCircle } from "lucide-react-native";
+import { useRef, useState } from "react";
+import { StyleSheet, Text } from "react-native";
+import { KeyboardAwareScrollView, type KeyboardAwareScrollViewRef } from "react-native-keyboard-controller";
 import { apiData } from "../../src/api/data";
 import { ApiError } from "../../src/api/http";
 import { useI18n } from "../../src/i18n";
@@ -9,7 +11,7 @@ import { accountKey } from "../../src/query/keys";
 import { useBusiness } from "../../src/state/business";
 import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
-import { Card } from "../../src/ui/bits";
+import { Card, EmptyState, LoadErrorCard, Skeleton } from "../../src/ui/bits";
 import { Field, PillButton } from "../../src/ui/controls";
 import { useTheme } from "../../src/ui/theme";
 
@@ -21,6 +23,7 @@ function CampaignsScreenContent() {
   const { user } = useSession();
   const { business } = useBusiness();
   const client = useQueryClient();
+  const scrollRef = useRef<KeyboardAwareScrollViewRef>(null);
   const id = business?.id;
   const [name, setName] = useState("");
   const [template, setTemplate] = useState("Hi {name}, we would love your feedback.");
@@ -55,21 +58,26 @@ function CampaignsScreenContent() {
   }
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: palette.paper }} contentContainerStyle={styles.content}>
+    <KeyboardAwareScrollView ref={scrollRef} style={{ flex: 1, backgroundColor: palette.paper }} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <Text style={[styles.title, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.campaigns}</Text>
-      <Field label={t.name} tone="paper" value={name} onChangeText={setName} />
+      <Field label={t.campaignName} tone="paper" value={name} onChangeText={setName} />
       <Field label={t.whatsAppCustomer} tone="paper" value={template} onChangeText={setTemplate} />
-      <PillButton label={t.addItem} tone="dark" disabled={name.trim().length < 2} onPress={create} />
-      {(rows.data?.items ?? []).map((row) => (
+      <PillButton label={t.addCampaign} tone="dark" disabled={name.trim().length < 2} onPress={create} />
+      {rows.isLoading ? <><Skeleton height={110} /><Skeleton height={110} /></> : null}
+      {rows.isError ? <LoadErrorCard onRetry={() => rows.refetch().catch(() => undefined)} /> : null}
+      {!rows.isLoading && !rows.isError && (rows.data?.items ?? []).length === 0 ? (
+        <EmptyState icon={MessageCircle} title={t.emptyCampaignsTitle} body={t.emptyCampaignsBody} action={t.addCampaign} onAction={() => scrollRef.current?.scrollTo({ x: 0, y: 0, animated: true })} />
+      ) : null}
+      {!rows.isLoading && !rows.isError ? (rows.data?.items ?? []).map((row) => (
         <Card key={row.id} style={styles.card}>
           <Text style={[styles.name, { color: palette.ink }]}>{row.name}</Text>
           <Text style={[styles.note, { color: palette.muted }]}>{row.status} · {row.sent}</Text>
           <Text style={[styles.note, { color: palette.ink }]}>{row.whatsappTemplate}</Text>
           <PillButton label={t.sendCampaign} tone="dark" onPress={() => send(row.id)} />
         </Card>
-      ))}
+      )) : null}
       {error ? <Text style={{ color: palette.danger, fontFamily: fonts.body }}>{error}</Text> : null}
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 

@@ -104,7 +104,7 @@ export default function IntroScreen() {
         ))}
       </Animated.ScrollView>
       <SafeAreaView style={styles.sheet} edges={["bottom"]}>
-        <View style={styles.langs}>
+        <View style={[styles.langs, { backgroundColor: palette.surface2 }]}>
           <Pressable accessibilityRole="button" accessibilityLabel={t.english} accessibilityState={{ selected: lang === "en" }} onPress={() => choose("en")} style={[styles.lang, lang === "en" && { backgroundColor: palette.ink }]}>
             <Text style={[styles.langText, { color: lang === "en" ? palette.paper : palette.ink }]}>{t.english}</Text>
           </Pressable>
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
   photo: { height: 420 },
   image: { width: "100%", height: "100%" },
   sheet: { marginTop: -36, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 22, paddingTop: 8, gap: 8 },
-  langs: { minHeight: 48, flexDirection: "row", gap: 8, alignSelf: "flex-end", backgroundColor: "rgba(255,255,255,0.9)", borderRadius: 999, padding: 4 },
+  langs: { minHeight: 48, flexDirection: "row", gap: 8, alignSelf: "flex-end", borderRadius: 999, padding: 4 },
   lang: { minHeight: 48, minWidth: 64, borderRadius: 999, alignItems: "center", justifyContent: "center", paddingHorizontal: 12 },
   langText: { fontFamily: fonts.bodyStrong, fontSize: 14 },
   title: { fontFamily: fonts.display, fontSize: 28, lineHeight: 34 },

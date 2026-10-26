@@ -1,6 +1,7 @@
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { router } from "expo-router";
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { apiData } from "../../src/api/data";
 import { ApiError } from "../../src/api/http";
@@ -48,8 +49,8 @@ export default function SignupScreen() {
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: palette.paper }]} edges={["top"]}>
-      <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-        <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+      <View style={styles.screen}>
+        <KeyboardAwareScrollView style={{ flex: 1 }} contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" bottomOffset={12}>
           <Text style={[styles.title, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.signupTitle}</Text>
           <Muted>{t.signupSub}</Muted>
           <SectionHeader label={t.phone} />
@@ -58,7 +59,7 @@ export default function SignupScreen() {
           </View>
           {error ? <Text style={[styles.error, { color: palette.danger }]}>{error}</Text> : null}
           <TextButton label={t.haveLogin} onPress={() => router.replace("/(auth)/login")} />
-        </ScrollView>
+        </KeyboardAwareScrollView>
         <StickyAction>
           <PrimaryButton
             label={t.sendCode}
@@ -67,7 +68,7 @@ export default function SignupScreen() {
             hint={phone.trim().length < 10 ? t.hintPhone : t.hintWait}
           />
         </StickyAction>
-      </KeyboardAvoidingView>
+      </View>
     </SafeAreaView>
   );
 }

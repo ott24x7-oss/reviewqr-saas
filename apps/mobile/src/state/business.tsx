@@ -16,6 +16,7 @@ export type BusinessCard = {
   googlePlaceId: string | null;
   googleReviewUrl: string | null;
   whatsappNumber: string | null;
+  logo?: string | null;
   ownerId?: string;
 };
 

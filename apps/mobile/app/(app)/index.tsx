@@ -16,12 +16,12 @@ import {
   Sparkles,
   Star
 } from "lucide-react-native";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Svg, { Circle } from "react-native-svg";
 import { apiData } from "../../src/api/data";
-import { CoachTour } from "../../src/guide/coach";
+import { widgetPaletteFromPalette } from "../../src/widgets/format";
+import { consumeSetupStep, nextSetupStep, SETUP_STEP_KEYS, type SetupStepKey } from "../../src/guide/setup";
+import { SetupCompleteCard, SetupGuideCard, type SetupGuideStep } from "../../src/guide/setup-guide";
 import { useI18n } from "../../src/i18n";
 import { businessDestinations } from "../../src/nav/business-destinations";
 import { accountKey } from "../../src/query/keys";
@@ -29,14 +29,15 @@ import { useReviewMoment } from "../../src/review/watch";
 import { useBusiness } from "../../src/state/business";
 import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
-import { BottomSheet, Card, Chip, KpiCard, Skeleton } from "../../src/ui/bits";
+import { BottomSheet, Card, Chip, KpiCard, LoadErrorCard, Skeleton } from "../../src/ui/bits";
 import { TextButton } from "../../src/ui/buttons";
-import { rowTint } from "../../src/ui/rows";
+import { rowTintFor } from "../../src/ui/rows";
 import { useTheme } from "../../src/ui/theme";
 import { writeWidgetSnapshot } from "../../src/widgets/cache";
 
 type Tip = { key: string; titleEn: string; titleHi: string; appHref: string; done?: boolean };
 type SetupStep = { key: string; done: boolean };
+const EMPTY_SETUP: SetupStep[] = [];
 type Growth = { ready: boolean; score: number | null; tips: Tip[]; checklist: Tip[]; setup?: SetupStep[] };
 type Note = { id: string; title: string; titleHi: string; body: string; bodyHi: string; link: string };
 type Analytics = {
@@ -56,7 +57,6 @@ function periodChange(points: number[]) {
 function HomeScreenContent() {
   const { t, lang } = useI18n();
   const { palette } = useTheme();
-  const insets = useSafeAreaInsets();
   const { user } = useSession();
   const { businesses, business, choose } = useBusiness();
   const client = useQueryClient();
@@ -65,6 +65,10 @@ function HomeScreenContent() {
   const [picker, setPicker] = useState(false);
   const [growthOpen, setGrowthOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
+  const [expandedSetup, setExpandedSetup] = useState<SetupStepKey | null>(null);
+  const [setupExpandedManually, setSetupExpandedManually] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const previousSetupDone = useRef<number | null>(null);
   const home = useQuery({
     queryKey: accountKey(user?.id ?? "", "dashboard", business?.id ?? "all"),
     enabled: !!user,
@@ -106,33 +110,65 @@ function HomeScreenContent() {
   const hour = new Date().getHours();
   const hello = hour < 12 ? t.greetMorning : hour < 17 ? t.greetAfternoon : t.greetEvening;
   const tasks = growth.data ? (growth.data.ready ? growth.data.tips : growth.data.checklist) : [];
-  const tasksLeft = tasks.filter((tip) => !tip.done).length;
-  const setup = growth.data?.setup ?? [];
+  const setup = growth.data?.setup ?? EMPTY_SETUP;
   const setupDone = setup.filter((step) => step.done).length;
   const showSetup = setup.length > 0 && setupDone < setup.length;
-  const showGrowth = Boolean(growth.data && (growth.data.ready || !showSetup));
   const growthBusinessId = business?.id;
   const growthUserId = user?.id;
   useFocusEffect(
     useCallback(() => {
-      if (!growthUserId || !growthBusinessId) return;
-      client.invalidateQueries({ queryKey: accountKey(growthUserId, "growth", growthBusinessId) }).catch(() => undefined);
+      let focused = true;
+      if (growthUserId && growthBusinessId) {
+        client.invalidateQueries({ queryKey: accountKey(growthUserId, "growth", growthBusinessId) }).catch(() => undefined);
+      }
+      consumeSetupStep().then((next) => {
+        if (!focused || !next) return;
+        if (next === "first") {
+          setSetupExpandedManually(false);
+          setExpandedSetup(null);
+        } else {
+          setSetupExpandedManually(true);
+          setExpandedSetup(next);
+        }
+      }).catch(() => undefined);
+      return () => { focused = false; };
     }, [client, growthBusinessId, growthUserId])
   );
-  const setupRows: { key: string; label: string; href: Href; done: boolean }[] = [
-    { key: "details", label: t.businessDetails, href: "/(app)/business-edit", done: false },
-    { key: "link", label: t.pageLink, href: "/(app)/tap", done: false },
-    { key: "menu", label: t.menuItems, href: "/(app)/menu", done: false },
-    { key: "buttons", label: t.pageButtons, href: { pathname: "/(app)/tap", params: { section: "buttons" } }, done: false },
-    { key: "store", label: t.storeHoursUpi, href: "/(app)/store", done: false },
-    { key: "print", label: t.printYourQr, href: "/(app)/tap", done: false }
-  ].map((row) => ({ ...row, done: setup.find((step) => step.key === row.key)?.done === true }));
+  const setupRows = useMemo<SetupGuideStep[]>(() => {
+    const rows: Record<SetupStepKey, Omit<SetupGuideStep, "done">> = {
+      details: { key: "details", title: t.businessDetails, body: t.setupWhyDetails },
+      link: { key: "link", title: t.pageLink, body: t.setupWhyLink },
+      menu: { key: "menu", title: t.menuItems, body: t.setupWhyMenu },
+      buttons: { key: "buttons", title: t.pageButtons, body: t.setupWhyButtons },
+      store: { key: "store", title: t.storeHoursUpi, body: t.setupWhyStore },
+      print: { key: "print", title: t.printYourQr, body: t.setupWhyPrint }
+    };
+    return SETUP_STEP_KEYS.map((key) => ({
+      ...rows[key],
+      done: setup.find((step) => step.key === key)?.done === true
+    }));
+  }, [setup, t]);
+  const expandedSetupKey = showSetup
+    ? setupExpandedManually ? expandedSetup : expandedSetup ?? setupRows.find((step) => !step.done)?.key ?? null
+    : null;
+  useEffect(() => {
+    if (setup.length === 0) return;
+    const previous = previousSetupDone.current;
+    if (previous !== null && previous < setup.length && setupDone === setup.length) {
+      setShowCelebration(true);
+      const timeout = setTimeout(() => setShowCelebration(false), 5000);
+      previousSetupDone.current = setupDone;
+      return () => clearTimeout(timeout);
+    }
+    previousSetupDone.current = setupDone;
+  }, [setup.length, setupDone]);
   const tiles = businessDestinations(t);
   const noteCount = (notes.data ?? []).length;
   const recentOrders = orders.data?.items ?? [];
   const recentFeedback = feedback.data?.items ?? [];
   useReviewMoment(recentOrders, recentFeedback, home.isError || orders.isError || feedback.isError);
   const quiet = recentOrders.length === 0 && recentFeedback.length === 0;
+  const hasDashboardError = home.isError || growth.isError || notes.isError || analytics.isError || orders.isError || feedback.isError;
 
   useEffect(() => {
     if (!user || !home.data) return;
@@ -141,9 +177,10 @@ function HomeScreenContent() {
       scans: home.data.scansToday,
       orders: home.data.ordersToday,
       reviews: home.data.feedbackToday,
-      businessName: business?.name ?? ""
+      businessName: business?.name ?? "",
+      palette: widgetPaletteFromPalette(palette)
     }).catch(() => undefined);
-  }, [user, home.data, business?.name]);
+  }, [user, home.data, business?.name, palette]);
 
   async function markTip(tipKey: string) {
     if (!business) return;
@@ -157,13 +194,26 @@ function HomeScreenContent() {
   }
 
   const actions = [
-    { label: t.showQr, icon: QrCode, href: "/(app)/tap", bg: palette.accentSoft, fg: palette.deep },
-    { label: t.addItem, icon: Plus, href: "/(app)/menu", bg: "#FEF3C7", fg: "#92400E" },
-    { label: t.orders, icon: ClipboardList, href: "/(app)/orders", bg: "#DBEAFE", fg: "#1E40AF" },
-    { label: t.quickFeedback, icon: MessageSquare, href: "/(app)/feedback", bg: "#FCE7F3", fg: "#9D174D" },
-    { label: t.sharePage, icon: Share2, href: "/(app)/tap", bg: "#E0E7FF", fg: "#3730A3" },
-    { label: t.printStand, icon: Printer, href: "/(app)/shop", bg: "#FEF3C7", fg: "#92400E" }
+    { label: t.showQr, icon: QrCode, href: "/(app)/tap" },
+    { label: t.addItem, icon: Plus, href: "/(app)/menu" },
+    { label: t.orders, icon: ClipboardList, href: "/(app)/orders" },
+    { label: t.quickFeedback, icon: MessageSquare, href: "/(app)/feedback" },
+    { label: t.sharePage, icon: Share2, href: "/(app)/tap" },
+    { label: t.printStand, icon: Printer, href: "/(app)/shop" }
   ];
+
+  function startSetup(key: SetupStepKey) {
+    const next = nextSetupStep(key);
+    const route = key === "details" ? "/(app)/business-edit"
+      : key === "menu" ? "/(app)/menu"
+      : key === "store" ? "/(app)/store"
+      : "/(app)/tap";
+    const params = key === "buttons" ? { section: "buttons" }
+      : key === "print" ? { section: "qr" }
+      : key === "link" ? { section: "link" }
+      : {};
+    router.push({ pathname: route, params: { ...params, setupGuide: key, setupNext: next ?? "complete" } } as Href);
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: palette.paper }}>
@@ -184,10 +234,10 @@ function HomeScreenContent() {
           />
         }
       >
-        <View style={[styles.header, { backgroundColor: palette.header, paddingTop: insets.top + 12 }]}>
+        <View style={[styles.header, { backgroundColor: palette.header }]}>
           <View style={styles.headerRow}>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.hello, lang === "hi" && styles.hindi]}>
+              <Text style={[styles.hello, { color: palette.headerInk }, lang === "hi" && styles.hindi]}>
                 {hello}{user?.name ? `, ${user.name}` : ""}
               </Text>
               <Pressable
@@ -214,7 +264,7 @@ function HomeScreenContent() {
               accessibilityRole="button"
               accessibilityLabel={t.dismiss}
               onPress={() => setNotesOpen(true)}
-              style={styles.bell}
+              style={[styles.bell, { borderColor: palette.headerInk }]}
             >
               <Bell color={palette.headerInk} size={22} strokeWidth={1.75} />
               {noteCount > 0 ? <View style={[styles.bellDot, { backgroundColor: palette.primary }]} /> : null}
@@ -224,34 +274,35 @@ function HomeScreenContent() {
 
         <View style={styles.overlap}>
           {showSetup ? (
-            <View style={[styles.growth, styles.setupCard, { backgroundColor: palette.card }]}>
-              <View style={styles.setupHead}>
-                <Ring score={Math.round((setupDone / setup.length) * 100)} track={palette.line} ink={palette.ink} accent={palette.primary} />
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.growthTitle, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.setupTitle}</Text>
-                  <Text style={[styles.growthHint, { color: palette.muted }, lang === "hi" && styles.hindi]}>
-                    {t.setupProgress.replace("{done}", String(setupDone)).replace("{total}", String(setup.length))}
-                  </Text>
-                </View>
-              </View>
-              {setupRows.map((row) => (
-                <Pressable
-                  key={row.key}
-                  accessibilityRole="button"
-                  accessibilityLabel={row.label}
-                  accessibilityState={{ checked: row.done }}
-                  onPress={() => router.push(row.href)}
-                  style={styles.setupRow}
-                >
-                  <View style={[styles.setupMark, { borderColor: row.done ? palette.deep : palette.line, backgroundColor: row.done ? "#DCFCE7" : "transparent" }]}>
-                    {row.done ? <Check color={palette.deep} size={14} strokeWidth={2.6} /> : null}
-                  </View>
-                  <Text style={[styles.growthTitle, { color: palette.ink, flex: 1 }, lang === "hi" && styles.hindi]}>{row.label}</Text>
-                  <ChevronRight color={palette.muted} size={16} strokeWidth={2} />
-                </Pressable>
-              ))}
-            </View>
+            <SetupGuideCard
+              steps={setupRows}
+              expandedKey={expandedSetupKey}
+              onExpand={(key) => {
+                setSetupExpandedManually(true);
+                setExpandedSetup((current) => current === key ? null : key);
+              }}
+              onStart={startSetup}
+            />
+          ) : showCelebration ? <SetupCompleteCard /> : null}
+          {hasDashboardError ? (
+            <LoadErrorCard onRetry={() => {
+              home.refetch().catch(() => undefined);
+              growth.refetch().catch(() => undefined);
+              notes.refetch().catch(() => undefined);
+              analytics.refetch().catch(() => undefined);
+              orders.refetch().catch(() => undefined);
+              feedback.refetch().catch(() => undefined);
+            }} />
           ) : null}
+          <View style={styles.filters}>
+            <Chip label={t.liveView} tone="live" selected={live} onPress={() => setLive(true)} />
+            <Chip
+              label={range === "7d" ? t.range7 : t.range30}
+              selected={!live}
+              onPress={() => { setLive(false); setRange((current) => current === "7d" ? "30d" : "7d"); }}
+            />
+            <TextButton label={t.analytics} onPress={() => router.push("/(app)/analytics")} />
+          </View>
           {home.isLoading ? (
             <View style={styles.kpiGrid}>
               <View style={styles.kpiCell}><Skeleton height={118} /></View>
@@ -319,10 +370,10 @@ function HomeScreenContent() {
                     accessibilityRole="button"
                     accessibilityLabel={action.label}
                     onPress={() => router.push(action.href as Href)}
-                    style={[styles.action, { backgroundColor: palette.card }]}
+                    style={[styles.action, { backgroundColor: palette.card, shadowColor: palette.ink }]}
                   >
-                    <View style={[styles.ico, { backgroundColor: action.bg }]}>
-                      <Icon color={action.fg} size={20} strokeWidth={1.75} />
+                    <View style={[styles.ico, { backgroundColor: palette.accentSoft }]}>
+                      <Icon color={palette.deep} size={20} strokeWidth={1.75} />
                     </View>
                     <Text style={[styles.actionText, { color: palette.ink }, lang === "hi" && styles.hindi]}>{action.label}</Text>
                   </Pressable>
@@ -335,14 +386,14 @@ function HomeScreenContent() {
           <View style={styles.actions}>
             {tiles.map((tile) => {
               const Icon = tile.icon;
-              const colors = rowTint[tile.tint];
+              const colors = rowTintFor(tile.tint, palette);
               return (
                 <View key={tile.key} style={styles.tileCell}>
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel={tile.title}
                     onPress={() => router.push(tile.href)}
-                    style={[styles.tile, { backgroundColor: palette.card }]}
+                    style={[styles.tile, { backgroundColor: palette.card, shadowColor: palette.ink }]}
                   >
                     <View style={[styles.ico, { backgroundColor: colors.bg }]}>
                       <Icon color={colors.fg} size={20} strokeWidth={1.75} />
@@ -354,39 +405,12 @@ function HomeScreenContent() {
             })}
           </View>
 
-          {showGrowth && growth.data ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={growth.data.ready ? t.growthScore : t.gettingStarted}
-              onPress={() => setGrowthOpen(true)}
-              style={[styles.growth, { backgroundColor: palette.card }]}
-            >
-              <Ring score={growth.data.ready ? growth.data.score ?? 0 : 0} track={palette.line} ink={palette.ink} accent={palette.primary} />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.growthTitle, { color: palette.ink }, lang === "hi" && styles.hindi]}>
-                  {growth.data.ready ? t.growthScore : t.gettingStarted}
-                </Text>
-                <Text style={[styles.growthHint, { color: palette.muted }, lang === "hi" && styles.hindi]}>
-                  {tasks.length
-                    ? t.tasksLeft.replace("{left}", String(tasksLeft)).replace("{total}", String(tasks.length))
-                    : t.checkLater}
-                </Text>
-              </View>
-              <ChevronRight color={palette.muted} size={18} strokeWidth={2} />
-            </Pressable>
-          ) : growth.isLoading ? (
-            <Skeleton height={78} />
-          ) : null}
-
-          <View style={styles.filters}>
-            <Chip label={live ? t.liveView : range === "7d" ? t.range7 : t.range30} selected={!live} onPress={() => { setLive(false); setRange(range === "7d" ? "30d" : "7d"); }} />
-            <Chip label={t.liveView} tone="live" selected={live} onPress={() => setLive(true)} />
-            <TextButton label={t.analytics} onPress={() => router.push("/(app)/analytics")} />
+          <View style={styles.recentHeading}>
+            <Text style={[styles.section, { color: palette.muted }, lang === "hi" && styles.hindi]}>{t.recentActivity}</Text>
+            {growth.data ? <TextButton label={t.growthIdeas} onPress={() => setGrowthOpen(true)} /> : null}
           </View>
-
-          <Text style={[styles.section, { color: palette.muted }, lang === "hi" && styles.hindi]}>{t.recentActivity}</Text>
           {quiet ? (
-            <View style={[styles.rowCard, { backgroundColor: palette.card }]}>
+            <View style={[styles.rowCard, { backgroundColor: palette.card, shadowColor: palette.ink }]}>
               <View style={[styles.ico, { backgroundColor: palette.accentSoft }]}>
                 <Sparkles color={palette.deep} size={18} strokeWidth={1.75} />
               </View>
@@ -403,10 +427,10 @@ function HomeScreenContent() {
                   accessibilityRole="button"
                   accessibilityLabel={`#${order.number} ${order.status}`}
                   onPress={() => router.push("/(app)/orders?tab=orders")}
-                  style={[styles.rowCard, { backgroundColor: palette.card }]}
+                  style={[styles.rowCard, { backgroundColor: palette.card, shadowColor: palette.ink }]}
                 >
                   <View style={[styles.avatar, { backgroundColor: palette.header }]}>
-                    <Text style={styles.avatarText}>{(order.customerName || "?").slice(0, 1)}</Text>
+                    <Text style={[styles.avatarText, { color: palette.headerInk }]}>{(order.customerName || "?").slice(0, 1)}</Text>
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.growthTitle, { color: palette.ink }]}>#{order.number} · {order.status}</Text>
@@ -423,10 +447,10 @@ function HomeScreenContent() {
                   accessibilityRole="button"
                   accessibilityLabel={`${row.review.rating} ${row.message}`}
                   onPress={() => router.push("/(app)/feedback")}
-                  style={[styles.rowCard, { backgroundColor: palette.card }]}
+                  style={[styles.rowCard, { backgroundColor: palette.card, shadowColor: palette.ink }]}
                 >
                   <View style={[styles.avatar, { backgroundColor: palette.primaryDeep }]}>
-                    <Text style={styles.avatarText}>{(row.review.customerName || "?").slice(0, 1)}</Text>
+                    <Text style={[styles.avatarText, { color: palette.headerInk }]}>{(row.review.customerName || "?").slice(0, 1)}</Text>
                   </View>
                   <View style={{ flex: 1 }}>
                     <View style={styles.stars} accessibilityElementsHidden>
@@ -445,10 +469,10 @@ function HomeScreenContent() {
             accessibilityRole="button"
             accessibilityLabel={t.askReviews}
             onPress={() => router.push({ pathname: "/(app)/help", params: { q: t.askReviews } })}
-            style={[styles.rowCard, { backgroundColor: palette.card }]}
+            style={[styles.rowCard, { backgroundColor: palette.card, shadowColor: palette.ink }]}
           >
-            <View style={[styles.ico, { backgroundColor: "#FEF3C7" }]}>
-              <Sparkles color="#92400E" size={18} strokeWidth={1.75} />
+            <View style={[styles.ico, { backgroundColor: palette.accentSoft }]}>
+              <Sparkles color={palette.deep} size={18} strokeWidth={1.75} />
             </View>
             <Text style={[styles.growthTitle, { color: palette.ink, flex: 1 }, lang === "hi" && styles.hindi]}>{t.askReviews}</Text>
             <ChevronRight color={palette.muted} size={16} strokeWidth={2} />
@@ -534,31 +558,6 @@ function HomeScreenContent() {
         ))}
       </BottomSheet>
 
-      <CoachTour
-        screen="home"
-        steps={[
-          { title: t.coachHomeStats, body: t.coachHomeStatsBody, top: 168 },
-          { title: t.coachHomeGrowth, body: t.coachHomeGrowthBody, top: 300 },
-          { title: t.coachHomeActions, body: t.coachHomeActionsBody, top: 420 }
-        ]}
-      />
-    </View>
-  );
-}
-
-function Ring({ score, track, ink, accent }: { score: number; track: string; ink: string; accent: string }) {
-  const radius = 20;
-  const c = 2 * Math.PI * radius;
-  const dash = c * (Math.max(0, Math.min(100, score)) / 100);
-  return (
-    <View style={styles.ring}>
-      <View style={{ transform: [{ rotate: "-90deg" }] }}>
-        <Svg width={54} height={54}>
-          <Circle cx={27} cy={27} r={radius} stroke={track} strokeWidth={4} fill="none" />
-          <Circle cx={27} cy={27} r={radius} stroke={accent} strokeWidth={4} fill="none" strokeDasharray={`${dash} ${c}`} strokeLinecap="round" />
-        </Svg>
-      </View>
-      <Text style={[styles.ringText, { color: ink }]}>{Math.round(score)}</Text>
     </View>
   );
 }
@@ -567,19 +566,16 @@ const styles = StyleSheet.create({
   content: { paddingBottom: 120 },
   header: { paddingHorizontal: 18, paddingTop: 12, paddingBottom: 54, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
   headerRow: { flexDirection: "row", alignItems: "center", gap: 12 },
-  hello: { color: "rgba(244,239,230,0.7)", fontFamily: fonts.bodyStrong, fontSize: 13 },
+  hello: { opacity: 0.78, fontFamily: fonts.bodyStrong, fontSize: 13 },
   switcher: { flexDirection: "row", alignItems: "center", gap: 6, minHeight: 44, alignSelf: "flex-start" },
-  bizName: { color: "#F4EFE6", fontFamily: fonts.display, fontSize: 19, flexShrink: 1 },
-  bell: { width: 44, height: 44, borderRadius: 14, backgroundColor: "rgba(255,255,255,0.1)", alignItems: "center", justifyContent: "center" },
+  bizName: { fontFamily: fonts.display, fontSize: 19, flexShrink: 1 },
+  bell: { width: 48, height: 48, borderRadius: 14, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   bellDot: { position: "absolute", top: 9, right: 10, width: 8, height: 8, borderRadius: 4 },
   overlap: { marginTop: -40, paddingHorizontal: 14, gap: 10 },
   filters: { flexDirection: "row", gap: 8, alignItems: "center", flexWrap: "wrap" },
   kpiGrid: { flexDirection: "row", flexWrap: "wrap", marginHorizontal: -5 },
   kpiCell: { width: "50%", padding: 5 },
-  setupCard: { flexDirection: "column", alignItems: "stretch" },
-  setupHead: { flexDirection: "row", alignItems: "center", gap: 12 },
-  setupRow: { minHeight: 48, flexDirection: "row", alignItems: "center", gap: 10 },
-  setupMark: { width: 22, height: 22, borderRadius: 11, borderWidth: 1.5, alignItems: "center", justifyContent: "center" },
+  recentHeading: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   tileCell: { width: "50%", padding: 5 },
   tile: {
     borderRadius: 20,
@@ -589,25 +585,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     gap: 10,
     minHeight: 72,
-    shadowColor: "#1C1813",
     shadowOpacity: 0.06,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
     elevation: 2
   },
   tileText: { flex: 1, fontFamily: fonts.bodyStrong, fontSize: 13 },
-  growth: {
-    borderRadius: 20,
-    padding: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    shadowColor: "#1C1813",
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2
-  },
   growthTitle: { fontFamily: fonts.bodyStrong, fontSize: 14 },
   growthHint: { fontFamily: fonts.body, fontSize: 12, lineHeight: 16, marginTop: 2 },
   section: { fontFamily: fonts.bodyStrong, fontSize: 12, letterSpacing: 0.6, textTransform: "uppercase", marginTop: 4, marginLeft: 2 },
@@ -620,7 +603,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     gap: 6,
     minHeight: 92,
-    shadowColor: "#1C1813",
     shadowOpacity: 0.06,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
@@ -634,17 +616,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
     alignItems: "center",
-    shadowColor: "#1C1813",
     shadowOpacity: 0.06,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
     elevation: 2
   },
   avatar: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
-  avatarText: { color: "#FFFFFF", fontFamily: fonts.bodyStrong },
+  avatarText: { fontFamily: fonts.bodyStrong },
   stars: { flexDirection: "row", gap: 2 },
-  ring: { width: 54, height: 54, alignItems: "center", justifyContent: "center" },
-  ringText: { position: "absolute", fontFamily: fonts.bodyStrong, fontSize: 12 },
   sheetRow: { minHeight: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   tipRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   tipLink: { flex: 1, minHeight: 48, justifyContent: "center" },
@@ -654,7 +633,8 @@ const styles = StyleSheet.create({
 });
 
 export default function HomeScreen() {
+  const { palette } = useTheme();
   return (
-    <Screen topInset={false}><HomeScreenContent /></Screen>
+    <Screen topInset statusBarColor={palette.header}><HomeScreenContent /></Screen>
   );
 }

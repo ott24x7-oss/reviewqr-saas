@@ -1,10 +1,15 @@
 import type { PlaceDetails, PlacesSearch } from "@reviewqr/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
-import { useState , useMemo } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import { Image } from "expo-image";
+import { useMemo, useRef, useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import type { ElementRef } from "react";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { apiData } from "../api/data";
 import { ApiError } from "../api/http";
+import { SetupWalkthrough } from "../guide/setup-tour";
 import { useI18n } from "../i18n";
 import { accountKey } from "../query/keys";
 import { useBusiness, type BusinessCard } from "../state/business";
@@ -23,6 +28,7 @@ type Draft = {
   googleReviewUrl: string;
   googlePlaceId: string;
   whatsappNumber: string;
+  logo: string;
 };
 
 const empty: Draft = {
@@ -32,7 +38,8 @@ const empty: Draft = {
   address: "",
   googleReviewUrl: "",
   googlePlaceId: "",
-  whatsappNumber: ""
+  whatsappNumber: "",
+  logo: ""
 };
 
 export function BusinessForm({ initial, businessId }: { initial?: BusinessCard | null; businessId?: string }) {
@@ -50,12 +57,15 @@ export function BusinessForm({ initial, businessId }: { initial?: BusinessCard |
     address: initial?.address || "",
     googleReviewUrl: initial?.googleReviewUrl || "",
     googlePlaceId: initial?.googlePlaceId || "",
-    whatsappNumber: initial?.whatsappNumber || ""
+    whatsappNumber: initial?.whatsappNumber || "",
+    logo: initial?.logo || ""
   });
   const [query, setQuery] = useState("");
   const [places, setPlaces] = useState<PlacesSearch | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const placesTarget = useRef<ElementRef<typeof View>>(null);
+  const detailsTarget = useRef<ElementRef<typeof View>>(null);
 
   function patch(part: Partial<Draft>) {
     setDraft((current) => ({ ...current, ...part }));
@@ -69,6 +79,34 @@ export function BusinessForm({ initial, businessId }: { initial?: BusinessCard |
       setPlaces(found);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Search failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function chooseLogo(source: "camera" | "library") {
+    if (source === "camera") {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        setError(t.cameraOff);
+        return;
+      }
+    }
+    const result = source === "camera"
+      ? await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 0.7 })
+      : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.7 });
+    const asset = result.canceled ? null : result.assets[0];
+    if (!asset) return;
+    setBusy(true);
+    setError(null);
+    const body = new FormData();
+    body.append("variant", "logo");
+    body.append("file", { uri: asset.uri, name: "logo.jpg", type: "image/jpeg" } as unknown as Blob);
+    try {
+      const saved = await apiData<{ url: string }>("/api/v1/uploads", { method: "POST", body });
+      patch({ logo: saved.url });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t.photoSaveError);
     } finally {
       setBusy(false);
     }
@@ -107,7 +145,8 @@ export function BusinessForm({ initial, businessId }: { initial?: BusinessCard |
         address: draft.address.trim(),
         googleReviewUrl: draft.googleReviewUrl.trim(),
         googlePlaceId: draft.googlePlaceId.trim(),
-        whatsappNumber: draft.whatsappNumber.trim()
+        whatsappNumber: draft.whatsappNumber.trim(),
+        logo: draft.logo || null
       };
       const saved = businessId
         ? await apiData<{ business: { id: string } }>(`/api/v1/businesses/${businessId}`, {
@@ -131,11 +170,10 @@ export function BusinessForm({ initial, businessId }: { initial?: BusinessCard |
   }
 
   return (
-    <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <View style={styles.screen}>
+      <KeyboardAwareScrollView style={{ flex: 1 }} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" bottomOffset={88}>
         <Text style={[styles.title, lang === "hi" && styles.hindi]}>{t.businessDetails}</Text>
-        <SectionHeader label={t.searchPlaces} />
-        <View style={styles.card}>
+        <View ref={placesTarget} collapsable={false} style={styles.card}>
           <FilledField label={t.searchPlaces} value={query} onChangeText={setQuery} />
           <PillButton label={t.searchPlaces} onPress={search} disabled={busy || query.trim().length < 2} tone="outline" />
           {places && !places.enabled ? <Text style={[styles.note, lang === "hi" && styles.hindi]}>{t.placesOff}</Text> : null}
@@ -146,7 +184,7 @@ export function BusinessForm({ initial, businessId }: { initial?: BusinessCard |
           ))}
         </View>
         <SectionHeader label={t.businessName} />
-        <View style={styles.card}>
+        <View ref={detailsTarget} collapsable={false} style={styles.card}>
           <FilledField label={t.businessName} value={draft.name} onChangeText={(name) => patch({ name })} />
           <FilledField label={t.phone} value={draft.phone} onChangeText={(phone) => patch({ phone })} keyboardType="phone-pad" />
           <FilledField label={t.whatsapp} value={draft.whatsappNumber} onChangeText={(whatsappNumber) => patch({ whatsappNumber })} keyboardType="phone-pad" />
@@ -156,12 +194,20 @@ export function BusinessForm({ initial, businessId }: { initial?: BusinessCard |
           <FilledField label={t.city} value={draft.city} onChangeText={(city) => patch({ city })} />
           <FilledField label={t.address} value={draft.address} onChangeText={(address) => patch({ address })} />
         </View>
+        <SectionHeader label={t.photo} />
+        <View style={styles.card}>
+          {draft.logo ? <Image source={{ uri: draft.logo }} style={styles.photoPreview} contentFit="cover" accessibilityLabel={t.photo} /> : null}
+          <View style={styles.photoActions}>
+            <PillButton label={t.camera} onPress={() => chooseLogo("camera")} disabled={busy} tone="outline" />
+            <PillButton label={t.gallery} onPress={() => chooseLogo("library")} disabled={busy} tone="outline" />
+          </View>
+        </View>
         <SectionHeader label={t.reviewUrl} />
         <View style={styles.card}>
           <FilledField label={t.reviewUrl} value={draft.googleReviewUrl} onChangeText={(googleReviewUrl) => patch({ googleReviewUrl })} autoCapitalize="none" />
         </View>
         {error ? <Text style={styles.error}>{error}</Text> : null}
-      </ScrollView>
+      </KeyboardAwareScrollView>
       <StickyAction>
         <PillButton
           label={t.save}
@@ -171,18 +217,29 @@ export function BusinessForm({ initial, businessId }: { initial?: BusinessCard |
           tone="dark"
         />
       </StickyAction>
-    </KeyboardAvoidingView>
+      <SetupWalkthrough
+        step="details"
+        screen="home"
+        targets={{ places: placesTarget, details: detailsTarget }}
+        steps={[
+          { title: t.searchPlaces, body: t.setupCoachDetailsSearch, top: 150, target: "places" },
+          { title: t.businessDetails, body: t.setupCoachDetailsFields, top: 300, target: "details" }
+        ]}
+      />
+    </View>
   );
 }
 
 function makeStyles(colors: Palette) {
   return StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.paper },
-  content: { padding: 16, gap: 12, paddingBottom: 24 },
+  content: { padding: 16, gap: 12, paddingBottom: 120 },
   title: { fontFamily: fonts.display, fontSize: 28, color: colors.ink },
   card: { backgroundColor: colors.card, borderRadius: 20, padding: 12, gap: 10 },
   hit: { minHeight: 48, justifyContent: "center", backgroundColor: colors.paper, borderRadius: 14, paddingHorizontal: 14 },
   hitText: { fontFamily: fonts.body, color: colors.ink },
+  photoPreview: { height: 150, borderRadius: 16, backgroundColor: colors.paper },
+  photoActions: { flexDirection: "row", gap: 8 },
   note: { fontFamily: fonts.body, color: colors.inkSoft, lineHeight: 22 },
   error: { color: colors.danger, fontFamily: fonts.body },
   hindi: { fontFamily: fonts.hindi }

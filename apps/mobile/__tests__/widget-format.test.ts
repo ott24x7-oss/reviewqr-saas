@@ -11,7 +11,7 @@ describe("widget formatter", () => {
   });
 
   it("prints cached today numbers", () => {
-    const view = formatWidget({ loggedIn: true, scans: 12, orders: 3, reviews: 4, businessName: "Spice Junction" });
+    const view = formatWidget({ ...emptySnapshot(), loggedIn: true, scans: 12, orders: 3, reviews: 4, businessName: "Spice Junction" });
     expect(view.title).toBe("QR24x7 Today");
     expect(view.scans).toBe("12");
     expect(view.orders).toBe("3");

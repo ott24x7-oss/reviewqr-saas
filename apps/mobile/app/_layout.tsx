@@ -8,6 +8,7 @@ import { StatusBar } from "expo-status-bar";
 import { Stack, usePathname } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { KeyboardProvider } from "react-native-keyboard-controller";
 import { AppOpenEvent } from "../src/analytics/open";
 import { I18nProvider } from "../src/i18n";
 import { OrderStatusSync } from "../src/orders/sync";
@@ -16,7 +17,7 @@ import { initSentry, wrapRoot } from "../src/sentry/init";
 import { SessionProvider, useSession } from "../src/state/session";
 import { AppUpdateCheck } from "../src/updates/check";
 import { LaunchFrame } from "../src/ui/launch";
-import { ConnectivityBanner, QueryRetryBar } from "../src/ui/offline-banner";
+import { ConnectivityBanner } from "../src/ui/offline-banner";
 import { ThemeProvider, useTheme } from "../src/ui/theme";
 
 initSentry();
@@ -33,7 +34,6 @@ function Boot({ fontsReady }: { fontsReady: boolean }) {
       <StatusBar style={scheme === "dark" ? "light" : "dark"} />
       <LaunchFrame fontsReady={fontsReady} sessionReady={ready && themeReady} skip={motionLab}>
         <ConnectivityBanner />
-        <QueryRetryBar />
         {fontsReady && themeReady ? <Stack screenOptions={{ headerShown: false }} /> : null}
       </LaunchFrame>
     </>
@@ -54,18 +54,20 @@ function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <I18nProvider>
-        <PersistQueryClientProvider client={queryClient} persistOptions={queryPersistOptions}>
-          <SessionProvider>
-            <ThemeProvider>
-              <AppOpenEvent />
-              <OrderStatusSync />
-              <AppUpdateCheck />
-              <Boot fontsReady={Boolean(loaded)} />
-            </ThemeProvider>
-          </SessionProvider>
-        </PersistQueryClientProvider>
-      </I18nProvider>
+      <KeyboardProvider>
+        <I18nProvider>
+          <PersistQueryClientProvider client={queryClient} persistOptions={queryPersistOptions}>
+            <SessionProvider>
+              <ThemeProvider>
+                <AppOpenEvent />
+                <OrderStatusSync />
+                <AppUpdateCheck />
+                <Boot fontsReady={Boolean(loaded)} />
+              </ThemeProvider>
+            </SessionProvider>
+          </PersistQueryClientProvider>
+        </I18nProvider>
+      </KeyboardProvider>
     </GestureHandlerRootView>
   );
 }

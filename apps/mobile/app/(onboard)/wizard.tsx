@@ -1,3 +1,4 @@
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   BUSINESS_CATEGORIES,
@@ -18,7 +19,7 @@ import { router } from "expo-router";
 import LottieView from "lottie-react-native";
 import { Camera, Download, Image as ImageIcon, Share2, ShoppingBag, Store, Utensils } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
-import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Image, Linking, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { trackAppEvent } from "../../src/analytics/events";
@@ -347,7 +348,7 @@ export default function WizardScreen() {
   if (done) {
     return (
       <SafeAreaView style={styles.screen} testID="wizard-success">
-        <ScrollView contentContainerStyle={styles.content}>
+        <KeyboardAwareScrollView style={{ flex: 1 }} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" bottomOffset={12}>
           {!reduceMotion && !lowRam ? (
             <LottieView source={require("../../assets/lottie/confetti.json")} autoPlay loop={false} style={styles.confetti} />
           ) : null}
@@ -375,7 +376,7 @@ export default function WizardScreen() {
               <Text style={[styles.actionText, { color: palette.ink }]}>{t.orderStand}</Text>
             </Pressable>
           </View>
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </SafeAreaView>
     );
   }
@@ -384,7 +385,7 @@ export default function WizardScreen() {
 
   return (
     <SafeAreaView style={styles.screen} testID={`wizard-step-${step}`}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <KeyboardAwareScrollView style={{ flex: 1 }} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" bottomOffset={12}>
         <ProgressSteps labels={[t.stepBusiness, t.stepLook, t.stepLink, t.stepMenu]} step={step} />
         <Animated.View style={stepShift}>
         {step === 1 ? (
@@ -424,7 +425,7 @@ export default function WizardScreen() {
             </Animated.View>
             <View style={styles.row}>
               {ONBOARDING_THEMES.map((item) => (
-                <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={item.id} accessibilityState={{ selected: draft.themeId === item.id }} onPress={() => patch({ themeId: item.id })} style={[styles.swatch, { backgroundColor: item.bg }, draft.themeId === item.id && styles.swatchOn]} />
+                <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={item.id} accessibilityState={{ selected: draft.themeId === item.id }} onPress={() => patch({ themeId: item.id })} style={[styles.swatch, { backgroundColor: item.bg, borderColor: palette.line }, draft.themeId === item.id && styles.swatchOn]} />
               ))}
             </View>
           </View>
@@ -537,7 +538,7 @@ export default function WizardScreen() {
             }}
           />
         ) : null}
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 }
@@ -565,7 +566,7 @@ function makeStyles(colors: Palette) {
   previewName: { fontFamily: fonts.display, fontSize: 28 },
   previewButton: { alignSelf: "flex-start", borderRadius: 999, paddingHorizontal: 16, paddingVertical: 10 },
   previewButtonText: { color: colors.white, fontFamily: fonts.bodyStrong },
-  swatch: { width: 48, height: 48, borderRadius: 24, borderWidth: 1, borderColor: "#DDD6C8" },
+  swatch: { width: 48, height: 48, borderRadius: 24, borderWidth: 1 },
   swatchOn: { borderColor: colors.ink, borderWidth: 3 },
   prefixRow: { minHeight: 56, borderRadius: 16, borderWidth: 1, flexDirection: "row", alignItems: "center", paddingHorizontal: 12, gap: 4 },
   prefix: { fontFamily: fonts.bodyStrong, fontSize: 16 },

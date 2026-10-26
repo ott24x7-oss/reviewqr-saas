@@ -14,7 +14,7 @@ export function TodayWidget({ snapshot, wide }: { snapshot: WidgetSnapshot; wide
       style={{
         height: "match_parent",
         width: "match_parent",
-        backgroundColor: "#F4EFE6",
+        backgroundColor: view.palette.bg,
         padding: 12,
         flexDirection: "column",
         justifyContent: "space-between",
@@ -22,39 +22,39 @@ export function TodayWidget({ snapshot, wide }: { snapshot: WidgetSnapshot; wide
       }}
       {...openQr}
     >
-      <TextWidget text={view.title} style={{ fontSize: 13, color: "#0F7A37" }} />
+      <TextWidget text={view.title} style={{ fontSize: 13, color: view.palette.primary }} />
       {view.loggedIn ? (
         <FlexWidget style={{ flexDirection: wide ? "row" : "column", justifyContent: "space-between", width: "match_parent" }}>
-          <TextWidget text={`${view.scans} scans`} style={{ fontSize: 16, color: "#1C1813" }} />
-          <TextWidget text={`${view.orders} orders`} style={{ fontSize: 16, color: "#1C1813" }} />
-          <TextWidget text={`${view.reviews} reviews`} style={{ fontSize: 16, color: "#1C1813" }} />
+          <TextWidget text={`${view.scans} scans`} style={{ fontSize: 16, color: view.palette.ink }} />
+          <TextWidget text={`${view.orders} orders`} style={{ fontSize: 16, color: view.palette.ink }} />
+          <TextWidget text={`${view.reviews} reviews`} style={{ fontSize: 16, color: view.palette.ink }} />
         </FlexWidget>
       ) : (
-        <TextWidget text={view.signedOut} style={{ fontSize: 14, color: "#1C1813" }} />
+        <TextWidget text={view.signedOut} style={{ fontSize: 14, color: view.palette.ink }} />
       )}
       <TextWidget
         text={view.qrLabel}
-        style={{ fontSize: 13, color: "#FFFFFF", backgroundColor: "#0F7A37", padding: 6 }}
+        style={{ fontSize: 13, color: view.palette.onPrimary, backgroundColor: view.palette.primary, padding: 6 }}
         {...openQr}
       />
     </FlexWidget>
   );
 }
 
-export function MyQrWidget() {
+export function MyQrWidget({ palette }: { palette: WidgetSnapshot["palette"] }) {
   return (
     <FlexWidget
       accessibilityLabel="My QR"
       style={{
         height: "match_parent",
         width: "match_parent",
-        backgroundColor: "#0F7A37",
+        backgroundColor: palette.primary,
         alignItems: "center",
         justifyContent: "center"
       }}
       {...openQr}
     >
-      <TextWidget text="QR" style={{ fontSize: 18, color: "#FFFFFF" }} />
+      <TextWidget text="QR" style={{ fontSize: 18, color: palette.onPrimary }} />
     </FlexWidget>
   );
 }
