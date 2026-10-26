@@ -91,6 +91,9 @@ function OwnerTabs() {
       <Tabs.Screen name="analytics" options={{ title: t.analytics }} />
       <Tabs.Screen name="orders" options={{ title: t.orders }} />
       <Tabs.Screen name="menu" options={{ title: t.menuTab }} />
+      <Tabs.Screen name="services" options={{ title: t.services }} />
+      <Tabs.Screen name="bookings" options={{ title: t.bookings }} />
+      <Tabs.Screen name="booking-detail" options={{ title: t.bookingDetail }} />
       <Tabs.Screen name="feedback" options={{ title: t.feedbackTab }} />
       <Tabs.Screen name="more" options={{ title: t.more }} />
       <Tabs.Screen name="shop" options={{ title: t.shop }} />

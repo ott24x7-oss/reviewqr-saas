@@ -22,7 +22,7 @@ import { noteOrderCompleted } from "../../src/review/prompt";
 import { useReviewMoment } from "../../src/review/watch";
 import { useBusiness } from "../../src/state/business";
 import { hasModule, useEntitlement } from "../../src/state/entitlement";
-import { openPlanLock } from "../../src/state/plan-lock";
+import { openPlanLock, useFeatures } from "../../src/state/plan-lock";
 import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
 import { Card, Chip, EmptyState, LoadErrorCard, Skeleton } from "../../src/ui/bits";
@@ -148,6 +148,7 @@ function OrdersScreenContent() {
   const [range, setRange] = useState<"all" | "today" | "week">("all");
   const [skeletonReady, setSkeletonReady] = useState(false);
   const entitlement = useEntitlement();
+  const { locked: featureLocked } = useFeatures();
   const modules = entitlement.data?.modules;
   const id = business?.id;
   const userId = user?.id ?? "";
@@ -364,6 +365,14 @@ function OrdersScreenContent() {
             onPress={() => setTab(item)}
           />
         ))}
+        <Chip
+          label={t.bookings}
+          selected={false}
+          onPress={() => {
+            if (featureLocked("services-booking")) openPlanLock("services-booking");
+            else router.push("/(app)/bookings");
+          }}
+        />
       </View>
       {tab === "orders" && !locked ? (
         <View style={styles.row}>
