@@ -11,6 +11,7 @@ import {
   type ReactNode
 } from "react";
 import { AccessibilityInfo, Appearance, type ColorSchemeName } from "react-native";
+import Constants from "expo-constants";
 import { apiData } from "../api/data";
 import { useSession } from "../state/session";
 import {
@@ -25,6 +26,10 @@ import {
 const APPEARANCE_KEY = "reviewqr.theme";
 const APP_THEME_KEY = "reviewqr.appTheme";
 const CINEMATIC_ACCENT_KEY = "reviewqr.cinematicAccent";
+const IS_ADMIN_VARIANT = process.env.EXPO_PUBLIC_APP_VARIANT === "admin" || Constants.expoConfig?.extra?.appVariant === "admin" || Constants.expoConfig?.name === "QR24x7 Admin";
+const ACTIVE_APPEARANCE_KEY = IS_ADMIN_VARIANT ? "reviewqr.admin.theme" : APPEARANCE_KEY;
+const ACTIVE_APP_THEME_KEY = IS_ADMIN_VARIANT ? "reviewqr.admin.appTheme" : APP_THEME_KEY;
+const ACTIVE_ACCENT_KEY = IS_ADMIN_VARIANT ? "reviewqr.admin.cinematicAccent" : CINEMATIC_ACCENT_KEY;
 const LOW_RAM_BYTES = 2.5 * 1024 * 1024 * 1024;
 
 export type SchemeChoice = "system" | "light" | "dark";
@@ -76,8 +81,8 @@ type StoredPreferences = { appTheme: AppThemeName; cinematicAccent: CinematicAcc
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const { ready: sessionReady, user } = useSession();
-  const [choice, setChoiceState] = useState<SchemeChoice>("system");
-  const [appTheme, setAppThemeState] = useState<AppThemeName>("emerald");
+  const [choice, setChoiceState] = useState<SchemeChoice>(IS_ADMIN_VARIANT ? "dark" : "system");
+  const [appTheme, setAppThemeState] = useState<AppThemeName>(IS_ADMIN_VARIANT ? "ocean" : "emerald");
   const [cinematicAccent, setCinematicAccentState] = useState<CinematicAccent>("gold");
   const [system, setSystem] = useState<ColorSchemeName | null>(Appearance.getColorScheme() ?? null);
   const [reduceMotion, setReduceMotion] = useState(false);
@@ -93,9 +98,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let live = true;
     Promise.all([
-      AsyncStorage.getItem(APPEARANCE_KEY),
-      AsyncStorage.getItem(APP_THEME_KEY),
-      AsyncStorage.getItem(CINEMATIC_ACCENT_KEY)
+      AsyncStorage.getItem(ACTIVE_APPEARANCE_KEY),
+      AsyncStorage.getItem(ACTIVE_APP_THEME_KEY),
+      AsyncStorage.getItem(ACTIVE_ACCENT_KEY)
     ])
       .then(([savedChoice, savedTheme, savedAccent]) => {
         if (!live) return;
@@ -137,8 +142,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         setCinematicAccentState(remote.cinematicAccent);
         hasStoredTheme.current = true;
         AsyncStorage.multiSet([
-          [APP_THEME_KEY, remote.appTheme],
-          [CINEMATIC_ACCENT_KEY, remote.cinematicAccent]
+          [ACTIVE_APP_THEME_KEY, remote.appTheme],
+          [ACTIVE_ACCENT_KEY, remote.cinematicAccent]
         ]).catch(() => undefined);
       })
       .catch(() => undefined);
@@ -147,8 +152,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const persistPreferences = useCallback((next: StoredPreferences) => {
     hasStoredTheme.current = true;
     AsyncStorage.multiSet([
-      [APP_THEME_KEY, next.appTheme],
-      [CINEMATIC_ACCENT_KEY, next.cinematicAccent]
+      [ACTIVE_APP_THEME_KEY, next.appTheme],
+      [ACTIVE_ACCENT_KEY, next.cinematicAccent]
     ]).catch(() => undefined);
     if (user) {
       apiData("/api/v1/me/preferences", {
@@ -172,7 +177,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const setChoice = useCallback((next: SchemeChoice) => {
     setChoiceState(next);
-    AsyncStorage.setItem(APPEARANCE_KEY, next).catch(() => undefined);
+    AsyncStorage.setItem(ACTIVE_APPEARANCE_KEY, next).catch(() => undefined);
   }, []);
 
   const value = useMemo<ThemeValue>(() => {

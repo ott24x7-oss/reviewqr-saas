@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { Redirect, Tabs } from "expo-router";
-import { useMemo, type ReactNode } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Redirect, router, Tabs, usePathname } from "expo-router";
+import { useEffect, useMemo, type ReactNode } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { apiData } from "../../src/api/data";
 import { useI18n } from "../../src/i18n";
@@ -9,6 +10,10 @@ import { accountKey } from "../../src/query/keys";
 import { BusinessProvider, useBusiness } from "../../src/state/business";
 import { PlanLockHost } from "../../src/state/plan-lock";
 import { useSession } from "../../src/state/session";
+import { AgentModeProvider, useAgentMode } from "../../src/agent/mode-context";
+import { useAgentHome, useAgentTeam } from "../../src/agent/api";
+import { PendingAgentScreen } from "../../src/agent/pending-screen";
+import { PENDING_AGENT_JOIN_KEY } from "../../src/agent/join-code";
 import { fonts } from "../../src/theme";
 import { PremiumTabBar } from "../../src/ui/tab-bar";
 import { usePalette } from "../../src/ui/theme";
@@ -36,7 +41,7 @@ function PanelGate({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-function AppTabs() {
+function OwnerTabs() {
   const { user } = useSession();
   const { business } = useBusiness();
   const { t, lang } = useI18n();
@@ -67,6 +72,7 @@ function AppTabs() {
           state={props.state}
           descriptors={props.descriptors}
           badges={badges}
+          mode="owner"
           onTabPress={(route, focused) => {
             const event = props.emitter.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
             if (!focused && !event.defaultPrevented) props.navigateToTab(route.key);
@@ -108,8 +114,96 @@ function AppTabs() {
       <Tabs.Screen name="account" options={{ title: t.account }} />
       <Tabs.Screen name="theme" options={{ title: t.theme }} />
       <Tabs.Screen name="agent" options={{ title: t.agentHome }} />
+      <Tabs.Screen name="agent-join" options={{ title: t.agentJoin }} />
+      <Tabs.Screen name="agent-pending" options={{ title: t.agentWaitingTitle }} />
     </Tabs>
   );
+}
+
+function AgentTabs() {
+  const { t, lang } = useI18n();
+  const palette = usePalette();
+  const pathname = usePathname();
+  const home = useAgentHome();
+  const team = useAgentTeam(home.data?.status === "ACTIVE");
+  const label = lang === "hi" ? fonts.hindiStrong : fonts.bodyStrong;
+
+  useEffect(() => {
+    if (home.data?.status === "PENDING") return;
+    if (/^\/agent-(home|businesses|team|earnings|more|member|onboard|payouts|profile|how|join|pending)$/.test(pathname) || pathname.startsWith("/agent/join/")) return;
+    router.replace("/(app)/agent-home");
+  }, [home.data?.status, pathname]);
+
+  if (home.data?.status === "PENDING") return <PendingAgentScreen />;
+  const canRecruit = team.data?.canRecruit !== false;
+  return (
+    <Tabs
+      tabBar={(props) => (
+        <PremiumTabBar
+          state={props.state}
+          descriptors={props.descriptors}
+          mode="agent"
+          canRecruit={canRecruit}
+          onTabPress={(route, focused) => {
+            const event = props.emitter.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
+            if (!focused && !event.defaultPrevented) props.navigateToTab(route.key);
+          }}
+        />
+      )}
+      screenOptions={{
+        headerShown: false,
+        headerStyle: { backgroundColor: palette.paper },
+        headerTintColor: palette.ink,
+        headerTitleStyle: { fontFamily: label },
+        tabBarStyle: { backgroundColor: palette.card, minHeight: 64 }
+      }}
+    >
+      <Tabs.Screen name="agent-home" options={{ title: t.agentHomeTab }} />
+      <Tabs.Screen name="agent-businesses" options={{ title: t.agentBusinessesTab }} />
+      <Tabs.Screen name="agent-team" options={{ title: t.agentTeamTab }} />
+      <Tabs.Screen name="agent-earnings" options={{ title: t.agentEarningsTab }} />
+      <Tabs.Screen name="agent-more" options={{ title: t.agentMoreTab }} />
+      <Tabs.Screen name="agent-member" options={{ title: t.agentTeamTab }} />
+      <Tabs.Screen name="agent-onboard" options={{ title: t.onboardBusiness }} />
+      <Tabs.Screen name="agent-payouts" options={{ title: t.agentPayouts }} />
+      <Tabs.Screen name="agent-profile" options={{ title: t.agentProfile }} />
+      <Tabs.Screen name="agent-how" options={{ title: t.agentHowTitle }} />
+      <Tabs.Screen name="agent-join" options={{ title: t.agentJoin }} />
+      <Tabs.Screen name="agent-pending" options={{ title: t.agentWaitingTitle }} />
+      <Tabs.Screen name="agent" options={{ title: t.agentHome }} />
+    </Tabs>
+  );
+}
+
+function ModeTabs() {
+  const { user } = useSession();
+  const { loading } = useBusiness();
+  const { mode, ready } = useAgentMode();
+  const palette = usePalette();
+  if (user?.role === "AGENT" && (!ready || (mode === "owner" && loading))) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: palette.paper }}>
+        <ActivityIndicator color={palette.ink} />
+      </View>
+    );
+  }
+  return user?.role === "AGENT" && mode === "agent" ? <AgentTabs /> : <OwnerTabs />;
+}
+
+function PendingAgentJoinRedirect() {
+  const { user } = useSession();
+  const pathname = usePathname();
+  useEffect(() => {
+    if (!user || user.role !== "USER" || pathname.includes("agent-join")) return;
+    AsyncStorage.getItem(PENDING_AGENT_JOIN_KEY)
+      .then(async (code) => {
+        if (!code) return;
+        await AsyncStorage.removeItem(PENDING_AGENT_JOIN_KEY).catch(() => undefined);
+        router.replace({ pathname: "/(app)/agent-join", params: { code } });
+      })
+      .catch(() => undefined);
+  }, [pathname, user]);
+  return null;
 }
 
 export default function AppLayout() {
@@ -119,8 +213,11 @@ export default function AppLayout() {
     <BusinessProvider>
     <PushBridge />
     <PlanLockHost />
+    <PendingAgentJoinRedirect />
     <PanelGate>
-      <AppTabs />
+      <AgentModeProvider>
+        <ModeTabs />
+      </AgentModeProvider>
     </PanelGate>
     </BusinessProvider>
   );

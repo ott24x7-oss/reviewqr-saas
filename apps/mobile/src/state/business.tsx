@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useQuery } from "@tanstack/react-query";
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { apiData } from "../api/data";
+import { agentMockEnabled } from "../agent/env";
 import { accountKey } from "../query/keys";
 import { useSession } from "./session";
 import { BUSINESS_ID_KEY } from "./storage";
@@ -35,10 +36,12 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
   const { user } = useSession();
   const [businessId, setBusinessId] = useState<string | null>(null);
   const [stored, setStored] = useState(false);
-  const query = useQuery({
+  const query = useQuery<{ items: BusinessCard[] }>({
     queryKey: accountKey(user?.id ?? "", "businesses"),
     enabled: !!user,
-    queryFn: () => apiData<{ items: BusinessCard[] }>("/api/v1/businesses?limit=50")
+    queryFn: () => agentMockEnabled()
+      ? Promise.resolve({ items: [{ id: "owner-demo", name: "Madhav Sweets", slug: "madhav-sweets", phone: null, city: "Jaipur", address: null, googlePlaceId: null, googleReviewUrl: null, whatsappNumber: null }] as BusinessCard[] })
+      : apiData<{ items: BusinessCard[] }>("/api/v1/businesses?limit=50")
   });
 
   useEffect(() => {

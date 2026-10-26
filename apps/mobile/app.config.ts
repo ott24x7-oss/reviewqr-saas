@@ -1,10 +1,11 @@
 import type { ConfigContext, ExpoConfig } from "expo/config";
+import { applyAppVariant, resolveAppVariant } from "./src/admin/variant.ts";
 
 const packageName = "com.qr24x7.app";
 // Expo project @ott24x7/reviewqr. Not a secret.
 const easProjectId = "00c6693d-9ab5-4dce-9de6-e24889f469fa";
 
-export default ({ config }: ConfigContext): ExpoConfig => ({
+export default ({ config }: ConfigContext): ExpoConfig => applyAppVariant(({
   ...config,
   name: "QR24x7",
   slug: "reviewqr",
@@ -17,11 +18,20 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   userInterfaceStyle: "automatic",
   ios: {
     supportsTablet: false,
-    bundleIdentifier: packageName
+    bundleIdentifier: packageName,
+    associatedDomains: ["applinks:qr24x7.in"]
   },
   android: {
     package: packageName,
     versionCode: 5,
+    intentFilters: [
+      {
+        action: "VIEW",
+        autoVerify: true,
+        data: [{ scheme: "https", host: "qr24x7.in", pathPrefix: "/agent/join" }],
+        category: ["BROWSABLE", "DEFAULT"]
+      }
+    ],
     adaptiveIcon: {
       foregroundImage: "./assets/adaptive-icon.png",
       backgroundImage: "./assets/adaptive-icon-background.png",
@@ -165,4 +175,4 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       projectId: process.env.EXPO_PUBLIC_EAS_PROJECT_ID || easProjectId
     }
   }
-});
+}), resolveAppVariant(process.env.APP_VARIANT));
