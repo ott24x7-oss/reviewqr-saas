@@ -500,7 +500,7 @@ export async function patchTeamMember(
   leaderUserId: string,
   memberUserId: string,
   input: { sharePercent?: number; action?: "pause" | "resume" }
-) {
+): Promise<ServiceResult<{ status: string } | { sharePercent: number }>> {
   const found = await memberForLeader(leaderUserId, memberUserId);
   if (!found.ok) return found;
   if (input.action) {

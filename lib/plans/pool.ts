@@ -20,7 +20,14 @@ export async function loadSellerChain(sellerId: string, db: CommissionDb = prism
   const seen = new Set<string>();
   while (userId && chain.length < settings.maxTeamDepth && !seen.has(userId)) {
     seen.add(userId);
-    const profile = await db.agentProfile.findUnique({
+    const profile: {
+      userId: string;
+      status: "PENDING" | "ACTIVE" | "PAUSED";
+      active: boolean;
+      sharePercent: number | null;
+      depth: number;
+      leader: { userId: string } | null;
+    } | null = await db.agentProfile.findUnique({
       where: { userId },
       select: {
         userId: true,

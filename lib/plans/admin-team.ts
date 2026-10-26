@@ -83,7 +83,10 @@ export async function moveAgentMember(profileId: string, leaderUserId: string) {
     if (cursor === member.id) return { ok: false as const, error: "That would put a leader under their own team" };
     if (seen.has(cursor)) break;
     seen.add(cursor);
-    const row = await prisma.agentProfile.findUnique({ where: { id: cursor }, select: { leaderId: true } });
+    const row: { leaderId: string | null } | null = await prisma.agentProfile.findUnique({
+      where: { id: cursor },
+      select: { leaderId: true }
+    });
     cursor = row?.leaderId ?? null;
   }
   const rows = await subtree(member.id);
