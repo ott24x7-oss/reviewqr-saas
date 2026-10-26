@@ -1,4 +1,5 @@
 import { Screen } from "../../src/ui/screen";
+import { FeatureGate } from "../../src/state/plan-lock";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -123,6 +124,8 @@ const styles = StyleSheet.create({
 
 export default function ReviewsScreen() {
   return (
-    <Screen topInset={true}><ReviewsScreenContent /></Screen>
+    <FeatureGate id="reviews-log">
+      <Screen topInset={true}><ReviewsScreenContent /></Screen>
+    </FeatureGate>
   );
 }

@@ -1,4 +1,5 @@
 import { Screen } from "../../src/ui/screen";
+import { FeatureGate } from "../../src/state/plan-lock";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ScrollView, StyleSheet, Text } from "react-native";
@@ -88,6 +89,8 @@ const styles = StyleSheet.create({
 
 export default function OffersScreen() {
   return (
-    <Screen topInset={true}><OffersScreenContent /></Screen>
+    <FeatureGate id="offers">
+      <Screen topInset={true}><OffersScreenContent /></Screen>
+    </FeatureGate>
   );
 }

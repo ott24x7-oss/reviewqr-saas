@@ -1,6 +1,7 @@
 import { Screen } from "../../src/ui/screen";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { Lock } from "lucide-react-native";
+import { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { apiData } from "../../src/api/data";
 import { ApiError } from "../../src/api/http";
@@ -8,6 +9,7 @@ import { useI18n } from "../../src/i18n";
 import { accountKey } from "../../src/query/keys";
 import { useBusiness } from "../../src/state/business";
 import { hasModule, useEntitlement } from "../../src/state/entitlement";
+import { openPlanLock, useFeatures } from "../../src/state/plan-lock";
 import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
 import { Card } from "../../src/ui/bits";
@@ -55,8 +57,13 @@ function StoreScreenContent() {
   const { business } = useBusiness();
   const client = useQueryClient();
   const entitlement = useEntitlement();
+  const { locked } = useFeatures();
   const modules = entitlement.data?.modules;
   const open = !!business && (!modules || hasModule(modules, "STORE"));
+  const storeLocked = !!(modules && !hasModule(modules, "STORE"));
+  useEffect(() => {
+    if (storeLocked) openPlanLock("store");
+  }, [storeLocked]);
   const id = business?.id;
   const [draft, setDraft] = useState<Settings | null>(null);
   const [place, setPlace] = useState("");
@@ -70,7 +77,7 @@ function StoreScreenContent() {
   const locations = useQuery({
     queryKey: accountKey(user?.id ?? "", "locations", id),
     enabled: !!user && !!id,
-    queryFn: () => apiData<{ items: { id: string; name: string; city: string }[] }>(`/api/v1/businesses/${id}/locations`)
+    queryFn: () => apiData<{ items: { id: string; name: string; city: string }[] }>(`/api/v1/businesses/${id}/locations`, {}, { planSheet: false })
   });
   const form = draft ?? (settings.data ? { ...settings.data, hours: hoursFrom(settings.data.hours), upiId: settings.data.upiId || "" } : null);
 
@@ -88,6 +95,10 @@ function StoreScreenContent() {
 
   async function addLocation() {
     if (!id || place.trim().length < 2) return;
+    if (locked("locations")) {
+      openPlanLock("locations");
+      return;
+    }
     setError(null);
     try {
       await apiData(`/api/v1/businesses/${id}/locations`, { method: "POST", body: JSON.stringify({ name: place.trim(), city: city.trim() }) });
@@ -136,7 +147,10 @@ function StoreScreenContent() {
           <PillButton label={t.save} tone="dark" onPress={save} />
         </>
       ) : null}
-      <Text style={[styles.name, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.locations}</Text>
+      <View style={styles.row}>
+        <Text style={[styles.name, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.locations}</Text>
+        {locked("locations") ? <Lock color={palette.muted} size={16} strokeWidth={2} /> : null}
+      </View>
       <Field label={t.addLocation} tone="paper" value={place} onChangeText={setPlace} />
       <Field label={t.city} tone="paper" value={city} onChangeText={setCity} />
       <PillButton label={t.addLocation} tone="outline" onPress={addLocation} />

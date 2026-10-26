@@ -18,6 +18,7 @@ import { HelpButton } from "../../src/guide/help-sheet";
 import { useI18n } from "../../src/i18n";
 import { accountKey } from "../../src/query/keys";
 import { useBusiness } from "../../src/state/business";
+import { openPlanLock, useFeatures } from "../../src/state/plan-lock";
 import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
 import { useTheme } from "../../src/ui/theme";
@@ -40,6 +41,8 @@ function TapScreenContent() {
   const { t, lang } = useI18n();
   const { user } = useSession();
   const { business } = useBusiness();
+  const { locked } = useFeatures();
+  const pageThemesLocked = locked("page-themes");
   const client = useQueryClient();
   const tap = useQuery({
     queryKey: accountKey(user?.id ?? "", "tap", business?.id),
@@ -82,6 +85,10 @@ function TapScreenContent() {
 
   async function saveColour() {
     if (!business) return;
+    if (locked("page-themes")) {
+      openPlanLock("page-themes");
+      return;
+    }
     setError(null);
     try {
       await apiData(`/api/v1/businesses/${business.id}/theme`, {
@@ -107,10 +114,11 @@ function TapScreenContent() {
         body: JSON.stringify({
           action: "publish",
           bio: bioText,
-          themeId: theme || undefined,
+          ...(themeId ? { themeId } : {}),
           links: shown,
-          directMode,
-          directTarget: directMode === "DIRECT" ? directTarget : ""
+          ...(directOn !== null
+            ? { directMode, directTarget: directMode === "DIRECT" ? directTarget : "" }
+            : {})
         })
       });
       setLinks(null);
@@ -144,6 +152,10 @@ function TapScreenContent() {
   useEffect(() => {
     if (qrUri) void trackOnce("first_qr_shown");
   }, [qrUri]);
+
+  useEffect(() => {
+    if (section === "theme" && pageThemesLocked) openPlanLock("page-themes");
+  }, [section, pageThemesLocked]);
 
   useEffect(() => {
     if (reduceMotion || lowRam || !data?.code) {
@@ -216,7 +228,13 @@ function TapScreenContent() {
                   accessibilityRole="button"
                   accessibilityLabel={item.name}
                   accessibilityState={{ selected }}
-                  onPress={() => setThemeId(item.id)}
+                  onPress={() => {
+                    if (locked("page-themes")) {
+                      openPlanLock("page-themes");
+                      return;
+                    }
+                    setThemeId(item.id);
+                  }}
                   style={[styles.swatch, { backgroundColor: item.bg, borderColor: selected ? palette.deep : "transparent" }]}
                 >
                   <Text style={{ color: item.ink, fontFamily: fonts.bodyStrong }} numberOfLines={2}>{item.name}</Text>
@@ -291,7 +309,13 @@ function TapScreenContent() {
         <PillButton label={t.downloadQr} onPress={share} tone="outline" />
         <PillButton label={t.printStand} onPress={() => qrUri && WebBrowser.openBrowserAsync(qrUri)} disabled={!qrUri} tone="outline" />
       </View>
-      <PillButton label={t.nfc} onPress={() => router.push("/(app)/nfc")} tone="dark" />
+      <PillButton label={t.nfc} onPress={() => {
+        if (locked("nfc")) {
+          openPlanLock("nfc");
+          return;
+        }
+        router.push("/(app)/nfc");
+      }} tone="dark" />
       <SectionHeader label={t.directTitle} />
       <Group>
         <GroupRow
@@ -306,6 +330,10 @@ function TapScreenContent() {
           selected={directMode === "DIRECT"}
           onPress={() => {
             const next = directMode !== "DIRECT";
+            if (next && locked("direct-link")) {
+              openPlanLock("direct-link");
+              return;
+            }
             setDirectOn(next);
             if (next && !directOptions.some((link) => link.key === directTarget) && directOptions[0]) {
               setDirectKey(directOptions[0].key);
@@ -320,7 +348,14 @@ function TapScreenContent() {
             title={lang === "hi" && link.labelHi ? link.labelHi : link.labelEn}
             hint={link.type}
             selected={link.key === directTarget && directMode === "DIRECT"}
-            onPress={() => { setDirectOn(true); setDirectKey(link.key); }}
+            onPress={() => {
+              if (locked("direct-link")) {
+                openPlanLock("direct-link");
+                return;
+              }
+              setDirectOn(true);
+              setDirectKey(link.key);
+            }}
           />
         ))}
       </Group>

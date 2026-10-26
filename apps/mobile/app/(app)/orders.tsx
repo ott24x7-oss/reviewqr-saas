@@ -21,6 +21,7 @@ import { noteOrderCompleted } from "../../src/review/prompt";
 import { useReviewMoment } from "../../src/review/watch";
 import { useBusiness } from "../../src/state/business";
 import { hasModule, useEntitlement } from "../../src/state/entitlement";
+import { openPlanLock } from "../../src/state/plan-lock";
 import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
 import { Card, Chip, EmptyState, Skeleton } from "../../src/ui/bits";
@@ -332,6 +333,10 @@ function OrdersScreenContent() {
   const storeLocked = !!(modules && !hasModule(modules, "STORE"));
   const reviewsLocked = !!(modules && !hasModule(modules, "REVIEWS"));
   const locked = tab === "products" ? menuLocked : tab === "orders" ? storeLocked : reviewsLocked;
+  useEffect(() => {
+    if (!locked) return;
+    openPlanLock(tab === "products" ? "menu" : tab === "orders" ? "orders" : "reviews-log");
+  }, [locked, tab]);
   const orderRows = (orders.data?.items ?? []).filter((order) => order.status === filter);
   const listData: (Product | OrderCard | FeedbackRow)[] = locked
     ? []

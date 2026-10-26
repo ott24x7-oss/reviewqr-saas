@@ -1,4 +1,5 @@
 import { Screen } from "../../src/ui/screen";
+import { FeatureGate } from "../../src/state/plan-lock";
 import { useQuery } from "@tanstack/react-query";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system/legacy";
@@ -110,6 +111,8 @@ const styles = StyleSheet.create({
 
 export default function OrderDetailScreen() {
   return (
-    <Screen topInset={true}><OrderDetailScreenContent /></Screen>
+    <FeatureGate id="orders">
+      <Screen topInset={true}><OrderDetailScreenContent /></Screen>
+    </FeatureGate>
   );
 }

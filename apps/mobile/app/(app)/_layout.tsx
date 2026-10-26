@@ -7,6 +7,7 @@ import { useI18n } from "../../src/i18n";
 import { PushBridge } from "../../src/push/register";
 import { accountKey } from "../../src/query/keys";
 import { BusinessProvider, useBusiness } from "../../src/state/business";
+import { PlanLockHost } from "../../src/state/plan-lock";
 import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
 import { PremiumTabBar } from "../../src/ui/tab-bar";
@@ -44,12 +45,12 @@ function AppTabs() {
   const orders = useQuery({
     queryKey: accountKey(user?.id ?? "", "orders", id),
     enabled: !!user && !!id,
-    queryFn: () => apiData<{ items: { status: string }[] }>(`/api/v1/orders?limit=30&businessId=${id}`)
+    queryFn: () => apiData<{ items: { status: string }[] }>(`/api/v1/orders?limit=30&businessId=${id}`, {}, { planSheet: false })
   });
   const feedback = useQuery({
     queryKey: accountKey(user?.id ?? "", "feedback", id),
     enabled: !!user && !!id,
-    queryFn: () => apiData<{ items: { status: string }[] }>(`/api/v1/feedback?limit=30&businessId=${id}`)
+    queryFn: () => apiData<{ items: { status: string }[] }>(`/api/v1/feedback?limit=30&businessId=${id}`, {}, { planSheet: false })
   });
   const badges = useMemo(
     () => ({
@@ -117,6 +118,7 @@ export default function AppLayout() {
   return (
     <BusinessProvider>
     <PushBridge />
+    <PlanLockHost />
     <PanelGate>
       <AppTabs />
     </PanelGate>

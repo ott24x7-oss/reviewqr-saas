@@ -1,5 +1,5 @@
 import { Screen } from "../../src/ui/screen";
-import type { Dashboard } from "@reviewqr/shared";
+import type { Dashboard, FeatureId } from "@reviewqr/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, useFocusEffect, type Href } from "expo-router";
 import {
@@ -8,6 +8,7 @@ import {
   ChevronDown,
   ChevronRight,
   ClipboardList,
+  Lock,
   MessageSquare,
   Plus,
   Printer,
@@ -27,6 +28,7 @@ import { businessDestinations } from "../../src/nav/business-destinations";
 import { accountKey } from "../../src/query/keys";
 import { useReviewMoment } from "../../src/review/watch";
 import { useBusiness } from "../../src/state/business";
+import { openPlanLock, useFeatures } from "../../src/state/plan-lock";
 import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
 import { BottomSheet, Card, Chip, KpiCard, Skeleton } from "../../src/ui/bits";
@@ -59,6 +61,7 @@ function HomeScreenContent() {
   const insets = useSafeAreaInsets();
   const { user } = useSession();
   const { businesses, business, choose } = useBusiness();
+  const { locked } = useFeatures();
   const client = useQueryClient();
   const [live, setLive] = useState(true);
   const [range, setRange] = useState<"7d" | "30d">("7d");
@@ -83,17 +86,17 @@ function HomeScreenContent() {
   const analytics = useQuery({
     queryKey: accountKey(user?.id ?? "", "analytics", business?.id, range),
     enabled: !!user && !!business,
-    queryFn: () => apiData<Analytics>(`/api/v1/analytics?businessId=${business?.id}&range=${range}`)
+    queryFn: () => apiData<Analytics>(`/api/v1/analytics?businessId=${business?.id}&range=${range}`, {}, { planSheet: false })
   });
   const orders = useQuery({
     queryKey: accountKey(user?.id ?? "", "orders", business?.id),
     enabled: !!user && !!business,
-    queryFn: () => apiData<{ items: OrderCard[] }>(`/api/v1/orders?limit=5&businessId=${business?.id}`)
+    queryFn: () => apiData<{ items: OrderCard[] }>(`/api/v1/orders?limit=5&businessId=${business?.id}`, {}, { planSheet: false })
   });
   const feedback = useQuery({
     queryKey: accountKey(user?.id ?? "", "feedback", business?.id),
     enabled: !!user,
-    queryFn: () => apiData<{ items: FeedbackRow[] }>(`/api/v1/feedback?limit=5${business ? `&businessId=${business.id}` : ""}`)
+    queryFn: () => apiData<{ items: FeedbackRow[] }>(`/api/v1/feedback?limit=5${business ? `&businessId=${business.id}` : ""}`, {}, { planSheet: false })
   });
   const plan = home.data?.plan;
   const scans = live ? home.data?.scansToday : analytics.data?.summary.scans;
@@ -119,14 +122,15 @@ function HomeScreenContent() {
       client.invalidateQueries({ queryKey: accountKey(growthUserId, "growth", growthBusinessId) }).catch(() => undefined);
     }, [client, growthBusinessId, growthUserId])
   );
-  const setupRows: { key: string; label: string; href: Href; done: boolean }[] = [
-    { key: "details", label: t.businessDetails, href: "/(app)/business-edit", done: false },
-    { key: "link", label: t.pageLink, href: "/(app)/tap", done: false },
-    { key: "menu", label: t.menuItems, href: "/(app)/menu", done: false },
-    { key: "buttons", label: t.pageButtons, href: { pathname: "/(app)/tap", params: { section: "buttons" } }, done: false },
-    { key: "store", label: t.storeHoursUpi, href: "/(app)/store", done: false },
-    { key: "print", label: t.printYourQr, href: "/(app)/tap", done: false }
-  ].map((row) => ({ ...row, done: setup.find((step) => step.key === row.key)?.done === true }));
+  const setupSource: { key: string; label: string; href: Href; feature?: FeatureId }[] = [
+    { key: "details", label: t.businessDetails, href: "/(app)/business-edit" },
+    { key: "link", label: t.pageLink, href: "/(app)/tap" },
+    { key: "menu", label: t.menuItems, href: "/(app)/menu", feature: "menu" },
+    { key: "buttons", label: t.pageButtons, href: { pathname: "/(app)/tap", params: { section: "buttons" } } },
+    { key: "store", label: t.storeHoursUpi, href: "/(app)/store", feature: "store" },
+    { key: "print", label: t.printYourQr, href: "/(app)/tap" }
+  ];
+  const setupRows = setupSource.map((row) => ({ ...row, done: setup.find((step) => step.key === row.key)?.done === true }));
   const tiles = businessDestinations(t);
   const noteCount = (notes.data ?? []).length;
   const recentOrders = orders.data?.items ?? [];
@@ -156,14 +160,21 @@ function HomeScreenContent() {
     await notes.refetch();
   }
 
-  const actions = [
+  const actions: { label: string; icon: typeof QrCode; href: string; bg: string; fg: string; feature?: FeatureId }[] = [
     { label: t.showQr, icon: QrCode, href: "/(app)/tap", bg: palette.accentSoft, fg: palette.deep },
-    { label: t.addItem, icon: Plus, href: "/(app)/menu", bg: "#FEF3C7", fg: "#92400E" },
-    { label: t.orders, icon: ClipboardList, href: "/(app)/orders", bg: "#DBEAFE", fg: "#1E40AF" },
-    { label: t.quickFeedback, icon: MessageSquare, href: "/(app)/feedback", bg: "#FCE7F3", fg: "#9D174D" },
+    { label: t.addItem, icon: Plus, href: "/(app)/menu", bg: "#FEF3C7", fg: "#92400E", feature: "menu" },
+    { label: t.orders, icon: ClipboardList, href: "/(app)/orders", bg: "#DBEAFE", fg: "#1E40AF", feature: "orders" },
+    { label: t.quickFeedback, icon: MessageSquare, href: "/(app)/feedback", bg: "#FCE7F3", fg: "#9D174D", feature: "reviews-log" },
     { label: t.sharePage, icon: Share2, href: "/(app)/tap", bg: "#E0E7FF", fg: "#3730A3" },
     { label: t.printStand, icon: Printer, href: "/(app)/shop", bg: "#FEF3C7", fg: "#92400E" }
   ];
+  function openHref(href: Href, feature?: FeatureId) {
+    if (feature && locked(feature)) {
+      openPlanLock(feature);
+      return;
+    }
+    router.push(href);
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: palette.paper }}>
@@ -240,14 +251,18 @@ function HomeScreenContent() {
                   accessibilityRole="button"
                   accessibilityLabel={row.label}
                   accessibilityState={{ checked: row.done }}
-                  onPress={() => router.push(row.href)}
+                  onPress={() => openHref(row.href, row.feature)}
                   style={styles.setupRow}
                 >
                   <View style={[styles.setupMark, { borderColor: row.done ? palette.deep : palette.line, backgroundColor: row.done ? "#DCFCE7" : "transparent" }]}>
                     {row.done ? <Check color={palette.deep} size={14} strokeWidth={2.6} /> : null}
                   </View>
                   <Text style={[styles.growthTitle, { color: palette.ink, flex: 1 }, lang === "hi" && styles.hindi]}>{row.label}</Text>
-                  <ChevronRight color={palette.muted} size={16} strokeWidth={2} />
+                  {row.feature && locked(row.feature) ? (
+                    <Lock color={palette.muted} size={16} strokeWidth={2} />
+                  ) : (
+                    <ChevronRight color={palette.muted} size={16} strokeWidth={2} />
+                  )}
                 </Pressable>
               ))}
             </View>
@@ -318,11 +333,18 @@ function HomeScreenContent() {
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel={action.label}
-                    onPress={() => router.push(action.href as Href)}
+                    onPress={() => openHref(action.href as Href, action.feature)}
                     style={[styles.action, { backgroundColor: palette.card }]}
                   >
-                    <View style={[styles.ico, { backgroundColor: action.bg }]}>
-                      <Icon color={action.fg} size={20} strokeWidth={1.75} />
+                    <View>
+                      <View style={[styles.ico, { backgroundColor: action.bg }]}>
+                        <Icon color={action.fg} size={20} strokeWidth={1.75} />
+                      </View>
+                      {action.feature && locked(action.feature) ? (
+                        <View style={[styles.lockBadge, { backgroundColor: palette.card }]}>
+                          <Lock color={palette.muted} size={11} strokeWidth={2.4} />
+                        </View>
+                      ) : null}
                     </View>
                     <Text style={[styles.actionText, { color: palette.ink }, lang === "hi" && styles.hindi]}>{action.label}</Text>
                   </Pressable>
@@ -341,11 +363,18 @@ function HomeScreenContent() {
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel={tile.title}
-                    onPress={() => router.push(tile.href)}
+                    onPress={() => openHref(tile.href, tile.feature)}
                     style={[styles.tile, { backgroundColor: palette.card }]}
                   >
-                    <View style={[styles.ico, { backgroundColor: colors.bg }]}>
-                      <Icon color={colors.fg} size={20} strokeWidth={1.75} />
+                    <View>
+                      <View style={[styles.ico, { backgroundColor: colors.bg }]}>
+                        <Icon color={colors.fg} size={20} strokeWidth={1.75} />
+                      </View>
+                      {tile.feature && locked(tile.feature) ? (
+                        <View style={[styles.lockBadge, { backgroundColor: palette.card }]}>
+                          <Lock color={palette.muted} size={11} strokeWidth={2.4} />
+                        </View>
+                      ) : null}
                     </View>
                     <Text style={[styles.tileText, { color: palette.ink }, lang === "hi" && styles.hindi]}>{tile.title}</Text>
                   </Pressable>
@@ -381,7 +410,7 @@ function HomeScreenContent() {
           <View style={styles.filters}>
             <Chip label={live ? t.liveView : range === "7d" ? t.range7 : t.range30} selected={!live} onPress={() => { setLive(false); setRange(range === "7d" ? "30d" : "7d"); }} />
             <Chip label={t.liveView} tone="live" selected={live} onPress={() => setLive(true)} />
-            <TextButton label={t.analytics} onPress={() => router.push("/(app)/analytics")} />
+            <TextButton label={t.analytics} onPress={() => openHref("/(app)/analytics", "analytics")} />
           </View>
 
           <Text style={[styles.section, { color: palette.muted }, lang === "hi" && styles.hindi]}>{t.recentActivity}</Text>
@@ -402,7 +431,7 @@ function HomeScreenContent() {
                   key={order.id}
                   accessibilityRole="button"
                   accessibilityLabel={`#${order.number} ${order.status}`}
-                  onPress={() => router.push("/(app)/orders?tab=orders")}
+                  onPress={() => openHref("/(app)/orders?tab=orders", "orders")}
                   style={[styles.rowCard, { backgroundColor: palette.card }]}
                 >
                   <View style={[styles.avatar, { backgroundColor: palette.header }]}>
@@ -414,7 +443,11 @@ function HomeScreenContent() {
                       {order.customerName} · {t.rupee}{Math.round(order.totalPaise / 100)}
                     </Text>
                   </View>
-                  <ChevronRight color={palette.muted} size={16} strokeWidth={2} />
+                  {locked("orders") ? (
+                    <Lock color={palette.muted} size={16} strokeWidth={2} />
+                  ) : (
+                    <ChevronRight color={palette.muted} size={16} strokeWidth={2} />
+                  )}
                 </Pressable>
               ))}
               {recentFeedback.map((row) => (
@@ -422,7 +455,7 @@ function HomeScreenContent() {
                   key={row.id}
                   accessibilityRole="button"
                   accessibilityLabel={`${row.review.rating} ${row.message}`}
-                  onPress={() => router.push("/(app)/feedback")}
+                  onPress={() => openHref("/(app)/feedback", "reviews-log")}
                   style={[styles.rowCard, { backgroundColor: palette.card }]}
                 >
                   <View style={[styles.avatar, { backgroundColor: palette.primaryDeep }]}>
@@ -436,6 +469,7 @@ function HomeScreenContent() {
                     </View>
                     <Text style={[styles.growthHint, { color: palette.muted }]}>{row.message}</Text>
                   </View>
+                  {locked("reviews-log") ? <Lock color={palette.muted} size={16} strokeWidth={2} /> : null}
                 </Pressable>
               ))}
             </>
@@ -627,6 +661,16 @@ const styles = StyleSheet.create({
     elevation: 2
   },
   ico: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  lockBadge: {
+    position: "absolute",
+    top: -4,
+    right: -6,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center"
+  },
   actionText: { fontFamily: fonts.bodyStrong, fontSize: 12, textAlign: "center" },
   rowCard: {
     borderRadius: 20,

@@ -1,4 +1,5 @@
 import { Screen } from "../../src/ui/screen";
+import { FeatureGate } from "../../src/state/plan-lock";
 import { useQuery } from "@tanstack/react-query";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
@@ -71,6 +72,8 @@ const styles = StyleSheet.create({
 
 export default function CustomersScreen() {
   return (
-    <Screen topInset={true}><CustomersScreenContent /></Screen>
+    <FeatureGate id="customers">
+      <Screen topInset={true}><CustomersScreenContent /></Screen>
+    </FeatureGate>
   );
 }

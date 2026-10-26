@@ -1,13 +1,15 @@
 import { Screen } from "../../src/ui/screen";
 import type { TapLink } from "@reviewqr/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Lock } from "lucide-react-native";
 import { useState } from "react";
-import { ScrollView, StyleSheet, Text } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { apiData } from "../../src/api/data";
 import { ApiError } from "../../src/api/http";
 import { useI18n } from "../../src/i18n";
 import { accountKey } from "../../src/query/keys";
 import { useBusiness } from "../../src/state/business";
+import { openPlanLock, useFeatures } from "../../src/state/plan-lock";
 import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
 import { Card } from "../../src/ui/bits";
@@ -21,6 +23,7 @@ function QrCodesScreenContent() {
   const { palette } = useTheme();
   const { user } = useSession();
   const { business } = useBusiness();
+  const { locked } = useFeatures();
   const client = useQueryClient();
   const id = business?.id;
   const [label, setLabel] = useState("");
@@ -30,6 +33,7 @@ function QrCodesScreenContent() {
     enabled: !!user && !!id,
     queryFn: () => apiData<{ items: Qr[] }>(`/api/v1/businesses/${id}/qr-codes`)
   });
+  const extraLocked = (rows.data?.items.length ?? 0) >= 1 && locked("multiple-qrs");
   const tap = useQuery({
     queryKey: accountKey(user?.id ?? "", "tap", id),
     enabled: !!user && !!id,
@@ -39,6 +43,10 @@ function QrCodesScreenContent() {
 
   async function create(type: "TABLE" | "COUNTER") {
     if (!id || label.trim().length < 1) return;
+    if ((rows.data?.items.length ?? 0) >= 1 && locked("multiple-qrs")) {
+      openPlanLock("multiple-qrs");
+      return;
+    }
     setError(null);
     try {
       await apiData(`/api/v1/businesses/${id}/qr-codes`, { method: "POST", body: JSON.stringify({ type, label: label.trim() }) });
@@ -49,8 +57,12 @@ function QrCodesScreenContent() {
     }
   }
 
-  async function patch(body: object) {
+  async function patch(body: { action?: string; mode?: string; code?: string; target?: string }) {
     if (!id) return;
+    if (body.action === "direct" && body.mode === "DIRECT" && locked("direct-link")) {
+      openPlanLock("direct-link");
+      return;
+    }
     setError(null);
     try {
       await apiData(`/api/v1/businesses/${id}/qr-codes`, { method: "PATCH", body: JSON.stringify(body) });
@@ -64,8 +76,13 @@ function QrCodesScreenContent() {
     <ScrollView style={{ flex: 1, backgroundColor: palette.paper }} contentContainerStyle={styles.content}>
       <Text style={[styles.title, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.qrList}</Text>
       <Field label={t.name} tone="paper" value={label} onChangeText={setLabel} />
-      <PillButton label={t.tableQr} tone="dark" disabled={!label.trim()} onPress={() => create("TABLE")} />
-      <PillButton label={t.counterQr} tone="outline" disabled={!label.trim()} onPress={() => create("COUNTER")} />
+      <View style={styles.addRow}>
+        {extraLocked ? <Lock color={palette.muted} size={16} strokeWidth={2} /> : null}
+        <View style={{ flex: 1, gap: 10 }}>
+          <PillButton label={t.tableQr} tone="dark" disabled={!label.trim()} onPress={() => create("TABLE")} />
+          <PillButton label={t.counterQr} tone="outline" disabled={!label.trim()} onPress={() => create("COUNTER")} />
+        </View>
+      </View>
       {(rows.data?.items ?? []).map((row) => (
         <Card key={row.id} style={styles.card}>
           <Text style={[styles.name, { color: palette.ink }]}>{row.label}</Text>
@@ -91,6 +108,7 @@ const styles = StyleSheet.create({
   name: { fontFamily: fonts.bodyStrong, fontSize: 16 },
   note: { fontFamily: fonts.body, fontSize: 14 },
   card: { gap: 6 },
+  addRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   hindi: { fontFamily: fonts.hindi }
 });
 
