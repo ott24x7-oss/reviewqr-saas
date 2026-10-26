@@ -54,3 +54,30 @@ export function MoreTabIcon({ color }: { color: string }) {
     </Icon>
   );
 }
+
+export function AgentBusinessesTabIcon({ color }: { color: string }) {
+  return (
+    <Icon>
+      <Path d="M4 20V8l8-4 8 4v12H4Z" stroke={color} strokeWidth={1.75} strokeLinejoin="round" />
+      <Path d="M9 20v-6h6v6M8 9h.01M12 9h.01M16 9h.01" stroke={color} strokeWidth={1.75} strokeLinecap="round" />
+    </Icon>
+  );
+}
+
+export function AgentTeamTabIcon({ color }: { color: string }) {
+  return (
+    <Icon>
+      <Circle cx="9" cy="8" r="3" stroke={color} strokeWidth={1.75} />
+      <Path d="M3.5 20v-1a5.5 5.5 0 0 1 11 0v1h-11ZM16 5.5a3 3 0 0 1 0 5.8M17 14a4.5 4.5 0 0 1 3.5 4.4V20h-3" stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" />
+    </Icon>
+  );
+}
+
+export function AgentEarningsTabIcon({ color }: { color: string }) {
+  return (
+    <Icon>
+      <Rect x="3.5" y="6" width="17" height="13" rx="2" stroke={color} strokeWidth={1.75} />
+      <Path d="M3.5 10h17M7.5 15h3" stroke={color} strokeWidth={1.75} strokeLinecap="round" />
+    </Icon>
+  );
+}

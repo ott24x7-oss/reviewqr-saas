@@ -8,6 +8,9 @@ import { PushBridge } from "../../src/push/register";
 import { accountKey } from "../../src/query/keys";
 import { BusinessProvider, useBusiness } from "../../src/state/business";
 import { useSession } from "../../src/state/session";
+import { AgentModeProvider, useAgentMode } from "../../src/agent/mode-context";
+import { useAgentHome, useAgentTeam } from "../../src/agent/api";
+import { PendingAgentScreen } from "../../src/agent/pending-screen";
 import { fonts } from "../../src/theme";
 import { PremiumTabBar } from "../../src/ui/tab-bar";
 import { usePalette } from "../../src/ui/theme";
@@ -35,7 +38,7 @@ function PanelGate({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-function AppTabs() {
+function OwnerTabs() {
   const { user } = useSession();
   const { business } = useBusiness();
   const { t, lang } = useI18n();
@@ -111,6 +114,67 @@ function AppTabs() {
   );
 }
 
+function AgentTabs() {
+  const { t, lang } = useI18n();
+  const palette = usePalette();
+  const home = useAgentHome();
+  const team = useAgentTeam(home.data?.status === "ACTIVE");
+  const label = lang === "hi" ? fonts.hindiStrong : fonts.bodyStrong;
+
+  if (home.data?.status === "PENDING") return <PendingAgentScreen />;
+  const canRecruit = team.data?.canRecruit !== false;
+  return (
+    <Tabs
+      tabBar={(props) => (
+        <PremiumTabBar
+          state={props.state}
+          descriptors={props.descriptors}
+          onTabPress={(route, focused) => {
+            const event = props.emitter.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
+            if (!focused && !event.defaultPrevented) props.navigateToTab(route.key);
+          }}
+        />
+      )}
+      screenOptions={{
+        headerShown: false,
+        headerStyle: { backgroundColor: palette.paper },
+        headerTintColor: palette.ink,
+        headerTitleStyle: { fontFamily: label },
+        tabBarStyle: { backgroundColor: palette.card, minHeight: 64 }
+      }}
+    >
+      <Tabs.Screen name="agent-home" options={{ title: t.agentHomeTab }} />
+      <Tabs.Screen name="agent-businesses" options={{ title: t.agentBusinessesTab }} />
+      {canRecruit ? <Tabs.Screen name="agent-team" options={{ title: t.agentTeamTab }} /> : null}
+      <Tabs.Screen name="agent-earnings" options={{ title: t.agentEarningsTab }} />
+      <Tabs.Screen name="agent-more" options={{ title: t.agentMoreTab }} />
+      <Tabs.Screen name="agent-member" options={{ href: null, title: t.agentTeamTab }} />
+      <Tabs.Screen name="agent-onboard" options={{ href: null, title: t.onboardBusiness }} />
+      <Tabs.Screen name="agent-payouts" options={{ href: null, title: t.agentPayouts }} />
+      <Tabs.Screen name="agent-profile" options={{ href: null, title: t.agentProfile }} />
+      <Tabs.Screen name="agent-how" options={{ href: null, title: t.agentHowTitle }} />
+      <Tabs.Screen name="agent-join" options={{ href: null, title: t.agentJoin }} />
+      <Tabs.Screen name="agent-pending" options={{ href: null, title: t.agentWaitingTitle }} />
+      <Tabs.Screen name="agent" options={{ href: null, title: t.agentHome }} />
+    </Tabs>
+  );
+}
+
+function ModeTabs() {
+  const { user } = useSession();
+  const { loading } = useBusiness();
+  const { mode, ready } = useAgentMode();
+  const palette = usePalette();
+  if (user?.role === "AGENT" && (!ready || (mode === "owner" && loading))) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: palette.paper }}>
+        <ActivityIndicator color={palette.ink} />
+      </View>
+    );
+  }
+  return user?.role === "AGENT" && mode === "agent" ? <AgentTabs /> : <OwnerTabs />;
+}
+
 export default function AppLayout() {
   const { ready, user } = useSession();
   if (ready && !user) return <Redirect href="/(auth)/login" />;
@@ -118,7 +182,9 @@ export default function AppLayout() {
     <BusinessProvider>
     <PushBridge />
     <PanelGate>
-      <AppTabs />
+      <AgentModeProvider>
+        <ModeTabs />
+      </AgentModeProvider>
     </PanelGate>
     </BusinessProvider>
   );

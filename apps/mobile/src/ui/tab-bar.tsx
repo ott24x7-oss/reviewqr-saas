@@ -7,7 +7,16 @@ import { useI18n } from "../i18n";
 import { fonts } from "../theme";
 import { Badge } from "./bits";
 import { tapLight } from "./haptics";
-import { FeedbackTabIcon, HomeTabIcon, MenuTabIcon, MoreTabIcon, OrdersTabIcon } from "./tab-icons";
+import {
+  AgentBusinessesTabIcon,
+  AgentEarningsTabIcon,
+  AgentTeamTabIcon,
+  FeedbackTabIcon,
+  HomeTabIcon,
+  MenuTabIcon,
+  MoreTabIcon,
+  OrdersTabIcon
+} from "./tab-icons";
 import { useTheme } from "./theme";
 import { withOpacity } from "./tokens";
 
@@ -27,7 +36,12 @@ const ICONS: Record<string, ComponentType<{ color: string }>> = {
   orders: OrdersTabIcon,
   menu: MenuTabIcon,
   feedback: FeedbackTabIcon,
-  more: MoreTabIcon
+  more: MoreTabIcon,
+  "agent-home": HomeTabIcon,
+  "agent-businesses": AgentBusinessesTabIcon,
+  "agent-team": AgentTeamTabIcon,
+  "agent-earnings": AgentEarningsTabIcon,
+  "agent-more": MoreTabIcon
 };
 
 type TabRoute = { key: string; name: string };
