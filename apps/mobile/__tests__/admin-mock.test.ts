@@ -31,6 +31,15 @@ describe("admin mock API", () => {
     await expect(adminMockRequest("/devices/d-1/action", device)).rejects.toThrow("STEP_UP_REQUIRED");
   });
 
+  it("asks for a reason and a plan step-up before a yearly plan change", async () => {
+    const path = "/users/u-1/action";
+    await expect(adminMockRequest(path, { method: "POST", body: JSON.stringify({ action: "change-plan", plan: "Growth" }) })).rejects.toThrow("REASON_REQUIRED");
+    await expect(adminMockRequest(path, { method: "POST", body: JSON.stringify({ action: "change-plan", plan: "Growth", reason: "Partner deal" }) })).rejects.toThrow("STEP_UP_REQUIRED");
+    const verified = await adminMockRequest<{ stepUpToken: string }>("/step-up", { method: "POST", body: JSON.stringify({ phase: "verify", action: "change_user_plan", challengeId: "c", code: "123456" }) });
+    await expect(adminMockRequest(path, { method: "POST", headers: { "X-Step-Up": verified.stepUpToken }, body: JSON.stringify({ action: "change-plan", plan: "Growth", reason: "Partner deal" }) })).resolves.toMatchObject({ ok: true });
+    await expect(adminMockRequest(path, { method: "POST", body: JSON.stringify({ action: "change-plan", plan: "Starter" }) })).resolves.toMatchObject({ ok: true });
+  });
+
   it("seeds the ninety-day dashboard and account lists", async () => {
     const dashboard = await adminMockRequest<{ revenue: unknown[] }>("/dashboard?range=90d");
     const team = await adminMockRequest<{ members: unknown[] }>("/team");

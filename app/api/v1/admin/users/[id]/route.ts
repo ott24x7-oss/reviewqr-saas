@@ -3,9 +3,10 @@ import { NextRequest } from "next/server";
 import { adminUserActionSchema } from "@reviewqr/shared";
 import type { AuditAction } from "@/lib/admin";
 import { parseJson, v1From } from "@/lib/api/v1";
-import { commitAdminWrite } from "@/lib/admin/finish";
+import { commitAdminWrite, moneyReason } from "@/lib/admin/finish";
 import { requireAdminActor, requireStepUp } from "@/lib/admin/guard";
 import {
+  adminPlanChangeIsLong,
   cancelAdminUser,
   changeAdminUserPlan,
   grantAdminDays,
@@ -34,8 +35,20 @@ async function postHandler(req: NextRequest, context?: { params: Record<string, 
   if (!parsed.ok) return parsed.response;
   const id = context?.params.id || "";
   const body = parsed.data;
-  if (body.action === "role" || (body.action === "grant" && body.days > 30)) {
-    const step = await requireStepUp(req, auth.actor, body.action === "role" ? "change_role" : "grant_days_over_30");
+  // Anything that grants more than 30 days of paid access needs a reason and a step-up for that action.
+  const longPlan = body.action === "plan" && (await adminPlanChangeIsLong(body.planId, body.duration));
+  const longGrant = body.action === "grant" && body.days > 30;
+  const reason = body.action === "plan" || body.action === "grant" ? body.reason : undefined;
+  if (longPlan || longGrant) {
+    const missing = moneyReason(reason);
+    if (missing) return missing;
+  }
+  if (body.action === "role" || longPlan || longGrant) {
+    const step = await requireStepUp(
+      req,
+      auth.actor,
+      body.action === "role" ? "change_role" : longPlan ? "change_user_plan" : "grant_days_over_30"
+    );
     if (!step.ok) return step.response;
   }
   let result: ServiceResult<unknown>;
@@ -69,7 +82,8 @@ async function postHandler(req: NextRequest, context?: { params: Record<string, 
     action,
     entity: "User",
     entityId: id,
-    reason: body.action === "note" ? body.note : undefined
+    reason: body.action === "note" ? body.note : reason,
+    money: longPlan || longGrant
   });
 }
 

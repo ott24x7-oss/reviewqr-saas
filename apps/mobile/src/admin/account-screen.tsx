@@ -41,6 +41,9 @@ export function AdminAccountScreen() {
       let stepUp: string | null = null;
       if (selected === "grant-days" && Number(value) > 30) stepUp = await requestStepUpToken("grant_days_over_30", id);
       if (selected === "grant-days" && Number(value) > 30 && !stepUp) return;
+      // A plan change can grant a year or a lifetime, so it is always confirmed.
+      if (selected === "change-plan") stepUp = await requestStepUpToken("change_user_plan", id);
+      if (selected === "change-plan" && !stepUp) return;
       const path = `/${kind === "user" ? "users" : "businesses"}/${encodeURIComponent(id)}/action`;
       await adminFetch(path, { method: "POST", headers: stepUp ? { "X-Step-Up": stepUp } : undefined, body: JSON.stringify({ action: selected, ...extra }) });
       setAction(null);
@@ -62,7 +65,7 @@ export function AdminAccountScreen() {
   function begin(selected: AccountAction) { setAction(selected); setValue(selected === "change-plan" ? "Growth" : ""); setNote(""); setError(false); }
   async function confirm() {
     if (!action) return;
-    if (action === "change-plan") await sendAction(action, { plan: value });
+    if (action === "change-plan") await sendAction(action, { plan: value, reason: note.trim() });
     else if (action === "grant-days") await sendAction(action, { days: Number(value), reason: note.trim() });
     else if (action === "internal-note") await sendAction(action, { note: note.trim() });
     else await sendAction(action);
@@ -111,10 +114,11 @@ export function AdminAccountScreen() {
             <View style={[styles.sheet, { backgroundColor: palette.card, borderColor: palette.line }]}>
               <Text style={[styles.sheetTitle, { color: palette.ink }]}>{action ? actionLabel[action] : t.accountActions}</Text>
               {action === "change-plan" ? <View style={styles.planChoices}>{["Starter", "Growth", "Pro"].map((plan) => <Pressable key={plan} onPress={() => setValue(plan)} style={[styles.choice, { backgroundColor: value === plan ? palette.accentSoft : palette.paper, borderColor: value === plan ? palette.primary : palette.line }]}><Text style={[styles.choiceText, { color: value === plan ? palette.primary : palette.ink }]}>{plan}</Text></Pressable>)}</View> : null}
+              {action === "change-plan" ? <Field label={t.reason} value={note} onChangeText={setNote} placeholder={t.reasonPlaceholder} multiline returnKeyType="done" /> : null}
               {action === "grant-days" ? <><Field label={t.daysToGrant} value={value} onChangeText={setValue} keyboardType="number-pad" returnKeyType="done" /><Field label={t.reason} value={note} onChangeText={setNote} placeholder={t.reasonPlaceholder} multiline returnKeyType="done" /><Text style={[styles.sheetHint, { color: palette.muted }]}>{t.duration30}</Text></> : null}
               {action === "internal-note" ? <Field label={t.internalNote} value={note} onChangeText={setNote} placeholder={t.notePlaceholder} multiline returnKeyType="done" /> : null}
               {error ? <Text style={[styles.error, { color: palette.danger }]}>{t.actionFailed}</Text> : null}
-              <AdminAction label={saving ? t.loading : t.confirm} onPress={() => confirm().catch(() => undefined)} disabled={saving || (action === "grant-days" && (!Number(value) || !note.trim())) || (action === "internal-note" && !note.trim())} icon={saving ? <ActivityIndicator color={palette.onPrimary} /> : undefined} />
+              <AdminAction label={saving ? t.loading : t.confirm} onPress={() => confirm().catch(() => undefined)} disabled={saving || (action === "grant-days" && (!Number(value) || !note.trim())) || (action === "change-plan" && !note.trim()) || (action === "internal-note" && !note.trim())} icon={saving ? <ActivityIndicator color={palette.onPrimary} /> : undefined} />
               <AdminAction label={t.stepUpCancel} tone="outline" onPress={() => setAction(null)} />
             </View>
           </KeyboardAwareScrollView>

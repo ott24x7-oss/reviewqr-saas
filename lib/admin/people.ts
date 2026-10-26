@@ -112,6 +112,22 @@ async function loadUser(id: string) {
   });
 }
 
+function pickPlanPrice<T extends { duration: PlanDuration; active: boolean }>(prices: T[], duration?: PlanDuration) {
+  return prices.find((row) => row.duration === duration && row.active) || prices.find((row) => row.active) || prices[0];
+}
+
+/**
+ * True when this plan change would grant more than one month (yearly, six months, lifetime).
+ * Uses the same price pick as changeAdminUserPlan, so a missing duration cannot hide a long grant.
+ */
+export async function adminPlanChangeIsLong(planId: string, duration?: PlanDuration) {
+  const plan = await prisma.plan.findUnique({ where: { id: planId }, select: { prices: true } });
+  const price = plan ? pickPlanPrice(plan.prices, duration) : null;
+  if (!price) return false;
+  const months = durationMonths(price.duration);
+  return months == null || months > 1;
+}
+
 export async function changeAdminUserPlan(userId: string, planId: string, duration?: PlanDuration) {
   const [user, plan] = await Promise.all([
     loadUser(userId),
@@ -119,8 +135,7 @@ export async function changeAdminUserPlan(userId: string, planId: string, durati
   ]);
   if (!user) return fail(404, "User not found");
   if (!plan) return fail(404, "Plan not found");
-  const price =
-    plan.prices.find((row) => row.duration === duration && row.active) || plan.prices.find((row) => row.active) || plan.prices[0];
+  const price = pickPlanPrice(plan.prices, duration);
   if (!price) return fail(400, "That plan has no price");
   const months = durationMonths(price.duration);
   const endsAt = months == null ? null : addMonths(new Date(), months);

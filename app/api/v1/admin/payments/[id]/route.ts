@@ -30,10 +30,11 @@ async function postHandler(req: NextRequest, context?: { params: Record<string, 
   if (!parsed.ok) return parsed.response;
   const id = context?.params.id || "";
   const body = parsed.data;
-  if (body.action === "refund") {
+  // Refund moves money back; a manual approve activates a plan and creates commissions.
+  if (body.action === "refund" || body.action === "approve") {
     const missing = moneyReason(body.reason);
     if (missing) return missing;
-    const step = await requireStepUp(req, auth.actor, "refund_payment");
+    const step = await requireStepUp(req, auth.actor, body.action === "refund" ? "refund_payment" : "approve_payment");
     if (!step.ok) return step.response;
   }
   let result: ServiceResult<unknown>;
@@ -57,7 +58,7 @@ async function postHandler(req: NextRequest, context?: { params: Record<string, 
     entity: "Payment",
     entityId: id,
     reason: body.reason,
-    money: body.action === "refund"
+    money: body.action === "refund" || body.action === "approve"
   });
 }
 

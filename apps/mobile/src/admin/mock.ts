@@ -189,6 +189,12 @@ export async function adminMockRequest<T>(path: string, init: RequestInit = {}):
     result = detailFor(id, kind === "businesses" ? "business" : "user");
   } else if (/^\/(users|businesses)\/[^/]+\/action$/.test(cleanPath) && method === "POST") {
     if (body.action === "grant-days" && Number(body.days) > 30 && !hasStepUp(init, "grant_days_over_30")) throw new Error("STEP_UP_REQUIRED");
+    if (body.action === "change-plan") {
+      // Like the server: a plan longer than 30 days needs a reason and its own step-up.
+      const target = plans.find((plan) => plan.nameEn === body.plan || plan.id === body.plan);
+      if ((target?.durationDays ?? 0) > 30 && String(body.reason ?? "").trim().length < 3) throw new Error("REASON_REQUIRED");
+      if ((target?.durationDays ?? 0) > 30 && !hasStepUp(init, "change_user_plan")) throw new Error("STEP_UP_REQUIRED");
+    }
     result = { ok: true, action: body.action };
   } else if (cleanPath === "/money" && method === "GET") result = money;
   else if (/^\/payments\/[^/]+\/action$/.test(cleanPath) && method === "POST") {

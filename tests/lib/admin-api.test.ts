@@ -281,9 +281,14 @@ describe("admin api", () => {
     expect(noted?.deviceId).toBe(deviceId);
     expect(noted?.reason).toBe("Called the owner");
 
-    const longGrant = await userPost(call(`/api/v1/admin/users/${personId}`, { token: adminToken, body: { action: "grant", days: 31 } }), {
+    const longGrantNoReason = await userPost(call(`/api/v1/admin/users/${personId}`, { token: adminToken, body: { action: "grant", days: 31 } }), {
       params: { id: personId }
     });
+    expect(longGrantNoReason.status).toBe(400);
+    const longGrant = await userPost(
+      call(`/api/v1/admin/users/${personId}`, { token: adminToken, body: { action: "grant", days: 31, reason: "Goodwill" } }),
+      { params: { id: personId } }
+    );
     expect(longGrant.status).toBe(403);
     expect((await longGrant.json()).error.code).toBe("STEP_UP_REQUIRED");
 
@@ -326,6 +331,40 @@ describe("admin api", () => {
     expect((await auditRow("user.tier.change", personId))?.deviceId).toBe(deviceId);
   });
 
+  it("needs a reason and a plan step-up for a lifetime or yearly plan change", async () => {
+    const lifetime = await prisma.plan.create({
+      data: {
+        nameEn: `Life ${stamp}`,
+        nameHi: `Life ${stamp}`,
+        slug: `life-${stamp}`,
+        modules: ["REVIEWS"],
+        limits: {},
+        legacyTier: "STARTER",
+        prices: { create: { duration: "LIFETIME", pricePaise: 90000, active: true } }
+      }
+    });
+    try {
+      // No duration: the server picks the only price, LIFETIME, and still asks for step-up.
+      const post = (body: Record<string, unknown>, stepToken?: string) =>
+        userPost(call(`/api/v1/admin/users/${personId}`, { token: adminToken, step: stepToken, body }), { params: { id: personId } });
+      expect((await post({ action: "plan", planId: lifetime.id })).status).toBe(400);
+      const noStep = await post({ action: "plan", planId: lifetime.id, reason: "Partner deal" });
+      expect(noStep.status).toBe(403);
+      expect((await post({ action: "plan", planId: lifetime.id, reason: "Partner deal" }, stepFor("grant_days_over_30"))).status).toBe(403);
+      expect(await prisma.subscription.count({ where: { userId: personId, planId: lifetime.id } })).toBe(0);
+      const done = await post({ action: "plan", planId: lifetime.id, duration: "LIFETIME", reason: "Partner deal" }, stepFor("change_user_plan"));
+      expect(done.status).toBe(200);
+      const row = await auditRow("user.tier.change", personId);
+      expect(row?.reason).toBe("Partner deal");
+      expect(row?.before).toBeTruthy();
+      expect(row?.after).toMatchObject({ planId: lifetime.id, duration: "LIFETIME" });
+    } finally {
+      await prisma.subscription.deleteMany({ where: { planId: lifetime.id } });
+      await prisma.planPrice.deleteMany({ where: { planId: lifetime.id } });
+      await prisma.plan.delete({ where: { id: lifetime.id } }).catch(() => undefined);
+    }
+  });
+
   it("suspends a business and reveals the phone in the audit", async () => {
     const view = await businessGet(call(`/api/v1/admin/businesses/${businessId}`, { token: adminToken }), { params: { id: businessId } });
     expect(view.status).toBe(200);
@@ -345,6 +384,25 @@ describe("admin api", () => {
     expect(reveal.status).toBe(200);
     expect((await reveal.json()).data.phone).toBe("9811100099");
     expect((await auditRow("business.reveal", businessId))?.deviceId).toBe(deviceId);
+  });
+
+  it("needs a reason and a step-up to approve a manual payment", async () => {
+    const manual = await prisma.payment.create({
+      data: { userId: personId, amount: 10000, status: "PENDING", tier: "STARTER", provider: "MANUAL", planId }
+    });
+    paymentIds.push(manual.id);
+    const post = (body: Record<string, unknown>, stepToken?: string) =>
+      paymentPost(call(`/api/v1/admin/payments/${manual.id}`, { token: adminToken, step: stepToken, body }), { params: { id: manual.id } });
+    expect((await post({ action: "approve" })).status).toBe(400);
+    expect((await post({ action: "approve", reason: "Bank transfer seen" })).status).toBe(403);
+    expect((await post({ action: "approve", reason: "Bank transfer seen" }, stepFor("refund_payment"))).status).toBe(403);
+    expect((await prisma.payment.findUnique({ where: { id: manual.id } }))?.status).toBe("PENDING");
+    const approved = await post({ action: "approve", reason: "Bank transfer seen" }, stepFor("approve_payment"));
+    expect(approved.status).toBe(200);
+    expect((await prisma.payment.findUnique({ where: { id: manual.id } }))?.status).toBe("COMPLETED");
+    const row = await auditRow("payment.approve", manual.id);
+    expect(row?.reason).toBe("Bank transfer seen");
+    expect(row?.after).toMatchObject({ status: "COMPLETED" });
   });
 
   it("pages payments and audits reject and refund", async () => {

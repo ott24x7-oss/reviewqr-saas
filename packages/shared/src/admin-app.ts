@@ -84,9 +84,16 @@ export const adminUserActionSchema = z.discriminatedUnion("action", [
   z.object({
     action: z.literal("plan"),
     planId: z.string().min(1).max(64),
-    duration: z.enum(["MONTH_1", "MONTH_6", "YEAR_1", "LIFETIME"]).optional()
+    duration: z.enum(["MONTH_1", "MONTH_6", "YEAR_1", "LIFETIME"]).optional(),
+    /** Required, with step-up, when the plan grants more than 30 days. */
+    reason: z.string().trim().max(500).optional()
   }),
-  z.object({ action: z.literal("grant"), days: z.number().int().min(1).max(3650) }),
+  z.object({
+    action: z.literal("grant"),
+    days: z.number().int().min(1).max(3650),
+    /** Required, with step-up, above 30 days. */
+    reason: z.string().trim().max(500).optional()
+  }),
   z.object({ action: z.literal("cancel") }),
   z.object({ action: z.literal("suspend") }),
   z.object({ action: z.literal("unsuspend") }),
