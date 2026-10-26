@@ -20,6 +20,14 @@ const nextConfig = {
     },
     serverComponentsExternalPackages: ["@whiskeysockets/baileys", "pino", "sharp", "@aws-sdk/client-s3", "exceljs"]
   },
+  async redirects() {
+    return [
+      { source: "/admin/users", destination: "/admin/customers", permanent: true },
+      { source: "/admin/users/:id", destination: "/admin/customers/:id", permanent: true },
+      { source: "/admin/pricing", destination: "/admin/plans?tab=copy", permanent: true },
+      { source: "/admin/app", destination: "/admin/apps", permanent: true }
+    ];
+  },
   async headers() {
     const security = [
       { key: "X-Frame-Options", value: "SAMEORIGIN" },
