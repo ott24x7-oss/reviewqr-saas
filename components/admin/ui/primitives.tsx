@@ -103,13 +103,14 @@ export function KpiCard({
   const gradientId = `kpi-${React.useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
   const data = (series || []).map((point, index) => ({ index, point }));
   const up = (delta || 0) >= 0;
+  const zeroValue = Number(value.replace(/[^\d.-]/g, "")) === 0;
   return (
     <article className={`admin-card admin-kpi-card ${hero ? "admin-kpi-card--hero" : ""}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="text-xs font-semibold tracking-wide text-zinc-500">{label}</div>
         {icon ? <div className="admin-kpi-icon">{icon}</div> : null}
       </div>
-      <div className="mt-1 text-[26px] font-semibold tabular-nums tracking-tight text-zinc-950 dark:text-zinc-50">
+      <div className="mt-1 text-xl font-semibold tabular-nums tracking-tight text-zinc-950 dark:text-zinc-50 sm:text-[26px]">
         <CountUp value={value} reduce={reduce} />
       </div>
       {delta != null ? (
@@ -120,7 +121,7 @@ export function KpiCard({
           <span className="ml-1.5 text-[11px] text-zinc-500">vs previous</span>
         </div>
       ) : (
-        <div className="mt-1 min-h-[21px] text-[11px] text-zinc-400">{data.length > 1 && data.every((point) => point.point === 0) ? "No activity yet" : " "}</div>
+        <div className="mt-1 min-h-[21px] text-[11px] text-zinc-400">{zeroValue || (data.length > 1 && data.every((point) => point.point === 0)) ? "No activity yet" : " "}</div>
       )}
       <div className="admin-kpi-spark">
         {data.length > 1 ? (
