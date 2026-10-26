@@ -118,16 +118,25 @@ const orderInclude = (userId: string) => ({
 /** One page of orders this user can read, plus today's summary. */
 export async function loadOrderCardPage(
   userId: string,
-  page: PageQuery & { businessId?: string | null; since?: Date | null }
+  page: PageQuery & { businessId?: string | null; since?: Date | null; status?: string | null; search?: string | null }
 ) {
   const locked = await ownedStoreBlock(userId);
   if (locked) return locked;
   const readable = await storeReadableWhere(userId);
   const summary = await loadDaySummary(userId);
+  const query = (page.search || "").trim();
+  const statuses = ["NEW", "ACCEPTED", "PREPARING", "READY", "OUT_FOR_DELIVERY", "COMPLETED", "REJECTED"];
   const paged = await takePage(async () => {
     const orders = await prisma.menuOrder.findMany({
       where: {
         ...(page.since ? { createdAt: { gte: page.since } } : {}),
+        ...(page.status && statuses.includes(page.status) ? { status: page.status as "NEW" | "ACCEPTED" | "PREPARING" | "READY" | "OUT_FOR_DELIVERY" | "COMPLETED" | "REJECTED" } : {}),
+        ...(query ? { OR: [
+          { number: { contains: query } },
+          { customerName: { contains: query } },
+          { customerPhone: { contains: query } },
+          { business: { name: { contains: query } } }
+        ] } : {}),
         business: {
           ...readable,
           ...(page.businessId ? { id: page.businessId } : {})
