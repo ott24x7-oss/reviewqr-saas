@@ -10,7 +10,7 @@ import { useI18n } from "../../src/i18n";
 import { accountKey } from "../../src/query/keys";
 import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
-import { Card, Skeleton } from "../../src/ui/bits";
+import { Card, LoadErrorCard, Skeleton } from "../../src/ui/bits";
 import { PillButton } from "../../src/ui/controls";
 import { useTheme } from "../../src/ui/theme";
 
@@ -61,6 +61,7 @@ function OrderDetailScreenContent() {
         {row ? `#${row.number}` : t.orders}
       </Text>
       {order.isLoading ? <Skeleton height={160} /> : null}
+      {order.isError ? <LoadErrorCard onRetry={() => order.refetch().catch(() => undefined)} /> : null}
       {row ? (
         <>
           <Card>

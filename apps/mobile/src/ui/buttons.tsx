@@ -13,6 +13,7 @@ import { useI18n } from "../i18n";
 import { fonts } from "../theme";
 import { tapLight } from "./haptics";
 import { useTheme } from "./theme";
+import { withOpacity } from "./tokens";
 
 type PressProps = {
   label: string;
@@ -41,20 +42,23 @@ export function PrimaryButton({ label, onPress, disabled, hint, icon: Icon, test
   }, [limitedMotion, sheen, off]);
 
   const scaleStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  const glowStyle: ViewStyle = Platform.OS === "web"
+    ? { boxShadow: `0 10px 24px ${withOpacity(palette.primary, 0.35)}` } as ViewStyle
+    : { shadowColor: palette.primary, shadowOpacity: 0.35, shadowRadius: 16, shadowOffset: { width: 0, height: 10 }, elevation: 8 };
   const sheenStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: sheen.value * 280 }, { rotate: "18deg" }]
   }));
 
   const face = (
     <View style={styles.row}>
-      {Icon ? <Icon color={off ? "#6B6358" : palette.onPrimary} size={20} strokeWidth={1.75} /> : null}
-      <Text style={[off ? styles.disabledText : [styles.primaryText, { color: palette.onPrimary }], lang === "hi" && styles.hindi]}>{label}</Text>
+      {Icon ? <Icon color={off ? palette.muted : palette.onPrimary} size={20} strokeWidth={1.75} /> : null}
+      <Text style={[off ? [styles.disabledText, { color: palette.muted }] : [styles.primaryText, { color: palette.onPrimary }], lang === "hi" && styles.hindi]}>{label}</Text>
     </View>
   );
 
   return (
     <Animated.View style={[scaleStyle, style]}>
-      <View style={off ? undefined : [styles.glow, { shadowColor: palette.primary }]}>
+      <View style={off ? undefined : [styles.glow, glowStyle]}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={accessibilityLabel || label}
@@ -74,7 +78,7 @@ export function PrimaryButton({ label, onPress, disabled, hint, icon: Icon, test
           style={styles.hit}
         >
           {off ? (
-            <View style={[styles.primary, styles.disabledFill]}>{face}</View>
+            <View style={[styles.primary, styles.disabledFill, { backgroundColor: palette.line }]}>{face}</View>
           ) : (
             <LinearGradient
               colors={[...palette.buttonGradient]}
@@ -83,8 +87,8 @@ export function PrimaryButton({ label, onPress, disabled, hint, icon: Icon, test
               end={{ x: 1, y: 1 }}
               style={styles.primary}
             >
-              <View style={styles.highlight} />
-              {limitedMotion ? null : <Animated.View pointerEvents="none" style={[styles.sheen, sheenStyle]} />}
+              <View style={[styles.highlight, { backgroundColor: withOpacity(palette.headerInk, 0.35) }]} />
+              {limitedMotion ? null : <Animated.View pointerEvents="none" style={[styles.sheen, { backgroundColor: withOpacity(palette.headerInk, 0.28) }, sheenStyle]} />}
               {face}
             </LinearGradient>
           )}
@@ -148,19 +152,7 @@ export function TextButton({ label, onPress, disabled, testID, accessibilityLabe
 
 const styles = StyleSheet.create({
   hit: { minHeight: 56, borderRadius: 16 },
-  glow: {
-    borderRadius: 16,
-    ...Platform.select({
-      web: { boxShadow: "0 10px 24px rgba(22, 163, 74, 0.35)" } as ViewStyle,
-      default: {
-        shadowColor: "#16A34A",
-        shadowOpacity: 0.35,
-        shadowRadius: 16,
-        shadowOffset: { width: 0, height: 10 },
-        elevation: 8
-      }
-    })
-  },
+  glow: { borderRadius: 16 },
   primary: {
     minHeight: 56,
     borderRadius: 16,
@@ -170,7 +162,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18
   },
   disabledFill: {
-    backgroundColor: "#8C847A",
     opacity: 0.45
   },
   highlight: {
@@ -179,7 +170,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 1,
-    backgroundColor: "rgba(255,255,255,0.35)"
   },
   sheen: {
     position: "absolute",
@@ -187,11 +177,10 @@ const styles = StyleSheet.create({
     left: -80,
     width: 36,
     height: 140,
-    backgroundColor: "rgba(255,255,255,0.28)"
   },
   row: { flexDirection: "row", alignItems: "center", gap: 8 },
   primaryText: { fontFamily: fonts.bodyStrong, fontSize: 16 },
-  disabledText: { color: "#3F3A34", fontFamily: fonts.bodyStrong, fontSize: 16 },
+  disabledText: { fontFamily: fonts.bodyStrong, fontSize: 16 },
   hint: { marginTop: 8, textAlign: "center", fontFamily: fonts.body, fontSize: 13, lineHeight: 18 },
   secondary: {
     minHeight: 52,

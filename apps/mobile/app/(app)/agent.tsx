@@ -1,15 +1,16 @@
-import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
+import { KeyboardAwareScrollView, type KeyboardAwareScrollViewRef } from "react-native-keyboard-controller";
 import { Screen } from "../../src/ui/screen";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Share, StyleSheet, Text } from "react-native";
+import { BriefcaseBusiness, WalletCards } from "lucide-react-native";
 import { apiData } from "../../src/api/data";
 import { ApiError } from "../../src/api/http";
 import { useI18n } from "../../src/i18n";
 import { accountKey } from "../../src/query/keys";
 import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
-import { Card } from "../../src/ui/bits";
+import { Card, EmptyState, LoadErrorCard, Skeleton } from "../../src/ui/bits";
 import { Field, PillButton } from "../../src/ui/controls";
 import { useTheme } from "../../src/ui/theme";
 
@@ -21,6 +22,7 @@ function AgentScreenContent() {
   const { palette } = useTheme();
   const { user } = useSession();
   const client = useQueryClient();
+  const scrollRef = useRef<KeyboardAwareScrollViewRef>(null);
   const [phone, setPhone] = useState("");
   const [businessName, setBusinessName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -44,8 +46,10 @@ function AgentScreenContent() {
 
   const totals = home.data?.totals;
   return (
-    <KeyboardAwareScrollView style={{ flex: 1, backgroundColor: palette.paper }} contentContainerStyle={styles.content}>
+    <KeyboardAwareScrollView ref={scrollRef} style={{ flex: 1, backgroundColor: palette.paper }} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <Text style={[styles.title, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.agentHome}</Text>
+      {home.isLoading ? <><Skeleton height={72} /><Skeleton height={72} /></> : null}
+      {home.isError ? <LoadErrorCard onRetry={() => home.refetch().catch(() => undefined)} /> : null}
       <Text style={[styles.note, { color: palette.muted }]}>{home.data?.code}</Text>
       <PillButton label={t.shareLink} tone="dark" disabled={!home.data?.link} onPress={() => home.data && Share.share({ message: home.data.shareText })} />
       <Text style={[styles.section, { color: palette.ink }]}>{t.commissions}</Text>
@@ -56,16 +60,22 @@ function AgentScreenContent() {
       <Field label={t.phone} tone="paper" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
       <Field label={t.name} tone="paper" value={businessName} onChangeText={setBusinessName} />
       <PillButton label={t.addItem} tone="dark" disabled={phone.trim().length < 10 || businessName.trim().length < 2} onPress={onboard} />
-      {(home.data?.businesses ?? []).map((row) => (
+      {!home.isLoading && !home.isError && (home.data?.businesses ?? []).length === 0 ? (
+        <EmptyState icon={BriefcaseBusiness} title={t.emptyAgentBusinessesTitle} body={t.emptyAgentBusinessesBody} action={t.onboardBusiness} onAction={() => scrollRef.current?.scrollTo({ x: 0, y: 0, animated: true })} />
+      ) : null}
+      {!home.isLoading && !home.isError ? (home.data?.businesses ?? []).map((row) => (
         <Card key={row.id} style={styles.card}>
           <Text style={[styles.name, { color: palette.ink }]}>{row.name}</Text>
           <Text style={[styles.note, { color: palette.muted }]}>{row.owner} · {row.plan} · {row.status}</Text>
         </Card>
-      ))}
+      )) : null}
       <Text style={[styles.section, { color: palette.ink }]}>{t.payouts}</Text>
-      {(home.data?.payouts ?? []).map((row) => (
+      {!home.isLoading && !home.isError && (home.data?.payouts ?? []).length === 0 ? (
+        <EmptyState icon={WalletCards} title={t.emptyPayoutsTitle} body={t.emptyPayoutsBody} action={t.onboardBusiness} onAction={() => scrollRef.current?.scrollTo({ x: 0, y: 0, animated: true })} />
+      ) : null}
+      {!home.isLoading && !home.isError ? (home.data?.payouts ?? []).map((row) => (
         <Text key={row.id} style={[styles.note, { color: palette.ink }]}>{t.rupee}{Math.round(row.amountPaise / 100)} · {row.utr} · {String(row.paidAt).slice(0, 10)}</Text>
-      ))}
+      )) : null}
       {error ? <Text style={{ color: palette.danger, fontFamily: fonts.body }}>{error}</Text> : null}
     </KeyboardAwareScrollView>
   );

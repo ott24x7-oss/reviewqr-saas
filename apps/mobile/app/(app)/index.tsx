@@ -19,6 +19,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { apiData } from "../../src/api/data";
+import { widgetPaletteFromPalette } from "../../src/widgets/format";
 import { CoachTour } from "../../src/guide/coach";
 import { consumeSetupStep, nextSetupStep, SETUP_STEP_KEYS, type SetupStepKey } from "../../src/guide/setup";
 import { SetupCompleteCard, SetupGuideCard, type SetupGuideStep } from "../../src/guide/setup-guide";
@@ -29,14 +30,15 @@ import { useReviewMoment } from "../../src/review/watch";
 import { useBusiness } from "../../src/state/business";
 import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
-import { BottomSheet, Card, Chip, KpiCard, Skeleton } from "../../src/ui/bits";
+import { BottomSheet, Card, Chip, KpiCard, LoadErrorCard, Skeleton } from "../../src/ui/bits";
 import { TextButton } from "../../src/ui/buttons";
-import { rowTint } from "../../src/ui/rows";
+import { rowTintFor } from "../../src/ui/rows";
 import { useTheme } from "../../src/ui/theme";
 import { writeWidgetSnapshot } from "../../src/widgets/cache";
 
 type Tip = { key: string; titleEn: string; titleHi: string; appHref: string; done?: boolean };
 type SetupStep = { key: string; done: boolean };
+const EMPTY_SETUP: SetupStep[] = [];
 type Growth = { ready: boolean; score: number | null; tips: Tip[]; checklist: Tip[]; setup?: SetupStep[] };
 type Note = { id: string; title: string; titleHi: string; body: string; bodyHi: string; link: string };
 type Analytics = {
@@ -109,7 +111,7 @@ function HomeScreenContent() {
   const hour = new Date().getHours();
   const hello = hour < 12 ? t.greetMorning : hour < 17 ? t.greetAfternoon : t.greetEvening;
   const tasks = growth.data ? (growth.data.ready ? growth.data.tips : growth.data.checklist) : [];
-  const setup = growth.data?.setup ?? [];
+  const setup = growth.data?.setup ?? EMPTY_SETUP;
   const setupDone = setup.filter((step) => step.done).length;
   const showSetup = setup.length > 0 && setupDone < setup.length;
   const growthBusinessId = business?.id;
@@ -121,7 +123,14 @@ function HomeScreenContent() {
         client.invalidateQueries({ queryKey: accountKey(growthUserId, "growth", growthBusinessId) }).catch(() => undefined);
       }
       consumeSetupStep().then((next) => {
-        if (focused && next) setExpandedSetup(next);
+        if (!focused || !next) return;
+        if (next === "first") {
+          setSetupExpandedManually(false);
+          setExpandedSetup(null);
+        } else {
+          setSetupExpandedManually(true);
+          setExpandedSetup(next);
+        }
       }).catch(() => undefined);
       return () => { focused = false; };
     }, [client, growthBusinessId, growthUserId])
@@ -140,11 +149,9 @@ function HomeScreenContent() {
       done: setup.find((step) => step.key === key)?.done === true
     }));
   }, [setup, t]);
-  useEffect(() => {
-    if (showSetup && !setupExpandedManually) {
-      setExpandedSetup((current) => current ?? setupRows.find((step) => !step.done)?.key ?? null);
-    }
-  }, [setupExpandedManually, showSetup, setupRows]);
+  const expandedSetupKey = showSetup
+    ? setupExpandedManually ? expandedSetup : expandedSetup ?? setupRows.find((step) => !step.done)?.key ?? null
+    : null;
   useEffect(() => {
     if (setup.length === 0) return;
     const previous = previousSetupDone.current;
@@ -162,6 +169,7 @@ function HomeScreenContent() {
   const recentFeedback = feedback.data?.items ?? [];
   useReviewMoment(recentOrders, recentFeedback, home.isError || orders.isError || feedback.isError);
   const quiet = recentOrders.length === 0 && recentFeedback.length === 0;
+  const hasDashboardError = home.isError || growth.isError || notes.isError || analytics.isError || orders.isError || feedback.isError;
 
   useEffect(() => {
     if (!user || !home.data) return;
@@ -170,9 +178,10 @@ function HomeScreenContent() {
       scans: home.data.scansToday,
       orders: home.data.ordersToday,
       reviews: home.data.feedbackToday,
-      businessName: business?.name ?? ""
+      businessName: business?.name ?? "",
+      palette: widgetPaletteFromPalette(palette)
     }).catch(() => undefined);
-  }, [user, home.data, business?.name]);
+  }, [user, home.data, business?.name, palette]);
 
   async function markTip(tipKey: string) {
     if (!business) return;
@@ -268,7 +277,7 @@ function HomeScreenContent() {
           {showSetup ? (
             <SetupGuideCard
               steps={setupRows}
-              expandedKey={expandedSetup}
+              expandedKey={expandedSetupKey}
               onExpand={(key) => {
                 setSetupExpandedManually(true);
                 setExpandedSetup((current) => current === key ? null : key);
@@ -276,6 +285,16 @@ function HomeScreenContent() {
               onStart={startSetup}
             />
           ) : showCelebration ? <SetupCompleteCard /> : null}
+          {hasDashboardError ? (
+            <LoadErrorCard onRetry={() => {
+              home.refetch().catch(() => undefined);
+              growth.refetch().catch(() => undefined);
+              notes.refetch().catch(() => undefined);
+              analytics.refetch().catch(() => undefined);
+              orders.refetch().catch(() => undefined);
+              feedback.refetch().catch(() => undefined);
+            }} />
+          ) : null}
           <View style={styles.filters}>
             <Chip label={t.liveView} tone="live" selected={live} onPress={() => setLive(true)} />
             <Chip
@@ -352,7 +371,7 @@ function HomeScreenContent() {
                     accessibilityRole="button"
                     accessibilityLabel={action.label}
                     onPress={() => router.push(action.href as Href)}
-                    style={[styles.action, { backgroundColor: palette.card }]}
+                    style={[styles.action, { backgroundColor: palette.card, shadowColor: palette.ink }]}
                   >
                     <View style={[styles.ico, { backgroundColor: palette.accentSoft }]}>
                       <Icon color={palette.deep} size={20} strokeWidth={1.75} />
@@ -368,14 +387,14 @@ function HomeScreenContent() {
           <View style={styles.actions}>
             {tiles.map((tile) => {
               const Icon = tile.icon;
-              const colors = rowTint[tile.tint];
+              const colors = rowTintFor(tile.tint, palette);
               return (
                 <View key={tile.key} style={styles.tileCell}>
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel={tile.title}
                     onPress={() => router.push(tile.href)}
-                    style={[styles.tile, { backgroundColor: palette.card }]}
+                    style={[styles.tile, { backgroundColor: palette.card, shadowColor: palette.ink }]}
                   >
                     <View style={[styles.ico, { backgroundColor: colors.bg }]}>
                       <Icon color={colors.fg} size={20} strokeWidth={1.75} />
@@ -392,7 +411,7 @@ function HomeScreenContent() {
             {growth.data ? <TextButton label={t.growthIdeas} onPress={() => setGrowthOpen(true)} /> : null}
           </View>
           {quiet ? (
-            <View style={[styles.rowCard, { backgroundColor: palette.card }]}>
+            <View style={[styles.rowCard, { backgroundColor: palette.card, shadowColor: palette.ink }]}>
               <View style={[styles.ico, { backgroundColor: palette.accentSoft }]}>
                 <Sparkles color={palette.deep} size={18} strokeWidth={1.75} />
               </View>
@@ -409,7 +428,7 @@ function HomeScreenContent() {
                   accessibilityRole="button"
                   accessibilityLabel={`#${order.number} ${order.status}`}
                   onPress={() => router.push("/(app)/orders?tab=orders")}
-                  style={[styles.rowCard, { backgroundColor: palette.card }]}
+                  style={[styles.rowCard, { backgroundColor: palette.card, shadowColor: palette.ink }]}
                 >
                   <View style={[styles.avatar, { backgroundColor: palette.header }]}>
                     <Text style={[styles.avatarText, { color: palette.headerInk }]}>{(order.customerName || "?").slice(0, 1)}</Text>
@@ -429,7 +448,7 @@ function HomeScreenContent() {
                   accessibilityRole="button"
                   accessibilityLabel={`${row.review.rating} ${row.message}`}
                   onPress={() => router.push("/(app)/feedback")}
-                  style={[styles.rowCard, { backgroundColor: palette.card }]}
+                  style={[styles.rowCard, { backgroundColor: palette.card, shadowColor: palette.ink }]}
                 >
                   <View style={[styles.avatar, { backgroundColor: palette.primaryDeep }]}>
                     <Text style={[styles.avatarText, { color: palette.headerInk }]}>{(row.review.customerName || "?").slice(0, 1)}</Text>
@@ -451,7 +470,7 @@ function HomeScreenContent() {
             accessibilityRole="button"
             accessibilityLabel={t.askReviews}
             onPress={() => router.push({ pathname: "/(app)/help", params: { q: t.askReviews } })}
-            style={[styles.rowCard, { backgroundColor: palette.card }]}
+            style={[styles.rowCard, { backgroundColor: palette.card, shadowColor: palette.ink }]}
           >
             <View style={[styles.ico, { backgroundColor: palette.accentSoft }]}>
               <Sparkles color={palette.deep} size={18} strokeWidth={1.75} />
@@ -575,7 +594,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     gap: 10,
     minHeight: 72,
-    shadowColor: "#000000",
     shadowOpacity: 0.06,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
@@ -594,7 +612,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     gap: 6,
     minHeight: 92,
-    shadowColor: "#000000",
     shadowOpacity: 0.06,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
@@ -608,7 +625,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
     alignItems: "center",
-    shadowColor: "#000000",
     shadowOpacity: 0.06,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },

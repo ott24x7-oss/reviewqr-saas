@@ -5,16 +5,17 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useI18n } from "../i18n";
 import { fonts } from "../theme";
 import { useTheme } from "./theme";
+import { withOpacity } from "./tokens";
 
-export const rowTint = {
-  green: { bg: "#DCFCE7", fg: "#0F7A37" },
-  amber: { bg: "#FEF3C7", fg: "#92400E" },
-  blue: { bg: "#DBEAFE", fg: "#1E40AF" },
-  pink: { bg: "#FCE7F3", fg: "#9D174D" },
-  ink: { bg: "#E7E0D4", fg: "#1C1813" }
-} as const;
+export type RowTint = "green" | "amber" | "blue" | "pink" | "ink";
 
-export type RowTint = keyof typeof rowTint;
+export function rowTintFor(tint: RowTint, palette: ReturnType<typeof useTheme>["palette"]) {
+  if (tint === "green") return { bg: palette.accentSoft, fg: palette.success };
+  if (tint === "amber") return { bg: withOpacity(palette.warning, 0.14), fg: palette.warning };
+  if (tint === "blue") return { bg: palette.cyanSoft, fg: palette.deep };
+  if (tint === "pink") return { bg: palette.accentSoft, fg: palette.primaryDeep };
+  return { bg: palette.surface2, fg: palette.ink };
+}
 
 export function SectionHeader({ label }: { label: string }) {
   const { lang } = useI18n();
@@ -46,7 +47,7 @@ export function GroupRow({
 }) {
   const { lang } = useI18n();
   const { palette } = useTheme();
-  const colors = tint === "green" ? { bg: palette.accentSoft, fg: palette.deep } : rowTint[tint];
+  const colors = rowTintFor(tint, palette);
   const body = (
     <>
       <View style={[styles.ico, { backgroundColor: colors.bg }]}>

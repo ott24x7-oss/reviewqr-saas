@@ -17,7 +17,7 @@ import { initSentry, wrapRoot } from "../src/sentry/init";
 import { SessionProvider, useSession } from "../src/state/session";
 import { AppUpdateCheck } from "../src/updates/check";
 import { LaunchFrame } from "../src/ui/launch";
-import { ConnectivityBanner, QueryRetryBar } from "../src/ui/offline-banner";
+import { ConnectivityBanner } from "../src/ui/offline-banner";
 import { ThemeProvider, useTheme } from "../src/ui/theme";
 
 initSentry();
@@ -34,7 +34,6 @@ function Boot({ fontsReady }: { fontsReady: boolean }) {
       <StatusBar style={scheme === "dark" ? "light" : "dark"} />
       <LaunchFrame fontsReady={fontsReady} sessionReady={ready && themeReady} skip={motionLab}>
         <ConnectivityBanner />
-        <QueryRetryBar />
         {fontsReady && themeReady ? <Stack screenOptions={{ headerShown: false }} /> : null}
       </LaunchFrame>
     </>

@@ -10,8 +10,7 @@ import { useI18n } from "../../src/i18n";
 import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
 import { PrimaryButton, TextButton } from "../../src/ui/buttons";
-import { StickyAction } from "../../src/ui/controls";
-import { Field } from "../../src/ui/controls";
+import { Field, StickyAction } from "../../src/ui/controls";
 import { usePalette } from "../../src/ui/theme";
 
 export default function EmailScreen() {

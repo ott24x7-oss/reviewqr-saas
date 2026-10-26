@@ -52,6 +52,17 @@ export type Palette = {
   glass: string;
 };
 
+/** Apply transparency to an opaque theme token without adding a screen color literal. */
+export function withOpacity(color: string, opacity: number) {
+  const hex = color.startsWith("#") ? color.slice(1) : "";
+  if (hex.length !== 6) return color;
+  const value = Number.parseInt(hex, 16);
+  const red = (value >> 16) & 255;
+  const green = (value >> 8) & 255;
+  const blue = value & 255;
+  return `rgba(${red},${green},${blue},${Math.max(0, Math.min(1, opacity))})`;
+}
+
 type PaletteSeed = Omit<Palette, "deep" | "bright" | "ink" | "paper" | "card" | "star" | "white" | "inkSoft" | "chip" | "scrim" | "header" | "headerInk" | "navy" | "cyan" | "cyanSoft" | "glass" | "cinematic" | "onDanger"> & {
   deep?: string;
   onDanger?: string;

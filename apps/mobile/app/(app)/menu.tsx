@@ -1,17 +1,20 @@
 import { Screen } from "../../src/ui/screen";
 import { FlashList } from "@shopify/flash-list";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useLocalSearchParams } from "expo-router";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { Camera, Plus, UtensilsCrossed } from "lucide-react-native";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Pressable, StyleSheet, Switch, Text, View } from "react-native";
+import type { ElementRef } from "react";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import Svg, { Circle, Rect } from "react-native-svg";
 import { apiBaseUrl } from "../../src/api/instance";
 import { apiData } from "../../src/api/data";
 import { ApiError } from "../../src/api/http";
 import { CoachTour } from "../../src/guide/coach";
+import { SetupWalkthrough } from "../../src/guide/setup-tour";
 import { HelpButton } from "../../src/guide/help-sheet";
 import { useI18n } from "../../src/i18n";
 import { accountKey } from "../../src/query/keys";
@@ -19,11 +22,12 @@ import { useBusiness } from "../../src/state/business";
 import { hasModule, useEntitlement } from "../../src/state/entitlement";
 import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
-import { BottomSheet, Card, Chip, EmptyState, Skeleton } from "../../src/ui/bits";
+import { BottomSheet, Card, Chip, EmptyState, LoadErrorCard, Skeleton } from "../../src/ui/bits";
 import { PrimaryButton } from "../../src/ui/buttons";
 import { Field, PillButton } from "../../src/ui/controls";
 import { LockedModuleCard } from "../../src/ui/locked-module";
 import { useTheme } from "../../src/ui/theme";
+import type { Palette } from "../../src/ui/tokens";
 
 type Category = { id: string; name: string };
 type Variant = { id: string; label: string; pricePaise: number };
@@ -60,6 +64,7 @@ function MenuTabContent() {
   const { business } = useBusiness();
   const entitlement = useEntitlement();
   const client = useQueryClient();
+  const params = useLocalSearchParams<{ setupGuide?: string }>();
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [mrp, setMrp] = useState("");
@@ -72,10 +77,12 @@ function MenuTabContent() {
   const [addonName, setAddonName] = useState("");
   const [addonPrice, setAddonPrice] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(() => params.setupGuide === "menu");
   const [grid, setGrid] = useState(true);
   const [suggesting, setSuggesting] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const itemNameTarget = useRef<ElementRef<typeof View>>(null);
+  const itemPriceTarget = useRef<ElementRef<typeof View>>(null);
   const id = business?.id;
   const modules = entitlement.data?.modules;
   const locked = !!(modules && !hasModule(modules, "MENU"));
@@ -203,7 +210,8 @@ function MenuTabContent() {
             ) : null}
             {locked ? <LockedModuleCard moduleId="MENU" /> : null}
             {items.isLoading ? <Skeleton height={120} /> : null}
-            {!locked && !items.isLoading && rows.length === 0 ? (
+            {!locked && items.isError ? <LoadErrorCard onRetry={() => items.refetch().catch(() => undefined)} /> : null}
+            {!locked && !items.isLoading && !items.isError && rows.length === 0 ? (
               <EmptyState
                 icon={UtensilsCrossed}
                 title={t.emptyMenuTitle}
@@ -241,7 +249,15 @@ function MenuTabContent() {
           <Plus color={palette.onPrimary} size={24} strokeWidth={1.75} />
         </Pressable>
       ) : null}
-      <BottomSheet visible={open} title={t.quickAdd} onClose={() => setOpen(false)}>
+      <BottomSheet
+        visible={open}
+        title={t.quickAdd}
+        onClose={() => setOpen(false)}
+        overlay={<SetupWalkthrough step="menu" screen="menu" targets={{ name: itemNameTarget, price: itemPriceTarget }} steps={[
+          { title: t.name, body: t.setupCoachMenuName, top: 160, target: "name" },
+          { title: t.price, body: t.setupCoachMenuPrice, top: 300, target: "price" }
+        ]} />}
+      >
         <View style={styles.stack}>
           <Pressable accessibilityRole="button" accessibilityLabel={t.photo} onPress={() => fromPhoto("camera")} style={[styles.camera, { borderColor: palette.line, backgroundColor: palette.paper }]}>
             <Camera color={palette.deep} size={28} strokeWidth={1.75} />
@@ -251,8 +267,8 @@ function MenuTabContent() {
             <Text style={[styles.note, { color: palette.deep }]}>{t.gallery}</Text>
           </Pressable>
           {suggesting ? <Skeleton height={18} /> : null}
-          <Field label={t.name} tone="paper" value={name} onChangeText={setName} />
-          <Field label={t.price} tone="paper" value={price} onChangeText={setPrice} keyboardType="decimal-pad" />
+          <View ref={itemNameTarget} collapsable={false}><Field label={t.name} tone="paper" value={name} onChangeText={setName} /></View>
+          <View ref={itemPriceTarget} collapsable={false}><Field label={t.price} tone="paper" value={price} onChangeText={setPrice} keyboardType="decimal-pad" /></View>
           <Field label={t.mrp} tone="paper" value={mrp} onChangeText={setMrp} keyboardType="decimal-pad" />
           <Field label={t.categoryName} tone="paper" value={categoryName} onChangeText={setCategoryName} />
           <PillButton
@@ -365,31 +381,31 @@ function MenuTabContent() {
           </View>
         ) : null}
       </BottomSheet>
-      <CoachTour screen="menu" steps={[{ title: t.coachMenuAdd, body: t.coachMenuAddBody, top: 96 }]} />
+      <CoachTour disabled={params.setupGuide === "menu"} screen="menu" steps={[{ title: t.coachMenuAdd, body: t.coachMenuAddBody, top: 96 }]} />
     </View>
   );
 }
 
-function FoodPlaceholder() {
+function FoodPlaceholder({ palette }: { palette: Palette }) {
   return (
     <Svg width="100%" height="100%" viewBox="0 0 160 120">
-      <Rect width="160" height="120" fill="#F4EFE6" />
-      <Circle cx="80" cy="64" r="36" fill="#FFFFFF" stroke="#E7E0D4" strokeWidth="2" />
-      <Circle cx="80" cy="64" r="20" fill="#DCFCE7" />
-      <Circle cx="72" cy="58" r="5" fill="#16A34A" />
-      <Circle cx="90" cy="68" r="4" fill="#92400E" />
-      <Circle cx="78" cy="74" r="3" fill="#D69E2E" />
+      <Rect width="160" height="120" fill={palette.paper} />
+      <Circle cx="80" cy="64" r="36" fill={palette.card} stroke={palette.line} strokeWidth="2" />
+      <Circle cx="80" cy="64" r="20" fill={palette.accentSoft} />
+      <Circle cx="72" cy="58" r="5" fill={palette.primary} />
+      <Circle cx="90" cy="68" r="4" fill={palette.warning} />
+      <Circle cx="78" cy="74" r="3" fill={palette.success} />
     </Svg>
   );
 }
 
-function ProductPhoto({ uri, tall }: { uri: string | null; tall: boolean }) {
+function ProductPhoto({ uri, tall, palette }: { uri: string | null; tall: boolean; palette: Palette }) {
   return (
-    <View style={[styles.photo, tall ? styles.photoTall : styles.photoThumb]}>
+    <View style={[styles.photo, { backgroundColor: palette.paper }, tall ? styles.photoTall : styles.photoThumb]}>
       {uri ? (
         <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" accessibilityIgnoresInvertColors />
       ) : (
-        <FoodPlaceholder />
+        <FoodPlaceholder palette={palette} />
       )}
     </View>
   );
@@ -427,12 +443,12 @@ function ProductCard({
       disabled={busy}
       onValueChange={onToggle}
       trackColor={{ false: palette.line, true: palette.primary }}
-      thumbColor="#FFFFFF"
+      thumbColor={palette.card}
     />
   );
   const body = !grid ? (
     <Card style={styles.listCard}>
-      <ProductPhoto uri={uri} tall={false} />
+      <ProductPhoto uri={uri} tall={false} palette={palette} />
       <View style={styles.listCopy}>
         <Text style={[styles.item, { color: palette.ink }, lang === "hi" && styles.hindi]} numberOfLines={1}>{item.name}</Text>
         <Text style={[styles.note, { color: palette.muted }]}>{price}</Text>
@@ -441,7 +457,7 @@ function ProductCard({
     </Card>
   ) : (
     <Card style={styles.gridCard}>
-      <ProductPhoto uri={uri} tall />
+      <ProductPhoto uri={uri} tall palette={palette} />
       <Text style={[styles.item, { color: palette.ink }, lang === "hi" && styles.hindi]} numberOfLines={2}>{item.name}</Text>
       <View style={styles.gridFoot}>
         <Text style={[styles.note, { color: palette.ink }]}>{price}</Text>
@@ -471,7 +487,7 @@ const styles = StyleSheet.create({
   listCard: { flexDirection: "row", alignItems: "center", gap: 10, padding: 10 },
   listCopy: { flex: 1, gap: 2 },
   gridFoot: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  photo: { borderRadius: 14, overflow: "hidden", backgroundColor: "#F4EFE6" },
+  photo: { borderRadius: 14, overflow: "hidden" },
   photoTall: { height: 112, width: "100%" },
   photoThumb: { width: 56, height: 56 },
   item: { fontFamily: fonts.title, fontSize: 16 },

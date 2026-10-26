@@ -14,10 +14,11 @@ import { accountKey } from "../../src/query/keys";
 import { useBusiness } from "../../src/state/business";
 import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
-import { EmptyState } from "../../src/ui/bits";
+import { EmptyState, LoadErrorCard, Skeleton } from "../../src/ui/bits";
 import { PillButton } from "../../src/ui/controls";
 import { usePalette } from "../../src/ui/theme";
 import type { Palette } from "../../src/ui/tokens";
+import { withOpacity } from "../../src/ui/tokens";
 
 type Analytics = {
   summary: {
@@ -93,7 +94,9 @@ function AnalyticsScreenContent() {
           </Pressable>
         ))}
       </View>
-      {quiet ? (
+      {query.isLoading ? <View style={styles.grid}><Skeleton height={112} /><Skeleton height={112} /></View> : null}
+      {query.isError ? <LoadErrorCard onRetry={() => query.refetch().catch(() => undefined)} /> : null}
+      {!query.isLoading && !query.isError && quiet ? (
         <EmptyState
           icon={QrCode}
           title={t.firstScans}
@@ -101,7 +104,7 @@ function AnalyticsScreenContent() {
           action={t.showMyQr}
           onAction={() => router.push("/(app)/tap")}
         />
-      ) : (
+      ) : !query.isLoading && !query.isError ? (
       <>
       <View style={styles.grid}>
         <Card label={t.scans} value={summary ? String(summary.scans) : "…"} />
@@ -138,7 +141,7 @@ function AnalyticsScreenContent() {
                 {row.map((count, hour) => (
                   <View
                     key={`${day}-${hour}`}
-                    style={[styles.heatCell, { backgroundColor: `rgba(28,27,24,${0.08 + (count / heatMax) * 0.92})` }]}
+                    style={[styles.heatCell, { backgroundColor: withOpacity(palette.primary, 0.08 + (count / heatMax) * 0.92) }]}
                   />
                 ))}
               </View>
@@ -159,7 +162,7 @@ function AnalyticsScreenContent() {
         ))}
       </View>
       </>
-      )}
+      ) : null}
       <PillButton
         label={t.weeklyReport}
         tone={prefs.data?.whatsappOptIn ? "dark" : "outline"}

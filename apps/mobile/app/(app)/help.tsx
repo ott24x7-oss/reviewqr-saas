@@ -6,11 +6,12 @@ import { useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput } from "react-native";
 import { apiData } from "../../src/api/data";
 import { replayAllTours } from "../../src/guide/store";
+import { queueSetupStep } from "../../src/guide/setup";
 import { useI18n } from "../../src/i18n";
 import { accountKey } from "../../src/query/keys";
 import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
-import { Card, EmptyState } from "../../src/ui/bits";
+import { Card, EmptyState, LoadErrorCard, Skeleton } from "../../src/ui/bits";
 import { PrimaryButton } from "../../src/ui/buttons";
 import { usePalette } from "../../src/ui/theme";
 import { CircleHelp } from "lucide-react-native";
@@ -60,6 +61,9 @@ function HelpScreenContent() {
         style={[styles.search, { color: palette.ink, backgroundColor: palette.card, borderColor: palette.line }]}
       />
       <PrimaryButton label={t.showTips} onPress={() => replayAllTours().then(() => router.back())} />
+      <PrimaryButton label={t.showSetupGuideAgain} onPress={() => queueSetupStep("first").then(() => router.replace("/(app)"))} />
+      {articles.isLoading ? <><Skeleton height={92} /><Skeleton height={92} /></> : null}
+      {articles.isError ? <LoadErrorCard onRetry={() => articles.refetch().catch(() => undefined)} /> : null}
       {rows.length === 0 && guides.length === 0 ? <EmptyState icon={CircleHelp} title={t.noArticles} body={t.helpSearch} /> : null}
       {rows.map((article) => (
         <Card key={article.id}>

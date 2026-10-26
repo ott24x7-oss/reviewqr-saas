@@ -7,6 +7,7 @@ import { useI18n } from "../i18n";
 import { fonts } from "../theme";
 import { PrimaryButton, SecondaryButton, TextButton } from "./buttons";
 import { usePalette, useTheme } from "./theme";
+import { withOpacity } from "./tokens";
 
 export function Field({ label, tone = "paper", ...props }: TextInputProps & { label: string; tone?: "dark" | "paper" }) {
   const { lang } = useI18n();
@@ -22,7 +23,7 @@ export function Field({ label, tone = "paper", ...props }: TextInputProps & { la
           styles.input,
           {
             borderColor: palette.line,
-            backgroundColor: paper ? palette.card : "rgba(255,255,255,0.06)",
+            backgroundColor: paper ? palette.card : withOpacity(palette.headerInk, 0.06),
             color: paper ? palette.ink : palette.headerInk
           }
         ]}

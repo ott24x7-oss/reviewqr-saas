@@ -24,7 +24,7 @@ import { useBusiness } from "../../src/state/business";
 import { hasModule, useEntitlement } from "../../src/state/entitlement";
 import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
-import { Card, Chip, EmptyState, Skeleton } from "../../src/ui/bits";
+import { Card, Chip, EmptyState, LoadErrorCard, Skeleton } from "../../src/ui/bits";
 import { Field, PillButton } from "../../src/ui/controls";
 import { tapStrong } from "../../src/ui/haptics";
 import { LockedModuleCard } from "../../src/ui/locked-module";
@@ -172,6 +172,8 @@ function OrdersScreenContent() {
   });
 
   const loading = tab === "products" ? products.isLoading : tab === "orders" ? orders.isLoading : feedback.isLoading;
+  const listError = tab === "products" ? products.isError : tab === "orders" ? orders.isError : feedback.isError;
+  const retryList = tab === "products" ? products.refetch : tab === "orders" ? orders.refetch : feedback.refetch;
   useReviewMoment(orders.data?.items ?? [], feedback.data?.items ?? [], Boolean(error) || orders.isError || feedback.isError);
   useEffect(() => {
     if (!loading) return;
@@ -401,12 +403,12 @@ function OrdersScreenContent() {
         ListHeaderComponent={header}
         contentContainerStyle={styles.listPad}
         ListEmptyComponent={
-          locked || showSkeleton || loading ? null : tab === "orders" ? (
-            <EmptyState icon={ClipboardList} title={t.emptyOrdersTitle} body={t.emptyOrdersBody} />
+          locked || showSkeleton || loading ? null : listError ? <LoadErrorCard onRetry={() => retryList().catch(() => undefined)} /> : tab === "orders" ? (
+            <EmptyState icon={ClipboardList} title={t.emptyOrdersTitle} body={t.emptyOrdersBody} action={t.sharePage} onAction={() => router.push({ pathname: "/(app)/tap", params: { section: "link" } })} />
           ) : tab === "products" ? (
             <EmptyState icon={ClipboardList} title={t.emptyMenuTitle} body={t.emptyMenuBody} action={t.quickAdd} onAction={addProduct} />
           ) : (
-            <EmptyState icon={ClipboardList} title={t.emptyFeedbackTitle} body={t.emptyFeedbackBody} />
+            <EmptyState icon={ClipboardList} title={t.emptyFeedbackTitle} body={t.emptyFeedbackBody} action={t.sharePage} onAction={() => router.push({ pathname: "/(app)/tap", params: { section: "link" } })} />
           )
         }
         renderItem={({ item, index }) => {
@@ -547,7 +549,7 @@ const styles = StyleSheet.create({
     paddingLeft: 16,
     gap: 6
   },
-  revealText: { color: "#FFFFFF", fontFamily: fonts.bodyStrong },
+  revealText: { fontFamily: fonts.bodyStrong },
   detail: { position: "absolute", left: 16, right: 16, bottom: 16, gap: 8 }
 });
 

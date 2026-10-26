@@ -1,6 +1,7 @@
 import { Screen } from "../../src/ui/screen";
 import type { BillingSummary } from "@reviewqr/shared";
 import { useQuery } from "@tanstack/react-query";
+import { router } from "expo-router";
 import { CreditCard, Receipt } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -11,6 +12,7 @@ import { useEntitlement } from "../../src/state/entitlement";
 import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
 import { Group, GroupRow, SectionHeader } from "../../src/ui/rows";
+import { EmptyState, LoadErrorCard, Skeleton } from "../../src/ui/bits";
 import { usePalette } from "../../src/ui/theme";
 import type { Palette } from "../../src/ui/tokens";
 
@@ -94,11 +96,14 @@ function PlanScreenContent() {
       </View>
 
       <SectionHeader label={t.planHistory} />
-      <Group>
-        {(billing.data?.history ?? []).length === 0 ? (
-          <GroupRow icon={Receipt} tint="ink" title={t.planHistory} hint={t.plansWeb} />
-        ) : (
-          (billing.data?.history ?? []).map((row) => (
+      {billing.isLoading ? <><Skeleton height={72} /><Skeleton height={72} /></> : null}
+      {billing.isError ? <LoadErrorCard onRetry={() => billing.refetch().catch(() => undefined)} /> : null}
+      {!billing.isLoading && !billing.isError && (billing.data?.history ?? []).length === 0 ? (
+        <EmptyState icon={Receipt} title={t.emptyBillingTitle} body={t.emptyBillingBody} action={t.helpCenter} onAction={() => router.push("/(app)/help")} />
+      ) : null}
+      {!billing.isLoading && !billing.isError && (billing.data?.history ?? []).length > 0 ? (
+        <Group>
+          {(billing.data?.history ?? []).map((row) => (
             <GroupRow
               key={row.id}
               icon={Receipt}
@@ -106,9 +111,9 @@ function PlanScreenContent() {
               title={`${row.createdAt.slice(0, 10)} · ${row.tier}`}
               hint={`${rupees(row.amountPaise)} · ${row.status}`}
             />
-          ))
-        )}
-      </Group>
+          ))}
+        </Group>
+      ) : null}
     </ScrollView>
   );
 }

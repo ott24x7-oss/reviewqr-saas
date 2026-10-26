@@ -14,7 +14,7 @@ export async function writeWidgetSnapshot(snapshot: WidgetSnapshot) {
     });
     await widgets.requestWidgetUpdate({
       widgetName: "MyQr",
-      renderWidget: () => <views.MyQrWidget />
+      renderWidget: () => <views.MyQrWidget palette={snapshot.palette} />
     });
   } catch {
     // The native widget module exists only in an Android build.

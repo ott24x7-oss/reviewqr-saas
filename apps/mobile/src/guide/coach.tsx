@@ -1,11 +1,11 @@
 import { ArrowUp } from "lucide-react-native";
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useEffect, useRef, useState, type ElementRef, type RefObject } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import type { ElementRef } from "react";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useI18n } from "../i18n";
 import { fonts } from "../theme";
 import { useTheme } from "../ui/theme";
+import { withOpacity } from "../ui/tokens";
 import {
   readCoachState,
   rememberTour,
@@ -23,7 +23,8 @@ export function CoachTour({
   force,
   targets,
   lastLabel,
-  onComplete
+  onComplete,
+  disabled
 }: {
   screen: CoachScreen;
   steps: CoachStep[];
@@ -31,6 +32,7 @@ export function CoachTour({
   targets?: Record<string, RefObject<NativeView | null>>;
   lastLabel?: string;
   onComplete?: () => void | Promise<void>;
+  disabled?: boolean;
 }) {
   const { t, lang } = useI18n();
   const { palette, reduceMotion } = useTheme();
@@ -44,7 +46,7 @@ export function CoachTour({
     async function load() {
       const state = await readCoachState();
       if (!live) return;
-      const show = force || shouldShowTour(state, screen);
+      const show = !disabled && (force || shouldShowTour(state, screen));
       setOpen(show);
       setIndex(0);
       if (show && !reduceMotion) {
@@ -56,7 +58,7 @@ export function CoachTour({
     return subscribeCoach(() => {
       load().catch(() => undefined);
     });
-  }, [force, screen, reduceMotion, scale]);
+  }, [disabled, force, screen, reduceMotion, scale]);
 
   async function close() {
     if (!force) await rememberTour(screen);
@@ -113,15 +115,15 @@ export function CoachTour({
       </Animated.View>
       <Animated.View pointerEvents="auto" style={[styles.below, { backgroundColor: palette.scrim }, below]} />
       <Animated.View style={[styles.tip, { backgroundColor: palette.deep }, tipPos]}>
-        <ArrowUp color="#FFFFFF" size={20} strokeWidth={1.75} />
-        <Text style={[styles.kicker, lang === "hi" && styles.hindi]}>
+        <ArrowUp color={palette.headerInk} size={20} strokeWidth={1.75} />
+        <Text style={[styles.kicker, { color: withOpacity(palette.headerInk, 0.8) }, lang === "hi" && styles.hindi]}>
           {index + 1}/{steps.length}
         </Text>
-        <Text style={[styles.title, lang === "hi" && styles.hindi]}>{step.title}</Text>
-        <Text style={[styles.body, lang === "hi" && styles.hindi]}>{step.body}</Text>
+        <Text style={[styles.title, { color: palette.headerInk }, lang === "hi" && styles.hindi]}>{step.title}</Text>
+        <Text style={[styles.body, { color: palette.headerInk }, lang === "hi" && styles.hindi]}>{step.body}</Text>
         <View style={styles.row}>
           <Pressable accessibilityRole="button" accessibilityLabel={t.coachSkip} onPress={close} style={styles.hit}>
-            <Text style={[styles.skip, lang === "hi" && styles.hindi]}>{t.coachSkip}</Text>
+            <Text style={[styles.skip, { color: withOpacity(palette.headerInk, 0.85) }, lang === "hi" && styles.hindi]}>{t.coachSkip}</Text>
           </Pressable>
           <Pressable
             accessibilityRole="button"
@@ -144,7 +146,7 @@ export function CoachTour({
             }}
             style={styles.hit}
           >
-            <Text style={[styles.next, lang === "hi" && styles.hindi]}>{last ? (lastLabel ?? t.coachGotIt) : t.coachNext}</Text>
+            <Text style={[styles.next, { color: palette.headerInk }, lang === "hi" && styles.hindi]}>{last ? (lastLabel ?? t.coachGotIt) : t.coachNext}</Text>
           </Pressable>
         </View>
       </Animated.View>
@@ -160,12 +162,12 @@ const styles = StyleSheet.create({
   hole: { flex: 1, borderRadius: 18 },
   below: { position: "absolute", left: 0, right: 0, bottom: 0 },
   tip: { position: "absolute", left: 20, right: 20, borderRadius: 18, padding: 16, gap: 6 },
-  kicker: { color: "rgba(255,255,255,0.8)", fontFamily: fonts.bodyStrong, fontSize: 12 },
-  title: { color: "#FFFFFF", fontFamily: fonts.title, fontSize: 18 },
-  body: { color: "#FFFFFF", fontFamily: fonts.body, fontSize: 15, lineHeight: 21 },
+  kicker: { fontFamily: fonts.bodyStrong, fontSize: 12 },
+  title: { fontFamily: fonts.title, fontSize: 18 },
+  body: { fontFamily: fonts.body, fontSize: 15, lineHeight: 21 },
   row: { flexDirection: "row", justifyContent: "space-between", marginTop: 8 },
   hit: { minHeight: 48, justifyContent: "center", paddingHorizontal: 8 },
-  skip: { color: "rgba(255,255,255,0.85)", fontFamily: fonts.bodyStrong },
-  next: { color: "#FFFFFF", fontFamily: fonts.bodyStrong },
+  skip: { fontFamily: fonts.bodyStrong },
+  next: { fontFamily: fonts.bodyStrong },
   hindi: { fontFamily: fonts.hindi }
 });

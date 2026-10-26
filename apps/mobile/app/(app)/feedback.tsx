@@ -2,6 +2,7 @@ import { Screen } from "../../src/ui/screen";
 import { FlashList } from "@shopify/flash-list";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MessageSquare } from "lucide-react-native";
+import { router } from "expo-router";
 import { useState } from "react";
 import { Linking, StyleSheet, Text, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
@@ -16,7 +17,7 @@ import { useBusiness } from "../../src/state/business";
 import { hasModule, useEntitlement } from "../../src/state/entitlement";
 import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
-import { Card, Chip, EmptyState } from "../../src/ui/bits";
+import { Card, Chip, EmptyState, LoadErrorCard, Skeleton } from "../../src/ui/bits";
 import { Field, PillButton } from "../../src/ui/controls";
 import { LockedModuleCard } from "../../src/ui/locked-module";
 import { useTheme } from "../../src/ui/theme";
@@ -135,7 +136,8 @@ function FeedbackTabContent() {
           </View>
         }
         ListEmptyComponent={
-          locked || rows.isLoading ? null : <EmptyState icon={MessageSquare} title={t.emptyFeedbackTitle} body={t.emptyFeedbackBody} />
+          locked ? null : rows.isLoading ? <View style={styles.skeletons}><Skeleton height={100} /><Skeleton height={100} /></View> : rows.isError ? <LoadErrorCard onRetry={() => rows.refetch().catch(() => undefined)} /> :
+            <EmptyState icon={MessageSquare} title={t.emptyFeedbackTitle} body={t.emptyFeedbackBody} action={t.sharePage} onAction={() => router.push({ pathname: "/(app)/tap", params: { section: "link" } })} />
         }
         renderItem={({ item }) => (
           <SwipeResolve hint={t.resolved} onResolve={() => resolve(item)}>
@@ -192,6 +194,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   inlineFormScroll: { flexGrow: 0, width: "100%", maxHeight: 260 },
   inlineFormContent: { gap: 8 },
+  skeletons: { padding: 16, gap: 12 },
   card: { marginBottom: 12, gap: 8 },
   reveal: {
     position: "absolute",
@@ -203,7 +206,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingLeft: 16
   },
-  revealText: { color: "#FFFFFF", fontFamily: fonts.bodyStrong }
+  revealText: { fontFamily: fonts.bodyStrong }
 });
 
 export default function FeedbackTab() {

@@ -79,7 +79,7 @@ export function PushBridge() {
       live = false;
       remove();
     };
-  }, [user?.id, user?.pushEnabled]);
+  }, [client, user?.id, user?.pushEnabled]);
 
   return null;
 }

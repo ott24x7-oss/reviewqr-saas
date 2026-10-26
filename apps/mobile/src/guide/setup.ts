@@ -10,13 +10,15 @@ export function nextSetupStep(key: SetupStepKey): SetupStepKey | null {
   return SETUP_STEP_KEYS[index + 1] ?? null;
 }
 
-export async function queueSetupStep(key: SetupStepKey | null) {
+export async function queueSetupStep(key: SetupStepKey | "first" | null) {
   if (key) await AsyncStorage.setItem(NEXT_SETUP_STEP_KEY, key);
   else await AsyncStorage.removeItem(NEXT_SETUP_STEP_KEY);
 }
 
-export async function consumeSetupStep(): Promise<SetupStepKey | null> {
+export async function consumeSetupStep(): Promise<SetupStepKey | "first" | null> {
   const stored = await AsyncStorage.getItem(NEXT_SETUP_STEP_KEY).catch(() => null);
   await AsyncStorage.removeItem(NEXT_SETUP_STEP_KEY).catch(() => undefined);
-  return SETUP_STEP_KEYS.includes(stored as SetupStepKey) ? (stored as SetupStepKey) : null;
+  return stored === "first" || SETUP_STEP_KEYS.includes(stored as SetupStepKey)
+    ? (stored as SetupStepKey | "first")
+    : null;
 }
