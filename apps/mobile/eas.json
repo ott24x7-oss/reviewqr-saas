@@ -34,6 +34,33 @@
         "EXPO_PUBLIC_EAS_PROJECT_ID": "00c6693d-9ab5-4dce-9de6-e24889f469fa",
         "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
+    },
+    "admin-preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "APP_VARIANT": "admin",
+        "EXPO_PUBLIC_APP_VARIANT": "admin",
+        "EXPO_PUBLIC_API_URL": "https://qr24x7.in",
+        "EXPO_PUBLIC_EAS_PROJECT_ID": "00c6693d-9ab5-4dce-9de6-e24889f469fa",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+      }
+    },
+    "admin-production": {
+      "autoIncrement": false,
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "APP_VARIANT": "admin",
+        "EXPO_PUBLIC_APP_VARIANT": "admin",
+        "EXPO_PUBLIC_API_URL": "https://qr24x7.in",
+        "EXPO_PUBLIC_EAS_PROJECT_ID": "00c6693d-9ab5-4dce-9de6-e24889f469fa",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+      }
     }
   },
   "submit": {
