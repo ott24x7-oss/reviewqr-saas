@@ -24,10 +24,11 @@ jest.mock("expo-secure-store", () => ({
 jest.mock("../src/state/session", () => ({ useSession: () => ({ user: null }) }));
 
 import {
-  adminBusinessActionSchema, adminCommissionActionSchema, adminDeviceActionSchema, adminInboxActionSchema, adminOtpVerifySchema,
-  adminPaymentActionSchema, adminPlanPatchSchema, adminSessionSchema, adminSettingsPatchSchema, adminShopActionSchema,
-  adminStepUpSchema, adminStepUpTokenSchema, adminSupportActionSchema, adminTeamActionSchema, adminUserActionSchema,
-  adminWhatsAppTestSchema, agentBusinessesSchema, agentCommissionsSchema, agentHomeSchema, agentInviteBodySchema,
+  adminBusinessActionSchema, adminCommissionActionSchema, adminDeviceActionSchema, adminInboxActionSchema, adminMeSchema,
+  adminMoneySummarySchema, adminMyDevicesSchema, adminOtpVerifySchema, adminPaymentActionSchema, adminPayoutsPageSchema,
+  adminPlanPatchSchema, adminSessionSchema, adminSettingsPatchSchema, adminShopActionSchema, adminShopOrderDetailSchema,
+  adminStepUpSchema, adminStepUpTokenSchema, adminSupportActionSchema, adminTeamActionSchema, adminTeamResponseSchema,
+  adminUserActionSchema, adminWhatsAppStatusSchema, adminWhatsAppTestSchema, agentBusinessesSchema, agentCommissionsSchema, agentHomeSchema, agentInviteBodySchema,
   agentInviteResultSchema, agentJoinBodySchema, agentJoinResultSchema, agentMemberDetailSchema, agentMemberPatchSchema,
   agentOnboardSchema, agentPayoutsSchema, agentProfilePutSchema, agentProfileSchema, agentTeamSchema, logoutSchema,
   otpRequestSchema, otpSentSchema, refreshSchema, tokenPairSchema
@@ -104,20 +105,24 @@ const adminCases: AdminCase[] = [
   { fn: "commissionAction", route: "POST /commissions", path: "/commissions", body: adminCommissionActionSchema, stepUp: "mark_payout_paid", call: (stepUp) => adminApi.commissionAction({ action: "pay", agentId: "user-agent-1", utr: "UTR998877", reason: "October payout" }, stepUp) },
   { fn: "plans", route: "GET /plans", path: "/plans", call: () => adminApi.plans() },
   { fn: "patchPlan", route: "PATCH /plans/:id", path: "/plans/growth", body: adminPlanPatchSchema, stepUp: "change_plan_modules", call: (stepUp) => adminApi.patchPlan("growth", { modules: ["qr", "reviews"] }, stepUp) },
-  { fn: "team", route: "GET /agents/team", path: "/agents/team", call: () => adminApi.team() },
+  { fn: "me", route: "GET /me", path: "/me", response: adminMeSchema, call: () => adminApi.me() },
+  { fn: "moneySummary", route: "GET /money/summary", path: "/money/summary?range=30d", response: adminMoneySummarySchema, call: () => adminApi.moneySummary("30d") },
+  { fn: "payouts", route: "GET /payouts", path: "/payouts", response: adminPayoutsPageSchema, call: () => adminApi.payouts() },
+  { fn: "team", route: "GET /agents/team", path: "/agents/team", response: adminTeamResponseSchema, call: () => adminApi.team() },
   { fn: "teamAction", route: "POST /agents/team", path: "/agents/team", body: adminTeamActionSchema, call: () => adminApi.teamAction({ action: "share", id: "ap-2", sharePercent: 75 }) },
   { fn: "shopOrders", route: "GET /shop/orders", path: "/shop/orders?status=PACKED", call: () => adminApi.shopOrders("PACKED") },
-  { fn: "shopOrder", route: "GET /shop/orders/:id", path: "/shop/orders/order-3", call: () => adminApi.shopOrder("order-3") },
+  { fn: "shopOrder", route: "GET /shop/orders/:id", path: "/shop/orders/order-3", response: adminShopOrderDetailSchema, call: () => adminApi.shopOrder("order-3") },
   { fn: "shopAction", route: "POST /shop/orders/:id", path: "/shop/orders/order-3", body: adminShopActionSchema, call: () => adminApi.shopAction("order-3", { action: "tracking", awb: "AWB12345", courierName: "Delhivery" }) },
   { fn: "tickets", route: "GET /support", path: "/support?status=OPEN", call: () => adminApi.tickets("OPEN") },
   { fn: "ticket", route: "GET /support/:id", path: "/support/ticket-1", call: () => adminApi.ticket("ticket-1") },
   { fn: "ticketAction", route: "POST /support/:id", path: "/support/ticket-1", body: adminSupportActionSchema, call: () => adminApi.ticketAction("ticket-1", { body: "Please rescan now." }) },
-  { fn: "whatsapp", route: "GET /whatsapp", path: "/whatsapp", call: () => adminApi.whatsapp() },
+  { fn: "whatsapp", route: "GET /whatsapp", path: "/whatsapp", response: adminWhatsAppStatusSchema, call: () => adminApi.whatsapp() },
   { fn: "whatsappReconnect", route: "POST /whatsapp/reconnect", path: "/whatsapp/reconnect", stepUp: "whatsapp_pairing", call: (stepUp) => adminApi.whatsappReconnect(stepUp ?? "") },
   { fn: "whatsappTest", route: "POST /whatsapp/test", path: "/whatsapp/test", body: adminWhatsAppTestSchema, call: () => adminApi.whatsappTest("Hello") },
   { fn: "settings", route: "GET /settings", path: "/settings", call: () => adminApi.settings() },
   { fn: "patchSettings", route: "PUT /settings", path: "/settings", body: adminSettingsPatchSchema, stepUp: "change_settings", call: (stepUp) => adminApi.patchSettings({ tdsPercent: 5, notify: { signup: false } }, stepUp) },
   { fn: "devices", route: "GET /devices", path: "/devices", call: () => adminApi.devices() },
+  { fn: "myDevices", route: "GET /devices/mine", path: "/devices/mine", response: adminMyDevicesSchema, call: () => adminApi.myDevices() },
   { fn: "deviceAction", route: "POST /devices/:id", path: "/devices/dev-1", body: adminDeviceActionSchema, call: () => adminApi.deviceAction("dev-1", "revoke") },
   { fn: "audit", route: "GET /audit", path: "/audit?action=plan.update", call: () => adminApi.audit({ action: "plan.update" }) }
 ];

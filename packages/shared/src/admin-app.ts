@@ -182,6 +182,156 @@ export const adminNotifyPrefSchema = z.object({
   whatsappDown: z.boolean().optional()
 });
 
+/** GET /api/v1/admin/me. The phone is already masked. */
+export const adminMeSchema = z.object({
+  name: z.string(),
+  phoneMasked: z.string(),
+  device: z.object({
+    name: z.string(),
+    status: adminDeviceStatusSchema
+  })
+});
+
+/** One phone that belongs to the signed-in admin. GET /api/v1/admin/devices/mine. */
+export const adminMyDeviceSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  platform: z.string(),
+  status: adminDeviceStatusSchema,
+  lastSeenAt: z.string().nullable(),
+  current: z.boolean()
+});
+export const adminMyDevicesSchema = z.object({
+  devices: z.array(adminMyDeviceSchema)
+});
+
+/** GET /api/v1/admin/money/summary. Amounts are paise. FY figures are the Indian financial year. */
+export const adminMoneySummarySchema = z.object({
+  range: adminRangeSchema,
+  collectedPaise: z.number().int(),
+  refundsPaise: z.number().int(),
+  pendingCommissionsPaise: z.number().int(),
+  approvedUnpaidPaise: z.number().int(),
+  paidThisFyPaise: z.number().int(),
+  tdsThisFyPaise: z.number().int()
+});
+
+export const adminPayoutSchema = z.object({
+  id: z.string(),
+  agentId: z.string(),
+  agentName: z.string(),
+  grossPaise: z.number().int(),
+  tdsPaise: z.number().int(),
+  netPaise: z.number().int(),
+  utr: z.string(),
+  paidAt: z.string()
+});
+export const adminPayoutsPageSchema = z.object({
+  items: z.array(adminPayoutSchema),
+  nextCursor: z.string().nullable()
+});
+
+export const adminTeamLeaderSchema = z.object({
+  leaderId: z.string(),
+  name: z.string(),
+  monthSalesPaise: z.number().int(),
+  overridePaise: z.number().int()
+});
+export const adminTeamBusinessCountSchema = z.object({
+  agentId: z.string(),
+  name: z.string(),
+  businesses: z.number().int()
+});
+export const adminTeamResponseSchema = z.object({
+  settings: z.object({
+    maxTeamDepth: z.number(),
+    minSharePercent: z.number(),
+    maxSharePercent: z.number(),
+    autoApproveSubAgents: z.boolean(),
+    tdsPercent: z.number(),
+    tdsYearlyThresholdPaise: z.number()
+  }),
+  agents: z.array(z.object({
+    id: z.string(),
+    userId: z.string(),
+    name: z.string(),
+    phone: z.string(),
+    status: z.string(),
+    active: z.boolean(),
+    sharePercent: z.number().nullable(),
+    depth: z.number(),
+    leaderId: z.string().nullable(),
+    code: z.string(),
+    businessCount: z.number().int()
+  })),
+  leaderboard: z.object({
+    label: z.string(),
+    rows: z.array(adminTeamLeaderSchema)
+  }),
+  businessCounts: z.array(adminTeamBusinessCountSchema)
+});
+
+export const adminShopLineSchema = z.object({
+  id: z.string(),
+  sku: z.string(),
+  name: z.string(),
+  qty: z.number().int(),
+  unitPaise: z.number().int(),
+  pricePaise: z.number().int(),
+  needsNfc: z.boolean(),
+  proofUrl: z.string().nullable(),
+  proofContentType: z.string().nullable()
+});
+export const adminShopShipmentSchema = z.object({
+  awb: z.string().nullable(),
+  courierName: z.string().nullable(),
+  provider: z.string(),
+  shipmentId: z.string().nullable()
+});
+export const adminShopOrderDetailSchema = z.object({
+  id: z.string(),
+  status: z.string(),
+  paymentStatus: z.string(),
+  totalPaise: z.number().int(),
+  subtotalPaise: z.number().int(),
+  discountPaise: z.number().int(),
+  advancePaise: z.number().int(),
+  balancePaise: z.number().int(),
+  invoiceNumber: z.string().nullable(),
+  buyerLegalName: z.string().nullable(),
+  business: z.string().nullable(),
+  name: z.string().nullable(),
+  email: z.string(),
+  phone: z.string(),
+  createdAt: z.string(),
+  shipment: adminShopShipmentSchema.nullable(),
+  lines: z.array(adminShopLineSchema)
+});
+
+export const adminWhatsAppTemplateSchema = z.object({
+  name: z.string(),
+  language: z.string(),
+  status: z.string()
+});
+export const adminWhatsAppCloudSchema = z.object({
+  configured: z.boolean(),
+  templates: z.array(adminWhatsAppTemplateSchema)
+});
+export const adminWhatsAppStatusSchema = z.object({
+  status: z.string(),
+  qrPng: z.string().nullable(),
+  phoneNumber: z.string().nullable(),
+  error: z.string().nullable(),
+  connectedAt: z.string().nullable(),
+  lastEvent: z.string().nullable(),
+  delivery: z.object({
+    lastAt: z.string().nullable(),
+    lastChannel: z.string().nullable(),
+    counts: z.object({ whatsapp: z.number(), email: z.number(), dev: z.number() })
+  }),
+  cloud: adminWhatsAppCloudSchema
+});
+
 export const adminSettingsPatchSchema = z.object({
   maintenanceMode: z.boolean().optional(),
   maintenanceMessage: z.string().max(240).optional(),

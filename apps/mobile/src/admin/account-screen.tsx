@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
-import { Building2, CreditCard, Eye, EyeOff, FileText, MessageCircle, QrCode, Smartphone, UserRound, WalletCards } from "lucide-react-native";
+import { Building2, CreditCard, Eye, EyeOff, FileText, MessageCircle, Smartphone, UserRound, WalletCards } from "lucide-react-native";
 import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { adminApi, useAdminBusiness, useAdminPlans, useAdminUser } from "./api";
@@ -132,8 +132,6 @@ export function AdminAccountScreen() {
           {u?.businesses.length ? <><Text style={[styles.sectionTitle, { color: palette.ink }]}>{t.businessesList}</Text><AdminCard style={styles.list}>{u.businesses.map((row) => <AdminRow key={row.id} icon={Building2} title={row.name} subtitle={row.slug} onPress={() => router.push({ pathname: "/(admin)/account", params: { kind: "business", id: row.id } })} trailing={<AdminStatus label={row.isActive ? "ACTIVE" : "SUSPENDED"} />} />)}</AdminCard></> : null}
           {u ? <><Text style={[styles.sectionTitle, { color: palette.ink }]}>{t.paymentsList}</Text>
             <AdminCard style={styles.list}>{u.payments.map((payment) => <AdminRow key={payment.id} icon={CreditCard} title={formatAdminMoney(payment.amount, lang)} subtitle={`${payment.provider} · ${formatAdminDate(payment.createdAt, lang)}`} trailing={<AdminStatus label={payment.status} />} />)}</AdminCard></> : null}
-          {u?.devices.length ? <><Text style={[styles.sectionTitle, { color: palette.ink }]}>{t.devices}</Text>
-            <AdminCard style={styles.list}>{u.devices.map((device) => <AdminRow key={device.id} icon={QrCode} title={device.shortCode} subtitle={`${device.kind} · ${device.status}`} />)}</AdminCard></> : null}
           <Text style={[styles.sectionTitle, { color: palette.ink }]}>{t.timeline}</Text>
           <AdminCard style={styles.list}>{timeline.map((event) => <AdminRow key={event.id} icon={FileText} title={event.action} subtitle={`${formatAdminDate(event.createdAt, lang)}${event.reason ? ` · ${event.reason}` : ""}`} />)}</AdminCard>
         </> : null}

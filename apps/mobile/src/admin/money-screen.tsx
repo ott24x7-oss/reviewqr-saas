@@ -3,9 +3,9 @@ import { useLocalSearchParams } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowDownLeft, ArrowUpRight, CircleDollarSign, RefreshCw, Send, X } from "lucide-react-native";
 import { StyleSheet, Text, View } from "react-native";
-import { adminApi, useAdminCommissions, useAdminPayments } from "./api";
+import { adminApi, useAdminCommissions, useAdminMoneySummary, useAdminPayments, useAdminPayouts } from "./api";
 import { useAdminCopy } from "./copy";
-import type { AdminCommission, AdminPayment, AdminPaymentProvider, AdminPaymentStatus } from "./types";
+import type { AdminCommission, AdminPayment, AdminPaymentProvider, AdminPaymentStatus, AdminPayout, AdminRange } from "./types";
 import { AdminAction, AdminConfirmSheet, AdminFrame, AdminLoadState, AdminStatus } from "./screen-kit";
 import { AdminCard, AdminChip } from "./components";
 import { formatAdminCompact, formatAdminDate, formatAdminMoney } from "./format";
@@ -14,7 +14,8 @@ import { useI18n } from "../i18n";
 import { fonts } from "../theme";
 import { useTheme } from "../ui/theme";
 
-type MoneyTab = "payments" | "commissions";
+type MoneyTab = "payments" | "commissions" | "payouts";
+const RANGES: AdminRange[] = ["today", "7d", "30d", "mtd"];
 /** Sheet actions need a reason (and a UTR for refund and pay) before the step-up. */
 type MoneySheet =
   | { kind: "payment"; action: "refund" | "approve"; payment: AdminPayment }
@@ -30,7 +31,8 @@ export function AdminMoneyScreen() {
   const { lang } = useI18n();
   const { palette } = useTheme();
   const params = useLocalSearchParams<{ tab?: string; status?: string }>();
-  const [tab, setTab] = useState<MoneyTab>(params.tab === "commissions" ? "commissions" : "payments");
+  const [tab, setTab] = useState<MoneyTab>(params.tab === "commissions" ? "commissions" : params.tab === "payouts" ? "payouts" : "payments");
+  const [range, setRange] = useState<AdminRange>("30d");
   const [paymentStatus, setPaymentStatus] = useState<AdminPaymentStatus | undefined>(PAYMENT_STATUSES.includes(params.status as AdminPaymentStatus) ? params.status as AdminPaymentStatus : undefined);
   const [provider, setProvider] = useState<AdminPaymentProvider | undefined>(undefined);
   const [planFilter, setPlanFilter] = useState("ALL");
@@ -41,14 +43,15 @@ export function AdminMoneyScreen() {
   const { withStepUp } = useAdminSecurity();
   const payments = useAdminPayments({ status: paymentStatus, provider });
   const commissions = useAdminCommissions();
+  const summary = useAdminMoneySummary(range);
+  const payouts = useAdminPayouts();
   const paymentRows = useMemo(() => payments.data?.pages.flatMap((page) => page.items) ?? [], [payments.data]);
   const commissionRows = useMemo(() => commissions.data?.pages.flatMap((page) => page.items) ?? [], [commissions.data]);
+  const payoutRows = useMemo(() => payouts.data?.pages.flatMap((page) => page.items) ?? [], [payouts.data]);
   const plans = Array.from(new Set(paymentRows.map((item) => item.plan).filter((plan): plan is string => !!plan)));
   const filteredPayments = paymentRows.filter((item) => planFilter === "ALL" || item.plan === planFilter);
-  // The server has no money totals route; these sum the commissions loaded so far.
-  const due = commissionRows.filter((row) => row.status === "APPROVED").reduce((sum, row) => sum + row.amountPaise, 0);
-  const pending = commissionRows.filter((row) => row.status === "PENDING").reduce((sum, row) => sum + row.amountPaise, 0);
-  const active = tab === "payments" ? payments : commissions;
+  const totals = summary.data;
+  const active = tab === "payments" ? payments : tab === "commissions" ? commissions : payouts;
 
   async function act(work: () => Promise<unknown>) {
     setBusy(true);
@@ -57,6 +60,8 @@ export function AdminMoneyScreen() {
       const done = await work();
       if (done === null) return;
       await queryClient.invalidateQueries({ queryKey: ["admin", tab] });
+      await queryClient.invalidateQueries({ queryKey: ["admin", "money"] });
+      await queryClient.invalidateQueries({ queryKey: ["admin", "payouts"] });
       setSheet(null);
     } catch { setError(true); }
     finally { setBusy(false); }
@@ -83,19 +88,28 @@ export function AdminMoneyScreen() {
   const sheetBody = !sheet ? undefined : sheet.kind === "commission" ? formatAdminMoney(commissionRows.filter((row) => row.agentId === sheet.commission.agentId && row.status === "APPROVED").reduce((sum, row) => sum + row.amountPaise, 0), lang) : `${sheet.payment.email} · ${formatAdminMoney(sheet.payment.amount, lang)}`;
 
   return (
-    <AdminFrame title={t.money} subtitle={t.moneySubtitle} refreshing={active.isRefetching} onRefresh={() => active.refetch()}>
+    <AdminFrame title={t.money} subtitle={t.moneySubtitle} refreshing={active.isRefetching || summary.isRefetching} onRefresh={() => { active.refetch(); summary.refetch(); }}>
+      <View style={styles.filterGroup}>{RANGES.map((item) => <AdminChip key={item} label={rangeLabel(item, t)} selected={range === item} onPress={() => setRange(item)} />)}</View>
       <View style={styles.summaryRow}>
-        <Summary label={t.payoutsDue} amount={due} icon={<ArrowUpRight color={palette.success} size={17} />} tone="success" />
-        <Summary label={t.pending} amount={pending} icon={<ArrowDownLeft color={palette.warning} size={17} />} tone="warning" />
+        <Summary label={t.collected} amount={totals?.collectedPaise ?? 0} icon={<ArrowDownLeft color={palette.success} size={17} />} tone="success" />
+        <Summary label={t.refunds} amount={totals?.refundsPaise ?? 0} icon={<ArrowUpRight color={palette.warning} size={17} />} tone="warning" />
       </View>
-      <View style={styles.tabs}>{(["payments", "commissions"] as const).map((key) => <AdminChip key={key} label={key === "payments" ? t.payments : t.commissions} selected={tab === key} onPress={() => setTab(key)} />)}</View>
+      <View style={styles.summaryRow}>
+        <Summary label={t.pending} amount={totals?.pendingCommissionsPaise ?? 0} icon={<ArrowDownLeft color={palette.warning} size={17} />} tone="warning" />
+        <Summary label={t.approvedUnpaid} amount={totals?.approvedUnpaidPaise ?? 0} icon={<ArrowUpRight color={palette.success} size={17} />} tone="success" />
+      </View>
+      <View style={styles.summaryRow}>
+        <Summary label={t.paidThisFy} amount={totals?.paidThisFyPaise ?? 0} icon={<CircleDollarSign color={palette.success} size={17} />} tone="success" />
+        <Summary label={t.tdsThisFy} amount={totals?.tdsThisFyPaise ?? 0} icon={<CircleDollarSign color={palette.warning} size={17} />} tone="warning" />
+      </View>
+      <View style={styles.tabs}>{([ ["payments", t.payments], ["commissions", t.commissions], ["payouts", t.payoutHistory] ] as const).map(([key, label]) => <AdminChip key={key} label={label} selected={tab === key} onPress={() => setTab(key)} />)}</View>
       {error ? <Text style={[styles.error, { color: palette.danger }]}>{t.actionFailed}</Text> : null}
       {tab === "payments" ? <View style={styles.filters}>
         <View style={styles.filterGroup}>{[undefined, ...PAYMENT_STATUSES].map((status) => <AdminChip key={status ?? "ALL"} label={status ? statusLabel(status, t) : t.all} selected={paymentStatus === status} onPress={() => setPaymentStatus(status)} />)}</View>
         <View style={styles.filterGroup}>{[undefined, ...PROVIDERS].map((item) => <AdminChip key={item ?? "ALL"} label={item ?? t.allGateways} selected={provider === item} onPress={() => setProvider(item)} />)}</View>
         {plans.length ? <View style={styles.filterGroup}>{["ALL", ...plans].map((plan) => <AdminChip key={plan} label={plan === "ALL" ? t.allPlans : plan} selected={planFilter === plan} onPress={() => setPlanFilter(plan)} />)}</View> : null}
       </View> : null}
-      <AdminLoadState loading={active.isLoading} error={active.isError} retry={() => active.refetch()} empty={active.isSuccess && (tab === "payments" ? !filteredPayments.length : !commissionRows.length)}>
+      <AdminLoadState loading={active.isLoading} error={active.isError} retry={() => active.refetch()} empty={active.isSuccess && (tab === "payments" ? !filteredPayments.length : tab === "commissions" ? !commissionRows.length : !payoutRows.length)}>
         {tab === "payments" ? filteredPayments.map((item) => <PaymentRow key={item.id} item={item} lang={lang} t={t} disabled={busy}
           onRefund={() => setSheet({ kind: "payment", action: "refund", payment: item })}
           onApprove={() => setSheet({ kind: "payment", action: "approve", payment: item })}
@@ -103,6 +117,7 @@ export function AdminMoneyScreen() {
         {tab === "commissions" ? commissionRows.map((item) => <CommissionRow key={item.id} item={item} lang={lang} t={t} disabled={busy}
           onApprove={() => approveAgent(item).catch(() => undefined)}
           onPay={() => setSheet({ kind: "commission", action: "pay", commission: item })} />) : null}
+        {tab === "payouts" ? payoutRows.map((item) => <PayoutRow key={item.id} item={item} lang={lang} t={t} />) : null}
       </AdminLoadState>
       {active.hasNextPage ? <AdminAction label={active.isFetchingNextPage ? t.loading : t.more} tone="outline" onPress={() => active.fetchNextPage()} disabled={active.isFetchingNextPage} /> : null}
       <AdminConfirmSheet visible={!!sheet} title={sheetTitle} body={sheetBody} needsUtr={sheet?.kind === "commission" || sheet?.action === "refund"} saving={busy} onClose={() => setSheet(null)} onConfirm={submitSheet} />
@@ -133,6 +148,21 @@ function PaymentRow({ item, lang, t, disabled, onRefund, onApprove, onAction }: 
       {item.status === "COMPLETED" ? <AdminAction label={t.refund} tone="danger" disabled={disabled} onPress={onRefund} /> : null}
       {item.status === "COMPLETED" ? <AdminAction label={t.resendInvoice} tone="outline" disabled={disabled} onPress={() => onAction("invoice")} icon={<Send color={palette.ink} size={15} />} /> : null}
     </View>
+  </AdminCard>;
+}
+
+function rangeLabel(range: AdminRange, t: ReturnType<typeof useAdminCopy>) {
+  if (range === "today") return t.today;
+  if (range === "7d") return t.sevenDays;
+  if (range === "30d") return t.thirtyDays;
+  return t.mtd;
+}
+
+function PayoutRow({ item, lang, t }: { item: AdminPayout; lang: "en" | "hi"; t: ReturnType<typeof useAdminCopy> }) {
+  const { palette } = useTheme();
+  return <AdminCard style={styles.moneyCard}>
+    <View style={styles.moneyTop}><View style={{ flex: 1 }}><Text style={[styles.rowTitle, { color: palette.ink }]}>{item.agentName}</Text><Text style={[styles.rowSubtitle, { color: palette.muted }]}>{item.utr} · {formatAdminDate(item.paidAt, lang)}</Text></View><Text style={[styles.moneyAmount, { color: palette.ink }]}>{formatAdminMoney(item.netPaise, lang)}</Text></View>
+    <Text style={[styles.referenceText, { color: palette.muted }]}>{t.gross} {formatAdminMoney(item.grossPaise, lang)} · {t.tds} {formatAdminMoney(item.tdsPaise, lang)} · {t.net} {formatAdminMoney(item.netPaise, lang)}</Text>
   </AdminCard>;
 }
 

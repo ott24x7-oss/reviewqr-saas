@@ -102,6 +102,7 @@ export function AdminPlansScreen() {
 
 export function AdminTeamScreen() {
   const t = useAdminCopy();
+  const { lang } = useI18n();
   const { palette } = useTheme();
   const query = useAdminTeam();
   const params = useLocalSearchParams<{ id?: string }>();
@@ -134,12 +135,19 @@ export function AdminTeamScreen() {
       <AdminLoadState loading={query.isLoading} error={query.isError} retry={() => query.refetch()} empty={query.isSuccess && agents.length === 0}>
         {query.data ? <>
           <AdminCard style={styles.teamSummary}><View style={[styles.teamIcon, { backgroundColor: palette.accentSoft }]}><Users color={palette.primary} size={21} /></View><View style={{ flex: 1 }}><Text style={[styles.summaryTitle, { color: palette.ink }]}>{agents.length} {t.teamMembers}</Text><Text style={[styles.summaryCaption, { color: palette.muted }]}>{t.maxDepth}: {query.data.settings.maxTeamDepth} · {t.share} {minShare}–{maxShare}%</Text></View><Text style={[styles.summaryBig, { color: palette.primary }]}>{agents.filter((agent) => agent.status === "PENDING").length}</Text></AdminCard>
+          {query.data.leaderboard.rows.length ? <>
+            <Text style={[styles.sectionTitle, { color: palette.ink }]}>{t.leaderboard}</Text>
+            {query.data.leaderboard.rows.map((row, index) => <AdminCard key={row.leaderId} style={styles.memberCard}>
+              <View style={styles.memberHead}><Text style={[styles.memberName, { color: palette.ink }]}>{index + 1}. {row.name}</Text></View>
+              <View style={styles.memberStats}><MemberMetric label={t.monthSales} value={formatAdminMoney(row.monthSalesPaise, lang)} /><MemberMetric label={t.override} value={formatAdminMoney(row.overridePaise, lang)} /></View>
+            </AdminCard>)}
+          </> : null}
           <Text style={[styles.sectionTitle, { color: palette.ink }]}>{t.teamTree}</Text>
           {agents.map((agent) => {
             const leader = agent.leaderId ? byId.get(agent.leaderId) : undefined;
             return <Pressable key={agent.id} onPress={() => select(agent)}><AdminCard style={[styles.memberCard, { borderColor: selectedId === agent.id ? palette.primary : palette.line, marginLeft: Math.max(0, agent.depth - 1) * 14 }]}>
               <View style={styles.memberHead}><View style={[styles.avatar, { backgroundColor: palette.accentSoft }]}><Text style={[styles.avatarText, { color: palette.primary }]}>{agent.name.split(" ").map((part) => part[0]).slice(0, 2).join("")}</Text></View><View style={{ flex: 1 }}><Text style={[styles.memberName, { color: palette.ink }]}>{agent.name}</Text><Text style={[styles.memberLead, { color: palette.muted }]}>{leader ? `${t.leader}: ${leader.name}` : t.teamLeader}</Text></View><AdminStatus label={agent.status} /></View>
-              <View style={[styles.memberStats, { borderTopColor: palette.line }]}><MemberMetric label={t.share} value={agent.sharePercent == null ? "—" : `${agent.sharePercent}%`} /><MemberMetric label="Code" value={agent.code} /><MemberMetric label={t.maxDepth} value={String(agent.depth)} /></View>
+              <View style={[styles.memberStats, { borderTopColor: palette.line }]}><MemberMetric label={t.share} value={agent.sharePercent == null ? "—" : `${agent.sharePercent}%`} /><MemberMetric label={t.businessesCount} value={String(agent.businessCount)} /><MemberMetric label={t.maxDepth} value={String(agent.depth)} /></View>
             </AdminCard></Pressable>;
           })}
           {selected ? <>
