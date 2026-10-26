@@ -1,7 +1,6 @@
 import { MarketingNavbar } from "@/components/marketing/navbar";
 import { Footer } from "@/components/marketing/footer";
 import { LegacyHashRedirect } from "@/components/marketing/landing/legacy-hash-redirect";
-import { PlanCompare } from "@/components/marketing/plan-compare";
 import { Comparison, FaqV2, CtaV2 } from "@/components/marketing/landing/sections";
 import type { Metadata } from "next";
 import { listActivePlanPrices, listPublicPlans } from "@/lib/plans/public";
@@ -70,7 +69,6 @@ export default async function HomePage() {
       <HowTeaser />
       <RealTestimonials quotes={quotes} />
       <Comparison rows={copy.stickerRows} />
-      <PlanCompare plans={catalog} />
       <FaqV2 faqs={copy.faqs} />
       <CtaV2 />
 
