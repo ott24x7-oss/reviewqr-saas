@@ -41,6 +41,7 @@ export function routeForPush(data: Record<string, unknown> | null | undefined) {
   const url = typeof data?.url === "string" ? data.url : "";
   if (/^(?:qr24x7|reviewqr):\/\/qr\/?$/.test(url)) return "/(app)/tap";
   if (type === "negative_feedback" || url.includes("/feedback")) return "/(app)/orders?tab=feedback";
+  if (type === "booking_request" || url.includes("/sell/bookings")) return "/(app)/bookings";
   if (type === "store_order" || type === "order_status" || url.includes("/dashboard/orders")) return "/(app)/orders?tab=orders";
   if (type === "plan_active") return "/(app)/plan";
   if (type === "plan_reminder" || type === "tap_expired" || url.includes("/billing")) return "/(app)/plan";

@@ -3,6 +3,7 @@ import type { FeatureId } from "@reviewqr/shared";
 import { router, type Href } from "expo-router";
 import {
   BarChart3,
+  CalendarDays,
   CircleHelp,
   CreditCard,
   Languages,
@@ -13,6 +14,7 @@ import {
   Palette,
   QrCode,
   Share2,
+  Scissors,
   ShoppingBag,
   Star,
   Trash2,
@@ -82,6 +84,8 @@ function MoreScreenContent() {
             onPress={() => go(item.href, item.feature)}
           />
         ))}
+        <GroupRow icon={Scissors} tint="amber" title={t.services} hint={t.addService} locked={locked("services-booking")} onPress={() => go("/(app)/services", "services-booking")} />
+        <GroupRow icon={CalendarDays} tint="green" title={t.bookings} hint={t.bookingsToday} locked={locked("services-booking")} onPress={() => go("/(app)/bookings", "services-booking")} />
         <GroupRow icon={QrCode} tint="ink" title={t.qrList} hint={t.perQr} locked={locked("multiple-qrs")} onPress={() => go("/(app)/qr-codes", "multiple-qrs", true)} />
         <GroupRow icon={Users} tint="blue" title={t.staff} hint={t.hintStaffRow} locked={locked("staff")} onPress={() => go("/(app)/staff", "staff")} />
       </Group>

@@ -71,7 +71,11 @@ describe("fast product entry", () => {
       "Mobile shop",
       "Clothing",
       "Kirana",
-      "Salon"
+      "Salon",
+      "Spa",
+      "Clinic",
+      "Gym",
+      "Tutor"
     ]);
     expect(STORE_TEMPLATES.every((template) => template.groups.some((group) => group.items.length > 0))).toBe(true);
   });

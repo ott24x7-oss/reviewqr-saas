@@ -62,8 +62,9 @@ async function queryTap(code: string): Promise<TapRecord> {
   if (!qr.business || qr.status === "UNASSIGNED") return { status: "unassigned", qrId: qr.id };
   if (!qr.business.isActive || qr.business.archived) return { status: "disabled", qrId: qr.id };
 
-  const [menuCount, tapPage] = await Promise.all([
+  const [menuCount, serviceCount, tapPage] = await Promise.all([
     prisma.menuItem.count({ where: { businessId: qr.business.id } }),
+    prisma.menuItem.count({ where: { businessId: qr.business.id, kind: "SERVICE" } }),
     prisma.tapPage.findUnique({ where: { businessId: qr.business.id }, select: { published: true } })
   ]);
   const business: TapBusinessFields = {
@@ -85,6 +86,8 @@ async function queryTap(code: string): Promise<TapRecord> {
     aiReviewsEnabled: qr.business.aiReviewsEnabled,
     whatsappNumber: qr.business.whatsappNumber,
     menuCount,
+    catalogMode: qr.business.catalogMode,
+    serviceCount,
     published: tapPage?.published ?? null
   };
   const owner = qr.business.owner;
@@ -152,8 +155,9 @@ async function queryBusinessPage(businessId: string): Promise<TapRecord> {
     }
   });
   if (!business) return { status: "not_found" };
-  const [menuCount, tapPage] = await Promise.all([
+  const [menuCount, serviceCount, tapPage] = await Promise.all([
     prisma.menuItem.count({ where: { businessId: business.id } }),
+    prisma.menuItem.count({ where: { businessId: business.id, kind: "SERVICE" } }),
     prisma.tapPage.findUnique({ where: { businessId: business.id }, select: { published: true } })
   ]);
   const fields: TapBusinessFields = {
@@ -175,6 +179,8 @@ async function queryBusinessPage(businessId: string): Promise<TapRecord> {
     aiReviewsEnabled: business.aiReviewsEnabled,
     whatsappNumber: business.whatsappNumber,
     menuCount,
+    catalogMode: business.catalogMode,
+    serviceCount,
     published: tapPage?.published ?? null
   };
   const access = tapAccess(business.owner);

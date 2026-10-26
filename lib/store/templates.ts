@@ -9,6 +9,7 @@ export type TemplateItem = {
   bestseller?: boolean;
   brand?: string;
   durationMinutes?: number;
+  priceType?: "FIXED" | "FROM" | "ON_REQUEST";
 };
 
 export type TemplateGroup = {
@@ -17,11 +18,25 @@ export type TemplateGroup = {
   items: TemplateItem[];
 };
 
+export const SERVICE_TEMPLATE_IDS = ["salon", "spa", "clinic", "gym", "tutor"] as const;
+
+export type StoreTemplateId =
+  | "cafe"
+  | "restaurant"
+  | "mobile"
+  | "clothing"
+  | "kirana"
+  | (typeof SERVICE_TEMPLATE_IDS)[number];
+
 export type StoreTemplate = {
-  id: "cafe" | "restaurant" | "mobile" | "clothing" | "kirana" | "salon";
+  id: StoreTemplateId;
   name: string;
   groups: TemplateGroup[];
 };
+
+export function isServiceTemplate(id: string | undefined): id is (typeof SERVICE_TEMPLATE_IDS)[number] {
+  return SERVICE_TEMPLATE_IDS.includes(id as (typeof SERVICE_TEMPLATE_IDS)[number]);
+}
 
 const restaurant: TemplateGroup[] = [
   {
@@ -116,7 +131,7 @@ const salon: TemplateGroup[] = [
     categoryHi: "बाल",
     items: [
       { name: "Haircut", nameHi: "हेयरकट", pricePaise: 20000, veg: "NONE", durationMinutes: 30 },
-      { name: "Hair colour", nameHi: "हेयर कलर", pricePaise: 80000, veg: "NONE", durationMinutes: 60 }
+      { name: "Hair colour", nameHi: "हेयर कलर", pricePaise: 80000, veg: "NONE", durationMinutes: 60, priceType: "FROM" }
     ]
   },
   {
@@ -129,13 +144,69 @@ const salon: TemplateGroup[] = [
   }
 ];
 
+const spa: TemplateGroup[] = [
+  {
+    category: "Massage",
+    categoryHi: "मसाज",
+    items: [
+      { name: "Swedish massage", nameHi: "स्वीडिश मसाज", pricePaise: 150000, veg: "NONE", durationMinutes: 60 },
+      { name: "Head massage", nameHi: "हेड मसाज", pricePaise: 40000, veg: "NONE", durationMinutes: 30 }
+    ]
+  },
+  {
+    category: "Skin",
+    categoryHi: "स्किन",
+    items: [
+      { name: "Facial", nameHi: "फेशियल", pricePaise: 80000, veg: "NONE", durationMinutes: 45, priceType: "FROM" }
+    ]
+  }
+];
+
+const clinic: TemplateGroup[] = [
+  {
+    category: "Visits",
+    categoryHi: "विज़िट",
+    items: [
+      { name: "Consultation", nameHi: "परामर्श", pricePaise: 30000, veg: "NONE", durationMinutes: 15 },
+      { name: "Follow-up", nameHi: "फॉलो-अप", pricePaise: 20000, veg: "NONE", durationMinutes: 15 },
+      { name: "Home visit", nameHi: "घर पर विज़िट", pricePaise: 0, veg: "NONE", durationMinutes: 30, priceType: "ON_REQUEST" }
+    ]
+  }
+];
+
+const gym: TemplateGroup[] = [
+  {
+    category: "Training",
+    categoryHi: "ट्रेनिंग",
+    items: [
+      { name: "Personal training", nameHi: "पर्सनल ट्रेनिंग", pricePaise: 50000, veg: "NONE", durationMinutes: 60 },
+      { name: "Yoga class", nameHi: "योग क्लास", pricePaise: 30000, veg: "NONE", durationMinutes: 45 }
+    ]
+  }
+];
+
+const tutor: TemplateGroup[] = [
+  {
+    category: "Classes",
+    categoryHi: "क्लास",
+    items: [
+      { name: "Maths class", nameHi: "गणित क्लास", pricePaise: 40000, veg: "NONE", durationMinutes: 60 },
+      { name: "English class", nameHi: "अंग्रेज़ी क्लास", pricePaise: 40000, veg: "NONE", durationMinutes: 60, priceType: "FROM" }
+    ]
+  }
+];
+
 export const STORE_TEMPLATES: StoreTemplate[] = [
   { id: "cafe", name: "Café", groups: CAFE_TEMPLATE },
   { id: "restaurant", name: "Restaurant", groups: restaurant },
   { id: "mobile", name: "Mobile shop", groups: mobile },
   { id: "clothing", name: "Clothing", groups: clothing },
   { id: "kirana", name: "Kirana", groups: kirana },
-  { id: "salon", name: "Salon", groups: salon }
+  { id: "salon", name: "Salon", groups: salon },
+  { id: "spa", name: "Spa", groups: spa },
+  { id: "clinic", name: "Clinic", groups: clinic },
+  { id: "gym", name: "Gym", groups: gym },
+  { id: "tutor", name: "Tutor", groups: tutor }
 ];
 
 export function templateById(id: string | undefined) {

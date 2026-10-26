@@ -401,6 +401,22 @@ function HomeScreenContent() {
             </View>
           )}
 
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t.bookingsToday}
+            onPress={() => openHref("/(app)/bookings", "services-booking")}
+            style={{ backgroundColor: palette.card, borderColor: palette.line, borderWidth: 1, borderRadius: 16, padding: 14, gap: 4 }}
+          >
+            <Text style={[styles.section, { color: palette.ink }, lang === "hi" && styles.hindi]}>
+              {t.bookingsToday} · {home.data?.bookingsToday ?? 0}
+            </Text>
+            {(home.data?.todayBookings ?? []).map((row) => (
+              <Text key={row.id} style={{ color: palette.ink, fontFamily: lang === "hi" ? fonts.hindi : fonts.body }}>
+                {row.customerName} · {row.serviceName}{row.timeLabel ? ` · ${row.timeLabel}` : ""}
+              </Text>
+            ))}
+          </Pressable>
+
           <Text style={[styles.section, { color: palette.muted }, lang === "hi" && styles.hindi]}>{t.quickActions}</Text>
           <View style={styles.actions}>
             {actions.map((action) => {
