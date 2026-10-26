@@ -52,7 +52,9 @@ export async function resolveV1User(req: NextRequest): Promise<V1User | null | "
     const token = readBearer(authorization);
     if (!token || !accessSecret()) return "bad-bearer";
     const claims = verifyAccessToken(token);
-    if (!claims) return "bad-bearer";
+    // Owner and agent tokens never carry an audience. Admin and step-up tokens do,
+    // and they must not open owner routes.
+    if (!claims || claims.aud !== undefined) return "bad-bearer";
     const user = await prisma.user.findUnique({
       where: { id: claims.sub },
       select: { id: true, email: true, name: true, phone: true, role: true, pushEnabled: true, deletedAt: true, suspendedAt: true }
