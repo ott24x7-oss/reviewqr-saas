@@ -8,7 +8,7 @@ import { ThemeProvider, useTheme } from "next-themes";
 import { MotionConfig, motion } from "framer-motion";
 import {
   Activity, BarChart3, Bell, Building2, Check, ChevronDown, CircleHelp,
-  CreditCard, Gift, LayoutDashboard, LifeBuoy, LockKeyhole, Menu, MessageSquare,
+  CalendarDays, CreditCard, Gift, LayoutDashboard, LifeBuoy, LockKeyhole, Menu, MessageSquare,
   Moon, Package, QrCode, Search, Settings, ShoppingBag, Sparkles, Star, Sun,
   Users, X, type LucideIcon
 } from "lucide-react";
@@ -41,6 +41,7 @@ const ownerGroups: NavGroup[] = [
   { key: "home", items: [{ href: "/dashboard", key: "home", icon: LayoutDashboard, exact: true }] },
   { key: "sell", items: [
     { href: "/dashboard/sell/orders", key: "orders", icon: ShoppingBag },
+    { href: "/dashboard/sell/bookings", key: "bookings", icon: CalendarDays },
     { href: "/dashboard/sell/menu", key: "menu", icon: Package },
     { href: "/dashboard/sell/customers", key: "customers", icon: Users },
     { href: "/dashboard/sell/campaigns", key: "campaigns", icon: Activity }
@@ -74,7 +75,7 @@ const agentGroup: NavGroup = { key: "agent", items: [
 ] };
 
 const labels: Record<string, [string, string]> = {
-  home: ["Home", "होम"], sell: ["Sell", "बेचें"], orders: ["Orders", "ऑर्डर"], menu: ["Menu & products", "मेन्यू और उत्पाद"],
+  home: ["Home", "होम"], sell: ["Sell", "बेचें"], orders: ["Orders", "ऑर्डर"], bookings: ["Bookings", "बुकिंग"], menu: ["Menu & products", "मेन्यू और उत्पाद"],
   customers: ["Customers", "ग्राहक"], campaigns: ["Offers & campaigns", "ऑफ़र और अभियान"], reputation: ["Reputation", "समीक्षा"],
   reviews: ["Reviews", "रिव्यू"], feedback: ["Feedback", "फ़ीडबैक"], aiReplies: ["AI replies", "AI जवाब"],
   pageQr: ["Page & QR", "पेज और QR"], myPage: ["My page", "मेरा पेज"], qrCodes: ["QR codes & NFC", "QR कोड और NFC"],

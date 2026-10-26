@@ -45,7 +45,8 @@ export default async function EditBusinessPage({ params }: { params: { id: strin
           ratingThreshold: business.ratingThreshold,
           reviewGating: business.reviewGating,
           primaryColor: business.primaryColor,
-          customThankYou: business.customThankYou || ""
+          customThankYou: business.customThankYou || "",
+          catalogMode: business.catalogMode || "MENU"
         }}
       />
     </div>

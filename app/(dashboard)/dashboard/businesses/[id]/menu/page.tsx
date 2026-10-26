@@ -11,7 +11,13 @@ import { HelpLink } from "@/components/help/help-link";
 
 export const dynamic = "force-dynamic";
 
-export default async function BusinessMenuPage({ params }: { params: { id: string } }) {
+export default async function BusinessMenuPage({
+  params,
+  searchParams
+}: {
+  params: { id: string };
+  searchParams?: { tab?: string };
+}) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   const access = await requireBusinessRole(user.id, params.id, "read");
@@ -42,6 +48,7 @@ export default async function BusinessMenuPage({ params }: { params: { id: strin
     prisma.storeSettings.findUnique({ where: { businessId: access.id }, select: { layout: true } })
   ]);
   const layout: StoreView = resolveLayout(settings?.layout, access.industry);
+  const serviceMode = searchParams?.tab === "services";
   const locked = await moduleBlock(access.ownerId, "MENU");
   if (locked) {
     const offer = await upsellOffer("MENU");
@@ -56,13 +63,14 @@ export default async function BusinessMenuPage({ params }: { params: { id: strin
       layout={layout}
       aiReady={!!(ai?.enabled && ai.apiKey)}
       canEdit={access.accessRole !== "STAFF"}
+      serviceMode={serviceMode}
       categories={categories.map((category) => ({
         id: category.id,
         name: category.name,
         nameHi: category.nameHi || "",
-        items: category.items.map(serialize)
+        items: category.items.map(serialize).filter((item) => !serviceMode || item.kind === "SERVICE")
       }))}
-      loose={loose.map(serialize)}
+      loose={loose.map(serialize).filter((item) => !serviceMode || item.kind === "SERVICE")}
     />
     </div>
   );
@@ -80,6 +88,9 @@ function serialize(item: {
   photos: string[];
   brand: string;
   durationMinutes: number | null;
+  kind: "PRODUCT" | "SERVICE";
+  priceType: "FIXED" | "FROM" | "ON_REQUEST";
+  bookable: boolean;
   barcode: string;
   veg: "VEG" | "NON_VEG" | "EGG" | "NONE";
   available: boolean;
@@ -91,6 +102,7 @@ function serialize(item: {
     colour: string;
     pricePaise: number;
     inStock: boolean;
+    durationMinutes: number | null;
   }[];
   addOns: {
     id: string;
@@ -112,6 +124,9 @@ function serialize(item: {
     photos: item.photos || [],
     brand: item.brand || "",
     durationMinutes: item.durationMinutes,
+    kind: item.kind,
+    priceType: item.priceType,
+    bookable: item.bookable,
     barcode: item.barcode || "",
     veg: item.veg,
     available: item.available,
@@ -122,7 +137,8 @@ function serialize(item: {
       size: variant.size,
       colour: variant.colour,
       priceRupees: variant.pricePaise / 100,
-      inStock: variant.inStock
+      inStock: variant.inStock,
+      durationMinutes: variant.durationMinutes
     })),
     addOns: item.addOns.map((addOn) => ({
       id: addOn.id,

@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { DURATION_STEPS } from "@reviewqr/shared";
 import { formatRupees } from "@/lib/tap/order-message";
 import type { StoreView } from "@/lib/store/layout";
 import type { EntryRow } from "@/lib/store/entry";
@@ -19,6 +20,7 @@ type Option = {
   colour: string;
   priceRupees: number;
   inStock: boolean;
+  durationMinutes?: number | null;
 };
 
 type AddOn = {
@@ -38,6 +40,27 @@ function minutesOf(value: string) {
   return Math.min(480, minutes);
 }
 
+function DurationSelect({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return (
+    <select aria-label={label} value={value} onChange={(event) => onChange(event.target.value)} className="flex h-11 w-full rounded-lg border bg-white px-3 text-sm">
+      <option value="">No duration</option>
+      {DURATION_STEPS.map((step) => (
+        <option key={step} value={String(step)}>{step} min</option>
+      ))}
+    </select>
+  );
+}
+
+function PriceTypeSelect({ value, onChange }: { value: Item["priceType"]; onChange: (value: Item["priceType"]) => void }) {
+  return (
+    <select aria-label="Price type" value={value} onChange={(event) => onChange(event.target.value as Item["priceType"])} className="flex h-11 w-full rounded-lg border bg-white px-3 text-sm">
+      <option value="FIXED">Fixed price</option>
+      <option value="FROM">From price</option>
+      <option value="ON_REQUEST">Price on request</option>
+    </select>
+  );
+}
+
 type Item = {
   id: string;
   name: string;
@@ -50,6 +73,9 @@ type Item = {
   photos: string[];
   brand: string;
   durationMinutes: number | null;
+  kind: "PRODUCT" | "SERVICE";
+  priceType: "FIXED" | "FROM" | "ON_REQUEST";
+  bookable: boolean;
   barcode: string;
   veg: "VEG" | "NON_VEG" | "EGG" | "NONE";
   available: boolean;
@@ -63,6 +89,7 @@ export function MenuEditor({
   layout,
   aiReady,
   canEdit,
+  serviceMode = false,
   categories,
   loose
 }: {
@@ -71,6 +98,7 @@ export function MenuEditor({
   layout: StoreView;
   aiReady: boolean;
   canEdit: boolean;
+  serviceMode?: boolean;
   categories: { id: string; name: string; nameHi: string; items: Item[] }[];
   loose: Item[];
 }) {
@@ -87,6 +115,8 @@ export function MenuEditor({
   const [photo, setPhoto] = React.useState("");
   const [photos, setPhotos] = React.useState<string[]>([]);
   const [duration, setDuration] = React.useState("");
+  const [priceType, setPriceType] = React.useState<Item["priceType"]>("FIXED");
+  const [bookable, setBookable] = React.useState(true);
   const [colour, setColour] = React.useState("");
   const [barcode, setBarcode] = React.useState("");
   const [categoryId, setCategoryId] = React.useState("");
@@ -475,7 +505,19 @@ export function MenuEditor({
                 </div>
               </>
             ) : null}
-            {layout === "SERVICES" ? (
+            {serviceMode ? (
+              <>
+                {layout === "SHOP" ? null : (
+                  <PhotoFields photo={photo} photos={photos} busy={busy} onCover={(url) => setPhoto(url)} onPhotos={setPhotos} upload={uploadPhoto} />
+                )}
+                <DurationSelect label="Duration" value={duration} onChange={setDuration} />
+                <PriceTypeSelect value={priceType} onChange={setPriceType} />
+                <label className="flex min-h-11 items-center gap-2 text-sm">
+                  <input type="checkbox" checked={bookable} onChange={(event) => setBookable(event.target.checked)} className="h-5 w-5" />
+                  Customers can book
+                </label>
+              </>
+            ) : layout === "SERVICES" ? (
               <Input aria-label="Duration in minutes" inputMode="numeric" value={duration} placeholder="Duration in minutes" onChange={(event) => setDuration(event.target.value)} className="min-h-11" />
             ) : null}
             <select aria-label="Category" value={categoryId} onChange={(event) => setCategoryId(event.target.value)} className="flex h-11 w-full rounded-lg border bg-white px-3 text-sm">
@@ -496,10 +538,14 @@ export function MenuEditor({
                   available: inStock,
                   categoryId: categoryId || null,
                   ...(layout === "SHOP" ? { brand, photo, photos, barcode, colour } : {}),
-                  ...(layout === "SERVICES" ? { durationMinutes: minutesOf(duration) } : {}),
+                  ...(serviceMode
+                    ? { itemKind: "SERVICE" as const, priceType, bookable, durationMinutes: minutesOf(duration), ...(layout === "SHOP" ? {} : { photo, photos }) }
+                    : layout === "SERVICES"
+                      ? { durationMinutes: minutesOf(duration) }
+                      : {}),
                   ...(!categoryId && categoryName.trim() ? { category: categoryName.trim() } : {})
                 })}>
-              Add item
+              {serviceMode ? "Add service" : "Add item"}
             </Button>
             <Input aria-label="Category name" value={categoryName} placeholder="New category" onChange={(event) => setCategoryName(event.target.value)} />
             <div className="flex flex-col gap-2 sm:flex-row">
@@ -664,6 +710,10 @@ export function MenuEditor({
                     <div className="text-sm text-muted-foreground">
                       {item.nameHi ? `${item.nameHi} · ` : ""}
                       {formatRupees(Math.round(item.priceRupees * 100))}
+                      {serviceMode && item.priceType === "FROM" ? " · from" : ""}
+                      {serviceMode && item.priceType === "ON_REQUEST" ? " · price on request" : ""}
+                      {serviceMode && item.durationMinutes ? ` · ${item.durationMinutes} min` : ""}
+                      {serviceMode && !item.bookable ? " · not bookable" : ""}
                       {item.mrpRupees ? <s className="ml-1">{formatRupees(Math.round(item.mrpRupees * 100))}</s> : null}
                       {layout === "FOOD" && item.veg !== "NONE" ? ` · ${item.veg === "NON_VEG" ? "Non-veg" : item.veg === "EGG" ? "Egg" : "Veg"}` : ""}
                     </div>
@@ -691,7 +741,7 @@ export function MenuEditor({
                           const saved = await send({
                             action: "duplicate",
                             id: item.id,
-                            kind: layout === "SERVICES" ? "item" : "variant"
+                            kind: layout === "SERVICES" || serviceMode ? "item" : "variant"
                           }, true);
                           if (saved && saved.variantId) setFocusVariantId(saved.variantId);
                         }}
@@ -705,6 +755,7 @@ export function MenuEditor({
                   <ItemCopy
                     item={item}
                     layout={layout}
+                    serviceMode={serviceMode}
                     busy={busy}
                     onSuggest={suggestCopy}
                     upload={uploadPhoto}
@@ -712,8 +763,8 @@ export function MenuEditor({
                     onSave={(patch) => send({ action: "update", id: item.id, ...patch }, true)}
                   />
                 ) : null}
-                {layout === "SERVICES" ? null : (
-                  <ItemOptions item={item} layout={layout} canEdit={canEdit} busy={busy} send={send} focusVariantId={focusVariantId} />
+                {layout === "SERVICES" && !serviceMode ? null : (
+                  <ItemOptions item={item} layout={layout} serviceMode={serviceMode} canEdit={canEdit} busy={busy} send={send} focusVariantId={focusVariantId} />
                 )}
               </CardContent>
             </Card>
@@ -727,6 +778,7 @@ export function MenuEditor({
 function ItemCopy({
   item,
   layout,
+  serviceMode,
   busy,
   onSuggest,
   upload,
@@ -735,6 +787,7 @@ function ItemCopy({
 }: {
   item: Item;
   layout: StoreView;
+  serviceMode: boolean;
   busy: boolean;
   onSuggest: (field: CopyField, current: { name: string; nameHi: string }, apply: (text: string) => void) => void;
   upload: (file: File) => Promise<string>;
@@ -747,6 +800,8 @@ function ItemCopy({
   const [photo, setPhoto] = React.useState(item.photo || "");
   const [photos, setPhotos] = React.useState(item.photos);
   const [duration, setDuration] = React.useState(item.durationMinutes ? String(item.durationMinutes) : "");
+  const [priceType, setPriceType] = React.useState<Item["priceType"]>(item.priceType);
+  const [bookable, setBookable] = React.useState(item.bookable);
   const [barcode, setBarcode] = React.useState(item.barcode);
   React.useEffect(() => {
     setNameHi(item.nameHi);
@@ -755,8 +810,10 @@ function ItemCopy({
     setPhoto(item.photo || "");
     setPhotos(item.photos);
     setDuration(item.durationMinutes ? String(item.durationMinutes) : "");
+    setPriceType(item.priceType);
+    setBookable(item.bookable);
     setBarcode(item.barcode || "");
-  }, [item.id, item.nameHi, item.description, item.brand, item.photo, item.photos, item.durationMinutes, item.barcode]);
+  }, [item.id, item.nameHi, item.description, item.brand, item.photo, item.photos, item.durationMinutes, item.priceType, item.bookable, item.barcode]);
 
   return (
     <div className="space-y-2">
@@ -786,7 +843,17 @@ function ItemCopy({
           />
         </>
       ) : null}
-      {layout === "SERVICES" ? (
+      {serviceMode ? (
+        <>
+          <DurationSelect label={`Duration for ${item.name}`} value={duration} onChange={setDuration} />
+          <PriceTypeSelect value={priceType} onChange={setPriceType} />
+          <label className="flex min-h-11 items-center gap-2 text-sm">
+            <input type="checkbox" checked={bookable} onChange={(event) => setBookable(event.target.checked)} className="h-5 w-5" />
+            Customers can book
+          </label>
+          {layout === "SHOP" ? null : <PhotoFields photo={photo} photos={photos} busy={busy} onCover={setPhoto} onPhotos={setPhotos} upload={upload} />}
+        </>
+      ) : layout === "SERVICES" ? (
         <Input aria-label={`Duration for ${item.name}`} inputMode="numeric" value={duration} placeholder="Duration in minutes" onChange={(event) => setDuration(event.target.value)} className="min-h-11" />
       ) : null}
       <div className="flex flex-col gap-2 sm:flex-row">
@@ -816,7 +883,11 @@ function ItemCopy({
             nameHi,
             description,
             ...(layout === "SHOP" ? { brand, photo, photos, barcode } : {}),
-            ...(layout === "SERVICES" ? { durationMinutes: minutesOf(duration) } : {})
+            ...(serviceMode
+              ? { itemKind: "SERVICE", priceType, bookable, durationMinutes: minutesOf(duration), ...(layout === "SHOP" ? {} : { photo, photos }) }
+              : layout === "SERVICES"
+                ? { durationMinutes: minutesOf(duration) }
+                : {})
           })}
         >
           Save
@@ -870,6 +941,7 @@ function PhotoFields({
 function ItemOptions({
   item,
   layout,
+  serviceMode,
   canEdit,
   busy,
   send,
@@ -877,6 +949,7 @@ function ItemOptions({
 }: {
   item: Item;
   layout: StoreView;
+  serviceMode: boolean;
   canEdit: boolean;
   busy: boolean;
   send: (body: Record<string, unknown>, keepForm?: boolean) => Promise<MenuSave>;
@@ -886,6 +959,7 @@ function ItemOptions({
   const [size, setSize] = React.useState("");
   const [colour, setColour] = React.useState("");
   const [price, setPrice] = React.useState("");
+  const [optionDuration, setOptionDuration] = React.useState("");
   const [addOnName, setAddOnName] = React.useState("");
   const [addOnPrice, setAddOnPrice] = React.useState("");
   if (!canEdit && item.variants.length === 0 && item.addOns.length === 0) return null;
@@ -914,6 +988,7 @@ function ItemOptions({
               {variant.size || variant.colour ? ` · ${[variant.size, variant.colour].filter(Boolean).join(" / ")}` : ""}
               {" · "}
               {formatRupees(Math.round(variant.priceRupees * 100))}
+              {variant.durationMinutes ? ` · ${variant.durationMinutes} min` : ""}
               {variant.inStock ? "" : " · Out of stock"}
             </span>
           )}
@@ -958,6 +1033,7 @@ function ItemOptions({
                 <Input aria-label={`Colour for ${item.name}`} value={colour} placeholder="Colour (optional)" onChange={(event) => setColour(event.target.value)} className="min-h-11" />
               </>
             ) : null}
+            {serviceMode ? <DurationSelect label={`Option duration for ${item.name}`} value={optionDuration} onChange={setOptionDuration} /> : null}
           </div>
           <Button
             type="button"
@@ -971,13 +1047,15 @@ function ItemOptions({
                 name: label,
                 size,
                 colour,
-                priceRupees: Number(price || 0)
+                priceRupees: Number(price || 0),
+                ...(serviceMode ? { durationMinutes: minutesOf(optionDuration) } : {})
               }, true);
               if (saved) {
                 setLabel("");
                 setSize("");
                 setColour("");
                 setPrice("");
+                setOptionDuration("");
               }
             }}
           >

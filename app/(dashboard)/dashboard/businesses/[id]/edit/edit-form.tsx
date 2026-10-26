@@ -32,6 +32,7 @@ type Init = {
   reviewGating: boolean;
   primaryColor: string;
   customThankYou: string;
+  catalogMode: "MENU" | "SERVICES" | "BOTH";
 };
 
 export function EditBusinessForm({ initial }: { initial: Init }) {
@@ -116,6 +117,20 @@ export function EditBusinessForm({ initial }: { initial: Init }) {
             <Input id="name" value={form.name} onChange={(e) => update("name", e.target.value)} />
           </div>
           <div className="grid sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="catalogMode">Catalogue</Label>
+              <select
+                id="catalogMode"
+                aria-label="Catalogue mode"
+                value={form.catalogMode}
+                onChange={(e) => update("catalogMode", e.target.value as Init["catalogMode"])}
+                className="flex h-10 w-full rounded-md border bg-background px-3 text-sm"
+              >
+                <option value="MENU">Menu</option>
+                <option value="SERVICES">Services</option>
+                <option value="BOTH">Menu & services</option>
+              </select>
+            </div>
             <div className="space-y-1.5">
               <Label htmlFor="industry">Industry</Label>
               <Input
