@@ -69,6 +69,7 @@ test("admin web search, inbox, payout step-up, export, and redirects", async ({ 
   let shopOrderId = "";
   let articleId = "";
   let supportTicketId = "";
+  let pricingCopyBefore: { value: string; updatedBy: string | null } | null | undefined;
 
   try {
     await registerWithEmail(page, { name: "Web Admin", business: `Web Cafe ${stamp}`, email, password });
@@ -194,6 +195,25 @@ test("admin web search, inbox, payout step-up, export, and redirects", async ({ 
       if (from === "/admin/app") await expect(page.getByRole("heading", { name: "Admin devices" })).toBeVisible();
     }
 
+    pricingCopyBefore = await prisma.appSetting.findUnique({ where: { key: "pricing.copy" }, select: { value: true, updatedBy: true } });
+    await page.goto("/admin/plans?tab=copy", { timeout: 120_000 });
+    await expect(page.getByRole("heading", { name: "Pricing page copy" })).toBeVisible({ timeout: 30_000 });
+    const faqQuestion = `Edited question ${stamp}`;
+    const stickerRow = `Edited row ${stamp}`;
+    await page.locator("#qEn-0").fill(faqQuestion);
+    await page.locator("#rowEn-0").fill(stickerRow);
+    await page.getByRole("button", { name: "Save pricing page" }).click();
+    await expect.poll(async () => {
+      const row = await prisma.appSetting.findUnique({ where: { key: "pricing.copy" }, select: { value: true } });
+      return row?.value || "";
+    }, { timeout: 30_000 }).toContain(faqQuestion);
+    const savedCopy = await prisma.appSetting.findUnique({ where: { key: "pricing.copy" }, select: { value: true } });
+    expect(savedCopy?.value).toContain(stickerRow);
+    await page.reload({ timeout: 120_000 });
+    await expect(page.locator("#qEn-0")).toHaveValue(faqQuestion);
+    await expect(page.locator("#rowEn-0")).toHaveValue(stickerRow);
+    await expect.poll(async () => prisma.auditLog.count({ where: { action: "pricing.update", userId: admin.id } })).toBeGreaterThan(0);
+
     await page.goto("/admin?range=qtd", { timeout: 120_000 });
     const compareSwitch = page.getByRole("switch", { name: "Compare to previous" });
     await expect(compareSwitch).toHaveAttribute("aria-checked", "true");
@@ -253,6 +273,11 @@ test("admin web search, inbox, payout step-up, export, and redirects", async ({ 
       await shoot(page, name);
     }
   } finally {
+    if (pricingCopyBefore) {
+      await prisma.appSetting.update({ where: { key: "pricing.copy" }, data: pricingCopyBefore });
+    } else if (pricingCopyBefore === null) {
+      await prisma.appSetting.deleteMany({ where: { key: "pricing.copy" } });
+    }
     if (supportTicketId) await prisma.supportTicket.deleteMany({ where: { id: supportTicketId } });
     if (articleId) await prisma.helpArticle.deleteMany({ where: { id: articleId } });
     if (shopOrderId) await prisma.shopOrder.deleteMany({ where: { id: shopOrderId } });

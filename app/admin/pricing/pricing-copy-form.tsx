@@ -30,10 +30,10 @@ export function PricingCopyForm({ initial }: { initial: PricingCopy }) {
   }
 
   return (
-    <form onSubmit={save} className="space-y-6 rounded-xl border p-4">
+    <form onSubmit={save} className="admin-card space-y-6 p-4 text-zinc-950 sm:p-5 dark:text-zinc-50">
       <div>
         <h2 className="font-display text-xl font-bold">Pricing page copy</h2>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">
           Questions and the sticker comparison. The public pages read this on the next request.
         </p>
       </div>
@@ -55,7 +55,7 @@ export function PricingCopyForm({ initial }: { initial: PricingCopy }) {
           </Button>
         </div>
         {copy.faqs.map((item, index) => (
-          <div key={index} className="grid gap-2 rounded-lg border p-3">
+          <div key={index} className="grid gap-2 rounded-[10px] border border-zinc-200 p-3 dark:border-zinc-700">
             <div className="grid gap-2 sm:grid-cols-2">
               <div>
                 <Label htmlFor={`qEn-${index}`}>Question (English)</Label>
@@ -140,7 +140,7 @@ export function PricingCopyForm({ initial }: { initial: PricingCopy }) {
           </Button>
         </div>
         {copy.stickerRows.map((row, index) => (
-          <div key={index} className="grid gap-2 rounded-lg border p-3 sm:grid-cols-[1fr_1fr_auto]">
+          <div key={index} className="grid gap-2 rounded-[10px] border border-zinc-200 p-3 dark:border-zinc-700 sm:grid-cols-[1fr_1fr_auto]">
             <div>
               <Label htmlFor={`rowEn-${index}`}>Row (English)</Label>
               <Input
