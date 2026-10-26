@@ -217,6 +217,9 @@ test("admin web search, inbox, payout step-up, export, and redirects", async ({ 
     await page.goto("/admin?range=qtd", { timeout: 120_000 });
     const compareSwitch = page.getByRole("switch", { name: "Compare to previous" });
     await expect(compareSwitch).toHaveAttribute("aria-checked", "true");
+    const trackBox = await compareSwitch.locator("span").first().boundingBox();
+    const labelBox = await compareSwitch.getByText("Compare to previous", { exact: true }).boundingBox();
+    expect(trackBox && labelBox && trackBox.x + trackBox.width <= labelBox.x).toBeTruthy();
     await compareSwitch.click();
     await expect(page).toHaveURL(/compare=0/);
     await expect(page.getByText("Daily paid amount", { exact: false })).toBeVisible();

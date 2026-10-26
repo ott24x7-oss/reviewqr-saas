@@ -153,9 +153,9 @@ export function AdminDateRange({ range, from, to, compare }: { range: string; fr
           </div>
         </div> : null}
       </div>
-      <button type="button" role="switch" aria-checked={compare} onClick={() => navigate({ compare: compare ? "0" : null })} className="inline-flex min-h-10 items-center gap-2 rounded-[11px] px-2 text-xs font-medium text-zinc-600 hover:bg-white/60 dark:text-zinc-300 dark:hover:bg-zinc-900/60">
-        <span className={cn("relative h-5 w-9 rounded-full transition-colors", compare ? "bg-emerald-600 dark:bg-emerald-400" : "bg-zinc-300 dark:bg-zinc-700")}><i className={cn("absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform dark:bg-zinc-950", compare ? "translate-x-[18px]" : "translate-x-0.5")} /></span>
-        Compare to previous
+      <button type="button" role="switch" aria-checked={compare} onClick={() => navigate({ compare: compare ? "0" : null })} className="inline-flex min-h-10 shrink-0 items-center gap-2.5 whitespace-nowrap rounded-[11px] px-2 text-xs font-medium text-zinc-600 hover:bg-white/60 dark:text-zinc-300 dark:hover:bg-zinc-900/60">
+        <span aria-hidden className={cn("relative h-5 w-9 shrink-0 rounded-full transition-colors", compare ? "bg-emerald-600 dark:bg-emerald-400" : "bg-zinc-300 dark:bg-zinc-700")}><i className={cn("absolute left-0 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform dark:bg-zinc-950", compare ? "translate-x-[18px]" : "translate-x-0.5")} /></span>
+        <span>Compare to previous</span>
       </button>
     </div>
   );
