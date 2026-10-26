@@ -13,7 +13,10 @@ export function FadeIn({ children, className, delay = 0 }: { children: React.Rea
   return (
     <motion.div
       className={className}
-      initial={{ opacity: 0, y: 6 }}
+      // Keep server-rendered admin pages visible before client hydration. An
+      // opacity-zero initial state leaves the whole screen blank if hydration
+      // is delayed or a browser blocks the motion bundle.
+      initial={false}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.15, delay }}
     >
