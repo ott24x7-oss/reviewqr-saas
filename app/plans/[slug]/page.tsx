@@ -8,6 +8,7 @@ import { PlanDetail } from "@/components/marketing/landing-v2/plan-detail";
 import { getBrand } from "@/lib/brand";
 import { listStandAddons } from "@/lib/landing/hardware";
 import { listPublicPlans } from "@/lib/plans/public";
+import { getPricingCopy } from "@/lib/plans/pricing-copy";
 import { fallbackImageName } from "@/lib/plans/categories";
 import { DURATION_LABELS } from "@/lib/plans/catalog";
 
@@ -42,7 +43,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 }
 
 export default async function PlanPage({ params, searchParams }: { params: Params; searchParams: Search }) {
-  const { plan, brand, hardware } = await load(params.slug);
+  const [{ plan, brand, hardware }, copy] = await Promise.all([load(params.slug), getPricingCopy()]);
   if (!plan) notFound();
   const base = (brand.appUrl || process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "");
   const imagePath =
@@ -72,7 +73,7 @@ export default async function PlanPage({ params, searchParams }: { params: Param
       <main className={`marketing-page min-h-screen overflow-x-hidden ${marketingFontClass}`}>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
         <MarketingNavbar brand={brand} />
-        <PlanDetail plan={plan} hardware={hardware} initialDuration={searchParams.duration} />
+        <PlanDetail plan={plan} hardware={hardware} initialDuration={searchParams.duration} faqs={copy.faqs} />
         <Footer brand={brand} />
       </main>
     </LandingLangProvider>

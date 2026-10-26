@@ -21,7 +21,6 @@ import { useTheme } from "./theme";
 import { fonts } from "../theme";
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
-const GREEN = "#16A34A";
 const FINDER = 170;
 
 let leftForeground = false;
@@ -39,7 +38,7 @@ function finderPath(x: number, y: number) {
   return `M ${x + radius} ${y} H ${right - radius} A ${radius} ${radius} 0 0 1 ${right} ${y + radius} V ${bottom - radius} A ${radius} ${radius} 0 0 1 ${right - radius} ${bottom} H ${x + radius} A ${radius} ${radius} 0 0 1 ${x} ${bottom - radius} V ${y + radius} A ${radius} ${radius} 0 0 1 ${x + radius} ${y} Z`;
 }
 
-function Finder({ delay, x, y, skip }: { delay: number; x: number; y: number; skip: boolean }) {
+function Finder({ delay, x, y, skip, color }: { delay: number; x: number; y: number; skip: boolean; color: string }) {
   const offset = useSharedValue(skip ? 0 : FINDER);
   useEffect(() => {
     if (skip) {
@@ -53,7 +52,7 @@ function Finder({ delay, x, y, skip }: { delay: number; x: number; y: number; sk
     <AnimatedPath
       animatedProps={props}
       d={finderPath(x, y)}
-      stroke="#FFFFFF"
+      stroke={color}
       strokeWidth={5}
       fill="none"
       strokeLinecap="round"
@@ -63,7 +62,7 @@ function Finder({ delay, x, y, skip }: { delay: number; x: number; y: number; sk
   );
 }
 
-function Spark({ delay, right, bottom, size }: { delay: number; right: number; bottom: number; size: number }) {
+function Spark({ delay, right, bottom, size, color }: { delay: number; right: number; bottom: number; size: number; color: string }) {
   const opacity = useSharedValue(0);
   useEffect(() => {
     opacity.value = withDelay(
@@ -72,7 +71,7 @@ function Spark({ delay, right, bottom, size }: { delay: number; right: number; b
     );
   }, [delay, opacity]);
   const style = useAnimatedStyle(() => ({ opacity: opacity.value }));
-  return <Animated.View style={[styles.spark, { right, bottom, width: size, height: size, borderRadius: size / 2 }, style]} />;
+  return <Animated.View style={[styles.spark, { backgroundColor: color, right, bottom, width: size, height: size, borderRadius: size / 2 }, style]} />;
 }
 
 /** Cold-start launch. A resume from the background skips it. */
@@ -89,7 +88,7 @@ export function LaunchOverlay({
   warm?: boolean;
   content?: SharedValue<number>;
 }) {
-  const { reduceMotion, lowRam } = useTheme();
+  const { reduceMotion, lowRam, palette } = useTheme();
   const { width, height } = useWindowDimensions();
   const [gone, setGone] = useState(warm && !demo);
   const started = useRef(0);
@@ -206,32 +205,32 @@ export function LaunchOverlay({
 
   return (
     <View style={styles.layer} pointerEvents="auto" testID="launch-overlay" accessibilityElementsHidden>
-      {fadeMode ? <Animated.View style={[styles.fill, fadeStyle]} /> : null}
+      {fadeMode ? <Animated.View style={[styles.fill, { backgroundColor: palette.primary }, fadeStyle]} /> : null}
       {fadeMode ? null : (
         <Svg width={width} height={height} style={StyleSheet.absoluteFill} pointerEvents="none">
-          <AnimatedPath animatedProps={holeProps} fill={GREEN} fillRule="evenodd" />
+          <AnimatedPath animatedProps={holeProps} fill={palette.primary} fillRule="evenodd" />
         </Svg>
       )}
       <Animated.View style={[styles.center, holdStyle]} pointerEvents="none">
         <View>
           <Svg width={120} height={120} viewBox="0 0 120 120">
-            <Finder delay={0} x={8} y={8} skip={skipDraw} />
-            <Finder delay={150} x={66} y={8} skip={skipDraw} />
-            <Finder delay={300} x={8} y={66} skip={skipDraw} />
+            <Finder delay={0} x={8} y={8} skip={skipDraw} color={palette.headerInk} />
+            <Finder delay={150} x={66} y={8} skip={skipDraw} color={palette.headerInk} />
+            <Finder delay={300} x={8} y={66} skip={skipDraw} color={palette.headerInk} />
           </Svg>
           <Animated.View style={[styles.star, starStyle]}>
-            <Star color="#FFFFFF" size={34} fill="#FFFFFF" strokeWidth={1.5} />
+            <Star color={palette.headerInk} size={34} fill={palette.headerInk} strokeWidth={1.5} />
           </Animated.View>
           {reduceMotion || lowRam ? null : (
             <>
-              <Spark delay={420} right={4} bottom={52} size={5} />
-              <Spark delay={500} right={36} bottom={6} size={4} />
-              <Spark delay={560} right={-2} bottom={24} size={3} />
+              <Spark delay={420} right={4} bottom={52} size={5} color={palette.headerInk} />
+              <Spark delay={500} right={36} bottom={6} size={4} color={palette.headerInk} />
+              <Spark delay={560} right={-2} bottom={24} size={3} color={palette.headerInk} />
             </>
           )}
         </View>
-        <Animated.Text style={[styles.word, wordStyle]}>QR24x7</Animated.Text>
-        <Animated.Text style={[styles.tag, tagStyle]}>Scan. Tap. Grow.</Animated.Text>
+        <Animated.Text style={[styles.word, { color: palette.headerInk }, wordStyle]}>QR24x7</Animated.Text>
+        <Animated.Text style={[styles.tag, { color: palette.headerInk }, tagStyle]}>Scan. Tap. Grow.</Animated.Text>
       </Animated.View>
     </View>
   );
@@ -251,8 +250,9 @@ export function LaunchFrame({
   const [warm] = useState(leftForeground);
   const opacity = useSharedValue(warm || skip ? 1 : 0);
   const style = useAnimatedStyle(() => ({ flex: 1, opacity: opacity.value }));
+  const { palette } = useTheme();
   return (
-    <View style={styles.frame}>
+    <View style={[styles.frame, { backgroundColor: palette.primary }]}>
       <Animated.View style={style}>{children}</Animated.View>
       {skip ? null : (
         <LaunchOverlay fontsReady={fontsReady} sessionReady={sessionReady} warm={warm} content={opacity} />
@@ -262,12 +262,12 @@ export function LaunchFrame({
 }
 
 const styles = StyleSheet.create({
-  frame: { flex: 1, backgroundColor: GREEN },
+  frame: { flex: 1 },
   layer: { ...StyleSheet.absoluteFill, zIndex: 50 },
-  fill: { ...StyleSheet.absoluteFill, backgroundColor: GREEN },
+  fill: StyleSheet.absoluteFill,
   center: { ...StyleSheet.absoluteFill, alignItems: "center", justifyContent: "center", gap: 8 },
   star: { position: "absolute", right: 14, bottom: 16 },
-  spark: { position: "absolute", backgroundColor: "#FFFFFF" },
-  word: { color: "#FFFFFF", fontFamily: fonts.display, fontSize: 28 },
-  tag: { color: "#FFFFFF", fontFamily: fonts.body, fontSize: 15 }
+  spark: { position: "absolute" },
+  word: { fontFamily: fonts.display, fontSize: 28 },
+  tag: { fontFamily: fonts.body, fontSize: 15 }
 });

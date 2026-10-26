@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
+import { denyFeatureResponse } from "@/lib/plans/feature-gate";
 import { requireBusinessRole } from "@/lib/tenant";
 import { assertSafeOutboundUrl } from "@/lib/ssrf";
 import { paletteFromImage } from "@/lib/tap/palette";
@@ -10,6 +11,8 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const business = await requireBusinessRole(user.id, params.id, "manage");
   if (!business) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const denied = await denyFeatureResponse(business.ownerId, "page-themes");
+  if (denied) return denied;
   const row = await prisma.business.findUnique({ where: { id: business.id }, select: { logo: true } });
   if (!row?.logo) return NextResponse.json({ error: "Add a logo first" }, { status: 400 });
   try {

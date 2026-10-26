@@ -24,7 +24,19 @@ export function v1Data<T>(data: T, status = 200) {
 }
 
 export function v1From<T>(result: ServiceResult<T>) {
-  if (!result.ok) return v1Error(result.status, codeForStatus(result.status), result.error);
+  if (!result.ok) {
+    if (result.code === "PLAN_REQUIRED" && result.feature) {
+      return NextResponse.json(
+        {
+          code: "PLAN_REQUIRED",
+          feature: result.feature,
+          error: { code: "PLAN_REQUIRED", message: result.error, feature: result.feature }
+        },
+        { status: 403 }
+      );
+    }
+    return v1Error(result.status, result.code || codeForStatus(result.status), result.error);
+  }
   return v1Data(result.data);
 }
 
@@ -40,12 +52,14 @@ export async function resolveV1User(req: NextRequest): Promise<V1User | null | "
     const token = readBearer(authorization);
     if (!token || !accessSecret()) return "bad-bearer";
     const claims = verifyAccessToken(token);
-    if (!claims) return "bad-bearer";
+    // Owner and agent tokens never carry an audience. Admin and step-up tokens do,
+    // and they must not open owner routes.
+    if (!claims || claims.aud !== undefined) return "bad-bearer";
     const user = await prisma.user.findUnique({
       where: { id: claims.sub },
-      select: { id: true, email: true, name: true, phone: true, role: true, pushEnabled: true, deletedAt: true }
+      select: { id: true, email: true, name: true, phone: true, role: true, pushEnabled: true, deletedAt: true, suspendedAt: true }
     });
-    if (!user || user.deletedAt) return null;
+    if (!user || user.deletedAt || user.suspendedAt) return null;
     return {
       id: user.id,
       email: user.email,

@@ -63,7 +63,7 @@ export default defineConfig({
     },
     {
       name: "plans",
-      testMatch: /plans-agents\.spec\.ts/,
+      testMatch: /plans-.*\.spec\.ts/,
       use: { ...devices["Desktop Chrome"], baseURL: devURL }
     },
     {
@@ -90,6 +90,11 @@ export default defineConfig({
       name: "phase8",
       testMatch: /phase8\.spec\.ts/,
       use: { ...devices["Desktop Chrome"], baseURL }
+    },
+    {
+      name: "admin",
+      testMatch: /admin-device\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"], baseURL: devURL }
     }
   ],
   webServer: [

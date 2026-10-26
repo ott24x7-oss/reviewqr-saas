@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { rateLimitDb } from "@/lib/rate-limit";
+import { queueAdminPush } from "@/lib/admin/push";
 
 const createSchema = z.object({
   subject: z.string().min(3).max(120),
@@ -43,6 +44,14 @@ export async function POST(req: NextRequest) {
       subject: parsed.data.subject.trim(),
       messages: { create: { authorId: user.id, body: parsed.data.body.trim() } }
     }
+  });
+  void queueAdminPush({
+    event: "supportTicket",
+    collapseKey: ticket.id,
+    title: "Support ticket",
+    // Push text shows on a lock screen. Keep the customer's own words out of it.
+    body: "New support ticket",
+    windowSeconds: 3600
   });
   return NextResponse.json({ id: ticket.id });
 }

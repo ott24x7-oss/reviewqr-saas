@@ -30,7 +30,8 @@ export function OtpCodeForm({
   onSubmit,
   submitting,
   error,
-  success
+  success,
+  showSubmit = true
 }: {
   channel?: string;
   devCode?: string | null;
@@ -45,6 +46,7 @@ export function OtpCodeForm({
   submitting?: boolean;
   error?: string | null;
   success?: boolean;
+  showSubmit?: boolean;
 }) {
   const { lang, t } = useI18n();
   const { palette, reduceMotion } = useTheme();
@@ -150,12 +152,14 @@ export function OtpCodeForm({
         <Text style={[styles.link, { color: palette.deep }, lang === "hi" && styles.hindi]}>{t.otpCall}</Text>
       </Pressable>
       {callNote ? <Text style={[styles.note, { color: palette.muted }]}>{t.otpCallUnavailable}</Text> : null}
-      <PrimaryButton
-        label={t.verify}
-        onPress={onSubmit}
-        disabled={submitting || code.length !== 6}
-        hint={code.length !== 6 ? t.hintCode : t.hintWait}
-      />
+      {showSubmit ? (
+        <PrimaryButton
+          label={t.verify}
+          onPress={onSubmit}
+          disabled={submitting || code.length !== 6}
+          hint={code.length !== 6 ? t.hintCode : t.hintWait}
+        />
+      ) : null}
       <Pressable accessibilityRole="button" accessibilityLabel={t.changeNumber} onPress={onChangeNumber} style={styles.linkHit}>
         <Text style={[styles.link, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.changeNumber}</Text>
       </Pressable>

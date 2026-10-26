@@ -1,4 +1,5 @@
 import { Screen } from "../../src/ui/screen";
+import { FeatureGate } from "../../src/state/plan-lock";
 import { useQuery } from "@tanstack/react-query";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system/legacy";
@@ -10,7 +11,7 @@ import { useI18n } from "../../src/i18n";
 import { accountKey } from "../../src/query/keys";
 import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
-import { Card, Skeleton } from "../../src/ui/bits";
+import { Card, LoadErrorCard, Skeleton } from "../../src/ui/bits";
 import { PillButton } from "../../src/ui/controls";
 import { useTheme } from "../../src/ui/theme";
 
@@ -61,6 +62,7 @@ function OrderDetailScreenContent() {
         {row ? `#${row.number}` : t.orders}
       </Text>
       {order.isLoading ? <Skeleton height={160} /> : null}
+      {order.isError ? <LoadErrorCard onRetry={() => order.refetch().catch(() => undefined)} /> : null}
       {row ? (
         <>
           <Card>
@@ -110,6 +112,8 @@ const styles = StyleSheet.create({
 
 export default function OrderDetailScreen() {
   return (
-    <Screen topInset={true}><OrderDetailScreenContent /></Screen>
+    <FeatureGate id="orders">
+      <Screen topInset={true}><OrderDetailScreenContent /></Screen>
+    </FeatureGate>
   );
 }

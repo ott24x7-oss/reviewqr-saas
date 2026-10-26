@@ -1,6 +1,7 @@
 import type { PlanDuration, SubscriptionTier } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../db";
+import { parseBullets } from "./bullets";
 import { DURATIONS, cleanModules, parseLimits, slugifyPlan } from "./catalog";
 import { planCategory } from "./categories";
 import { limitsForTier } from "./legacy";
@@ -26,8 +27,20 @@ export const planWriteSchema = z.object({
     qrCodes: z.number().int().min(0),
     products: z.number().int().min(0),
     staff: z.number().int().min(0),
+    locations: z.number().int().min(0).optional(),
     aiCalls: z.number().int().min(0)
   }),
+  bullets: z
+    .array(
+      z.object({
+        en: z.string().trim().min(1).max(160),
+        hi: z.string().trim().min(1).max(160),
+        compare: z.boolean()
+      })
+    )
+    .max(40)
+    .optional()
+    .default([]),
   badge: z.string().max(40).nullable().optional(),
   category: z.enum(["reviews", "menu", "store", "profile", "combo"]).default("reviews"),
   imageUrl: z.string().max(2_000_000).optional().default(""),
@@ -60,6 +73,7 @@ async function limitsFor(input: PlanWriteInput) {
       qrCodes: input.limits.qrCodes,
       products: input.limits.products,
       staff: input.limits.staff,
+      locations: input.limits.locations ?? base.locations,
       aiCalls: input.limits.aiCalls,
       storeProducts: input.limits.products,
       aiCallsPerMonth: input.limits.aiCalls
@@ -94,6 +108,7 @@ export async function createPlanRecord(input: PlanWriteInput) {
       descriptionHi: input.descriptionHi || "",
       modules,
       limits: await limitsFor(input),
+      bullets: parseBullets(input.bullets),
       badge: input.badge?.trim() || null,
       category: planCategory(input.category),
       imageUrl: input.imageUrl.trim(),
@@ -124,6 +139,7 @@ export async function updatePlanRecord(id: string, input: PlanWriteInput) {
       descriptionHi: input.descriptionHi || "",
       modules,
       limits: await limitsFor(input),
+      bullets: parseBullets(input.bullets),
       badge: input.badge?.trim() || null,
       category: planCategory(input.category),
       imageUrl: input.imageUrl.trim(),
@@ -164,6 +180,7 @@ export async function duplicatePlan(id: string) {
       descriptionHi: source.descriptionHi,
       modules: source.modules,
       limits: source.limits as object,
+      bullets: parseBullets(source.bullets),
       badge: source.badge,
       category: source.category,
       imageUrl: source.imageUrl,

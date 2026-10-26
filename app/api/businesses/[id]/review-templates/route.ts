@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { ownerLimitError } from "@/lib/entitlements";
+import { denyFeatureResponse } from "@/lib/plans/feature-gate";
 import { planOwner, requireBusinessRole } from "@/lib/tenant";
 
 export async function GET(
@@ -13,6 +14,8 @@ export async function GET(
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const biz = await requireBusinessRole(user.id, params.id, "manage");
   if (!biz) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const denied = await denyFeatureResponse(biz.ownerId, "reviews-log");
+  if (denied) return denied;
 
   const url = new URL(req.url);
   const status = url.searchParams.get("status"); // "available" | "used" | undefined
@@ -46,6 +49,8 @@ export async function POST(
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const biz = await requireBusinessRole(user.id, params.id, "manage");
   if (!biz) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const denied = await denyFeatureResponse(biz.ownerId, "reviews-log");
+  if (denied) return denied;
   const owner = await planOwner(user, biz.ownerId);
   if (!owner) return NextResponse.json({ error: "Not found" }, { status: 404 });
 

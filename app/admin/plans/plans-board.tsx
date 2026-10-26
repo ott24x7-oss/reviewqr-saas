@@ -12,6 +12,7 @@ import { PLAN_CATEGORIES } from "@/lib/plans/categories";
 import { ImageUpload } from "@/components/ui/image-upload";
 
 type Price = { duration: string; pricePaise: number; mrpPaise: number | null; active: boolean };
+type Bullet = { en: string; hi: string; compare: boolean };
 export type AdminPlan = {
   id: string;
   nameEn: string;
@@ -20,7 +21,8 @@ export type AdminPlan = {
   descriptionEn: string;
   descriptionHi: string;
   modules: string[];
-  limits: { businesses: number; qrCodes: number; products: number; staff: number; aiCalls: number };
+  limits: { businesses: number; qrCodes: number; products: number; staff: number; locations: number; aiCalls: number };
+  bullets: Bullet[];
   badge: string | null;
   category: string;
   imageUrl: string;
@@ -31,7 +33,15 @@ export type AdminPlan = {
 };
 
 const TIERS = ["FREE", "STARTER", "GROWTH", "AGENCY", "FOUNDER"] as const;
-const emptyLimits = { businesses: 1, qrCodes: 2, products: 100000, staff: 1, aiCalls: 30 };
+const emptyLimits = { businesses: 1, qrCodes: 2, products: 100000, staff: 1, locations: 1, aiCalls: 30 };
+const LIMIT_FIELDS = [
+  { key: "businesses", label: "Businesses" },
+  { key: "qrCodes", label: "QR codes" },
+  { key: "products", label: "Menu items" },
+  { key: "staff", label: "Staff" },
+  { key: "locations", label: "Locations" },
+  { key: "aiCalls", label: "AI replies" }
+] as const;
 
 function blank(): AdminPlan {
   return {
@@ -43,6 +53,7 @@ function blank(): AdminPlan {
     descriptionHi: "",
     modules: ["REVIEWS"],
     limits: { ...emptyLimits },
+    bullets: [],
     badge: "",
     category: "reviews",
     imageUrl: "",
@@ -257,19 +268,82 @@ export function PlansBoard({ plans }: { plans: AdminPlan[] }) {
                 ))}
               </div>
             </fieldset>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-              {(["businesses", "qrCodes", "products", "staff", "aiCalls"] as const).map((key) => (
-                <div key={key}>
-                  <Label htmlFor={key}>{key}</Label>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-medium">Feature bullets</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setEditing({ ...editing, bullets: [...editing.bullets, { en: "", hi: "", compare: true }] })}
+                >
+                  Add bullet
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Leave this empty and the pricing page lists the plan&apos;s modules. Tick a line to show it in the comparison table.
+              </p>
+              {editing.bullets.map((bullet, index) => (
+                <div key={index} className="grid gap-2 rounded-lg border p-2 sm:grid-cols-[1fr_1fr_auto]">
                   <Input
-                    id={key}
+                    aria-label={`Bullet ${index + 1} English`}
+                    placeholder="English"
+                    value={bullet.en}
+                    required
+                    onChange={(event) => {
+                      const bullets = [...editing.bullets];
+                      bullets[index] = { ...bullet, en: event.target.value };
+                      setEditing({ ...editing, bullets });
+                    }}
+                  />
+                  <Input
+                    aria-label={`Bullet ${index + 1} Hindi`}
+                    placeholder="हिन्दी"
+                    value={bullet.hi}
+                    required
+                    onChange={(event) => {
+                      const bullets = [...editing.bullets];
+                      bullets[index] = { ...bullet, hi: event.target.value };
+                      setEditing({ ...editing, bullets });
+                    }}
+                  />
+                  <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={bullet.compare}
+                        aria-label={`Bullet ${index + 1} show in comparison table`}
+                        onChange={(event) => {
+                          const bullets = [...editing.bullets];
+                          bullets[index] = { ...bullet, compare: event.target.checked };
+                          setEditing({ ...editing, bullets });
+                        }}
+                      />
+                      Show in comparison table
+                    </label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setEditing({ ...editing, bullets: editing.bullets.filter((_, item) => item !== index) })}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {LIMIT_FIELDS.map((field) => (
+                <div key={field.key}>
+                  <Label htmlFor={field.key}>{field.label}</Label>
+                  <Input
+                    id={field.key}
                     type="number"
                     min={0}
-                    value={editing.limits[key]}
+                    value={editing.limits[field.key]}
                     onChange={(event) =>
                       setEditing({
                         ...editing,
-                        limits: { ...editing.limits, [key]: Math.max(0, Math.floor(Number(event.target.value) || 0)) }
+                        limits: { ...editing.limits, [field.key]: Math.max(0, Math.floor(Number(event.target.value) || 0)) }
                       })
                     }
                   />
@@ -362,7 +436,13 @@ export function PlansBoard({ plans }: { plans: AdminPlan[] }) {
               mrpPaise={previewPrice.mrpPaise}
               periodLabel={DURATION_LABELS[previewPrice.duration as keyof typeof DURATION_LABELS]?.en || ""}
               savings={savingsPercent({ pricePaise: previewPrice.pricePaise, mrpPaise: previewPrice.mrpPaise })}
-              modules={preview.modules.length ? preview.modules : (["REVIEWS"] as ModuleId[])}
+              modules={
+                preview.bullets.length
+                  ? preview.bullets.map((bullet) => bullet.en)
+                  : preview.modules.length
+                    ? preview.modules
+                    : (["REVIEWS"] as ModuleId[])
+              }
               cta="Preview"
             />
           ) : null}

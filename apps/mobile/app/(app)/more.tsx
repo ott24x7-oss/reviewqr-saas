@@ -1,5 +1,6 @@
 import { Screen } from "../../src/ui/screen";
-import { router } from "expo-router";
+import type { FeatureId } from "@reviewqr/shared";
+import { router, type Href } from "expo-router";
 import {
   BarChart3,
   CircleHelp,
@@ -25,7 +26,9 @@ import { ApiError } from "../../src/api/http";
 import { useI18n } from "../../src/i18n";
 import { businessDestinations } from "../../src/nav/business-destinations";
 import { useEntitlement } from "../../src/state/entitlement";
+import { openPlanLock, useFeatures } from "../../src/state/plan-lock";
 import { useSession } from "../../src/state/session";
+import { useAgentMode } from "../../src/agent/mode-context";
 import { fonts } from "../../src/theme";
 import { Group, GroupRow, SectionHeader } from "../../src/ui/rows";
 import { useTheme, type SchemeChoice } from "../../src/ui/theme";
@@ -34,8 +37,17 @@ function MoreScreenContent() {
   const { t, lang, choose } = useI18n();
   const { palette, choice, setChoice } = useTheme();
   const { user, logout, refreshUser } = useSession();
+  const { setMode } = useAgentMode();
   const plan = useEntitlement();
+  const { locked } = useFeatures();
   const [error, setError] = useState<string | null>(null);
+  function go(href: Href, feature?: FeatureId, keep?: boolean) {
+    if (feature && locked(feature) && !keep) {
+      openPlanLock(feature);
+      return;
+    }
+    router.push(href);
+  }
   const name = lang === "hi" ? plan.data?.plan?.nameHi || plan.data?.plan?.nameEn : plan.data?.plan?.nameEn;
   const themes: SchemeChoice[] = ["system", "light", "dark"];
 
@@ -60,25 +72,33 @@ function MoreScreenContent() {
       <SectionHeader label={t.yourBusiness} />
       <Group>
         {businessDestinations(t).map((item) => (
-          <GroupRow key={item.key} icon={item.icon} tint={item.tint} title={item.title} hint={item.hint} onPress={() => router.push(item.href)} />
+          <GroupRow
+            key={item.key}
+            icon={item.icon}
+            tint={item.tint}
+            title={item.title}
+            hint={item.hint}
+            locked={!!item.feature && locked(item.feature)}
+            onPress={() => go(item.href, item.feature)}
+          />
         ))}
-        <GroupRow icon={QrCode} tint="ink" title={t.qrList} hint={t.perQr} onPress={() => router.push("/(app)/qr-codes")} />
-        <GroupRow icon={Users} tint="blue" title={t.staff} hint={t.hintStaffRow} onPress={() => router.push("/(app)/staff")} />
+        <GroupRow icon={QrCode} tint="ink" title={t.qrList} hint={t.perQr} locked={locked("multiple-qrs")} onPress={() => go("/(app)/qr-codes", "multiple-qrs", true)} />
+        <GroupRow icon={Users} tint="blue" title={t.staff} hint={t.hintStaffRow} locked={locked("staff")} onPress={() => go("/(app)/staff", "staff")} />
       </Group>
 
       <SectionHeader label={t.sectionGrow} />
       <Group>
-        <GroupRow icon={Share2} tint="green" title={t.offers} hint={t.couponCode} onPress={() => router.push("/(app)/offers")} />
-        <GroupRow icon={Megaphone} tint="pink" title={t.campaigns} hint={t.sendCampaign} onPress={() => router.push("/(app)/campaigns")} />
+        <GroupRow icon={Share2} tint="green" title={t.offers} hint={t.couponCode} locked={locked("offers")} onPress={() => go("/(app)/offers", "offers")} />
+        <GroupRow icon={Megaphone} tint="pink" title={t.campaigns} hint={t.sendCampaign} locked={locked("campaigns")} onPress={() => go("/(app)/campaigns", "campaigns")} />
         <GroupRow icon={Share2} tint="amber" title={t.referEarn} hint={t.shareLink} onPress={() => router.push("/(app)/refer")} />
-        <GroupRow icon={BarChart3} tint="blue" title={t.analytics} hint={t.hintAnalyticsRow} onPress={() => router.push("/(app)/analytics")} />
-        <GroupRow icon={Star} tint="amber" title={t.reviews} hint={t.testimonials} onPress={() => router.push("/(app)/reviews")} />
-        <GroupRow icon={Users} tint="blue" title={t.customers} hint={t.exportCsv} onPress={() => router.push("/(app)/customers")} />
+        <GroupRow icon={BarChart3} tint="blue" title={t.analytics} hint={t.hintAnalyticsRow} locked={locked("analytics")} onPress={() => go("/(app)/analytics", "analytics")} />
+        <GroupRow icon={Star} tint="amber" title={t.reviews} hint={t.testimonials} locked={locked("reviews-log")} onPress={() => go("/(app)/reviews", "reviews-log")} />
+        <GroupRow icon={Users} tint="blue" title={t.customers} hint={t.exportCsv} locked={locked("customers")} onPress={() => go("/(app)/customers", "customers")} />
       </Group>
 
       <SectionHeader label={t.sectionDevices} />
       <Group>
-        <GroupRow icon={Nfc} tint="green" title={t.nfcOne} hint={t.hintNfcRow} onPress={() => router.push("/(app)/nfc")} />
+        <GroupRow icon={Nfc} tint="green" title={t.nfcOne} hint={t.hintNfcRow} locked={locked("nfc")} onPress={() => go("/(app)/nfc", "nfc")} />
         <GroupRow icon={ShoppingBag} tint="amber" title={t.orderStands} hint={t.hintShopRow} onPress={() => router.push("/(app)/shop")} />
       </Group>
 
@@ -131,9 +151,10 @@ function MoreScreenContent() {
         />
         <GroupRow icon={User} tint="ink" title={t.account} hint={t.hintAccountRow} onPress={() => router.push("/(app)/account")} />
         <GroupRow icon={Bell} tint="amber" title={t.inbox} hint={t.recentActivity} onPress={() => router.push("/(app)/inbox")} />
-        {user?.role === "AGENT" ? <GroupRow icon={Users} tint="green" title={t.agentHome} hint={t.onboardBusiness} onPress={() => router.push("/(app)/agent")} /> : null}
+        {user?.role === "AGENT" ? <GroupRow icon={Users} tint="green" title={t.agentSwitchMode} hint={t.agentSwitchAgent} onPress={() => { setMode("agent"); router.replace("/(app)/agent-home"); }} /> : null}
         <GroupRow icon={CircleHelp} tint="green" title={t.help} hint={t.hintHelpRow} onPress={() => router.push("/(app)/help")} />
         <GroupRow icon={Trash2} tint="pink" title={t.deleteAccount} hint={t.hintDeleteRow} danger onPress={() => router.push("/(app)/delete-account")} />
+        {user?.role === "USER" ? <GroupRow icon={Users} tint="green" title={t.agentJoin} hint={t.agentJoinBody} onPress={() => router.push("/(app)/agent-join")} /> : null}
         <GroupRow icon={LogOut} tint="ink" title={t.signOut} hint={t.hintSignOut} onPress={() => logout()} />
       </Group>
       {error ? <Text style={{ color: palette.danger, fontFamily: fonts.body }}>{error}</Text> : null}

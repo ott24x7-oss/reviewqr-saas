@@ -7,6 +7,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { ChevronRight, ClipboardList } from "lucide-react-native";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Linking, StyleSheet, Text, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withDelay, withSpring, withTiming } from "react-native-reanimated";
 import { apiData } from "../../src/api/data";
@@ -21,9 +22,10 @@ import { noteOrderCompleted } from "../../src/review/prompt";
 import { useReviewMoment } from "../../src/review/watch";
 import { useBusiness } from "../../src/state/business";
 import { hasModule, useEntitlement } from "../../src/state/entitlement";
+import { openPlanLock } from "../../src/state/plan-lock";
 import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
-import { Card, Chip, EmptyState, Skeleton } from "../../src/ui/bits";
+import { Card, Chip, EmptyState, LoadErrorCard, Skeleton } from "../../src/ui/bits";
 import { Field, PillButton } from "../../src/ui/controls";
 import { tapStrong } from "../../src/ui/haptics";
 import { LockedModuleCard } from "../../src/ui/locked-module";
@@ -171,6 +173,8 @@ function OrdersScreenContent() {
   });
 
   const loading = tab === "products" ? products.isLoading : tab === "orders" ? orders.isLoading : feedback.isLoading;
+  const listError = tab === "products" ? products.isError : tab === "orders" ? orders.isError : feedback.isError;
+  const retryList = tab === "products" ? products.refetch : tab === "orders" ? orders.refetch : feedback.refetch;
   useReviewMoment(orders.data?.items ?? [], feedback.data?.items ?? [], Boolean(error) || orders.isError || feedback.isError);
   useEffect(() => {
     if (!loading) return;
@@ -332,6 +336,10 @@ function OrdersScreenContent() {
   const storeLocked = !!(modules && !hasModule(modules, "STORE"));
   const reviewsLocked = !!(modules && !hasModule(modules, "REVIEWS"));
   const locked = tab === "products" ? menuLocked : tab === "orders" ? storeLocked : reviewsLocked;
+  useEffect(() => {
+    if (!locked) return;
+    openPlanLock(tab === "products" ? "menu" : tab === "orders" ? "orders" : "reviews-log");
+  }, [locked, tab]);
   const orderRows = (orders.data?.items ?? []).filter((order) => order.status === filter);
   const listData: (Product | OrderCard | FeedbackRow)[] = locked
     ? []
@@ -375,13 +383,13 @@ function OrdersScreenContent() {
       {error ? <Text style={[styles.error, { color: palette.danger }]}>{error}</Text> : null}
       {locked ? <LockedModuleCard moduleId={tab === "products" ? "MENU" : tab === "orders" ? "STORE" : "REVIEWS"} /> : null}
       {tab === "products" && !locked ? (
-        <View style={styles.stack}>
+        <KeyboardAwareScrollView style={styles.inlineFormScroll} contentContainerStyle={styles.stack} keyboardShouldPersistTaps="handled" bottomOffset={12}>
           <Field label={t.name} tone="paper" value={name} onChangeText={setName} />
           <Field label={t.price} tone="paper" value={price} onChangeText={setPrice} keyboardType="decimal-pad" />
           <PillButton label={t.quickAdd} onPress={addProduct} disabled={!name.trim() || !price.trim()} hint={t.hintNamePrice} tone="dark" />
           <PillButton label={t.photo} onPress={() => fromPhoto("camera")} tone="outline" />
           <PillButton label={t.gallery} onPress={() => fromPhoto("library")} tone="outline" />
-        </View>
+        </KeyboardAwareScrollView>
       ) : null}
       {showSkeleton ? (
         <View style={styles.stack}>
@@ -400,12 +408,12 @@ function OrdersScreenContent() {
         ListHeaderComponent={header}
         contentContainerStyle={styles.listPad}
         ListEmptyComponent={
-          locked || showSkeleton || loading ? null : tab === "orders" ? (
-            <EmptyState icon={ClipboardList} title={t.emptyOrdersTitle} body={t.emptyOrdersBody} />
+          locked || showSkeleton || loading ? null : listError ? <LoadErrorCard onRetry={() => retryList().catch(() => undefined)} /> : tab === "orders" ? (
+            <EmptyState icon={ClipboardList} title={t.emptyOrdersTitle} body={t.emptyOrdersBody} action={t.sharePage} onAction={() => router.push({ pathname: "/(app)/tap", params: { section: "link" } })} />
           ) : tab === "products" ? (
             <EmptyState icon={ClipboardList} title={t.emptyMenuTitle} body={t.emptyMenuBody} action={t.quickAdd} onAction={addProduct} />
           ) : (
-            <EmptyState icon={ClipboardList} title={t.emptyFeedbackTitle} body={t.emptyFeedbackBody} />
+            <EmptyState icon={ClipboardList} title={t.emptyFeedbackTitle} body={t.emptyFeedbackBody} action={t.sharePage} onAction={() => router.push({ pathname: "/(app)/tap", params: { section: "link" } })} />
           )
         }
         renderItem={({ item, index }) => {
@@ -521,6 +529,7 @@ const styles = StyleSheet.create({
   listPad: { padding: 16, paddingBottom: 120 },
   header: { gap: 12, marginBottom: 12 },
   stack: { gap: 12 },
+  inlineFormScroll: { flexGrow: 0, maxHeight: 280 },
   row: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   titleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
   screenTitle: { fontFamily: fonts.display, fontSize: 28 },
@@ -545,7 +554,7 @@ const styles = StyleSheet.create({
     paddingLeft: 16,
     gap: 6
   },
-  revealText: { color: "#FFFFFF", fontFamily: fonts.bodyStrong },
+  revealText: { fontFamily: fonts.bodyStrong },
   detail: { position: "absolute", left: 16, right: 16, bottom: 16, gap: 8 }
 });
 

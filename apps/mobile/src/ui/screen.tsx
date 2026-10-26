@@ -8,15 +8,19 @@ import { useTheme } from "./theme";
 export function Screen({
   children,
   topInset = true,
+  statusBarColor,
   style
 }: {
   children: ReactNode;
-  /** Home uses the inset inside its header so the color band fills the status-bar area. */
+  /** Reserve the status-bar area before placing screen content. */
   topInset?: boolean;
+  /** Paint the status-bar area with a solid theme color. */
+  statusBarColor?: string;
   style?: StyleProp<ViewStyle>;
 }) {
   const insets = useSafeAreaInsets();
   const { palette, appTheme, cinematicAccent, scheme, reduceMotion, lowRam } = useTheme();
+  const statusColor = statusBarColor ?? (palette.cinematic ? palette.bg : palette.paper);
   const enteringCinematic = palette.cinematic && !reduceMotion && !lowRam;
   const opacity = useSharedValue(enteringCinematic ? 0 : 1);
   const scale = useSharedValue(enteringCinematic ? 0.98 : 1);
@@ -52,17 +56,33 @@ export function Screen({
     transform: [{ scale: scale.value }]
   }));
   return (
-    <View style={[styles.root, { backgroundColor: palette.bg, paddingTop: topInset ? insets.top : 0 }, style]}>
+    <View style={[styles.root, { backgroundColor: statusColor }, style]}>
+      <View pointerEvents="none" style={{ height: topInset ? insets.top : 0, backgroundColor: statusColor, zIndex: 1 }} />
       {palette.cinematic ? (
-        <CinematicBackground accent={cinematicAccent} reduceMotion={reduceMotion} lowRam={lowRam} />
+        <CinematicBackground accent={cinematicAccent} palette={palette} reduceMotion={reduceMotion} lowRam={lowRam} />
       ) : null}
-      <Animated.View style={transition}>
+      <Animated.View style={[transition, { backgroundColor: palette.bg }]}>
         {children}
       </Animated.View>
+      <View
+        pointerEvents="none"
+        style={[
+          styles.statusBarStrip,
+          { height: insets.top, backgroundColor: statusColor }
+        ]}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 }
+  root: { flex: 1 },
+  statusBarStrip: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+    elevation: 1000
+  }
 });

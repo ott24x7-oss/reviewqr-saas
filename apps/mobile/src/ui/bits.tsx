@@ -1,8 +1,9 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { LucideIcon } from "lucide-react-native";
-import { Check } from "lucide-react-native";
+import { Check, CircleAlert, RotateCw } from "lucide-react-native";
 import { useEffect, useId, useState, type ReactNode } from "react";
 import { Modal, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   Easing,
@@ -31,7 +32,7 @@ export function Card({ children, raised, style }: { children: ReactNode; raised?
           borderColor: palette.line,
           borderWidth: palette.cinematic ? 1 : 0,
           borderRadius: palette.cinematic ? 24 : 20,
-          shadowColor: palette.cinematic ? palette.primary : "#1C1813",
+          shadowColor: palette.ink,
           shadowOpacity: palette.cinematic ? (raised ? 0.16 : 0.08) : raised ? 0.12 : 0.06,
           elevation: raised ? 8 : 2
         },
@@ -331,6 +332,21 @@ export function Skeleton({ height = 18, width = "100%" }: { height?: number; wid
   return <Animated.View style={[styles.skeleton, { height, width, backgroundColor: palette.line }, anim]} />;
 }
 
+export function LoadErrorCard({ onRetry }: { onRetry: () => void }) {
+  const { t, lang } = useI18n();
+  const { palette } = useTheme();
+  return (
+    <View style={[styles.loadError, { backgroundColor: palette.card, borderColor: palette.line }]}>
+      <CircleAlert color={palette.warning} size={20} />
+      <Text style={[styles.loadErrorText, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.loadError}</Text>
+      <Pressable accessibilityRole="button" accessibilityLabel={t.retry} onPress={onRetry} style={styles.retryButton}>
+        <RotateCw color={palette.deep} size={17} />
+        <Text style={[styles.retryText, { color: palette.deep }, lang === "hi" && styles.hindi]}>{t.retry}</Text>
+      </Pressable>
+    </View>
+  );
+}
+
 export function EmptyState({
   icon: Icon,
   title,
@@ -370,12 +386,14 @@ export function BottomSheet({
   visible,
   title,
   onClose,
-  children
+  children,
+  overlay
 }: {
   visible: boolean;
   title: string;
   onClose: () => void;
   children: ReactNode;
+  overlay?: ReactNode;
 }) {
   const { lang } = useI18n();
   const { palette, reduceMotion } = useTheme();
@@ -428,7 +446,15 @@ export function BottomSheet({
           <Animated.View style={[styles.sheet, { backgroundColor: palette.card }, sheet]}>
             <View style={[styles.handle, { backgroundColor: palette.line }]} />
             <Text style={[styles.sheetTitle, { color: palette.ink }, lang === "hi" && styles.hindi]}>{title}</Text>
-            {children}
+            <KeyboardAwareScrollView
+              style={styles.sheetScroll}
+              contentContainerStyle={styles.sheetContent}
+              keyboardShouldPersistTaps="handled"
+              bottomOffset={12}
+            >
+              {children}
+            </KeyboardAwareScrollView>
+            {overlay}
           </Animated.View>
         </GestureDetector>
       </View>
@@ -437,7 +463,11 @@ export function BottomSheet({
 }
 
 const styles = StyleSheet.create({
-  card: { borderRadius: 20, padding: 16, shadowColor: "#1C1813", shadowRadius: 12, shadowOffset: { width: 0, height: 4 } },
+  card: { borderRadius: 20, padding: 16, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } },
+  loadError: { minHeight: 64, borderWidth: 1, borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10, flexDirection: "row", alignItems: "center", gap: 10 },
+  loadErrorText: { flex: 1, fontFamily: fonts.body, fontSize: 14, lineHeight: 20 },
+  retryButton: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 8 },
+  retryText: { fontFamily: fonts.bodyStrong, fontSize: 14 },
   chip: {
     minHeight: 48,
     borderRadius: 999,
@@ -451,7 +481,7 @@ const styles = StyleSheet.create({
   chipText: { fontFamily: fonts.bodyStrong, fontSize: 13 },
   dot: { width: 8, height: 8, borderRadius: 4 },
   badge: { minWidth: 18, height: 18, borderRadius: 9, alignItems: "center", justifyContent: "center", paddingHorizontal: 4 },
-  badgeText: { color: "#FFFFFF", fontFamily: fonts.bodyStrong, fontSize: 11 },
+  badgeText: { fontFamily: fonts.bodyStrong, fontSize: 11 },
   tileWrap: { width: "48%" },
   tile: { minHeight: 112, borderRadius: 16, borderWidth: 1.5, padding: 12, gap: 6 },
   iconCircle: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
@@ -477,7 +507,9 @@ const styles = StyleSheet.create({
   emptyBody: { fontFamily: fonts.body, fontSize: 15, lineHeight: 22, textAlign: "center" },
   sheetRoot: { flex: 1, justifyContent: "flex-end" },
   scrim: { ...StyleSheet.absoluteFill },
-  sheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, gap: 12, paddingBottom: 28 },
+  sheet: { maxHeight: "92%", borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, gap: 12, paddingBottom: 28 },
+  sheetScroll: { flexShrink: 1 },
+  sheetContent: { gap: 12, paddingBottom: 20 },
   handle: { alignSelf: "center", width: 40, height: 4, borderRadius: 2 },
   sheetTitle: { fontFamily: fonts.title, fontSize: 20 },
   hindi: { fontFamily: fonts.hindiStrong },

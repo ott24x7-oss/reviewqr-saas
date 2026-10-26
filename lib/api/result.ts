@@ -1,6 +1,12 @@
 import type { ApiErrorCode } from "@reviewqr/shared";
 
-export type Fail = { ok: false; status: number; error: string };
+export type Fail = {
+  ok: false;
+  status: number;
+  error: string;
+  code?: ApiErrorCode;
+  feature?: string;
+};
 export type ServiceResult<T> = { ok: true; data: T } | Fail;
 
 export function fail(status: number, error: string): Fail {

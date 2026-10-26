@@ -12,7 +12,7 @@ import {
   PLAN_CATEGORIES,
   buyHref,
   planCategory,
-  planTicks,
+
   type PlanCategory
 } from "@/lib/plans/categories";
 import { assignCardImages, pictureNameFromSrc } from "@/lib/landing/card-images";
@@ -39,7 +39,7 @@ function ProductCard({ plan, imageSrc, className = "" }: { plan: PublicPlan; ima
   const [duration, setDuration] = React.useState<PlanDuration | undefined>(initial);
   const selected = plan.prices.find((price) => price.duration === duration) || plan.prices[0];
   if (!selected) return null;
-  const ticks = planTicks(plan.category);
+  const ticks = plan.bullets;
   const name = lang === "hi" ? plan.nameHi : plan.nameEn;
   const alt = pick(lang, `${name} product photo`, `${name} की तस्वीर`);
   const off = selected.savings;

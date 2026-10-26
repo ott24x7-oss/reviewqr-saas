@@ -2,10 +2,12 @@ import { useEffect, useState, type ReactNode } from "react";
 import { StyleSheet, Text, TextInput, View, type TextInputProps } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { KeyboardStickyView } from "react-native-keyboard-controller";
 import { useI18n } from "../i18n";
 import { fonts } from "../theme";
 import { PrimaryButton, SecondaryButton, TextButton } from "./buttons";
 import { usePalette, useTheme } from "./theme";
+import { withOpacity } from "./tokens";
 
 export function Field({ label, tone = "paper", ...props }: TextInputProps & { label: string; tone?: "dark" | "paper" }) {
   const { lang } = useI18n();
@@ -21,7 +23,7 @@ export function Field({ label, tone = "paper", ...props }: TextInputProps & { la
           styles.input,
           {
             borderColor: palette.line,
-            backgroundColor: paper ? palette.card : "rgba(255,255,255,0.06)",
+            backgroundColor: paper ? palette.card : withOpacity(palette.headerInk, 0.06),
             color: paper ? palette.ink : palette.headerInk
           }
         ]}
@@ -79,7 +81,7 @@ export function StickyAction({ children }: { children: ReactNode }) {
   const palette = usePalette();
   const insets = useSafeAreaInsets();
   return (
-    <View
+    <KeyboardStickyView
       style={[
         styles.sticky,
         {
@@ -90,7 +92,7 @@ export function StickyAction({ children }: { children: ReactNode }) {
       ]}
     >
       {children}
-    </View>
+    </KeyboardStickyView>
   );
 }
 

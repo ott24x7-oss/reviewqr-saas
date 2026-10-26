@@ -11,6 +11,7 @@ import { legacyPlanId, limitsForTier, modulesForTier } from "../plans/legacy";
 import { grantPlanAccess } from "../plans/snapshot";
 import { bundleGrant } from "./bundle";
 import { holdUntil } from "../plans/commission-rules";
+import { creditPooledCommission } from "../plans/pool";
 import { getPlanProgramSettings } from "../plans/settings";
 
 export type FulfillInput = {
@@ -180,28 +181,29 @@ export async function fulfillPaidShopOrder(input: FulfillInput): Promise<Fulfill
       data: { couponCode: null, referralCode: null }
     });
     // Find-then-create. A caught unique violation inside this transaction would abort it.
+    // Older rows used kind ORDER. A replay must not add a second hardware credit.
     if (row.agentId && row.agentId !== row.userId && row.agentId !== beneficiaryId && row.commissionPaise > 0) {
-      const existing = await tx.shopCommission.findUnique({
+      const legacy = await tx.shopCommission.findUnique({
         where: {
           agentId_kind_sourceId: { agentId: row.agentId, kind: "ORDER", sourceId: row.id }
         }
       });
-      if (!existing) {
-        await tx.shopCommission.create({
-          data: {
-            agentId: row.agentId,
-            kind: "ORDER",
+      if (!legacy) {
+        await creditPooledCommission(
+          {
+            sellerId: row.agentId,
+            sellerKind: "HARDWARE",
+            poolPaise: row.commissionPaise,
             sourceId: row.id,
             orderId: row.id,
-            amountPaise: row.commissionPaise,
             percent: row.commissionPercent ?? 0,
             basis: (row.commissionPercent ?? 0) > 0 ? "PERCENT" : "FLAT",
             flatPaise: (row.commissionPercent ?? 0) > 0 ? 0 : row.commissionPaise,
             saleKind: "HARDWARE",
-            status: "PENDING",
             holdUntil: heldUntil
-          }
-        });
+          },
+          tx
+        );
       }
     }
     return { ok: true as const, already: false, invoiceNumber, userId: row.userId };

@@ -11,7 +11,10 @@ import { deliveryEstimate } from "./estimate";
 import { gstinError, normalizeGstin } from "./gstin";
 import { addressError, sameSupplyState } from "./address";
 import { quoteShop, type DiscountOffer } from "./quote";
+import { isPhysicalShopProduct } from "./physical";
 import { providerForEstimates } from "./shipping-resolve";
+
+type ShopAudience = "web" | "app";
 
 type LineInput = { sku: string; qty: number; design?: ShopDesign | null };
 
@@ -87,14 +90,16 @@ function productCard(product: {
   };
 }
 
-export async function shopCatalog() {
+export async function shopCatalog(audience: ShopAudience = "web") {
   await ensureCatalog();
   const products = await prisma.catalogProduct.findMany({
     where: { active: true },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     include: { variants: { where: { active: true }, orderBy: { salePaise: "asc" } } }
   });
-  return products.filter((product) => product.variants.length > 0).map(productCard);
+  const cards = products.filter((product) => product.variants.length > 0).map(productCard);
+  if (audience === "web") return cards;
+  return cards.filter((product) => isPhysicalShopProduct(product));
 }
 
 export async function shopProduct(slug: string) {
@@ -130,7 +135,7 @@ async function businessesFor(userId: string) {
   });
 }
 
-export async function shopCartView(userId: string) {
+export async function shopCartView(userId: string, audience: ShopAudience = "web") {
   const cart = await cartFor(userId);
   const [addresses, businesses, payments] = await Promise.all([
     prisma.shippingAddress.findMany({ where: { userId }, orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }] }),
@@ -143,10 +148,21 @@ export async function shopCartView(userId: string) {
     : [];
   const byId = new Map(variants.map((variant) => [variant.id, variant]));
   const address = addresses.find((row) => row.id === cart.addressId) ?? null;
-  const lines = cart.lines.map((line) => {
+  const lines = cart.lines.flatMap((line) => {
     const variant = byId.get(line.variantId);
+    if (
+      audience === "app" &&
+      (!variant ||
+        !isPhysicalShopProduct({
+          slug: variant.product.slug,
+          name: variant.product.name,
+          variants: [variant]
+        }))
+    ) {
+      return [];
+    }
     const design = readDesign(line.design);
-    return {
+    return [{
       sku: variant?.sku ?? "",
       name: variant?.name ?? "Removed item",
       nameHi: variant?.nameHi ?? null,
@@ -166,7 +182,7 @@ export async function shopCartView(userId: string) {
       designError: variant
         ? designError({ needsDesign: variant.product.needsDesign, needsNfc: variant.product.needsNfc }, design)
         : "This item is not for sale"
-    };
+    }];
   });
   const quotable = lines.filter((line) => line.sku && line.active);
   const emptyQuote = { ok: true as const, lines: [], subtotalPaise: 0, couponPaise: 0, referralPaise: 0, couponRejected: false, referralRejected: false, discountPaise: 0, totalPaise: 0, taxablePaise: 0, cgstPaise: 0, sgstPaise: 0, igstPaise: 0 };
@@ -259,6 +275,34 @@ async function checkedLines(userId: string, businessId: string | null, lines: Li
   return ok(next);
 }
 
+async function appBlockedSku(skus: string[]) {
+  const variants = await variantsBySku(skus);
+  return variants.some(
+    (variant) =>
+      !isPhysicalShopProduct({
+        slug: variant.product.slug,
+        name: variant.product.name,
+        variants: [variant]
+      })
+  );
+}
+
+export async function appCartSellsDigital(userId: string) {
+  const cart = await prisma.shopCart.findUnique({
+    where: { userId },
+    include: { lines: { include: { variant: { include: { product: true } } } } }
+  });
+  if (!cart) return false;
+  return cart.lines.some(
+    (line) =>
+      !isPhysicalShopProduct({
+        slug: line.variant.product.slug,
+        name: line.variant.product.name,
+        variants: [line.variant]
+      })
+  );
+}
+
 export async function saveShopCart(
   userId: string,
   input: {
@@ -269,7 +313,8 @@ export async function saveShopCart(
     buyerLegalName?: string | null;
     addressId?: string | null;
     lines?: LineInput[];
-  }
+  },
+  audience: ShopAudience = "web"
 ) {
   const gstin = normalizeGstin(input.buyerGstin);
   const gstinProblem = gstinError(gstin);
@@ -280,6 +325,9 @@ export async function saveShopCart(
   if (input.addressId) {
     const address = await prisma.shippingAddress.findFirst({ where: { id: input.addressId, userId }, select: { id: true } });
     if (!address) return fail(400, "Choose a saved address");
+  }
+  if (audience === "app" && input.lines?.some((line) => line.sku) && (await appBlockedSku(input.lines.map((line) => line.sku)))) {
+    return fail(404, "Product not found");
   }
   const prepared = input.lines ? await checkedLines(userId, businessId, input.lines) : null;
   if (prepared && !prepared.ok) return prepared;
@@ -310,25 +358,29 @@ export async function saveShopCart(
       }
     }
   });
-  return ok(await shopCartView(userId));
+  return ok(await shopCartView(userId, audience));
 }
 
-export async function addShopCartItem(userId: string, item: LineInput) {
+export async function addShopCartItem(userId: string, item: LineInput, audience: ShopAudience = "web") {
   const cart = await cartFor(userId);
-  const current = await shopCartView(userId);
+  const current = await shopCartView(userId, audience);
   const lines = current.lines.filter((line) => line.sku).map((line) => ({ sku: line.sku, qty: line.qty, design: line.design }));
   const existing = lines.find((line) => line.sku === item.sku);
   if (existing) existing.qty += item.qty;
   else lines.push({ sku: item.sku, qty: item.qty, design: item.design ?? null });
-  return saveShopCart(userId, {
-    businessId: cart.businessId,
-    couponCode: cart.couponCode,
-    referralCode: cart.referralCode,
-    buyerGstin: cart.buyerGstin,
-    buyerLegalName: cart.buyerLegalName,
-    addressId: cart.addressId,
-    lines
-  });
+  return saveShopCart(
+    userId,
+    {
+      businessId: cart.businessId,
+      couponCode: cart.couponCode,
+      referralCode: cart.referralCode,
+      buyerGstin: cart.buyerGstin,
+      buyerLegalName: cart.buyerLegalName,
+      addressId: cart.addressId,
+      lines
+    },
+    audience
+  );
 }
 
 export async function createShopAddress(

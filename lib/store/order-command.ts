@@ -2,7 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { orderStatusSchema } from "@reviewqr/shared";
 import { prisma } from "../db";
 import { fail, ok } from "../api/result";
-import { moduleBlock } from "../plans/entitlements";
+import { featureBlock } from "../plans/feature-gate";
 import { requireBusinessRole } from "../tenant";
 import { notifyOrderStatus } from "./order-alert";
 import { loadOrderCards } from "./order-feed";
@@ -32,8 +32,8 @@ export async function setOrderStatus(userId: string, orderId: string, raw: unkno
     if (read) return fail(403, "You can view orders but not change them.");
     return fail(404, "Not found");
   }
-  const locked = await moduleBlock(order.business.ownerId, "STORE");
-  if (locked) return fail(403, locked);
+  const locked = await featureBlock(order.business.ownerId, "orders");
+  if (locked) return locked;
 
   const next = parsed.data.status;
   if (order.status !== next) {

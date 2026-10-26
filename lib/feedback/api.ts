@@ -9,6 +9,7 @@ import { takePage } from "../api/page";
 import { fail, ok, type ServiceResult } from "../api/result";
 import { safePublicReply, safeWhatsappReply } from "../reply-draft";
 import { getAiConfig } from "../settings";
+import { accountFeatureBlock, featureBlock } from "../plans/feature-gate";
 import { readableBusinessWhere, requireBusinessRole } from "../tenant";
 
 const FEEDBACK_STATUSES = ["NEW", "IN_PROGRESS", "RESOLVED", "IGNORED"] as const;
@@ -21,6 +22,16 @@ export async function listFeedback(
   const status = filter?.status?.toUpperCase();
   if (status && !FEEDBACK_STATUSES.includes(status as (typeof FEEDBACK_STATUSES)[number])) {
     return fail(400, "Invalid status");
+  }
+  if (filter?.businessId) {
+    const access = await requireBusinessRole(userId, filter.businessId, "read");
+    if (access) {
+      const blocked = await featureBlock(access.ownerId, "reviews-log");
+      if (blocked) return blocked;
+    }
+  } else {
+    const blocked = await accountFeatureBlock(userId, "reviews-log");
+    if (blocked) return blocked;
   }
   return takePage(
     () =>
@@ -64,6 +75,8 @@ export async function patchFeedback(
   if (!feedback) return fail(404, "Not found");
   const access = await requireBusinessRole(userId, feedback.businessId, "manage");
   if (!access) return fail(404, "Not found");
+  const blocked = await featureBlock(access.ownerId, "reviews-log");
+  if (blocked) return blocked;
 
   const parsed = feedbackPatchSchema.safeParse(raw);
   if (!parsed.success) return fail(400, parsed.error.issues[0]?.message || "Invalid request");
@@ -143,6 +156,8 @@ export async function draftFeedbackReply(userId: string, feedbackId: string) {
   if (!feedback) return fail(404, "Not found");
   const access = await requireBusinessRole(userId, feedback.businessId, "manage");
   if (!access) return fail(404, "Not found");
+  const blocked = await featureBlock(access.ownerId, "ai-replies");
+  if (blocked) return blocked;
 
   const cfg = await getAiConfig();
   if (!cfg.enabled || !cfg.apiKey || !feedback.business.aiReviewsEnabled) {

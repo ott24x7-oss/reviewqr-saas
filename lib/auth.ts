@@ -150,7 +150,7 @@ export async function getSessionUser() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return null;
   const user = await prisma.user.findUnique({ where: { id: session.user.id } });
-  if (!user || user.deletedAt) return null;
+  if (!user || user.deletedAt || user.suspendedAt) return null;
   return user;
 }
 

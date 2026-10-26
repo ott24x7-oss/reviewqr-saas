@@ -12,7 +12,7 @@ async function getHandler(req: NextRequest) {
   const page = v1Page(req);
   if (!page.ok) return page.response;
   const locked = await ownedStoreBlock(auth.user.id);
-  if (locked) return v1Error(403, "FORBIDDEN", locked);
+  if (locked) return v1From(locked);
   const since = orderListSince(req.nextUrl.searchParams.get("from"));
   if (!since.ok) return v1Error(400, "VALIDATION", since.error);
   const businessId = req.nextUrl.searchParams.get("businessId");

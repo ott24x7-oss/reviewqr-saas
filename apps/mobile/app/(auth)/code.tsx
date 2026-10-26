@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import type { PendingOtp } from "../../src/auth/pending";
 import { StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { apiData } from "../../src/api/data";
 import { ApiError } from "../../src/api/http";
 import { devCodeFrom } from "../../src/auth/otp";
@@ -11,6 +12,7 @@ import { useI18n } from "../../src/i18n";
 import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
 import { PrimaryButton } from "../../src/ui/buttons";
+import { StickyAction } from "../../src/ui/controls";
 import { OtpCodeForm } from "../../src/ui/otp-form";
 import { usePalette } from "../../src/ui/theme";
 import type { TokenPair } from "@reviewqr/shared";
@@ -93,8 +95,9 @@ export default function CodeScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.screen, { backgroundColor: palette.paper }]}>
-      <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.line }]}>
+    <SafeAreaView style={[styles.screen, { backgroundColor: palette.paper }]} edges={["top"]}>
+      <KeyboardAwareScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" bottomOffset={12}>
+        <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.line }]}>
         <Text style={[styles.title, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.codeOnWhatsapp}</Text>
         <Text style={[styles.sent, { color: palette.muted }, lang === "hi" && styles.hindi]}>
           {challenge.mode === "login" ? t.codeMaybe : t.sentTo}
@@ -112,6 +115,7 @@ export default function CodeScreen() {
           onSubmit={submit}
           submitting={busy}
           error={error}
+          showSubmit={false}
         />
         {challenge.mode === "login" ? (
           <PrimaryButton
@@ -120,13 +124,18 @@ export default function CodeScreen() {
             onPress={() => router.replace("/(auth)/signup")}
           />
         ) : null}
-      </View>
+        </View>
+      </KeyboardAwareScrollView>
+      <StickyAction>
+        <PrimaryButton label={t.verify} onPress={submit} disabled={busy || code.length !== 6} hint={code.length !== 6 ? t.hintCode : t.hintWait} />
+      </StickyAction>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, padding: 16, justifyContent: "center" },
+  screen: { flex: 1 },
+  scrollContent: { flexGrow: 1, padding: 16, justifyContent: "center" },
   card: { gap: 16, padding: 22, borderRadius: 24, borderWidth: 1 },
   title: { fontFamily: fonts.display, fontSize: 28 },
   sent: { fontFamily: fonts.body, fontSize: 15 },

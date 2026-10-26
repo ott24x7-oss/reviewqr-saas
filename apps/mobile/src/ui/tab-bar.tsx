@@ -7,8 +7,18 @@ import { useI18n } from "../i18n";
 import { fonts } from "../theme";
 import { Badge } from "./bits";
 import { tapLight } from "./haptics";
-import { FeedbackTabIcon, HomeTabIcon, MenuTabIcon, MoreTabIcon, OrdersTabIcon } from "./tab-icons";
+import {
+  AgentBusinessesTabIcon,
+  AgentEarningsTabIcon,
+  AgentTeamTabIcon,
+  FeedbackTabIcon,
+  HomeTabIcon,
+  MenuTabIcon,
+  MoreTabIcon,
+  OrdersTabIcon
+} from "./tab-icons";
 import { useTheme } from "./theme";
+import { withOpacity } from "./tokens";
 
 function TabIcon({ focused, children }: { focused: boolean; children: ReactNode }) {
   const { reduceMotion } = useTheme();
@@ -26,7 +36,12 @@ const ICONS: Record<string, ComponentType<{ color: string }>> = {
   orders: OrdersTabIcon,
   menu: MenuTabIcon,
   feedback: FeedbackTabIcon,
-  more: MoreTabIcon
+  more: MoreTabIcon,
+  "agent-home": HomeTabIcon,
+  "agent-businesses": AgentBusinessesTabIcon,
+  "agent-team": AgentTeamTabIcon,
+  "agent-earnings": AgentEarningsTabIcon,
+  "agent-more": MoreTabIcon
 };
 
 type TabRoute = { key: string; name: string };
@@ -35,17 +50,24 @@ export function PremiumTabBar({
   state,
   descriptors,
   onTabPress,
-  badges
+  badges,
+  mode = "owner",
+  canRecruit = true
 }: {
   state: { index: number; routes: TabRoute[] };
   descriptors: Record<string, { options?: { title?: string } }>;
   onTabPress: (route: TabRoute, focused: boolean) => void;
   badges?: Record<string, number>;
+  mode?: "owner" | "agent";
+  canRecruit?: boolean;
 }) {
   const { palette, reduceMotion } = useTheme();
   const { lang } = useI18n();
   const insets = useSafeAreaInsets();
-  const routes = state.routes.filter((route) => route.name in ICONS);
+  const ownerTabs = new Set(["index", "orders", "menu", "feedback", "more"]);
+  const agentTabs = new Set(["agent-home", "agent-businesses", "agent-earnings", "agent-more", ...(canRecruit ? ["agent-team"] : [])]);
+  const visibleTabs = mode === "agent" ? agentTabs : ownerTabs;
+  const routes = state.routes.filter((route) => visibleTabs.has(route.name) && route.name in ICONS);
   const index = routes.findIndex((route) => route.key === state.routes[state.index]?.key);
   const slide = useSharedValue(index);
   const tabWidth = useSharedValue(0);
@@ -60,7 +82,7 @@ export function PremiumTabBar({
   return (
     <View style={[styles.bar, {
       backgroundColor: palette.cinematic
-        ? Platform.OS === "android" || Platform.OS === "web" ? "rgba(20,20,24,0.85)" : "rgba(5,5,7,0.42)"
+        ? withOpacity(palette.bg, Platform.OS === "android" || Platform.OS === "web" ? 0.85 : 0.42)
         : palette.card,
       borderColor: palette.line,
       paddingBottom: Math.max(8, insets.bottom)
@@ -127,7 +149,6 @@ const styles = StyleSheet.create({
   badgeSlot: { position: "absolute", top: -6, right: -10 },
   label: { fontFamily: fonts.bodyStrong, fontSize: 12 },
   badge: { position: "absolute", top: -4, right: -8, minWidth: 16, height: 16, borderRadius: 8, alignItems: "center", justifyContent: "center", paddingHorizontal: 3 },
-  badgeText: { color: "#FFFFFF", fontSize: 10, fontFamily: fonts.bodyStrong },
   pill: { position: "absolute", top: 4, bottom: 4, left: 0, borderRadius: 16 },
   hindi: { fontFamily: fonts.hindi }
 });

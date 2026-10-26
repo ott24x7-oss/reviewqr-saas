@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 async function getHandler(req: NextRequest) {
   const auth = await requireV1User(req);
   if (!auth.ok) return auth.response;
-  return v1Data(await shopCartView(auth.user.id));
+  return v1Data(await shopCartView(auth.user.id, "app"));
 }
 
 async function putHandler(req: NextRequest) {
@@ -17,7 +17,7 @@ async function putHandler(req: NextRequest) {
   if (!auth.ok) return auth.response;
   const parsed = await parseJson(req, shopCartPutSchema);
   if (!parsed.ok) return parsed.response;
-  return v1From(await saveShopCart(auth.user.id, parsed.data));
+  return v1From(await saveShopCart(auth.user.id, parsed.data, "app"));
 }
 
 export const GET = observe(getHandler);

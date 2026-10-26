@@ -1,4 +1,5 @@
 import { rateLimitDb } from "../rate-limit";
+import { featureBlock } from "../plans/feature-gate";
 import { hasModule } from "../plans/entitlements";
 import { requireBusinessRole } from "../tenant";
 import { ensureRollups } from "./build";
@@ -16,6 +17,8 @@ export async function readBusinessAnalytics(
 ) {
   const access = await requireBusinessRole(userId, businessId, "read");
   if (!access) return { ok: false as const, status: 404, error: "Business not found" };
+  const blocked = await featureBlock(access.ownerId, "analytics");
+  if (blocked) return blocked;
   let range;
   try {
     range = resolveRange(query);

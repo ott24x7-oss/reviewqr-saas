@@ -1,6 +1,7 @@
 import { logAudit } from "./admin";
 import { prisma } from "./db";
 import { sendEmail } from "./email";
+import { queueAdminPush } from "./admin/push";
 import { rateLimitDb } from "./rate-limit";
 
 /** Record a dropped Baileys session and email admins at most once an hour. */
@@ -10,6 +11,13 @@ export async function noteBaileysDown(reason: string) {
       action: "whatsapp.baileys.disconnect",
       entity: "whatsapp",
       metadata: { reason }
+    });
+    void queueAdminPush({
+      event: "whatsappDown",
+      collapseKey: "sender",
+      title: "WhatsApp disconnected",
+      body: "The sender needs to be paired again.",
+      windowSeconds: 3600
     });
     const gate = await rateLimitDb({
       key: "baileys-disconnect-mail",

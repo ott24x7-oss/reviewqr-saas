@@ -1,10 +1,12 @@
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { Screen } from "../../src/ui/screen";
 import type { BillingSummary, ShopOrderDetail } from "@reviewqr/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { CreditCard, PackageOpen, ShoppingBag } from "lucide-react-native";
 import * as WebBrowser from "expo-web-browser";
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState , useMemo } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { apiData } from "../../src/api/data";
 import { ApiError } from "../../src/api/http";
 import { useI18n } from "../../src/i18n";
@@ -14,6 +16,7 @@ import { useSession } from "../../src/state/session";
 import { pollPayment } from "../../src/shop/poll";
 import { cartPaise } from "../../src/shop/totals";
 import { fonts } from "../../src/theme";
+import { EmptyState, LoadErrorCard, Skeleton } from "../../src/ui/bits";
 import { usePalette } from "../../src/ui/theme";
 import type { Palette } from "../../src/ui/tokens";
 import { Field, PillButton } from "../../src/ui/controls";
@@ -205,7 +208,7 @@ function ShopScreenContent() {
   const needsAddress = lines.some((line) => line.ships);
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <KeyboardAwareScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.row}>
         {(["catalogue", "orders", "plan"] as const).map((item) => (
           <Pressable key={item} accessibilityRole="button" accessibilityState={{ selected: tab === item }} accessibilityLabel={item === "catalogue" ? t.catalogue : item === "orders" ? t.orders : t.plans} onPress={() => setTab(item)} style={[styles.chip, tab === item && styles.chipOn]}>
@@ -218,12 +221,17 @@ function ShopScreenContent() {
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {tab === "catalogue" ? (
         <View style={styles.stack}>
-          {(catalog.data?.items ?? []).map((product) => (
+          {catalog.isLoading ? <><Skeleton height={96} /><Skeleton height={96} /></> : null}
+          {catalog.isError ? <LoadErrorCard onRetry={() => catalog.refetch().catch(() => undefined)} /> : null}
+          {!catalog.isLoading && !catalog.isError && (catalog.data?.items ?? []).length === 0 ? (
+            <EmptyState icon={ShoppingBag} title={t.emptyShopCatalogTitle} body={t.emptyShopCatalogBody} action={t.retry} onAction={() => catalog.refetch().catch(() => undefined)} />
+          ) : null}
+          {!catalog.isLoading && !catalog.isError ? (catalog.data?.items ?? []).map((product) => (
             <Pressable key={product.name} accessibilityRole="button" accessibilityLabel={product.name} style={styles.card} onPress={() => add(product)}>
               <Text style={styles.title}>{product.name}</Text>
               <Text style={styles.note}>{product.variants[0] ? rupees(product.variants[0].salePaise) : ""}</Text>
             </Pressable>
-          ))}
+          )) : null}
           <Text style={[styles.title, lang === "hi" && styles.hindi]}>
             {t.cart} · {rupees(cartPaise(lines))}
           </Text>
@@ -253,14 +261,19 @@ function ShopScreenContent() {
       ) : null}
       {tab === "orders" ? (
         <View style={styles.stack}>
-          {(orders.data?.items ?? []).map((order) => (
+          {orders.isLoading ? <><Skeleton height={80} /><Skeleton height={80} /></> : null}
+          {orders.isError ? <LoadErrorCard onRetry={() => orders.refetch().catch(() => undefined)} /> : null}
+          {!orders.isLoading && !orders.isError && (orders.data?.items ?? []).length === 0 ? (
+            <EmptyState icon={PackageOpen} title={t.emptyShopOrdersTitle} body={t.emptyShopOrdersBody} action={t.catalogue} onAction={() => setTab("catalogue")} />
+          ) : null}
+          {!orders.isLoading && !orders.isError ? (orders.data?.items ?? []).map((order) => (
             <Pressable key={order.id} accessibilityRole="button" accessibilityLabel={order.statusLabel || order.status} style={styles.card} onPress={() => setOpenId(order.id)}>
               <Text style={styles.title}>{order.statusLabel || order.status}</Text>
               <Text style={styles.note}>
                 {rupees(order.totalPaise)} · {order.paymentStatus}
               </Text>
             </Pressable>
-          ))}
+          )) : null}
           {detail.data ? (
             <View style={styles.card}>
               <Text style={[styles.title, lang === "hi" && styles.hindi]}>{t.tracking}</Text>
@@ -314,6 +327,8 @@ function ShopScreenContent() {
       ) : null}
       {tab === "plan" ? (
         <View style={styles.stack}>
+          {billing.isLoading ? <><Skeleton height={84} /><Skeleton height={84} /></> : null}
+          {billing.isError ? <LoadErrorCard onRetry={() => billing.refetch().catch(() => undefined)} /> : null}
           <Text style={[styles.note, lang === "hi" && styles.hindi]}>{sellPlans ? t.plansFlag : t.planHistory}</Text>
           <View style={styles.card}>
             <Text style={styles.title}>{plan?.tier || "…"}</Text>
@@ -321,14 +336,17 @@ function ShopScreenContent() {
             <Text style={styles.note}>{(plan?.subscriptionEndsAt || plan?.trialEndsAt || "").slice(0, 10)}</Text>
           </View>
           <Text style={[styles.title, lang === "hi" && styles.hindi]}>{t.planHistory}</Text>
-          {(billing.data?.history ?? []).map((row) => (
+          {!billing.isLoading && !billing.isError && (billing.data?.history ?? []).length === 0 ? (
+            <EmptyState icon={CreditCard} title={t.emptyShopHistoryTitle} body={t.emptyShopHistoryBody} action={t.catalogue} onAction={() => setTab("catalogue")} />
+          ) : null}
+          {!billing.isLoading && !billing.isError ? (billing.data?.history ?? []).map((row) => (
             <Text key={row.id} style={styles.note}>
               {row.createdAt.slice(0, 10)} · {row.tier} · {rupees(row.amountPaise)} · {row.status}
             </Text>
-          ))}
+          )) : null}
         </View>
       ) : null}
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 

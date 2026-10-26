@@ -1,5 +1,6 @@
 import { planDescriptionOrDefault } from "@/lib/brand-defaults";
 import { prisma } from "@/lib/db";
+import { parseBullets } from "@/lib/plans/bullets";
 import { DURATIONS, parseLimits } from "@/lib/plans/catalog";
 import { limitsForTier } from "@/lib/plans/legacy";
 import { PlansBoard, type AdminPlan } from "./plans-board";
@@ -26,8 +27,10 @@ export default async function AdminPlansPage() {
         qrCodes: limits.qrCodes,
         products: limits.products,
         staff: limits.staff,
+        locations: limits.locations,
         aiCalls: limits.aiCalls
       },
+      bullets: parseBullets(plan.bullets),
       badge: plan.badge,
       category: plan.category,
       imageUrl: plan.imageUrl,

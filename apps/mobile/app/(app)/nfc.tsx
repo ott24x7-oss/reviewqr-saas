@@ -1,4 +1,5 @@
 import { Screen } from "../../src/ui/screen";
+import { FeatureGate } from "../../src/state/plan-lock";
 import type { TapPage } from "@reviewqr/shared";
 import { useQuery } from "@tanstack/react-query";
 import LottieView from "lottie-react-native";
@@ -15,7 +16,7 @@ import { accountKey } from "../../src/query/keys";
 import { useBusiness } from "../../src/state/business";
 import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
-import { BottomSheet } from "../../src/ui/bits";
+import { BottomSheet, LoadErrorCard, Skeleton } from "../../src/ui/bits";
 import { PillButton } from "../../src/ui/controls";
 import { useTheme } from "../../src/ui/theme";
 import type { Palette } from "../../src/ui/tokens";
@@ -139,6 +140,8 @@ function NfcScreenContent() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Text style={[styles.title, lang === "hi" && styles.hindi]}>{t.nfcOne}</Text>
+      {tap.isLoading ? <Skeleton height={88} /> : null}
+      {tap.isError ? <LoadErrorCard onRetry={() => tap.refetch().catch(() => undefined)} /> : null}
       <View style={styles.hold}>
         {!reduceMotion && !lowRam ? (
           <LottieView source={require("../../assets/lottie/nfc.json")} autoPlay loop style={styles.lottie} />
@@ -149,7 +152,7 @@ function NfcScreenContent() {
         <Text style={[styles.note, lang === "hi" && styles.hindi]}>{safe ? url : path ? t.nfcUnsafeUrl : t.noQr}</Text>
       </View>
       {!base ? <Text style={styles.note}>{t.missingApi}</Text> : null}
-      {business && !tap.isLoading && !path ? <Text style={styles.note}>{t.noQr}</Text> : null}
+      {business && !tap.isLoading && !tap.isError && !path ? <Text style={styles.note}>{t.noQr}</Text> : null}
       {path && !safe ? <Text style={[styles.note, lang === "hi" && styles.hindi]}>{t.nfcUnsafeUrl}</Text> : null}
       {safe ? <Text style={styles.url}>{url}</Text> : null}
       {status ? <Text style={[styles.note, lang === "hi" && styles.hindi]}>{status}</Text> : null}
@@ -222,6 +225,8 @@ function makeStyles(colors: Palette) {
 
 export default function NfcScreen() {
   return (
-    <Screen topInset={true}><NfcScreenContent /></Screen>
+    <FeatureGate id="nfc">
+      <Screen topInset={true}><NfcScreenContent /></Screen>
+    </FeatureGate>
   );
 }

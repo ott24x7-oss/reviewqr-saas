@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { campaignSchema } from "@/lib/validations";
 import { ownerLimitError } from "@/lib/entitlements";
+import { denyFeatureResponse } from "@/lib/plans/feature-gate";
 import { planOwner, requireBusinessRole } from "@/lib/tenant";
 
 /** Creates a draft campaign. Sending is not built; the plan cap still applies. */
@@ -14,6 +15,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (!business) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const owner = await planOwner(user, business.ownerId);
   if (!owner) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const denied = await denyFeatureResponse(business.ownerId, "campaigns");
+  if (denied) return denied;
 
   const parsed = campaignSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {

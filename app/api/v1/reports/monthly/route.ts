@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireV1User } from "@/lib/api/v1";
+import { requireV1User, v1From } from "@/lib/api/v1";
+import { featureBlock } from "@/lib/plans/feature-gate";
 import { istDayKey } from "@/lib/analytics/ist";
 import { monthlyPdfFor } from "@/lib/reports/run";
 import { requireBusinessRole } from "@/lib/tenant";
@@ -12,6 +13,8 @@ export async function GET(req: NextRequest) {
   const businessId = req.nextUrl.searchParams.get("businessId") || "";
   const access = await requireBusinessRole(auth.user.id, businessId, "read");
   if (!access) return NextResponse.json({ error: { code: "NOT_FOUND", message: "Business not found" } }, { status: 404 });
+  const blocked = await featureBlock(access.ownerId, "pdf-report");
+  if (blocked) return v1From(blocked);
   const today = istDayKey(new Date());
   const month = req.nextUrl.searchParams.get("month") || today.slice(0, 7);
   const report = await monthlyPdfFor(businessId, month);

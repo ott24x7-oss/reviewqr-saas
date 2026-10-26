@@ -2,7 +2,8 @@ import type { Prisma } from "@prisma/client";
 import { menuActionSchema } from "@reviewqr/shared";
 import { prisma } from "../db";
 import { ownerLimitError } from "../entitlements";
-import { limit, moduleBlock } from "../plans/entitlements";
+import { limit } from "../plans/entitlements";
+import { featureBlock } from "../plans/feature-gate";
 import { adjustedPricePaise } from "./variants";
 import { flattenTemplate, templateById } from "./templates";
 import { takeForSave } from "./entry";
@@ -35,8 +36,8 @@ export async function runMenuAction(userId: string, businessId: string, raw: unk
   if (!actor) return fail(401, "Unauthorized");
   const owner = await planOwner(actor, business.ownerId);
   if (!owner) return fail(404, "Not found");
-  const locked = await moduleBlock(owner.id, "MENU");
-  if (locked) return fail(403, locked);
+  const locked = await featureBlock(owner.id, "menu");
+  if (locked) return locked;
 
   const parsed = menuActionSchema.safeParse(raw);
   if (!parsed.success) {

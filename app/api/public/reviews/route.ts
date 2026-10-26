@@ -6,6 +6,7 @@ import { sanitizeFeedback, sanitizeText, isLikelyDuplicate } from "@/lib/sanitiz
 import { fingerprint, getClientIp } from "@/lib/utils";
 import { notifyNegativeFeedback } from "@/lib/notify";
 import { monthlyReviewCount, ownerLimitError } from "@/lib/entitlements";
+import { featureBlock, planDeniedResponse } from "@/lib/plans/feature-gate";
 import { reviewContact } from "@/lib/privacy";
 import { reviewWasRedirected } from "@/lib/review-policy";
 import type { ReviewSentiment } from "@prisma/client";
@@ -45,6 +46,8 @@ export async function POST(req: NextRequest) {
     where: { slug: data.businessSlug, isActive: true, archived: false }
   });
   if (!business) return NextResponse.json({ error: "Business not found" }, { status: 404 });
+  const locked = await featureBlock(business.ownerId, "reviews-log");
+  if (locked) return planDeniedResponse(locked);
 
   const location = data.locationSlug
     ? await prisma.location.findUnique({

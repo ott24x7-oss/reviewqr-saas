@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { ownerLimitError, calendarMonthStart } from "@/lib/entitlements";
-import { moduleBlock } from "@/lib/plans/entitlements";
+import { featureBlock, planDeniedResponse } from "@/lib/plans/feature-gate";
 import { rateLimitDb } from "@/lib/rate-limit";
 import { absoluteUrl, getClientIp } from "@/lib/utils";
 import { makeQrPublicId } from "@/lib/tap/ids";
@@ -70,8 +70,8 @@ export async function POST(req: NextRequest) {
   if (!qr?.business || qr.status !== "ACTIVE" || !qr.business.isActive || qr.business.archived) {
     return NextResponse.json({ error: "This menu is not available" }, { status: 404 });
   }
-  const locked = await moduleBlock(qr.business.ownerId, "STORE");
-  if (locked) return NextResponse.json({ error: locked }, { status: 403 });
+  const locked = await featureBlock(qr.business.ownerId, "whatsapp-orders");
+  if (locked) return planDeniedResponse(locked);
 
   const storeLimit = await rateLimitDb({
     key: storeOrderRateKeys(ip, qr.business.id)[1],

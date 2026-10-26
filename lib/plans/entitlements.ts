@@ -26,16 +26,18 @@ export async function loadEntitlement(userId: string): Promise<Entitlement> {
   }
   const sub = await prisma.subscription.findFirst({
     where: { userId, status: { in: ["ACTIVE", "TRIALING", "PAST_DUE"] } },
-    orderBy: { createdAt: "desc" }
+    orderBy: { createdAt: "desc" },
+    include: { plan: { select: { modules: true, limits: true } } }
   });
   if (sub && snapshotGrants({ tier: sub.tier, status: sub.status, endsAt: sub.endsAt })) {
     const tier = sub.tier;
-    // Catalogue purchases keep the modules they bought. Legacy tiers keep today's access.
+    // A catalogue plan follows the current row, so an admin edit reaches the app without a deploy.
+    // The subscription row stays the purchase record when the plan itself is gone.
     if (isCataloguePlan(sub.planId)) {
       return {
         tier,
-        modules: cleanModules(sub.modules),
-        limits: parseLimits(sub.limits, await limitsForTier(tier))
+        modules: cleanModules(sub.plan ? sub.plan.modules : sub.modules),
+        limits: parseLimits(sub.plan ? sub.plan.limits : sub.limits, await limitsForTier(tier))
       };
     }
     return { tier, modules: cleanModules(modulesForTier(tier)), limits: await limitsForTier(tier) };

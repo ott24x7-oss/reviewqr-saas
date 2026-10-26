@@ -138,6 +138,11 @@ model User {
   referralRewardReceived ReferralReward? @relation("RewardReferred")
   referralCredit ReferralCredit?
   agentOnboardings AgentOnboarding[]
+  commissionLeaderSnapshots ShopCommission[] @relation("CommissionLeaderSnapshot")
+  suspendedAt DateTime?
+  adminDevices AdminDevice[] @relation("AdminDeviceOwner")
+  adminDevicesApproved AdminDevice[] @relation("AdminDeviceApprover")
+  adminNotifyPref AdminNotifyPref?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -185,11 +190,64 @@ model RefreshSession {
   expiresAt  DateTime
   deviceName String?
   userAgent  String?
+  audience   String    @default("app")
+  adminDeviceId String?
+  adminDevice AdminDevice? @relation(fields: [adminDeviceId], references: [id], onDelete: SetNull)
   createdAt  DateTime  @default(now())
   lastUsedAt DateTime?
 
   @@index([userId])
   @@index([familyId])
+  @@index([adminDeviceId])
+}
+
+enum AdminDeviceStatus {
+  PENDING
+  ACTIVE
+  REVOKED
+}
+
+// A phone that signed into the admin app. A new phone stays PENDING until the web approves it.
+model AdminDevice {
+  id           String            @id @default(cuid())
+  userId       String
+  user         User              @relation("AdminDeviceOwner", fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  platform     String
+  pushToken    String?
+  /// SHA-256 of the device secret handed out once at first sign-in. Never the secret itself.
+  secretHash   String?
+  status       AdminDeviceStatus @default(PENDING)
+  lastSeenAt   DateTime?
+  approvedById String?
+  approvedBy   User?             @relation("AdminDeviceApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  sessions     RefreshSession[]
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@index([userId, status])
+  @@index([status, createdAt])
+}
+
+/// A spent admin step-up token. The jti is the key, so a token works once.
+model StepUpUse {
+  jti    String   @id
+  usedAt DateTime @default(now())
+
+  @@index([usedAt])
+}
+
+model AdminNotifyPref {
+  userId        String  @id
+  user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  paidPayment   Boolean @default(true)
+  failedPayment Boolean @default(true)
+  signup        Boolean @default(true)
+  agentPending  Boolean @default(true)
+  printProof    Boolean @default(true)
+  payoutDue     Boolean @default(true)
+  supportTicket Boolean @default(true)
+  whatsappDown  Boolean @default(true)
 }
 
 // Expo push tokens. This is not an NFC Device.
@@ -1252,11 +1310,16 @@ model AuditLog {
   metadata  Json?
   ip        String?
   userAgent String?  @db.Text
+  deviceId  String?
+  reason    String?  @db.Text
+  before    Json?
+  after     Json?
 
   createdAt DateTime @default(now())
 
   @@index([userId])
   @@index([entity, entityId])
+  @@index([deviceId])
 }
 
 // Per-business stock of pre-written positive reviews. After a happy
@@ -1713,6 +1776,16 @@ model ShopCarrierEvent {
 enum ShopCommissionKind {
   ORDER
   RENEWAL
+  SALE
+  HARDWARE
+  TEAM_OVERRIDE
+}
+
+enum AgentStatus {
+  PENDING
+  ACTIVE
+  PAUSED
+  REJECTED
 }
 
 // One credit per agent, kind, and source. An order and a renewal never share a source.
@@ -1739,6 +1812,11 @@ model ShopCommission {
   planId      String?
   payoutId    String?
   payout      CommissionPayout?  @relation(fields: [payoutId], references: [id], onDelete: SetNull)
+  /// Team share used for this row, frozen at sale time.
+  sharePercent Int?
+  /// Leader who sits above this earner, frozen at sale time.
+  leaderId    String?
+  leader      User?              @relation("CommissionLeaderSnapshot", fields: [leaderId], references: [id], onDelete: SetNull)
   createdAt   DateTime           @default(now())
 
   @@unique([agentId, kind, sourceId])
@@ -1747,6 +1825,7 @@ model ShopCommission {
   @@index([paymentId])
   @@index([status, holdUntil])
   @@index([payoutId])
+  @@index([leaderId])
 }
 
 // Damage or misprint after delivery. Approval is what allows Delivered → Reprint.
@@ -1790,6 +1869,8 @@ model Plan {
   descriptionHi        String           @default("") @db.Text
   modules              String[]
   limits               Json
+  /// Feature lines for the pricing page. Empty means they are built from the modules.
+  bullets              Json             @default("[]")
   badge                String?
   category             String           @default("reviews")
   imageUrl             String           @default("")
@@ -1822,7 +1903,7 @@ model PlanPrice {
   @@unique([planId, duration])
 }
 
-// Snapshot of the modules and limits the owner bought. Later plan edits do not change it.
+// Purchase record. A catalogue plan's access follows the current plan row, so an admin edit applies without a new checkout.
 model Subscription {
   id              String             @id @default(cuid())
   userId          String
@@ -1851,15 +1932,47 @@ model Subscription {
 }
 
 model AgentProfile {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  upiId     String   @default("")
-  city      String   @default("")
-  active    Boolean  @default(true)
-  code      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String         @id @default(cuid())
+  userId       String         @unique
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  upiId        String         @default("")
+  city         String         @default("")
+  active       Boolean        @default(true)
+  code         String         @unique
+  leaderId     String?
+  leader       AgentProfile?  @relation("AgentTeam", fields: [leaderId], references: [id], onDelete: SetNull)
+  members      AgentProfile[] @relation("AgentTeam")
+  status       AgentStatus    @default(ACTIVE)
+  /// User who paused this agent. A leader can resume only a pause they made.
+  pausedBy     String?
+  sharePercent Int?
+  depth        Int            @default(1)
+  /// PAN, encrypted with the platform secret helper. Readers show the last 4 only.
+  pan          String?
+  /// Bank account number, encrypted. Optional.
+  bankAccount  String?
+  bankIfsc     String?
+  bankName     String?
+  invites      AgentInvite[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([leaderId])
+  @@index([status])
+}
+
+// A leader's invite. Joining never charges a fee and never creates a commission.
+model AgentInvite {
+  id        String       @id @default(cuid())
+  code      String       @unique
+  leaderId  String
+  leader    AgentProfile @relation(fields: [leaderId], references: [id], onDelete: Cascade)
+  phone     String?
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime     @default(now())
+
+  @@index([leaderId, createdAt])
 }
 
 // Null agentId is the default rule. Null planId applies to every plan.
@@ -1890,6 +2003,9 @@ model CommissionPayout {
   agentId        String
   agent          User             @relation(fields: [agentId], references: [id], onDelete: Restrict)
   amountPaise    Int
+  grossPaise     Int              @default(0)
+  tdsPaise       Int              @default(0)
+  netPaise       Int              @default(0)
   utr            String
   paidAt         DateTime
   note           String           @default("")

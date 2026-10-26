@@ -1,0 +1,1 @@
+ALTER TABLE "Plan" ADD COLUMN "bullets" JSONB NOT NULL DEFAULT '[]';

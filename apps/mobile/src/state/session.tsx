@@ -9,6 +9,16 @@ import { apiData } from "../api/data";
 import { apiBaseUrl, mobileApi } from "../api/instance";
 import { forgetPushToken, readPushToken } from "../push/stored-token";
 import { BUSINESS_ID_KEY } from "./storage";
+import { agentMockEnabled } from "../agent/env";
+
+const MOCK_AGENT_USER: Me = {
+  id: "local-agent",
+  email: "agent@example.test",
+  name: "Diwakar Sharma",
+  phone: "+919876543210",
+  role: "AGENT",
+  pushEnabled: false
+};
 
 type SessionValue = {
   ready: boolean;
@@ -20,12 +30,16 @@ type SessionValue = {
 
 const SessionContext = createContext<SessionValue | null>(null);
 
-export function SessionProvider({ children }: { children: ReactNode }) {
+export function SessionProvider({ children, disabled = false }: { children: ReactNode; disabled?: boolean }) {
   const queryClient = useQueryClient();
-  const [ready, setReady] = useState(false);
+  const [ready, setReady] = useState(disabled);
   const [user, setUser] = useState<Me | null>(null);
 
   const refreshUser = useCallback(async () => {
+    if (agentMockEnabled()) {
+      setUser(MOCK_AGENT_USER);
+      return;
+    }
     const me = await apiData<Me>("/api/v1/me");
     setUser(me);
   }, []);
@@ -39,6 +53,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   );
 
   const logout = useCallback(async () => {
+    if (agentMockEnabled()) {
+      queryClient.clear();
+      setUser(null);
+      return;
+    }
     await endSession({
       baseUrl: apiBaseUrl(),
       accessToken: mobileApi.getAccessToken(),
@@ -54,12 +73,26 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let live = true;
+    if (disabled) {
+      return () => { live = false; };
+    }
     mobileApi.setSessionListener(() => {
       if (!live) return;
       clearWidgetSnapshot().catch(() => undefined);
       setUser(null);
       router.replace("/(auth)/login");
     });
+    if (agentMockEnabled()) {
+      Promise.resolve().then(() => {
+        if (!live) return;
+        setUser(MOCK_AGENT_USER);
+        setReady(true);
+      });
+      return () => {
+        live = false;
+        mobileApi.setSessionListener(null);
+      };
+    }
     mobileApi
       .restore()
       .then(async (ok) => {
@@ -74,7 +107,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       live = false;
       mobileApi.setSessionListener(null);
     };
-  }, [refreshUser]);
+  }, [disabled, refreshUser]);
 
   const value = useMemo(
     () => ({ ready, user, saveSession, refreshUser, logout }),

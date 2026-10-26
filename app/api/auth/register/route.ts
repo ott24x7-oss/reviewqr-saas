@@ -12,6 +12,7 @@ import { markOnboarding } from "@/lib/tap/onboarding-mark";
 import { isReservedSlug } from "@/lib/tap/reserved-slugs";
 import { cookies } from "next/headers";
 import { JOIN_COOKIE, applySignupAttribution } from "@/lib/plans/attribution";
+import { queueAdminPush } from "@/lib/admin/push";
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req.headers);
@@ -57,6 +58,13 @@ export async function POST(req: NextRequest) {
       subscriptionStatus: "TRIALING",
       trialEndsAt
     }
+  });
+  void queueAdminPush({
+    event: "signup",
+    collapseKey: user.id,
+    title: "New signup",
+    body: "A new owner joined QR24x7.",
+    windowSeconds: 86400
   });
 
   let businessId: string | null = null;

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { phoneKey } from "@/lib/otp";
 import { effectiveTier } from "@/lib/payments";
+import { denyFeatureResponse } from "@/lib/plans/feature-gate";
 import { z } from "zod";
 
 const schema = z.object({
@@ -24,8 +25,17 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message }, { status: 400 });
   }
 
-  // White-label only allowed on Agency tier
   const data = { ...parsed.data };
+  const wantsWhiteLabel =
+    data.whiteLabelEnabled !== undefined ||
+    data.whiteLabelName !== undefined ||
+    data.whiteLabelDomain !== undefined ||
+    data.whiteLabelColor !== undefined;
+  if (wantsWhiteLabel) {
+    const denied = await denyFeatureResponse(user.id, "custom-domain");
+    if (denied) return denied;
+  }
+  // White-label only allowed on Agency tier
   if (data.phone !== undefined) {
     const currentKey = phoneKey(user.phone || "");
     const nextKey = phoneKey(data.phone);

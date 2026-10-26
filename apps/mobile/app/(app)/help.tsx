@@ -1,15 +1,17 @@
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { Screen } from "../../src/ui/screen";
 import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput } from "react-native";
+import { Pressable, StyleSheet, Text, TextInput } from "react-native";
 import { apiData } from "../../src/api/data";
 import { replayAllTours } from "../../src/guide/store";
+import { queueSetupStep } from "../../src/guide/setup";
 import { useI18n } from "../../src/i18n";
 import { accountKey } from "../../src/query/keys";
 import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
-import { Card, EmptyState } from "../../src/ui/bits";
+import { Card, EmptyState, LoadErrorCard, Skeleton } from "../../src/ui/bits";
 import { PrimaryButton } from "../../src/ui/buttons";
 import { usePalette } from "../../src/ui/theme";
 import { CircleHelp } from "lucide-react-native";
@@ -48,7 +50,7 @@ function HelpScreenContent() {
   ].filter((guide) => !needle || `${guide.title} ${guide.body}`.toLowerCase().includes(needle));
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: palette.paper }} contentContainerStyle={styles.content}>
+    <KeyboardAwareScrollView style={{ flex: 1, backgroundColor: palette.paper }} contentContainerStyle={styles.content}>
       <Text style={[styles.title, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.helpCenter}</Text>
       <TextInput
         accessibilityLabel={t.helpSearch}
@@ -59,6 +61,9 @@ function HelpScreenContent() {
         style={[styles.search, { color: palette.ink, backgroundColor: palette.card, borderColor: palette.line }]}
       />
       <PrimaryButton label={t.showTips} onPress={() => replayAllTours().then(() => router.back())} />
+      <PrimaryButton label={t.showSetupGuideAgain} onPress={() => queueSetupStep("first").then(() => router.replace("/(app)"))} />
+      {articles.isLoading ? <><Skeleton height={92} /><Skeleton height={92} /></> : null}
+      {articles.isError ? <LoadErrorCard onRetry={() => articles.refetch().catch(() => undefined)} /> : null}
       {rows.length === 0 && guides.length === 0 ? <EmptyState icon={CircleHelp} title={t.noArticles} body={t.helpSearch} /> : null}
       {rows.map((article) => (
         <Card key={article.id}>
@@ -78,7 +83,7 @@ function HelpScreenContent() {
       <Pressable accessibilityRole="button" accessibilityLabel={t.wizardBack} onPress={() => router.back()} style={styles.back}>
         <Text style={{ color: palette.deep, fontFamily: fonts.bodyStrong }}>{t.wizardBack}</Text>
       </Pressable>
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 
