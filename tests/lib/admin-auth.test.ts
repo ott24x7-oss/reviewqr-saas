@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { NextRequest } from "next/server";
 import { POST as requestPost } from "../../app/api/v1/admin/auth/otp/request/route";
 import { POST as verifyPost } from "../../app/api/v1/admin/auth/otp/verify/route";
@@ -43,6 +43,11 @@ describe("admin auth", () => {
   const adminPhone = `9${String(stamp).slice(-9)}`;
   const otherPhone = `8${String(stamp).slice(-9)}`;
   const stranger = `7${String(stamp).slice(-9)}`;
+
+  beforeAll(async () => {
+    // The IP-wide OTP limits outlive a run; start each run with a clean window for this test IP.
+    await prisma.rateLimit.deleteMany({ where: { key: { contains: "10.24.7.15" } } });
+  });
 
   afterAll(async () => {
     if (reveal === undefined) delete process.env.OTP_DEV_REVEAL;
@@ -107,6 +112,10 @@ describe("admin auth", () => {
     const session = (await verified.json()).data;
     expect(session.expiresIn).toBe(600);
     expect(session.device.status).toBe("PENDING");
+    expect(session.deviceSecret).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    const stored = await prisma.adminDevice.findUnique({ where: { id: session.device.id } });
+    expect(stored?.secretHash).toBeTruthy();
+    expect(stored?.secretHash).not.toContain(session.deviceSecret);
     const payload = JSON.parse(Buffer.from(session.accessToken.split(".")[1], "base64url").toString("utf8"));
     expect(payload.aud).toBe("admin");
     expect(payload.deviceId).toBe(session.device.id);
@@ -264,10 +273,51 @@ describe("admin auth", () => {
     const again = (await signedAgain.json()).data;
     expect(again.device.id).not.toBe(pendingDevice.id);
     expect(again.device.status).toBe("PENDING");
+    expect(again.deviceSecret).toBeTruthy();
 
     const loggedOut = await logoutPost(call("/api/v1/admin/auth/logout", { refreshToken: approverBody.refreshToken }));
     expect(loggedOut.status).toBe(200);
     const dead = await refreshPost(call("/api/v1/admin/auth/refresh", { refreshToken: approverBody.refreshToken }));
     expect(dead.status).toBe(401);
+  });
+  it("reuses an approved phone only with its device secret", async () => {
+    const ownerPhone = `5${String(stamp).slice(-9)}`;
+    phones.push(ownerPhone);
+    const admin = await prisma.user.create({
+      data: { email: `secret-${stamp}@example.test`, role: "ADMIN", phone: ownerPhone, name: "Secret" }
+    });
+    users.push(admin.id);
+    async function signIn(extra: Record<string, string>) {
+      await clearPhoneLimits(ownerPhone);
+      await prisma.rateLimit.deleteMany({ where: { key: { contains: "10.24.7.15" } } });
+      const codeRes = await requestPost(call("/api/v1/admin/auth/otp/request", { phone: ownerPhone }));
+      const res = await verifyPost(
+        call("/api/v1/admin/auth/otp/verify", {
+          phone: ownerPhone,
+          code: (await codeRes.json()).data.devCode,
+          deviceName: `Phone ${stamp}`,
+          ...extra
+        })
+      );
+      expect(res.status).toBe(200);
+      return (await res.json()).data;
+    }
+
+    const first = await signIn({ pushToken: "ExponentPushToken[real]" });
+    expect(first.deviceSecret).toBeTruthy();
+    await prisma.adminDevice.update({ where: { id: first.device.id }, data: { status: "ACTIVE" } });
+
+    // Knowing the device id (it is inside every access token) is not enough.
+    const idOnly = await signIn({ deviceId: first.device.id, pushToken: "ExponentPushToken[attacker]" });
+    expect(idOnly.device.id).not.toBe(first.device.id);
+    expect(idOnly.device.status).toBe("PENDING");
+    const wrong = await signIn({ deviceId: first.device.id, deviceSecret: "x".repeat(43), pushToken: "ExponentPushToken[attacker]" });
+    expect(wrong.device.id).not.toBe(first.device.id);
+    expect(wrong.device.status).toBe("PENDING");
+    expect((await prisma.adminDevice.findUnique({ where: { id: first.device.id } }))?.pushToken).toBe("ExponentPushToken[real]");
+
+    const reused = await signIn({ deviceId: first.device.id, deviceSecret: first.deviceSecret });
+    expect(reused.device).toMatchObject({ id: first.device.id, status: "ACTIVE" });
+    expect(reused.deviceSecret).toBeUndefined();
   });
 });

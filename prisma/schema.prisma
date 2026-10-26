@@ -215,6 +215,8 @@ model AdminDevice {
   name         String
   platform     String
   pushToken    String?
+  /// SHA-256 of the device secret handed out once at first sign-in. Never the secret itself.
+  secretHash   String?
   status       AdminDeviceStatus @default(PENDING)
   lastSeenAt   DateTime?
   approvedById String?

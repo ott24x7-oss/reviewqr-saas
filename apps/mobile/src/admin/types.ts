@@ -3,12 +3,14 @@ export type AdminInboxSegment = "agents" | "devices" | "proofs" | "payouts" | "r
 export type AdminInboxAction = "approve" | "reject" | "pause" | "mark-paid" | "reply" | "ship";
 
 export type AdminAuthRequest = { phase: "request"; phone: string };
-export type AdminAuthVerify = { phase: "verify"; phone: string; code: string; deviceName: string; platform: string; pushToken?: string };
+export type AdminAuthVerify = { phase: "verify"; phone: string; code: string; deviceName: string; platform: string; pushToken?: string; deviceId?: string; deviceSecret?: string };
 export type AdminAuthResponse = {
   accessToken: string;
   refreshToken: string;
   status: AdminDeviceStatus;
   deviceId: string;
+  /** Sent once for a newly registered phone. Kept in secure storage. */
+  deviceSecret?: string;
   admin: { id: string; name: string; phoneMasked: string };
 };
 export type AdminAuthStatus = {

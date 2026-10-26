@@ -7,7 +7,7 @@ import { router } from "expo-router";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AppState, Platform } from "react-native";
 import { useQueryClient } from "@tanstack/react-query";
-import { adminAuth, AdminApiError, clearAdminTokens, readAdminAccessToken, writeAdminTokens } from "./api";
+import { adminAuth, AdminApiError, clearAdminTokens, forgetAdminDevice, readAdminAccessToken, readAdminDevice, rememberAdminDevice, writeAdminTokens } from "./api";
 import { adminMockEnabled } from "./env";
 import type { AdminAuthRequest, AdminAuthStatus, AdminDeviceStatus } from "./types";
 
@@ -54,7 +54,7 @@ export function AdminSessionProvider({ children }: { children: ReactNode }) {
   }, [queryClient]);
 
   const markRevoked = useCallback(async () => {
-    await clearAdminTokens();
+    await Promise.all([clearAdminTokens(), forgetAdminDevice()]);
     setUnlocked(false);
     setStatus("REVOKED");
     if (!revokedTimer.current) revokedTimer.current = setTimeout(() => signOut().catch(() => undefined), 1200);
@@ -101,15 +101,18 @@ export function AdminSessionProvider({ children }: { children: ReactNode }) {
         }
       } catch { /* sign-in remains available if notifications are disabled */ }
     }
+    const saved = await readAdminDevice();
     const response = await adminAuth.verifyOtp({
       phase: "verify",
       phone: phone.replace(/\D/g, ""),
       code: code.trim(),
       deviceName: Device.deviceName || `${Platform.OS} device`,
       platform: Platform.OS,
-      pushToken
+      pushToken,
+      ...(saved ?? {})
     });
     await writeAdminTokens(response.accessToken, response.refreshToken);
+    await rememberAdminDevice(response);
     setAdmin(response.admin);
     setDeviceId(response.deviceId);
     setStatus(response.status);

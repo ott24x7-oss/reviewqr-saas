@@ -4,13 +4,15 @@ import { apiBaseUrl } from "../api/instance";
 import { adminMockEnabled } from "./env";
 import { adminMockRequest } from "./mock";
 import type {
-  AdminAccountDetail, AdminAuthRequest, AdminAuthResponse, AdminAuthStatus, AdminDashboard,
+  AdminAccountDetail, AdminAuthRequest, AdminAuthResponse, AdminAuthVerify, AdminAuthStatus, AdminDashboard,
   AdminInbox, AdminInboxSegment, AdminMoney, AdminPlan, AdminSearchResult, AdminSettings,
   AdminShopOrder, AdminSupportTicket, AdminTeam, AdminWhatsApp
 } from "./types";
 
 export const ADMIN_ACCESS_KEY = "qr24x7.admin.access";
 export const ADMIN_REFRESH_KEY = "qr24x7.admin.refresh";
+export const ADMIN_DEVICE_ID_KEY = "qr24x7.admin.deviceId";
+export const ADMIN_DEVICE_SECRET_KEY = "qr24x7.admin.deviceSecret";
 export const ADMIN_QUERY_PREFIX = ["admin"] as const;
 
 export async function writeAdminTokens(access: string, refresh: string) {
@@ -23,6 +25,22 @@ export async function readAdminAccessToken() {
 
 export async function clearAdminTokens() {
   await Promise.all([secureRemove(ADMIN_ACCESS_KEY), secureRemove(ADMIN_REFRESH_KEY)]);
+}
+
+/** The server reuses this phone's approval only when it sees the secret it issued for it. */
+export async function readAdminDevice() {
+  const [deviceId, deviceSecret] = await Promise.all([secureGet(ADMIN_DEVICE_ID_KEY), secureGet(ADMIN_DEVICE_SECRET_KEY)]);
+  return deviceId && deviceSecret ? { deviceId, deviceSecret } : null;
+}
+
+/** The secret is returned once, when the phone is first registered. */
+export async function rememberAdminDevice(response: { deviceId: string; deviceSecret?: string }) {
+  if (!response.deviceSecret) return;
+  await Promise.all([secureSet(ADMIN_DEVICE_ID_KEY, response.deviceId), secureSet(ADMIN_DEVICE_SECRET_KEY, response.deviceSecret)]);
+}
+
+export async function forgetAdminDevice() {
+  await Promise.all([secureRemove(ADMIN_DEVICE_ID_KEY), secureRemove(ADMIN_DEVICE_SECRET_KEY)]);
 }
 
 async function secureGet(key: string) {
@@ -67,7 +85,7 @@ export async function adminFetch<T>(path: string, init: RequestInit = {}): Promi
 
 export const adminAuth = {
   requestOtp: (body: AdminAuthRequest) => adminFetch<{ challengeId: string }>("/auth", { method: "POST", body: JSON.stringify(body) }),
-  verifyOtp: (body: { phase: "verify"; phone: string; code: string; deviceName: string; platform: string; pushToken?: string }) => adminFetch<AdminAuthResponse>("/auth", { method: "POST", body: JSON.stringify(body) }),
+  verifyOtp: (body: AdminAuthVerify) => adminFetch<AdminAuthResponse>("/auth", { method: "POST", body: JSON.stringify(body) }),
   status: () => adminFetch<AdminAuthStatus>("/auth"),
   requestStepUp: (action: string, target?: string) => adminFetch<{ challengeId: string }>("/step-up", { method: "POST", body: JSON.stringify({ phase: "request", action, target }) }),
   verifyStepUp: (action: string, challengeId: string, code: string) => adminFetch<{ challengeId: string; stepUpToken: string; expiresAt: string }>("/step-up", { method: "POST", body: JSON.stringify({ phase: "verify", action, challengeId, code }) })

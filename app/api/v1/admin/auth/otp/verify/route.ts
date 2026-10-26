@@ -17,9 +17,10 @@ async function postHandler(req: NextRequest) {
   if (!parsed.ok) return parsed.response;
   const verified = await verifyAdminOtp(parsed.data.phone, parsed.data.code);
   if (!verified.ok) return v1Error(400, "VALIDATION", verified.error);
-  const device = await openAdminDevice({
+  const { device, deviceSecret } = await openAdminDevice({
     userId: verified.user.id,
     deviceId: parsed.data.deviceId,
+    deviceSecret: parsed.data.deviceSecret,
     name: parsed.data.deviceName,
     platform: parsed.data.platform || "android",
     pushToken: parsed.data.pushToken
@@ -27,7 +28,8 @@ async function postHandler(req: NextRequest) {
   const tokens = await issueAdminTokenPair(verified.user, device.id, deviceMeta(req, parsed.data.deviceName));
   return v1Data({
     ...tokens,
-    device: { id: device.id, status: device.status, name: device.name, platform: device.platform }
+    device: { id: device.id, status: device.status, name: device.name, platform: device.platform },
+    ...(deviceSecret ? { deviceSecret } : {})
   });
 }
 export const POST = observe(postHandler);

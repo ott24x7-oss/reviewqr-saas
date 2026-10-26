@@ -10,7 +10,9 @@ export const adminOtpVerifySchema = z.object({
   deviceName: z.string().trim().min(1).max(80),
   platform: adminPlatformSchema.default("android"),
   pushToken: z.string().max(240).optional(),
-  deviceId: z.string().max(64).optional()
+  deviceId: z.string().max(64).optional(),
+  /** Returned once when this phone was first registered. Required to reuse deviceId. */
+  deviceSecret: z.string().max(128).optional()
 });
 
 export const adminDeviceSchema = z.object({
@@ -21,7 +23,9 @@ export const adminDeviceSchema = z.object({
 });
 
 export const adminSessionSchema = tokenPairSchema.extend({
-  device: adminDeviceSchema
+  device: adminDeviceSchema,
+  /** Present only when a new device was registered. Store it securely; it is not shown again. */
+  deviceSecret: z.string().optional()
 });
 
 export const adminStepUpSchema = z.object({

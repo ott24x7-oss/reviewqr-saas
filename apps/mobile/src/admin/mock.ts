@@ -101,6 +101,9 @@ let teamMembers: AdminTeam["members"] = clone(initialTeam);
 let shopOrders: AdminShopOrder[] = clone(initialShopOrders);
 let settings: AdminSettings = { maintenanceBanner: "", autoApproveAgents: false, teamDepth: 4, shareCapPercent: 80, tdsPercent: 10, minVersionCode: 4, latestVersionCode: 5, flags: [{ name: "New checkout", enabled: true }, { name: "Shop shipping", enabled: false }], devices: [{ id: "d-1", name: "Pixel 9 · Jaipur", status: "ACTIVE", lastSeenAt: "Now" }, { id: "d-2", name: "Chrome · Admin web", status: "ACTIVE", lastSeenAt: "1 hour ago" }] };
 let stepUpToken = "";
+const MOCK_DEVICE_SECRET = "mock-device-secret";
+let deviceSerial = 0;
+let deviceId = "device-1";
 
 export function resetAdminMock() {
   deviceStatus = "PENDING";
@@ -113,6 +116,8 @@ export function resetAdminMock() {
     { id: "pro", nameEn: "Pro", nameHi: "प्रो", durationDays: 365, pricePaise: 5999000, visible: true, active: true, modules: ["All modules"], badge: null, sort: 3 }
   ];
   stepUpToken = "";
+  deviceSerial = 0;
+  deviceId = "device-1";
   teamMembers = clone(initialTeam);
   shopOrders = clone(initialShopOrders);
 }
@@ -131,13 +136,19 @@ export async function adminMockRequest<T>(path: string, init: RequestInit = {}):
   if (cleanPath === "/auth" && method === "POST" && body.phase === "request") result = { challengeId: "mock-admin-otp" };
   else if (cleanPath === "/auth" && method === "POST" && body.phase === "verify") {
     if (body.code !== "123456") throw new Error("INVALID_OTP");
-    deviceStatus = "PENDING";
-    pendingChecks = 2;
-    result = { accessToken: "mock-admin-access", refreshToken: "mock-admin-refresh", status: deviceStatus, deviceId: "device-1", admin: { id: "admin-1", name: "Kavita Sharma", phoneMasked: "+91 •••• 4218" } } satisfies AdminAuthResponse;
+    // Like the server: a device id is reused only with the secret issued for it.
+    const reuse = deviceSerial > 0 && deviceStatus !== "REVOKED" && body.deviceId === deviceId && body.deviceSecret === `${MOCK_DEVICE_SECRET}-${deviceSerial}`;
+    if (!reuse) {
+      deviceSerial += 1;
+      deviceId = `device-${deviceSerial}`;
+      deviceStatus = "PENDING";
+      pendingChecks = 2;
+    }
+    result = { accessToken: "mock-admin-access", refreshToken: "mock-admin-refresh", status: deviceStatus, deviceId, ...(reuse ? {} : { deviceSecret: `${MOCK_DEVICE_SECRET}-${deviceSerial}` }), admin: { id: "admin-1", name: "Kavita Sharma", phoneMasked: "+91 •••• 4218" } } satisfies AdminAuthResponse;
   } else if (cleanPath === "/auth" && method === "GET") {
     if (deviceStatus === "PENDING" && pendingChecks > 0) pendingChecks -= 1;
     else if (deviceStatus === "PENDING") deviceStatus = "ACTIVE";
-    result = { status: deviceStatus, deviceId: "device-1", admin: { id: "admin-1", name: "Kavita Sharma", phoneMasked: "+91 •••• 4218" } } satisfies AdminAuthStatus;
+    result = { status: deviceStatus, deviceId, admin: { id: "admin-1", name: "Kavita Sharma", phoneMasked: "+91 •••• 4218" } } satisfies AdminAuthStatus;
   } else if (cleanPath === "/step-up" && method === "POST" && body.phase === "request") result = { challengeId: "mock-step-up" };
   else if (cleanPath === "/step-up" && method === "POST" && body.phase === "verify") {
     if (body.code !== "123456") throw new Error("INVALID_OTP");

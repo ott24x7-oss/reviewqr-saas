@@ -1,9 +1,27 @@
+import crypto from "crypto";
 import { logAudit } from "@/lib/admin";
 import { prisma } from "@/lib/db";
 
+export function hashDeviceSecret(secret: string) {
+  return crypto.createHash("sha256").update(secret, "utf8").digest("hex");
+}
+
+function secretMatches(secret: string, storedHash: string | null) {
+  if (!storedHash) return false;
+  const a = Buffer.from(hashDeviceSecret(secret), "hex");
+  const b = Buffer.from(storedHash, "hex");
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+/**
+ * A device id alone proves nothing: it is sent in every token. An existing device is
+ * reused only with the secret it was issued. Anything else opens a new PENDING device
+ * and returns its secret once.
+ */
 export async function openAdminDevice(input: {
   userId: string;
   deviceId?: string | null;
+  deviceSecret?: string | null;
   name: string;
   platform: string;
   pushToken?: string | null;
@@ -11,10 +29,15 @@ export async function openAdminDevice(input: {
   const name = input.name.trim().slice(0, 80) || "Admin phone";
   const platform = input.platform.slice(0, 20) || "android";
   const pushToken = input.pushToken?.trim().slice(0, 240) || null;
-  if (input.deviceId) {
+  if (input.deviceId && input.deviceSecret) {
     const existing = await prisma.adminDevice.findUnique({ where: { id: input.deviceId } });
-    if (existing && existing.userId === input.userId && existing.status !== "REVOKED") {
-      return prisma.adminDevice.update({
+    if (
+      existing &&
+      existing.userId === input.userId &&
+      existing.status !== "REVOKED" &&
+      secretMatches(input.deviceSecret, existing.secretHash)
+    ) {
+      const device = await prisma.adminDevice.update({
         where: { id: existing.id },
         data: {
           name,
@@ -23,18 +46,22 @@ export async function openAdminDevice(input: {
           lastSeenAt: new Date()
         }
       });
+      return { device, deviceSecret: null };
     }
   }
-  return prisma.adminDevice.create({
+  const deviceSecret = crypto.randomBytes(32).toString("base64url");
+  const device = await prisma.adminDevice.create({
     data: {
       userId: input.userId,
       name,
       platform,
       pushToken,
+      secretHash: hashDeviceSecret(deviceSecret),
       status: "PENDING",
       lastSeenAt: new Date()
     }
   });
+  return { device, deviceSecret };
 }
 
 export async function adminDeviceRows() {
