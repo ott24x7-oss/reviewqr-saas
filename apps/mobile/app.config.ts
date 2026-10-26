@@ -23,7 +23,7 @@ export default ({ config }: ConfigContext): ExpoConfig => applyAppVariant(({
   },
   android: {
     package: packageName,
-    versionCode: 5,
+    versionCode: 6,
     intentFilters: [
       {
         action: "VIEW",
