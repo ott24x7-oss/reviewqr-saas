@@ -40,11 +40,9 @@ export function parseAdminOrderQuery(search: URLSearchParams) {
   };
 }
 
-export async function listAdminOrderPipeline(search: URLSearchParams) {
-  const parsed = parseAdminOrderQuery(search);
-  if (!parsed.ok) return fail(400, parsed.error);
-  const query = parsed.data;
-  const where: Prisma.ShopOrderWhereInput = {
+/** Shared filter for the order list and its CSV export. */
+function adminOrderWhere(query: Pick<AdminOrderQuery, "q" | "status">): Prisma.ShopOrderWhereInput {
+  return {
     ...(query.status ? { status: query.status } : { status: { not: "PENDING_PAYMENT" } }),
     ...(query.q
       ? {
@@ -59,6 +57,13 @@ export async function listAdminOrderPipeline(search: URLSearchParams) {
         }
       : {})
   };
+}
+
+export async function listAdminOrderPipeline(search: URLSearchParams) {
+  const parsed = parseAdminOrderQuery(search);
+  if (!parsed.ok) return fail(400, parsed.error);
+  const query = parsed.data;
+  const where = adminOrderWhere(query);
   const orderBy = { [query.sort]: query.dir } as Prisma.ShopOrderOrderByWithRelationInput;
   const [total, rows] = await Promise.all([
     prisma.shopOrder.count({ where }),
@@ -106,6 +111,58 @@ export async function listAdminOrderPipeline(search: URLSearchParams) {
     pageSize: query.pageSize,
     sort: query.sort,
     dir: query.dir
+  });
+}
+
+export const ORDER_EXPORT_CAP = 5000;
+
+/** Every order that matches the list filters, newest rows first by the list sort. Phones are masked. */
+export async function exportAdminOrders(search: URLSearchParams) {
+  const parsed = parseAdminOrderQuery(search);
+  if (!parsed.ok) return fail(400, parsed.error);
+  const query = parsed.data;
+  const where = adminOrderWhere(query);
+  const orderBy = { [query.sort]: query.dir } as Prisma.ShopOrderOrderByWithRelationInput;
+  const [total, rows] = await Promise.all([
+    prisma.shopOrder.count({ where }),
+    prisma.shopOrder.findMany({
+      where,
+      orderBy,
+      take: ORDER_EXPORT_CAP,
+      select: {
+        id: true,
+        status: true,
+        paymentStatus: true,
+        totalPaise: true,
+        invoiceNumber: true,
+        createdAt: true,
+        buyerLegalName: true,
+        business: { select: { name: true } },
+        user: { select: { name: true, phone: true, email: true } },
+        lines: { select: { qty: true } },
+        shipment: { select: { awb: true, courierName: true } }
+      }
+    })
+  ]);
+  return ok({
+    filter: { q: query.q, status: query.status, sort: query.sort, dir: query.dir },
+    items: rows.map((row) => ({
+      id: row.id,
+      invoiceNumber: row.invoiceNumber,
+      status: row.status,
+      paymentStatus: row.paymentStatus,
+      businessName: row.business?.name || row.buyerLegalName || "QR24x7",
+      customerName: row.user.name || "",
+      email: row.user.email,
+      phone: maskPhone(row.user.phone),
+      items: row.lines.reduce((sum, line) => sum + line.qty, 0),
+      totalPaise: row.totalPaise,
+      awb: row.shipment?.awb || "",
+      courierName: row.shipment?.courierName || "",
+      createdAt: row.createdAt.toISOString()
+    })),
+    total,
+    truncated: total > rows.length
   });
 }
 
