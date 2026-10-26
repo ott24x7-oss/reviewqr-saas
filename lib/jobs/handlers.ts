@@ -6,6 +6,7 @@ import { enqueueMonthlySends, enqueueWeeklySends, sendMonthlyToUser, sendWeeklyT
 import { expireLapsedSubscriptions, sendRenewalReminders } from "../billing-jobs";
 import { expireStale, reconcileAllPending } from "../manual-payments";
 import { deliverNegativeFeedback } from "../notify";
+import { scanAdminPaymentAlerts } from "../admin/push";
 import { sendPushToUsers, type PushPayload } from "../push";
 import { deliverNewOrder, deliverOrderStatus } from "../store/order-alert";
 import type { OrderStatus } from "../store/order-status";
@@ -72,8 +73,11 @@ export async function handleJob(job: ClaimedJob) {
       await sendPushToUsers(userIds, message);
       return { ok: true };
     }
-    case "billing.reconcile":
-      return reconcileAllPending();
+    case "billing.reconcile": {
+      const result = await reconcileAllPending();
+      await scanAdminPaymentAlerts();
+      return result;
+    }
     case "billing.expireStale":
       return expireStale();
     case "billing.expireLapsed":

@@ -1,3 +1,4 @@
+import { queueAdminPush } from "../admin/push";
 import { prisma } from "../db";
 import { creditRenewalCommission } from "../shop/renewal-commission";
 import { queueReferralReward } from "./rewards";
@@ -11,4 +12,11 @@ export async function settleConfirmedPayment(paymentId: string) {
   if (!payment || payment.status !== "COMPLETED" || payment.amount <= 0) return;
   await creditRenewalCommission(payment.userId, payment.id, payment.amount);
   await queueReferralReward(payment.id);
+  void queueAdminPush({
+    event: "paidPayment",
+    collapseKey: payment.id,
+    title: "Payment received",
+    body: "A plan payment was confirmed.",
+    windowSeconds: 3600
+  });
 }

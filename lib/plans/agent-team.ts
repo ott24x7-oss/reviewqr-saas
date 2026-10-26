@@ -12,6 +12,7 @@ import { freshAgentCode } from "./agents";
 import { makeCode, normalizeCode } from "./codes";
 import { indiaDayStart, indiaMonthStart } from "./india";
 import { getTeamProgramSettings } from "./team-settings";
+import { queueAdminPush } from "../admin/push";
 
 const SALE_KINDS: ShopCommissionKind[] = ["SALE", "RENEWAL", "HARDWARE", "ORDER"];
 const PAN = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
@@ -591,6 +592,15 @@ export async function joinTeam(userId: string, codeRaw: string): Promise<Service
   } catch (error) {
     if (error instanceof Error && error.message === "used") return fail(400, "This invite is no longer valid");
     throw error;
+  }
+  if (status === "PENDING") {
+    void queueAdminPush({
+      event: "agentPending",
+      collapseKey: userId,
+      title: "Agent waiting",
+      body: "An agent is waiting for approval.",
+      windowSeconds: 86400
+    });
   }
   return ok({ status, leaderName: invite.leader.user.name || "Leader" });
 }

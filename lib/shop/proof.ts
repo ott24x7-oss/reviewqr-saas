@@ -9,6 +9,7 @@ import { fail, ok } from "@/lib/api/result";
 import { prisma } from "@/lib/db";
 import { PrintInputError, type PrintDesign } from "@/lib/print/design";
 import { exportPrint } from "@/lib/print/export";
+import { queueAdminPush } from "@/lib/admin/push";
 import { moveShopOrder } from "./order-move";
 
 const PRINTABLE = ["APPROVED", "PRINTING", "NFC_WRITTEN", "PACKED", "PICKUP_SCHEDULED", "SHIPPED", "DELIVERED", "REPRINT"] as const;
@@ -74,7 +75,17 @@ export async function sendShopProof(orderId: string, adminId: string) {
     return fail(400, message);
   }
 
-  return moveShopOrder({ orderId, to: "PROOF_SENT", actor: "admin", userId: adminId });
+  const moved = await moveShopOrder({ orderId, to: "PROOF_SENT", actor: "admin", userId: adminId });
+  if (moved.ok) {
+    void queueAdminPush({
+      event: "printProof",
+      collapseKey: orderId,
+      title: "Print proof waiting",
+      body: "A shop proof is ready to review.",
+      windowSeconds: 3600
+    });
+  }
+  return moved;
 }
 
 export async function imposedShopPdf(orderIds: string[]) {

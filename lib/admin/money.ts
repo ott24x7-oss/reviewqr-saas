@@ -11,6 +11,7 @@ import { notifyUser } from "@/lib/plans/notify";
 import { absoluteUrl } from "@/lib/utils";
 import { indiaDate } from "./range";
 import { maskPhone } from "./mask";
+import { queueAdminPush } from "./push";
 
 const STATUSES: PaymentStatus[] = ["PENDING", "QUEUED", "COMPLETED", "FAILED", "REFUNDED", "EXPIRED", "CANCELLED"];
 const PROVIDERS: PaymentProvider[] = ["RAZORPAY", "STRIPE", "MANUAL", "UPI", "USDT", "YOUPI"];
@@ -125,6 +126,13 @@ export async function rejectAdminPayment(id: string) {
     data: { status: "FAILED" }
   });
   if (!updated.count) return fail(409, "Only a pending payment can be rejected");
+  void queueAdminPush({
+    event: "failedPayment",
+    collapseKey: `failed:${id}`,
+    title: "Payment failed",
+    body: "A payment was marked failed.",
+    windowSeconds: 86400
+  });
   return ok({ before: { status: payment.status }, after: { status: "FAILED" } });
 }
 
