@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
+import { denyFeatureResponse } from "@/lib/plans/feature-gate";
 import { requireBusinessRole } from "@/lib/tenant";
 import { parseTags } from "@/lib/store/customers";
 
@@ -21,6 +22,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (read) return NextResponse.json({ error: "You can view customers but not change them." }, { status: 403 });
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
+  const denied = await denyFeatureResponse(manage.ownerId, "customers");
+  if (denied) return denied;
 
   const parsed = schema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Enter tags separated by commas." }, { status: 400 });

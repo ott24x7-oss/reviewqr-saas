@@ -1,4 +1,5 @@
 import { Screen } from "../../src/ui/screen";
+import { FeatureGate } from "../../src/state/plan-lock";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useRef, useState } from "react";
 import { UsersRound } from "lucide-react-native";
@@ -123,6 +124,8 @@ function makeStyles(colors: Palette) {
 
 export default function StaffScreen() {
   return (
-    <Screen topInset={true}><StaffScreenContent /></Screen>
+    <FeatureGate id="staff">
+      <Screen topInset={true}><StaffScreenContent /></Screen>
+    </FeatureGate>
   );
 }

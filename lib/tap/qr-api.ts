@@ -3,6 +3,7 @@ import { qrClaimSchema, qrPatchSchema } from "@reviewqr/shared";
 import { logAudit, logDeviceAudit, type AuditAction } from "../admin";
 import { prisma } from "../db";
 import { ownerLimitError } from "../entitlements";
+import { featureBlock } from "../plans/feature-gate";
 import { cursorQuery, type PageQuery } from "../api/cursor";
 import { takePage } from "../api/page";
 import { fail, ok } from "../api/result";
@@ -77,6 +78,10 @@ export async function createQrCode(userId: string, businessId: string, raw: unkn
   ]);
   if (!location.ok) return fail(400, location.error);
   if (!staff.ok) return fail(400, staff.error);
+  if (qrCount >= 1) {
+    const blocked = await featureBlock(business.ownerId, "multiple-qrs");
+    if (blocked) return blocked;
+  }
   const limitError = await ownerLimitError(owner, "qrCodes", qrCount);
   if (limitError) return fail(402, limitError);
 
@@ -121,6 +126,10 @@ export async function patchQrCodes(userId: string, businessId: string, raw: unkn
     return ok({ ok: true as const });
   }
   if (body.action === "direct") {
+    if (body.mode === "DIRECT") {
+      const blocked = await featureBlock(business.ownerId, "direct-link");
+      if (blocked) return blocked;
+    }
     const target = (body.target || "").trim().slice(0, 40);
     if (body.mode === "DIRECT") {
       const allowed = await directTargets(business.id);

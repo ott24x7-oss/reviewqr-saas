@@ -1,5 +1,6 @@
 import { KeyboardAwareScrollView, type KeyboardAwareScrollViewRef } from "react-native-keyboard-controller";
 import { Screen } from "../../src/ui/screen";
+import { FeatureGate } from "../../src/state/plan-lock";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Lightbulb, MessageSquareQuote, Star } from "lucide-react-native";
 import { router } from "expo-router";
@@ -142,6 +143,8 @@ const styles = StyleSheet.create({
 
 export default function ReviewsScreen() {
   return (
-    <Screen topInset={true}><ReviewsScreenContent /></Screen>
+    <FeatureGate id="reviews-log">
+      <Screen topInset={true}><ReviewsScreenContent /></Screen>
+    </FeatureGate>
   );
 }

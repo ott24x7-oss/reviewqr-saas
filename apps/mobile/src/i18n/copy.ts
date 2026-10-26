@@ -518,7 +518,9 @@ const en = {
   guideShareTitle: "Share your page",
   guideShareBody: "Open Page & QR and tap Share. Send the link on WhatsApp, or show the code on your phone.",
   guideStaffTitle: "Use the app with staff",
-  guideStaffBody: "Open More, then Your business, then Staff. Invite them with their email. They can see orders. Removing a person turns off their access."
+  guideStaffBody: "Open More, then Your business, then Staff. Invite them with their email. They can see orders. Removing a person turns off their access.",
+  planNotInPlan: "{name} is not in your current plan",
+  planManaged: "Your plan is managed on qr24x7.in"
 };
 
 const hi: typeof en = {
@@ -1037,7 +1039,9 @@ const hi: typeof en = {
   guideShareTitle: "अपना पेज शेयर करें",
   guideShareBody: "पेज और QR खोलें और शेयर दबाएँ। लिंक WhatsApp पर भेजें, या फोन पर कोड दिखाएँ।",
   guideStaffTitle: "स्टाफ के साथ ऐप चलाएँ",
-  guideStaffBody: "और खोलें, फिर आपका बिज़नेस, फिर स्टाफ। ईमेल से उन्हें बुलाएँ। वे ऑर्डर देख सकते हैं। किसी को हटाने पर उनकी पहुँच बंद हो जाती है।"
+  guideStaffBody: "और खोलें, फिर आपका बिज़नेस, फिर स्टाफ। ईमेल से उन्हें बुलाएँ। वे ऑर्डर देख सकते हैं। किसी को हटाने पर उनकी पहुँच बंद हो जाती है।",
+  planNotInPlan: "{name} आपके मौजूदा प्लान में नहीं है",
+  planManaged: "आपका प्लान qr24x7.in पर मैनेज होता है"
 };
 
 export const copy = { en, hi };

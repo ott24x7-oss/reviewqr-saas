@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { AppState } from "react-native";
 import { apiData } from "../api/data";
 import { accountKey } from "../query/keys";
+import { useBusiness } from "./business";
 import { useSession } from "./session";
 
 export type SubscriptionView = {
@@ -16,11 +17,17 @@ export type SubscriptionView = {
 
 export function useEntitlement() {
   const { user } = useSession();
+  const { businessId } = useBusiness();
   const client = useQueryClient();
   const query = useQuery({
-    queryKey: accountKey(user?.id ?? "", "subscription"),
+    queryKey: accountKey(user?.id ?? "", "subscription", businessId),
     enabled: !!user,
-    queryFn: () => apiData<SubscriptionView>("/api/v1/subscription")
+    queryFn: () =>
+      apiData<SubscriptionView>(
+        businessId ? `/api/v1/subscription?businessId=${encodeURIComponent(businessId)}` : "/api/v1/subscription",
+        {},
+        { planSheet: false }
+      )
   });
 
   useEffect(() => {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import ExcelJS from "exceljs";
 import { requireUser } from "@/lib/auth";
+import { denyFeatureResponse } from "@/lib/plans/feature-gate";
 import { requireBusinessRole } from "@/lib/tenant";
 import { templateCsv } from "@/lib/store/entry";
 
@@ -30,6 +31,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const business = await requireBusinessRole(user.id, params.id, "manage");
   if (!business) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const denied = await denyFeatureResponse(business.ownerId, "menu");
+  if (denied) return denied;
 
   const format = new URL(req.url).searchParams.get("format");
   if (format === "xlsx") {
@@ -54,6 +57,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const business = await requireBusinessRole(user.id, params.id, "manage");
   if (!business) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const denied = await denyFeatureResponse(business.ownerId, "menu");
+  if (denied) return denied;
 
   const form = await req.formData().catch(() => null);
   const file = form?.get("file");

@@ -4,6 +4,7 @@ import { logAudit } from "../admin";
 import { fail, ok } from "../api/result";
 import { prisma } from "../db";
 import { effectiveTier } from "../payments";
+import { featureBlock } from "../plans/feature-gate";
 import { sanitizeText } from "../sanitize";
 import { planOwner, requireBusinessRole } from "../tenant";
 import { storedDirectOptions } from "./direct";
@@ -80,6 +81,10 @@ export async function saveTapPage(userId: string, businessId: string, raw: unkno
   if ("error" in links) return fail(400, links.error);
   const directMode = parsed.data.directMode;
   const directTarget = (parsed.data.directTarget || "").trim().slice(0, 40);
+  if (directMode === "DIRECT") {
+    const blocked = await featureBlock(business.ownerId, "direct-link");
+    if (blocked) return blocked;
+  }
   if (directMode === "DIRECT" && !storedDirectOptions(links.links, "q", "preview").some((item) => item.key === directTarget)) {
     return fail(400, "Choose an enabled button");
   }
@@ -112,6 +117,8 @@ export async function saveTapPage(userId: string, businessId: string, raw: unkno
     const extra = await readAdminThemes();
     const preset = findTheme(canonicalThemeId(parsed.data.themeId), extra);
     if (!preset) return fail(400, "Unknown theme");
+    const themeLocked = await featureBlock(business.ownerId, "page-themes");
+    if (themeLocked) return themeLocked;
     const actor = await prisma.user.findUnique({ where: { id: userId }, select: limitSelect });
     if (!actor) return fail(401, "Unauthorized");
     const owner = await planOwner(actor, business.ownerId);

@@ -1,4 +1,5 @@
 import { Screen } from "../../src/ui/screen";
+import { FeatureGate } from "../../src/state/plan-lock";
 import { FlashList } from "@shopify/flash-list";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams } from "expo-router";
@@ -509,6 +510,8 @@ const styles = StyleSheet.create({
 
 export default function MenuTab() {
   return (
-    <Screen topInset={true}><MenuTabContent /></Screen>
+    <FeatureGate id="menu">
+      <Screen topInset={true}><MenuTabContent /></Screen>
+    </FeatureGate>
   );
 }

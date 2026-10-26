@@ -5,7 +5,7 @@ import { rateLimitDb } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/utils";
 import { STORE_COUPON_LIMIT, storeCouponRateKeys } from "@/lib/store/limits";
 import { couponDiscount, normalizeCouponCode, type CouponFail } from "@/lib/store/coupons";
-import { moduleBlock } from "@/lib/plans/entitlements";
+import { featureBlock, planDeniedResponse } from "@/lib/plans/feature-gate";
 
 const schema = z.object({
   code: z.string().min(4).max(32),
@@ -31,8 +31,8 @@ export async function POST(req: NextRequest) {
   if (!qr?.business || qr.status !== "ACTIVE" || !qr.business.isActive || qr.business.archived) {
     return NextResponse.json({ error: "This menu is not available" }, { status: 404 });
   }
-  const locked = await moduleBlock(qr.business.ownerId, "STORE");
-  if (locked) return NextResponse.json({ error: locked }, { status: 403 });
+  const locked = await featureBlock(qr.business.ownerId, "offers");
+  if (locked) return planDeniedResponse(locked);
 
   const storeLimit = await rateLimitDb({
     key: storeCouponRateKeys(ip, qr.business.id)[1],

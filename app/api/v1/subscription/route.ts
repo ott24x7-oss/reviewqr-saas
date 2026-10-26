@@ -3,6 +3,7 @@ import { observe } from "@/lib/api/observe";
 import { requireV1User, v1Data } from "@/lib/api/v1";
 import { prisma } from "@/lib/db";
 import { loadEntitlement } from "@/lib/plans/entitlements";
+import { requireBusinessRole } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -10,14 +11,20 @@ export const dynamic = "force-dynamic";
 async function getHandler(req: NextRequest) {
   const auth = await requireV1User(req);
   if (!auth.ok) return auth.response;
+  const requested = req.nextUrl.searchParams.get("businessId");
+  let subjectId = auth.user.id;
+  if (requested) {
+    const access = await requireBusinessRole(auth.user.id, requested, "read");
+    if (access) subjectId = access.ownerId;
+  }
   const [user, entitlement, subscription, credit] = await Promise.all([
     prisma.user.findUnique({
-      where: { id: auth.user.id },
+      where: { id: subjectId },
       select: { subscriptionStatus: true, subscriptionEndsAt: true, trialEndsAt: true }
     }),
-    loadEntitlement(auth.user.id),
+    loadEntitlement(subjectId),
     prisma.subscription.findFirst({
-      where: { userId: auth.user.id, status: { in: ["ACTIVE", "TRIALING", "PAST_DUE"] } },
+      where: { userId: subjectId, status: { in: ["ACTIVE", "TRIALING", "PAST_DUE"] } },
       orderBy: { createdAt: "desc" },
       include: { plan: { select: { slug: true, nameEn: true, nameHi: true } } }
     }),

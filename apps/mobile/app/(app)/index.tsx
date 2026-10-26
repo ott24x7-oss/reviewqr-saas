@@ -1,5 +1,5 @@
 import { Screen } from "../../src/ui/screen";
-import type { Dashboard } from "@reviewqr/shared";
+import type { Dashboard, FeatureId } from "@reviewqr/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, useFocusEffect, type Href } from "expo-router";
 import {
@@ -8,6 +8,7 @@ import {
   ChevronDown,
   ChevronRight,
   ClipboardList,
+  Lock,
   MessageSquare,
   Plus,
   Printer,
@@ -27,6 +28,7 @@ import { businessDestinations } from "../../src/nav/business-destinations";
 import { accountKey } from "../../src/query/keys";
 import { useReviewMoment } from "../../src/review/watch";
 import { useBusiness } from "../../src/state/business";
+import { openPlanLock, useFeatures } from "../../src/state/plan-lock";
 import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
 import { BottomSheet, Card, Chip, KpiCard, LoadErrorCard, Skeleton } from "../../src/ui/bits";
@@ -38,6 +40,7 @@ import { writeWidgetSnapshot } from "../../src/widgets/cache";
 type Tip = { key: string; titleEn: string; titleHi: string; appHref: string; done?: boolean };
 type SetupStep = { key: string; done: boolean };
 const EMPTY_SETUP: SetupStep[] = [];
+const SETUP_FEATURES: Partial<Record<SetupStepKey, FeatureId>> = { menu: "menu", store: "store" };
 type Growth = { ready: boolean; score: number | null; tips: Tip[]; checklist: Tip[]; setup?: SetupStep[] };
 type Note = { id: string; title: string; titleHi: string; body: string; bodyHi: string; link: string };
 type Analytics = {
@@ -59,6 +62,7 @@ function HomeScreenContent() {
   const { palette } = useTheme();
   const { user } = useSession();
   const { businesses, business, choose } = useBusiness();
+  const { locked } = useFeatures();
   const client = useQueryClient();
   const [live, setLive] = useState(true);
   const [range, setRange] = useState<"7d" | "30d">("7d");
@@ -87,17 +91,17 @@ function HomeScreenContent() {
   const analytics = useQuery({
     queryKey: accountKey(user?.id ?? "", "analytics", business?.id, range),
     enabled: !!user && !!business,
-    queryFn: () => apiData<Analytics>(`/api/v1/analytics?businessId=${business?.id}&range=${range}`)
+    queryFn: () => apiData<Analytics>(`/api/v1/analytics?businessId=${business?.id}&range=${range}`, {}, { planSheet: false })
   });
   const orders = useQuery({
     queryKey: accountKey(user?.id ?? "", "orders", business?.id),
     enabled: !!user && !!business,
-    queryFn: () => apiData<{ items: OrderCard[] }>(`/api/v1/orders?limit=5&businessId=${business?.id}`)
+    queryFn: () => apiData<{ items: OrderCard[] }>(`/api/v1/orders?limit=5&businessId=${business?.id}`, {}, { planSheet: false })
   });
   const feedback = useQuery({
     queryKey: accountKey(user?.id ?? "", "feedback", business?.id),
     enabled: !!user,
-    queryFn: () => apiData<{ items: FeedbackRow[] }>(`/api/v1/feedback?limit=5${business ? `&businessId=${business.id}` : ""}`)
+    queryFn: () => apiData<{ items: FeedbackRow[] }>(`/api/v1/feedback?limit=5${business ? `&businessId=${business.id}` : ""}`, {}, { planSheet: false })
   });
   const plan = home.data?.plan;
   const scans = live ? home.data?.scansToday : analytics.data?.summary.scans;
@@ -134,6 +138,8 @@ function HomeScreenContent() {
       return () => { focused = false; };
     }, [client, growthBusinessId, growthUserId])
   );
+  const menuLocked = locked("menu");
+  const storeLocked = locked("store");
   const setupRows = useMemo<SetupGuideStep[]>(() => {
     const rows: Record<SetupStepKey, Omit<SetupGuideStep, "done">> = {
       details: { key: "details", title: t.businessDetails, body: t.setupWhyDetails },
@@ -145,9 +151,10 @@ function HomeScreenContent() {
     };
     return SETUP_STEP_KEYS.map((key) => ({
       ...rows[key],
-      done: setup.find((step) => step.key === key)?.done === true
+      done: setup.find((step) => step.key === key)?.done === true,
+      locked: key === "menu" ? menuLocked : key === "store" ? storeLocked : false
     }));
-  }, [setup, t]);
+  }, [menuLocked, setup, storeLocked, t]);
   const expandedSetupKey = showSetup
     ? setupExpandedManually ? expandedSetup : expandedSetup ?? setupRows.find((step) => !step.done)?.key ?? null
     : null;
@@ -193,16 +200,28 @@ function HomeScreenContent() {
     await notes.refetch();
   }
 
-  const actions = [
+  const actions: { label: string; icon: typeof QrCode; href: string; feature?: FeatureId }[] = [
     { label: t.showQr, icon: QrCode, href: "/(app)/tap" },
-    { label: t.addItem, icon: Plus, href: "/(app)/menu" },
-    { label: t.orders, icon: ClipboardList, href: "/(app)/orders" },
-    { label: t.quickFeedback, icon: MessageSquare, href: "/(app)/feedback" },
+    { label: t.addItem, icon: Plus, href: "/(app)/menu", feature: "menu" },
+    { label: t.orders, icon: ClipboardList, href: "/(app)/orders", feature: "orders" },
+    { label: t.quickFeedback, icon: MessageSquare, href: "/(app)/feedback", feature: "reviews-log" },
     { label: t.sharePage, icon: Share2, href: "/(app)/tap" },
     { label: t.printStand, icon: Printer, href: "/(app)/shop" }
   ];
+  function openHref(href: Href, feature?: FeatureId) {
+    if (feature && locked(feature)) {
+      openPlanLock(feature);
+      return;
+    }
+    router.push(href);
+  }
 
   function startSetup(key: SetupStepKey) {
+    const feature = SETUP_FEATURES[key];
+    if (feature && locked(feature)) {
+      openPlanLock(feature);
+      return;
+    }
     const next = nextSetupStep(key);
     const route = key === "details" ? "/(app)/business-edit"
       : key === "menu" ? "/(app)/menu"
@@ -301,7 +320,7 @@ function HomeScreenContent() {
               selected={!live}
               onPress={() => { setLive(false); setRange((current) => current === "7d" ? "30d" : "7d"); }}
             />
-            <TextButton label={t.analytics} onPress={() => router.push("/(app)/analytics")} />
+            <TextButton label={t.analytics} onPress={() => openHref("/(app)/analytics", "analytics")} />
           </View>
           {home.isLoading ? (
             <View style={styles.kpiGrid}>
@@ -369,11 +388,18 @@ function HomeScreenContent() {
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel={action.label}
-                    onPress={() => router.push(action.href as Href)}
+                    onPress={() => openHref(action.href as Href, action.feature)}
                     style={[styles.action, { backgroundColor: palette.card, shadowColor: palette.ink }]}
                   >
-                    <View style={[styles.ico, { backgroundColor: palette.accentSoft }]}>
-                      <Icon color={palette.deep} size={20} strokeWidth={1.75} />
+                    <View>
+                      <View style={[styles.ico, { backgroundColor: palette.accentSoft }]}>
+                        <Icon color={palette.deep} size={20} strokeWidth={1.75} />
+                      </View>
+                      {action.feature && locked(action.feature) ? (
+                        <View style={[styles.lockBadge, { backgroundColor: palette.card }]}>
+                          <Lock color={palette.muted} size={11} strokeWidth={2.4} />
+                        </View>
+                      ) : null}
                     </View>
                     <Text style={[styles.actionText, { color: palette.ink }, lang === "hi" && styles.hindi]}>{action.label}</Text>
                   </Pressable>
@@ -392,11 +418,18 @@ function HomeScreenContent() {
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel={tile.title}
-                    onPress={() => router.push(tile.href)}
+                    onPress={() => openHref(tile.href, tile.feature)}
                     style={[styles.tile, { backgroundColor: palette.card, shadowColor: palette.ink }]}
                   >
-                    <View style={[styles.ico, { backgroundColor: colors.bg }]}>
-                      <Icon color={colors.fg} size={20} strokeWidth={1.75} />
+                    <View>
+                      <View style={[styles.ico, { backgroundColor: colors.bg }]}>
+                        <Icon color={colors.fg} size={20} strokeWidth={1.75} />
+                      </View>
+                      {tile.feature && locked(tile.feature) ? (
+                        <View style={[styles.lockBadge, { backgroundColor: palette.card }]}>
+                          <Lock color={palette.muted} size={11} strokeWidth={2.4} />
+                        </View>
+                      ) : null}
                     </View>
                     <Text style={[styles.tileText, { color: palette.ink }, lang === "hi" && styles.hindi]}>{tile.title}</Text>
                   </Pressable>
@@ -426,7 +459,7 @@ function HomeScreenContent() {
                   key={order.id}
                   accessibilityRole="button"
                   accessibilityLabel={`#${order.number} ${order.status}`}
-                  onPress={() => router.push("/(app)/orders?tab=orders")}
+                  onPress={() => openHref("/(app)/orders?tab=orders", "orders")}
                   style={[styles.rowCard, { backgroundColor: palette.card, shadowColor: palette.ink }]}
                 >
                   <View style={[styles.avatar, { backgroundColor: palette.header }]}>
@@ -438,7 +471,11 @@ function HomeScreenContent() {
                       {order.customerName} · {t.rupee}{Math.round(order.totalPaise / 100)}
                     </Text>
                   </View>
-                  <ChevronRight color={palette.muted} size={16} strokeWidth={2} />
+                  {locked("orders") ? (
+                    <Lock color={palette.muted} size={16} strokeWidth={2} />
+                  ) : (
+                    <ChevronRight color={palette.muted} size={16} strokeWidth={2} />
+                  )}
                 </Pressable>
               ))}
               {recentFeedback.map((row) => (
@@ -446,7 +483,7 @@ function HomeScreenContent() {
                   key={row.id}
                   accessibilityRole="button"
                   accessibilityLabel={`${row.review.rating} ${row.message}`}
-                  onPress={() => router.push("/(app)/feedback")}
+                  onPress={() => openHref("/(app)/feedback", "reviews-log")}
                   style={[styles.rowCard, { backgroundColor: palette.card, shadowColor: palette.ink }]}
                 >
                   <View style={[styles.avatar, { backgroundColor: palette.primaryDeep }]}>
@@ -460,6 +497,7 @@ function HomeScreenContent() {
                     </View>
                     <Text style={[styles.growthHint, { color: palette.muted }]}>{row.message}</Text>
                   </View>
+                  {locked("reviews-log") ? <Lock color={palette.muted} size={16} strokeWidth={2} /> : null}
                 </Pressable>
               ))}
             </>
@@ -609,6 +647,16 @@ const styles = StyleSheet.create({
     elevation: 2
   },
   ico: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  lockBadge: {
+    position: "absolute",
+    top: -4,
+    right: -6,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center"
+  },
   actionText: { fontFamily: fonts.bodyStrong, fontSize: 12, textAlign: "center" },
   rowCard: {
     borderRadius: 20,

@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react-native";
-import { ChevronRight } from "lucide-react-native";
+import { ChevronRight, Lock } from "lucide-react-native";
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useI18n } from "../i18n";
@@ -35,7 +35,8 @@ export function GroupRow({
   hint,
   onPress,
   danger,
-  selected
+  selected,
+  locked
 }: {
   icon: LucideIcon;
   tint?: RowTint;
@@ -44,6 +45,7 @@ export function GroupRow({
   onPress?: () => void;
   danger?: boolean;
   selected?: boolean;
+  locked?: boolean;
 }) {
   const { lang } = useI18n();
   const { palette } = useTheme();
@@ -63,7 +65,7 @@ export function GroupRow({
           </Text>
         ) : null}
       </View>
-      <ChevronRight color={selected ? palette.deep : palette.muted} size={18} strokeWidth={2} />
+      {locked ? <Lock color={palette.muted} size={16} strokeWidth={2} /> : <ChevronRight color={selected ? palette.deep : palette.muted} size={18} strokeWidth={2} />}
     </>
   );
   if (!onPress) return <View style={styles.row}>{body}</View>;

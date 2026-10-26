@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { requireBusinessRole } from "@/lib/tenant";
-import { moduleBlock } from "@/lib/plans/entitlements";
+import { featureBlock, planDeniedResponse } from "@/lib/plans/feature-gate";
 import { storePosterPdf } from "@/lib/tap/qr-pdf";
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
@@ -10,8 +10,8 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const access = await requireBusinessRole(user.id, params.id, "read");
   if (!access) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  const locked = await moduleBlock(access.ownerId, "STORE");
-  if (locked) return NextResponse.json({ error: locked }, { status: 403 });
+  const locked = await featureBlock(access.ownerId, "store");
+  if (locked) return planDeniedResponse(locked);
   const business = await prisma.business.findFirst({
     where: { id: access.id, archived: false },
     select: { name: true, slug: true }

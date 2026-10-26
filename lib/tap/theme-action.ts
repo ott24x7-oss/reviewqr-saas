@@ -4,6 +4,7 @@ import { logAudit } from "../admin";
 import { fail, ok } from "../api/result";
 import { prisma } from "../db";
 import { effectiveTier } from "../payments";
+import { featureBlock } from "../plans/feature-gate";
 import { assertSafeOutboundUrl } from "../ssrf";
 import { planOwner, requireBusinessRole } from "../tenant";
 import { jsonObject, readAdminThemes, revalidateBusinessTap } from "./theme-store";
@@ -26,6 +27,8 @@ export async function saveBusinessTheme(userId: string, businessId: string, raw:
   if (!actor) return fail(401, "Unauthorized");
   const owner = await planOwner(actor, business.ownerId);
   if (!owner) return fail(404, "Not found");
+  const blocked = await featureBlock(business.ownerId, "page-themes");
+  if (blocked) return blocked;
 
   const parsed = themeActionSchema.safeParse(raw);
   if (!parsed.success) return fail(400, parsed.error.issues[0]?.message || "Invalid input");

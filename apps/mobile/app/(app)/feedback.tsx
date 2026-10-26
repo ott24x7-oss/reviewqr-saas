@@ -1,4 +1,5 @@
 import { Screen } from "../../src/ui/screen";
+import { FeatureGate } from "../../src/state/plan-lock";
 import { FlashList } from "@shopify/flash-list";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MessageSquare } from "lucide-react-native";
@@ -211,6 +212,8 @@ const styles = StyleSheet.create({
 
 export default function FeedbackTab() {
   return (
-    <Screen topInset={true}><FeedbackTabContent /></Screen>
+    <FeatureGate id="reviews-log">
+      <Screen topInset={true}><FeedbackTabContent /></Screen>
+    </FeatureGate>
   );
 }

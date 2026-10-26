@@ -1790,6 +1790,8 @@ model Plan {
   descriptionHi        String           @default("") @db.Text
   modules              String[]
   limits               Json
+  /// Feature lines for the pricing page. Empty means they are built from the modules.
+  bullets              Json             @default("[]")
   badge                String?
   category             String           @default("reviews")
   imageUrl             String           @default("")
@@ -1822,7 +1824,7 @@ model PlanPrice {
   @@unique([planId, duration])
 }
 
-// Snapshot of the modules and limits the owner bought. Later plan edits do not change it.
+// Purchase record. A catalogue plan's access follows the current plan row, so an admin edit applies without a new checkout.
 model Subscription {
   id              String             @id @default(cuid())
   userId          String

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { logAudit, requireAdminApi } from "@/lib/admin";
 import { reorderPlans } from "@/lib/plans/admin-write";
+import { revalidatePricing } from "@/lib/plans/revalidate";
 import { getClientIp } from "@/lib/utils";
 
 const schema = z.object({ ids: z.array(z.string().min(1)).min(1) });
@@ -13,6 +14,7 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: "Invalid order" }, { status: 400 });
   try {
     await reorderPlans(parsed.data.ids);
+    revalidatePricing();
   } catch {
     return NextResponse.json({ error: "Could not save the order" }, { status: 400 });
   }

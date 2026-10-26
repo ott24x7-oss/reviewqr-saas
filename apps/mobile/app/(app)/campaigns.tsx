@@ -1,4 +1,5 @@
 import { Screen } from "../../src/ui/screen";
+import { FeatureGate } from "../../src/state/plan-lock";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MessageCircle } from "lucide-react-native";
 import { useRef, useState } from "react";
@@ -92,6 +93,8 @@ const styles = StyleSheet.create({
 
 export default function CampaignsScreen() {
   return (
-    <Screen topInset={true}><CampaignsScreenContent /></Screen>
+    <FeatureGate id="campaigns">
+      <Screen topInset={true}><CampaignsScreenContent /></Screen>
+    </FeatureGate>
   );
 }

@@ -1,4 +1,5 @@
 import { Screen } from "../../src/ui/screen";
+import { FeatureGate } from "../../src/state/plan-lock";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Megaphone, TicketPercent } from "lucide-react-native";
 import { useRef, useState } from "react";
@@ -101,6 +102,8 @@ const styles = StyleSheet.create({
 
 export default function OffersScreen() {
   return (
-    <Screen topInset={true}><OffersScreenContent /></Screen>
+    <FeatureGate id="offers">
+      <Screen topInset={true}><OffersScreenContent /></Screen>
+    </FeatureGate>
   );
 }

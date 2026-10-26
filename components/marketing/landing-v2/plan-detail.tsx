@@ -7,39 +7,42 @@ import { DURATION_LABELS, MODULES } from "@/lib/plans/catalog";
 import type { PublicPlan } from "@/lib/plans/public";
 import type { StandAddon } from "@/lib/landing/hardware";
 import { formatRupees } from "@/lib/landing/money";
-import { DURATION_CHIPS, buyHref, fallbackImageName, planAudience, planTicks } from "@/lib/plans/categories";
+import { DURATION_CHIPS, buyHref, fallbackImageName, planAudience } from "@/lib/plans/categories";
+import type { PricingFaq } from "@/lib/plans/pricing-copy";
 import { LandingPicture } from "./picture";
 import { pick, useLandingLang } from "./lang";
 
-const FAQ = [
+const FAQ: PricingFaq[] = [
   {
-    en: "Can I pick a different duration?",
-    hi: "क्या मैं अलग अवधि चुन सकता हूँ?",
-    bodyEn: "Yes. Choose 1 month, 6 months, 1 year, or lifetime. Checkout uses the price saved on that plan.",
-    bodyHi: "हाँ। 1 महीना, 6 महीने, 1 साल या लाइफटाइम चुनें। चेकआउट उसी प्लान की सेव की हुई कीमत लेता है।"
+    qEn: "Can I pick a different duration?",
+    qHi: "क्या मैं अलग अवधि चुन सकता हूँ?",
+    aEn: "Yes. Choose 1 month, 6 months, 1 year, or lifetime. Checkout uses the price saved on that plan.",
+    aHi: "हाँ। 1 महीना, 6 महीने, 1 साल या लाइफटाइम चुनें। चेकआउट उसी प्लान की सेव की हुई कीमत लेता है।"
   },
   {
-    en: "Do you take a commission on WhatsApp orders?",
-    hi: "क्या WhatsApp ऑर्डर पर कमीशन लगता है?",
-    bodyEn: "No. Orders go to your own WhatsApp number.",
-    bodyHi: "नहीं। ऑर्डर आपके अपने WhatsApp नंबर पर जाते हैं।"
+    qEn: "Do you take a commission on WhatsApp orders?",
+    qHi: "क्या WhatsApp ऑर्डर पर कमीशन लगता है?",
+    aEn: "No. Orders go to your own WhatsApp number.",
+    aHi: "नहीं। ऑर्डर आपके अपने WhatsApp नंबर पर जाते हैं।"
   },
   {
-    en: "Do I have to buy a stand?",
-    hi: "क्या स्टैंड खरीदना ज़रूरी है?",
-    bodyEn: "No. You can download the QR. A printed QR + NFC stand is optional from the shop.",
-    bodyHi: "नहीं। QR डाउनलोड कर सकते हैं। प्रिंटेड QR + NFC स्टैंड दुकान से वैकल्पिक है।"
+    qEn: "Do I have to buy a stand?",
+    qHi: "क्या स्टैंड खरीदना ज़रूरी है?",
+    aEn: "No. You can download the QR. A printed QR + NFC stand is optional from the shop.",
+    aHi: "नहीं। QR डाउनलोड कर सकते हैं। प्रिंटेड QR + NFC स्टैंड दुकान से वैकल्पिक है।"
   }
 ];
 
 export function PlanDetail({
   plan,
   hardware,
-  initialDuration
+  initialDuration,
+  faqs = FAQ
 }: {
   plan: PublicPlan;
   hardware: StandAddon[];
   initialDuration: string | undefined;
+  faqs?: PricingFaq[];
 }) {
   const { lang } = useLandingLang();
   const match = plan.prices.find((price) => price.duration === initialDuration) || plan.prices[0];
@@ -48,7 +51,7 @@ export function PlanDetail({
   const name = lang === "hi" ? plan.nameHi : plan.nameEn;
   const description = lang === "hi" ? plan.descriptionHi || plan.descriptionEn : plan.descriptionEn;
   const alt = pick(lang, `${name} product photo`, `${name} की तस्वीर`);
-  const ticks = planTicks(plan.category);
+  const ticks = plan.bullets;
   const audience = planAudience(plan.category);
   const modules = plan.modules
     .map((id) => MODULES.find((item) => item.id === id))
@@ -146,10 +149,10 @@ export function PlanDetail({
       <section className="mt-10 max-w-2xl">
         <h2 className="text-lg font-semibold">{pick(lang, "Questions", "सवाल")}</h2>
         <div className="mt-3 divide-y divide-[var(--marketing-line)]">
-          {FAQ.map((item) => (
-            <details key={item.en} className="py-3">
-              <summary className="cursor-pointer text-sm font-semibold">{lang === "hi" ? item.hi : item.en}</summary>
-              <p className="mt-2 text-sm text-[var(--marketing-muted)]">{lang === "hi" ? item.bodyHi : item.bodyEn}</p>
+          {faqs.map((item) => (
+            <details key={item.qEn} className="py-3">
+              <summary className="cursor-pointer text-sm font-semibold">{lang === "hi" ? item.qHi : item.qEn}</summary>
+              <p className="mt-2 text-sm text-[var(--marketing-muted)]">{lang === "hi" ? item.aHi : item.aEn}</p>
             </details>
           ))}
         </div>

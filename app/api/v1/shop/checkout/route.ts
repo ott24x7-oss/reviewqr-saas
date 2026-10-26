@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 async function postHandler(req: NextRequest) {
   const auth = await requireV1User(req);
   if (!auth.ok) return auth.response;
-  return v1From(await checkoutShop(auth.user.id));
+  return v1From(await checkoutShop(auth.user.id, process.env, "app"));
 }
 
 export const POST = observe(postHandler);

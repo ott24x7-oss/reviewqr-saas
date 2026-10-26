@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
+import { featureBlock, planDeniedResponse } from "@/lib/plans/feature-gate";
 import { requireBusinessRole } from "@/lib/tenant";
 
 // Testimonial has only a scalar businessId (no relation), so we verify the
@@ -9,6 +10,8 @@ import { requireBusinessRole } from "@/lib/tenant";
 async function managedTestimonial(businessId: string, tid: string, userId: string) {
   const business = await requireBusinessRole(userId, businessId, "manage");
   if (!business) return null;
+  const blocked = await featureBlock(business.ownerId, "testimonials");
+  if (blocked) return { blocked } as const;
   const testimonial = await prisma.testimonial.findUnique({ where: { id: tid } });
   if (!testimonial || testimonial.businessId !== business.id) return null;
   return testimonial;
@@ -26,6 +29,7 @@ export async function PATCH(
   const user = await requireUser().catch(() => null);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const testimonial = await managedTestimonial(params.id, params.tid, user.id);
+  if (testimonial && "blocked" in testimonial) return planDeniedResponse(testimonial.blocked);
   if (!testimonial) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const parsed = patchSchema.safeParse(await req.json().catch(() => ({})));
@@ -51,6 +55,7 @@ export async function DELETE(
   const user = await requireUser().catch(() => null);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const testimonial = await managedTestimonial(params.id, params.tid, user.id);
+  if (testimonial && "blocked" in testimonial) return planDeniedResponse(testimonial.blocked);
   if (!testimonial) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   await prisma.testimonial.delete({ where: { id: testimonial.id } });

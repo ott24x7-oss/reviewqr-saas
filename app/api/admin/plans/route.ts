@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { logAudit, requireAdminApi } from "@/lib/admin";
 import { planWriteSchema, createPlanRecord } from "@/lib/plans/admin-write";
+import { revalidatePricing } from "@/lib/plans/revalidate";
 import { getClientIp } from "@/lib/utils";
 
 export async function POST(req: NextRequest) {
@@ -12,6 +13,7 @@ export async function POST(req: NextRequest) {
   }
   const result = await createPlanRecord(parsed.data);
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
+  revalidatePricing(result.plan.slug);
   await logAudit({
     userId: guard.user.id,
     action: "plan.update",

@@ -1,4 +1,5 @@
 import { Screen } from "../../src/ui/screen";
+import { FeatureGate } from "../../src/state/plan-lock";
 import { useQuery } from "@tanstack/react-query";
 import { UsersRound } from "lucide-react-native";
 import * as FileSystem from "expo-file-system/legacy";
@@ -78,6 +79,8 @@ const styles = StyleSheet.create({
 
 export default function CustomersScreen() {
   return (
-    <Screen topInset={true}><CustomersScreenContent /></Screen>
+    <FeatureGate id="customers">
+      <Screen topInset={true}><CustomersScreenContent /></Screen>
+    </FeatureGate>
   );
 }

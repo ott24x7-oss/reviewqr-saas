@@ -1,6 +1,7 @@
 import { observe } from "@/lib/api/observe";
 import { NextRequest } from "next/server";
-import { requireV1User, v1Data, v1Error } from "@/lib/api/v1";
+import { requireV1User, v1Data, v1Error, v1From } from "@/lib/api/v1";
+import { featureBlock } from "@/lib/plans/feature-gate";
 import { prisma } from "@/lib/db";
 import { ownerLimitError } from "@/lib/entitlements";
 import { staffSchema } from "@/lib/validations";
@@ -14,6 +15,8 @@ async function getHandler(req: NextRequest, { params }: { params: { id: string }
   if (!auth.ok) return auth.response;
   const business = await requireBusinessRole(auth.user.id, params.id, "read");
   if (!business) return v1Error(404, "NOT_FOUND", "Not found");
+  const blocked = await featureBlock(business.ownerId, "staff");
+  if (blocked) return v1From(blocked);
   const items = await prisma.staff.findMany({
     where: { businessId: business.id, isActive: true },
     orderBy: { name: "asc" },
@@ -38,6 +41,8 @@ async function postHandler(req: NextRequest, { params }: { params: { id: string 
     business.ownerId
   );
   if (!owner) return v1Error(404, "NOT_FOUND", "Not found");
+  const blocked = await featureBlock(business.ownerId, "staff");
+  if (blocked) return v1From(blocked);
   const count = await prisma.staff.count({ where: { business: { ownerId: business.ownerId }, isActive: true } });
   const limitError = await ownerLimitError(owner, "staff", count);
   if (limitError) return v1Error(402, "LIMIT", limitError);

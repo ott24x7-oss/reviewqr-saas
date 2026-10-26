@@ -1,4 +1,4 @@
-import { Check, ChevronDown, ChevronRight } from "lucide-react-native";
+import { Check, ChevronDown, ChevronRight, Lock } from "lucide-react-native";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from "react-native-reanimated";
 import { useEffect } from "react";
@@ -12,6 +12,8 @@ export type SetupGuideStep = {
   title: string;
   body: string;
   done: boolean;
+  /** Plan-gated: shows a lock; the screen's onStart opens the plan sheet instead of navigating. */
+  locked?: boolean;
 };
 
 export function SetupGuideCard({
@@ -63,6 +65,7 @@ export function SetupGuideCard({
               <Text style={[styles.stepTitle, { color: palette.ink, flex: 1 }, step.done && styles.doneTitle, lang === "hi" && styles.hindi]}>
                 {step.title}
               </Text>
+              {step.locked ? <Lock color={palette.muted} size={16} strokeWidth={2} /> : null}
               <Chevron color={palette.muted} size={18} strokeWidth={2} />
             </Pressable>
             {expanded ? (

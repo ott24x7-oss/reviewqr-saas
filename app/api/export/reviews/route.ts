@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { stringify } from "csv-stringify/sync";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
+import { denyFeatureResponse } from "@/lib/plans/feature-gate";
 
 export async function GET(req: NextRequest) {
   const user = await requireUser().catch(() => null);
@@ -17,6 +18,8 @@ export async function GET(req: NextRequest) {
     where: { id: businessId, ownerId: user.id }
   });
   if (!business) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const denied = await denyFeatureResponse(business.ownerId, "reviews-log");
+  if (denied) return denied;
 
   const reviews = await prisma.review.findMany({
     where: { businessId: business.id },

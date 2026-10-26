@@ -1,4 +1,5 @@
 import { Screen } from "../../src/ui/screen";
+import { FeatureGate } from "../../src/state/plan-lock";
 import type { TapPage } from "@reviewqr/shared";
 import { useQuery } from "@tanstack/react-query";
 import LottieView from "lottie-react-native";
@@ -224,6 +225,8 @@ function makeStyles(colors: Palette) {
 
 export default function NfcScreen() {
   return (
-    <Screen topInset={true}><NfcScreenContent /></Screen>
+    <FeatureGate id="nfc">
+      <Screen topInset={true}><NfcScreenContent /></Screen>
+    </FeatureGate>
   );
 }
