@@ -26,6 +26,7 @@ import { useI18n } from "../../src/i18n";
 import { businessDestinations } from "../../src/nav/business-destinations";
 import { useEntitlement } from "../../src/state/entitlement";
 import { useSession } from "../../src/state/session";
+import { useAgentMode } from "../../src/agent/mode-context";
 import { fonts } from "../../src/theme";
 import { Group, GroupRow, SectionHeader } from "../../src/ui/rows";
 import { useTheme, type SchemeChoice } from "../../src/ui/theme";
@@ -34,6 +35,7 @@ function MoreScreenContent() {
   const { t, lang, choose } = useI18n();
   const { palette, choice, setChoice } = useTheme();
   const { user, logout, refreshUser } = useSession();
+  const { setMode } = useAgentMode();
   const plan = useEntitlement();
   const [error, setError] = useState<string | null>(null);
   const name = lang === "hi" ? plan.data?.plan?.nameHi || plan.data?.plan?.nameEn : plan.data?.plan?.nameEn;
@@ -131,9 +133,10 @@ function MoreScreenContent() {
         />
         <GroupRow icon={User} tint="ink" title={t.account} hint={t.hintAccountRow} onPress={() => router.push("/(app)/account")} />
         <GroupRow icon={Bell} tint="amber" title={t.inbox} hint={t.recentActivity} onPress={() => router.push("/(app)/inbox")} />
-        {user?.role === "AGENT" ? <GroupRow icon={Users} tint="green" title={t.agentHome} hint={t.onboardBusiness} onPress={() => router.push("/(app)/agent")} /> : null}
+        {user?.role === "AGENT" ? <GroupRow icon={Users} tint="green" title={t.agentSwitchMode} hint={t.agentSwitchAgent} onPress={() => { setMode("agent"); router.replace("/(app)/agent-home"); }} /> : null}
         <GroupRow icon={CircleHelp} tint="green" title={t.help} hint={t.hintHelpRow} onPress={() => router.push("/(app)/help")} />
         <GroupRow icon={Trash2} tint="pink" title={t.deleteAccount} hint={t.hintDeleteRow} danger onPress={() => router.push("/(app)/delete-account")} />
+        {user?.role === "USER" ? <GroupRow icon={Users} tint="green" title={t.agentJoin} hint={t.agentJoinBody} onPress={() => router.push("/(app)/agent-join")} /> : null}
         <GroupRow icon={LogOut} tint="ink" title={t.signOut} hint={t.hintSignOut} onPress={() => logout()} />
       </Group>
       {error ? <Text style={{ color: palette.danger, fontFamily: fonts.body }}>{error}</Text> : null}

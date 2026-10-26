@@ -17,7 +17,7 @@ const ModeContext = createContext<ModeValue | null>(null);
 
 export function AgentModeProvider({ children }: { children: ReactNode }) {
   const { user } = useSession();
-  const { businesses } = useBusiness();
+  const { businesses, loading: businessesLoading } = useBusiness();
   const [storedChoice, setStoredChoice] = useState<{ userId: string; mode: AppMode | null } | null>(null);
 
   useEffect(() => {
@@ -37,8 +37,11 @@ export function AgentModeProvider({ children }: { children: ReactNode }) {
 
   const userId = user?.id;
   const role = user?.role;
-  const ready = role !== "AGENT" || storedChoice?.userId === userId;
-  const savedMode = storedChoice?.userId === userId ? storedChoice.mode : null;
+  const savedMode = storedChoice && storedChoice.userId === userId ? storedChoice.mode : null;
+  const ready = role !== "AGENT" || (
+    storedChoice?.userId === userId &&
+    (savedMode !== "owner" || !businessesLoading)
+  );
   const mode = resolveAppMode(user?.role, savedMode, businesses.length > 0);
   const canSwitch = user?.role === "AGENT" && businesses.length > 0;
   const setMode = useCallback((next: AppMode) => {

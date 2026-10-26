@@ -2,6 +2,7 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { apiData } from "../api/data";
 import { accountKey } from "../query/keys";
 import { useSession } from "../state/session";
+import { agentMockEnabled } from "./env";
 import { agentMockRequest } from "./mock";
 import type {
   AgentBusiness,
@@ -10,15 +11,12 @@ import type {
   AgentInviteResponse,
   AgentJoinResponse,
   AgentMemberDetail,
+  AgentOnboardResponse,
   AgentPayout,
   AgentProfile,
   AgentProfileUpdate,
   AgentTeam
 } from "./types";
-
-export function agentMockEnabled() {
-  return process.env.EXPO_PUBLIC_AGENT_MOCK === "1";
-}
 
 export async function agentRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (agentMockEnabled()) return agentMockRequest<T>(path, init);
@@ -92,6 +90,7 @@ export function useAgentMember(memberId: string | undefined) {
 
 export const agentRequests = {
   updateProfile: (body: AgentProfileUpdate) => agentRequest<AgentProfile>("/agent/profile", { method: "PUT", body: JSON.stringify(body) }),
+  onboardBusiness: (phone: string, businessName: string) => agentRequest<AgentOnboardResponse>("/agent/onboard", { method: "POST", body: JSON.stringify({ phone, businessName }) }),
   invite: (phone?: string) => agentRequest<AgentInviteResponse>("/agent/team/invite", { method: "POST", body: JSON.stringify(phone ? { phone } : {}) }),
   updateMember: (memberId: string, body: { sharePercent?: number; action?: "pause" | "resume" }) => agentRequest(`/agent/team/${encodeURIComponent(memberId)}`, { method: "PATCH", body: JSON.stringify(body) }),
   join: (code: string) => agentRequest<AgentJoinResponse>("/agent/join", { method: "POST", body: JSON.stringify({ code }) })

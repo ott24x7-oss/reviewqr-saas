@@ -50,17 +50,24 @@ export function PremiumTabBar({
   state,
   descriptors,
   onTabPress,
-  badges
+  badges,
+  mode = "owner",
+  canRecruit = true
 }: {
   state: { index: number; routes: TabRoute[] };
   descriptors: Record<string, { options?: { title?: string } }>;
   onTabPress: (route: TabRoute, focused: boolean) => void;
   badges?: Record<string, number>;
+  mode?: "owner" | "agent";
+  canRecruit?: boolean;
 }) {
   const { palette, reduceMotion } = useTheme();
   const { lang } = useI18n();
   const insets = useSafeAreaInsets();
-  const routes = state.routes.filter((route) => route.name in ICONS);
+  const ownerTabs = new Set(["index", "orders", "menu", "feedback", "more"]);
+  const agentTabs = new Set(["agent-home", "agent-businesses", "agent-earnings", "agent-more", ...(canRecruit ? ["agent-team"] : [])]);
+  const visibleTabs = mode === "agent" ? agentTabs : ownerTabs;
+  const routes = state.routes.filter((route) => visibleTabs.has(route.name) && route.name in ICONS);
   const index = routes.findIndex((route) => route.key === state.routes[state.index]?.key);
   const slide = useSharedValue(index);
   const tabWidth = useSharedValue(0);
