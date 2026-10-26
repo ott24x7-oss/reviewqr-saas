@@ -10,7 +10,7 @@ import { rateLimitDb } from "@/lib/rate-limit";
 import { getPaymentsConfig, getShopCheckoutConfig } from "@/lib/settings";
 import { absoluteUrl } from "@/lib/utils";
 import { getYoupiConfig, youpiConfigured, youpiCreatePayment } from "@/lib/payments/youpi";
-import { shopCartView } from "./cart-store";
+import { appCartSellsDigital, shopCartView } from "./cart-store";
 import { chargeForOrder } from "./charge";
 import { hardwareCommissionSnapshot } from "../plans/hardware";
 import { fulfillPaidShopOrder } from "./fulfill";
@@ -23,11 +23,12 @@ function jsonValue(value: unknown): Prisma.InputJsonValue | undefined {
   return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
 }
 
-export async function checkoutShop(userId: string, env: EnvLike = process.env) {
+export async function checkoutShop(userId: string, env: EnvLike = process.env, audience: "web" | "app" = "web") {
   const limit = await rateLimitDb({ key: `shop-pay:${userId}`, limit: 8, windowSeconds: 3600 });
   if (!limit.ok) return fail(429, "Too many payment attempts. Please wait.");
+  if (audience === "app" && (await appCartSellsDigital(userId))) return fail(400, "This item is not sold in the app");
 
-  const view = await shopCartView(userId);
+  const view = await shopCartView(userId, audience);
   if (!view.lines.length) return fail(400, "Add at least one item");
   if (view.lines.some((line) => !line.active || !line.sku)) return fail(400, "This item is not for sale");
   const designProblem = view.lines.find((line) => line.designError);
