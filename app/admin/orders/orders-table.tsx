@@ -7,7 +7,7 @@ import { Money, RelativeTime, StatusBadge } from "@/components/admin/ui/primitiv
 
 export type OrderRow = {
   id: string; status: string; totalPaise: number; invoiceNumber: string | null; createdAt: string;
-  businessName: string; customerName: string; phone: string; email: string | null; pendingReprint: boolean;
+  businessName: string; customerName: string; phone: string; pendingReprint: boolean;
 };
 
 export function OrdersTable({ rows, total, page, pageSize }: { rows: OrderRow[]; total: number; page: number; pageSize: number }) {
