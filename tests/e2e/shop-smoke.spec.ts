@@ -52,13 +52,14 @@ test("owner buys a combo, approves the proof, and the board shows Printing", asy
       password: "ShopTest1"
     });
 
-    await page.goto("/dashboard/businesses");
+    await page.goto("/dashboard/account/settings?section=businesses");
     const manage = page.getByRole("link", { name: "Manage", exact: true });
     const href = await manage.getAttribute("href");
     const businessId = href?.match(/\/dashboard\/businesses\/([^/?#]+)/)?.[1];
     expect(businessId).toBeTruthy();
     await manage.click();
-    await page.getByRole("main").getByRole("link", { name: /^QR codes/ }).click();
+    await page.getByRole("link", { name: "QR codes & NFC" }).click();
+    await page.getByRole("link", { name: "Create a code" }).click();
     await page.getByLabel("Label").fill("Front counter");
     await page.getByRole("button", { name: "Create QR code" }).click();
     await expect(page.getByText("Short URL")).toBeVisible();
