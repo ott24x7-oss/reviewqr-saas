@@ -2,6 +2,7 @@ import type { PlanDuration, SubscriptionTier } from "@prisma/client";
 import type { AdminPlanPatch } from "@reviewqr/shared";
 import { fail, ok } from "@/lib/api/result";
 import { prisma } from "@/lib/db";
+import { parseBullets } from "@/lib/plans/bullets";
 import { parseLimits } from "@/lib/plans/catalog";
 import { updatePlanRecord, type PlanWriteInput } from "@/lib/plans/admin-write";
 import { limitsForTier } from "@/lib/plans/legacy";
@@ -73,8 +74,11 @@ export async function patchAdminPlan(id: string, body: AdminPlanPatch) {
       qrCodes: limits.qrCodes,
       products: limits.products,
       staff: limits.staff,
+      locations: limits.locations,
       aiCalls: limits.aiCalls
     },
+    // A quick edit from the admin app must keep the pricing-page bullets.
+    bullets: parseBullets(plan.bullets),
     badge: body.badge === undefined ? plan.badge : body.badge,
     category: (plan.category as PlanWriteInput["category"]) || "reviews",
     imageUrl: plan.imageUrl,
