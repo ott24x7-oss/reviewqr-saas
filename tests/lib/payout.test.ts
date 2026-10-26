@@ -5,7 +5,7 @@ vi.mock("../../lib/plans/notify", () => ({ notifyUser }));
 
 import { encryptSecret } from "../../lib/crypto";
 import { prisma } from "../../lib/db";
-import { payApprovedCommissions } from "../../lib/plans/payout";
+import { checkPayoutDate, payApprovedCommissions } from "../../lib/plans/payout";
 import { saveTeamProgramSettings } from "../../lib/plans/team-settings";
 
 async function agentWithKyc(label: string) {
@@ -21,6 +21,9 @@ async function agentWithKyc(label: string) {
   });
   return agent;
 }
+
+/** The server clock for these tests. The financial year is 1 Apr 2026 to 31 Mar 2027. */
+const NOW = new Date("2026-10-26T12:00:00+05:30");
 
 describe("commission payout", () => {
   const users: string[] = [];
@@ -52,6 +55,7 @@ describe("commission payout", () => {
       agentId: agent.id,
       utr: "UTR123456",
       paidAt: new Date("2026-10-01T00:00:00.000Z"),
+      now: NOW,
       note: "October",
       idempotencyKey: `form-${agent.id}`
     };
@@ -89,12 +93,14 @@ describe("commission payout", () => {
         agentId: agent.id,
         utr: "CONCURR0001",
         paidAt,
+        now: NOW,
         idempotencyKey: `race-a-${agent.id}`
       }),
       payApprovedCommissions({
         agentId: agent.id,
         utr: "CONCURR0002",
         paidAt,
+        now: NOW,
         idempotencyKey: `race-b-${agent.id}`
       })
     ]);
@@ -130,7 +136,8 @@ describe("commission payout", () => {
     const blocked = await payApprovedCommissions({
       agentId: agent.id,
       utr: "KYC123456",
-      paidAt: new Date("2026-10-01T00:00:00.000Z")
+      paidAt: new Date("2026-10-01T00:00:00.000Z"),
+      now: NOW
     });
     expect(blocked.ok).toBe(false);
     expect(await prisma.commissionPayout.count({ where: { agentId: agent.id } })).toBe(0);
@@ -155,7 +162,8 @@ describe("commission payout", () => {
       const first = await payApprovedCommissions({
         agentId: agent.id,
         utr: "TDSUNDER1",
-        paidAt: new Date("2026-06-01T00:00:00+05:30")
+        paidAt: new Date("2026-06-01T00:00:00+05:30"),
+        now: NOW
       });
       expect(first.ok && first.grossPaise).toBe(8000);
       expect(first.ok && first.tdsPaise).toBe(0);
@@ -167,7 +175,8 @@ describe("commission payout", () => {
       const second = await payApprovedCommissions({
         agentId: agent.id,
         utr: "TDSOVER001",
-        paidAt: new Date("2026-08-01T00:00:00+05:30")
+        paidAt: new Date("2026-08-01T00:00:00+05:30"),
+        now: NOW
       });
       expect(second.ok && second.grossPaise).toBe(5000);
       expect(second.ok && second.tdsPaise).toBe(300);
@@ -178,5 +187,24 @@ describe("commission payout", () => {
       if (previous) await prisma.appSetting.update({ where: { key: "plans.team" }, data: { value: previous.value } });
       else await prisma.appSetting.deleteMany({ where: { key: "plans.team" } });
     }
+  });
+  it("refuses a future or earlier-year payout date and keeps the commission approved", async () => {
+    expect(checkPayoutDate(new Date("2026-10-26T11:00:00+05:30"), NOW)).toBeNull();
+    expect(checkPayoutDate(new Date("2026-04-01T00:00:00+05:30"), NOW)).toBeNull();
+    expect(checkPayoutDate(new Date("2026-10-27T00:00:00+05:30"), NOW)).toMatch(/future/);
+    expect(checkPayoutDate(new Date("2026-03-31T23:59:00+05:30"), NOW)).toMatch(/financial year/);
+    expect(checkPayoutDate(new Date("nope"), NOW)).toBe("Invalid date");
+
+    const agent = await agentWithKyc("backdate");
+    users.push(agent.id);
+    await prisma.shopCommission.create({
+      data: { agentId: agent.id, kind: "SALE", sourceId: `back-${agent.id}`, amountPaise: 9000, percent: 0, status: "APPROVED" }
+    });
+    for (const paidAt of [new Date("2026-03-15T10:00:00+05:30"), new Date("2026-11-01T10:00:00+05:30")]) {
+      const result = await payApprovedCommissions({ agentId: agent.id, utr: `BACK${paidAt.getTime()}`, paidAt, now: NOW });
+      expect(result.ok).toBe(false);
+    }
+    expect(await prisma.commissionPayout.count({ where: { agentId: agent.id } })).toBe(0);
+    expect((await prisma.shopCommission.findFirst({ where: { agentId: agent.id } }))?.status).toBe("APPROVED");
   });
 });

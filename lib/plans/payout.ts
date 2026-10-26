@@ -6,20 +6,39 @@ import { formatINR } from "../utils";
 import { getTeamProgramSettings } from "./team-settings";
 import { financialYearBounds, tdsForPayout } from "./tds";
 
+/**
+ * A payout date may not be in the future and may not fall before the current financial
+ * year. TDS always uses the financial year of the server's clock, so a backdated paidAt
+ * cannot move a payout into an earlier year's threshold.
+ */
+export function checkPayoutDate(paidAt: Date, now = new Date()) {
+  if (Number.isNaN(paidAt.getTime())) return "Invalid date";
+  if (paidAt.getTime() > now.getTime()) return "The payout date cannot be in the future";
+  if (paidAt.getTime() < financialYearBounds(now).start.getTime()) {
+    return "The payout date must be in the current financial year";
+  }
+  return null;
+}
+
 export async function payApprovedCommissions(input: {
   agentId: string;
   utr: string;
   paidAt: Date;
   note?: string;
   idempotencyKey?: string | null;
+  /** Server clock. Only tests pass this. */
+  now?: Date;
 }) {
   const utr = input.utr.trim().slice(0, 120);
   if (utr.length < 6) return { ok: false as const, error: "Enter the payout UTR" };
   const idempotencyKey = (input.idempotencyKey || "").trim().slice(0, 120) || null;
+  const now = input.now ?? new Date();
 
   const replay = async () => findPayout(input.agentId, utr, idempotencyKey);
   const seen = await replay();
   if (seen) return paidResult(seen, true, 0);
+  const badDate = checkPayoutDate(input.paidAt, now);
+  if (badDate) return { ok: false as const, error: badDate };
 
   try {
     const created = await prisma.$transaction(async (tx) => {
@@ -43,7 +62,7 @@ export async function payApprovedCommissions(input: {
       const bank = profile?.bankAccount ? decryptSecret(profile.bankAccount).replace(/\s/g, "") : "";
       if (!pan || (!(profile?.upiId || "").trim() && !bank)) return { kind: "kyc" as const };
       const settings = await getTeamProgramSettings();
-      const year = financialYearBounds(input.paidAt);
+      const year = financialYearBounds(now);
       const prior = await tx.commissionPayout.aggregate({
         where: { agentId: input.agentId, paidAt: { gte: year.start, lt: year.end } },
         _sum: { grossPaise: true }

@@ -17,14 +17,19 @@ export function PaymentActions({
   const router = useRouter();
   const [busy, setBusy] = React.useState<string | null>(null);
   const [refundUtr, setRefundUtr] = React.useState("");
+  const [reason, setReason] = React.useState("");
 
   async function run(action: "approve" | "reject" | "refund") {
+    if (action !== "reject" && !reason.trim()) {
+      toast.error("Write a reason first");
+      return;
+    }
     setBusy(action);
     try {
       const res = await fetch(`/api/admin/payments/${id}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action, refundUtr })
+        body: JSON.stringify({ action, refundUtr, reason: reason.trim() || undefined })
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error || "Request failed");
@@ -40,6 +45,15 @@ export function PaymentActions({
   const pending = status === "PENDING" || status === "QUEUED";
   return (
     <div className="flex flex-col items-end gap-1.5">
+      {(pending && provider !== "YOUPI") || status === "COMPLETED" ? (
+        <Input
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="Reason"
+          aria-label="Reason"
+          className="h-8 w-40 text-xs"
+        />
+      ) : null}
       {pending && provider !== "YOUPI" && (
         <div className="flex gap-1">
           <Button size="sm" disabled={busy !== null} onClick={() => run("approve")}>
