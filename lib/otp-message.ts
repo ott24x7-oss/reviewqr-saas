@@ -86,10 +86,33 @@ export function otpBrandName(raw: string | null | undefined) {
   return name || OTP_BRAND_FALLBACK;
 }
 
-/** Hindi and English in one message. Brand is the platform name. */
+/**
+ * Hindi and English in one WhatsApp message. The code leads the first line so the
+ * phone's notification preview shows it, and *bold* is WhatsApp formatting.
+ */
 export function otpLoginMessage(code: string, brand: string) {
   const name = otpBrandName(brand);
-  return `${code} is your ${name} login code. Valid 5 minutes. Do not share it with anyone. / ${code} आपका ${name} लॉगिन कोड है। 5 मिनट तक वैध। किसी से शेयर न करें।`;
+  return [
+    `*${code}* is your ${name} login code.`,
+    "",
+    "Valid for 5 minutes. Do not share this code with anyone.",
+    `${name} will never call or message you to ask for it.`,
+    "",
+    "———",
+    "",
+    `*${code}* आपका ${name} लॉगिन कोड है।`,
+    "",
+    "यह 5 मिनट तक मान्य है। यह कोड किसी को न बताएं।",
+    `${name} कभी कॉल या मैसेज करके यह कोड नहीं मांगेगा।`
+  ].join("\n");
+}
+
+/** The WhatsApp text as email HTML: no asterisks, line breaks kept, the code bold. */
+export function otpEmailHtml(message: string) {
+  return message
+    .split("\n")
+    .map((line) => escapeHtml(line).replace(/\*([^*]+)\*/g, "<strong>$1</strong>"))
+    .join("<br>");
 }
 
 /** Last 10 digits become +91. Shorter input is not a sendable number. */
@@ -155,7 +178,7 @@ export async function deliverOtpCode(opts: DeliverOtpDeps): Promise<OtpChannel> 
       await opts.sendMail(
         opts.email,
         `Your ${brand} login code`,
-        `<p>${escapeHtml(message)}</p>`
+        `<p style="font-family:Arial,sans-serif;font-size:15px;line-height:1.5">${otpEmailHtml(message)}</p>`
       );
       return "email";
     } catch {
