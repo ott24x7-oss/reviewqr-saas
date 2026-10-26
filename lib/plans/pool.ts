@@ -7,7 +7,7 @@ import { splitCommissionPool, type ChainMember, type EarnerStatus } from "./team
 export type CommissionDb = Prisma.TransactionClient | typeof prisma;
 
 function earnsStatus(status: "PENDING" | "ACTIVE" | "PAUSED" | "REJECTED", active: boolean): EarnerStatus {
-  if (status === "PENDING" || status === "REJECTED") return "PENDING";
+  if (status === "PENDING" || status === "REJECTED") return status;
   if (status === "PAUSED" || !active) return "PAUSED";
   return "ACTIVE";
 }

@@ -157,7 +157,7 @@ describe("team ledger", () => {
     expect(rows.every((row) => row.status === "REVERSED" && row.reversedAt)).toBe(true);
   });
 
-  it("pays a paused member nothing new and gives that share to the leader", async () => {
+  it("pays a paused member nothing new and does not give that share to the leader", async () => {
     const { leader, seller } = await pair(70, "PAUSED");
     const sourceId = `pause-${seller.id}`;
     await creditPooledCommission({
@@ -169,7 +169,8 @@ describe("team ledger", () => {
     });
     const rows = await prisma.shopCommission.findMany({ where: { sourceId } });
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ agentId: leader.id, kind: "TEAM_OVERRIDE", amountPaise: 20000 });
+    // The leader keeps only the normal 30% override. The paused member's 70% is withheld.
+    expect(rows[0]).toMatchObject({ agentId: leader.id, kind: "TEAM_OVERRIDE", amountPaise: 6000 });
   });
 
   it("keeps the old snapshot when a share changes", async () => {

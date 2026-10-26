@@ -73,17 +73,51 @@ describe("team commission split", () => {
     expect(paid(lines)).toBe(201);
   });
 
-  it("gives a paused or unapproved member's share to the leader", () => {
-    for (const status of ["PAUSED", "PENDING"] as const) {
+  it("withholds a paused, unapproved or rejected member's share instead of giving it to the leader", () => {
+    const normal = splitCommissionPool({
+      poolPaise: 20000,
+      chain: [member("member", 70), member("leader", 60), member("top", null)],
+      ...caps
+    });
+    for (const status of ["PAUSED", "PENDING", "REJECTED"] as const) {
       const lines = splitCommissionPool({
         poolPaise: 20000,
         chain: [member("member", 70, status), member("leader", 60), member("top", null)],
         ...caps
       });
       expect(lines.find((line) => line.agentId === "member")).toBeUndefined();
-      expect(paid(lines)).toBe(20000);
-      expect(lines[0]?.agentId).toBe("leader");
+      expect(lines.map((line) => [line.agentId, line.amountPaise])).toEqual([
+        ["leader", 3600],
+        ["top", 2400]
+      ]);
+      // The leader earns exactly the normal override; the member's 14000 stays unpaid.
+      expect(lines.filter((line) => line.agentId !== "member")).toEqual(normal.slice(1));
+      expect(paid(lines)).toBe(6000);
+      expect(paid(lines)).toBeLessThanOrEqual(20000);
     }
+  });
+
+  it("does not move a paused member's share to a 2-level leader", () => {
+    const lines = splitCommissionPool({
+      poolPaise: 20000,
+      chain: [member("member", 70, "PAUSED"), member("leader", null)],
+      ...caps
+    });
+    expect(lines).toEqual([
+      { agentId: "leader", role: "override", amountPaise: 6000, sharePercent: 100, leaderId: null }
+    ]);
+  });
+
+  it("withholds a paused middle leader's share without raising the top override", () => {
+    const lines = splitCommissionPool({
+      poolPaise: 20000,
+      chain: [member("seller", 70), member("mid", 60, "PAUSED"), member("top", null)],
+      ...caps
+    });
+    expect(lines.map((line) => [line.agentId, line.amountPaise])).toEqual([
+      ["seller", 14000],
+      ["top", 2400]
+    ]);
   });
 
   it("pays a direct sale in full and does not pay a zero pool", () => {

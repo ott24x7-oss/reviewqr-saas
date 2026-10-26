@@ -1,4 +1,4 @@
-export type EarnerStatus = "PENDING" | "ACTIVE" | "PAUSED";
+export type EarnerStatus = "PENDING" | "ACTIVE" | "PAUSED" | "REJECTED";
 
 export type ChainMember = {
   userId: string;
@@ -30,8 +30,10 @@ export function clampShare(share: number | null | undefined, minSharePercent: nu
  * An active earner who still has a leader keeps floor(pool * share / 100) paise.
  * The leader gets the remainder, and that remainder is the next pool. It is never
  * larger than the original commission. Rounding stays with the leader.
- * A pending or paused earner keeps nothing. Their share stays in the pool for the
- * next active ancestor. If nobody left is active, that remainder is not paid.
+ * A pending, paused or rejected earner is paid nothing, and their share is not
+ * passed up either: the platform keeps it. Their leader still gets only the normal
+ * override, so pausing a member never moves the member's money to the leader.
+ * If nobody left is active, that remainder is not paid.
  */
 export function splitCommissionPool(input: {
   poolPaise: number;
@@ -63,8 +65,8 @@ export function splitCommissionPool(input: {
       break;
     }
     const share = clampShare(person.sharePercent, input.minSharePercent, input.maxSharePercent);
-    const keep = earns ? Math.floor((remaining * share) / 100) : 0;
-    if (keep > 0) {
+    const keep = Math.floor((remaining * share) / 100);
+    if (earns && keep > 0) {
       lines.push({
         agentId: person.userId,
         role: i === 0 ? "seller" : "override",
