@@ -1,18 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { logAudit, requireAdminApi } from "@/lib/admin";
-import { prisma } from "@/lib/db";
-import { reassignBusinessAgent } from "@/lib/plans/attribution";
+import { applyAdminTeamAction } from "@/lib/admin/team-admin";
 import { getClientIp } from "@/lib/utils";
 
 const schema = z.object({
-  action: z.enum(["update", "reassign"]),
+  action: z.enum(["update", "reassign", "approve", "reject", "pause", "resume", "share", "move"]),
   name: z.string().trim().max(80).optional(),
   upiId: z.string().trim().max(80).optional(),
   city: z.string().trim().max(80).optional(),
   active: z.boolean().optional(),
   businessId: z.string().optional(),
-  agentUserId: z.string().optional()
+  agentUserId: z.string().optional(),
+  sharePercent: z.number().int().optional(),
+  leaderUserId: z.string().optional()
 });
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
@@ -21,26 +22,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const parsed = schema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
 
-  if (parsed.data.action === "reassign") {
-    const businessId = parsed.data.businessId || "";
-    const agentUserId = parsed.data.agentUserId || params.id;
-    const result = await reassignBusinessAgent(businessId, agentUserId);
-    if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
-  } else {
-    const profile = await prisma.agentProfile.findUnique({ where: { id: params.id }, select: { userId: true } });
-    if (!profile) return NextResponse.json({ error: "Agent not found" }, { status: 404 });
-    await prisma.agentProfile.update({
-      where: { id: params.id },
-      data: {
-        ...(parsed.data.upiId !== undefined ? { upiId: parsed.data.upiId } : {}),
-        ...(parsed.data.city !== undefined ? { city: parsed.data.city } : {}),
-        ...(parsed.data.active !== undefined ? { active: parsed.data.active } : {})
-      }
-    });
-    if (parsed.data.name) {
-      await prisma.user.update({ where: { id: profile.userId }, data: { name: parsed.data.name } });
-    }
-  }
+  const result = await applyAdminTeamAction(params.id, parsed.data);
+  if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
 
   await logAudit({
     userId: guard.user.id,

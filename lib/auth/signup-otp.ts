@@ -15,6 +15,7 @@ import { slugify } from "../utils";
 import { sendVerificationEmail } from "../verify-email";
 import { cookies } from "next/headers";
 import { JOIN_COOKIE, applySignupAttribution } from "../plans/attribution";
+import { queueAdminPush } from "../admin/push";
 
 export type SignupOtpResult =
   | { ok: true; kind: "request"; channel: "whatsapp" | "email" | "dev"; issuedCode: string }
@@ -49,6 +50,13 @@ async function createPhoneOwner(opts: {
       subscriptionStatus: "TRIALING",
       trialEndsAt
     }
+  });
+  void queueAdminPush({
+    event: "signup",
+    collapseKey: user.id,
+    title: "New signup",
+    body: "A new owner joined QR24x7.",
+    windowSeconds: 86400
   });
 
   let businessId: string | null = null;

@@ -1,7 +1,10 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../db";
+import { decryptSecret } from "../crypto";
 import { notifyUser } from "./notify";
 import { formatINR } from "../utils";
+import { getTeamProgramSettings } from "./team-settings";
+import { financialYearBounds, tdsForPayout } from "./tds";
 
 export async function payApprovedCommissions(input: {
   agentId: string;
@@ -16,9 +19,7 @@ export async function payApprovedCommissions(input: {
 
   const replay = async () => findPayout(input.agentId, utr, idempotencyKey);
   const seen = await replay();
-  if (seen) {
-    return { ok: true as const, already: true, payoutId: seen.id, amountPaise: seen.amountPaise, count: 0 };
-  }
+  if (seen) return paidResult(seen, true, 0);
 
   try {
     const created = await prisma.$transaction(async (tx) => {
@@ -34,10 +35,32 @@ export async function payApprovedCommissions(input: {
       `;
       const amountPaise = rows.reduce((sum, row) => sum + Number(row.amountPaise), 0);
       if (!rows.length || amountPaise <= 0) return { kind: "empty" as const };
+      const profile = await tx.agentProfile.findUnique({
+        where: { userId: input.agentId },
+        select: { pan: true, upiId: true, bankAccount: true }
+      });
+      const pan = profile?.pan ? decryptSecret(profile.pan).replace(/\s/g, "") : "";
+      const bank = profile?.bankAccount ? decryptSecret(profile.bankAccount).replace(/\s/g, "") : "";
+      if (!pan || (!(profile?.upiId || "").trim() && !bank)) return { kind: "kyc" as const };
+      const settings = await getTeamProgramSettings();
+      const year = financialYearBounds(input.paidAt);
+      const prior = await tx.commissionPayout.aggregate({
+        where: { agentId: input.agentId, paidAt: { gte: year.start, lt: year.end } },
+        _sum: { grossPaise: true }
+      });
+      const tax = tdsForPayout({
+        grossPaise: amountPaise,
+        alreadyGrossPaise: prior._sum.grossPaise || 0,
+        tdsPercent: settings.tdsPercent,
+        thresholdPaise: settings.tdsYearlyThresholdPaise
+      });
       const payout = await tx.commissionPayout.create({
         data: {
           agentId: input.agentId,
-          amountPaise,
+          amountPaise: tax.netPaise,
+          grossPaise: tax.grossPaise,
+          tdsPaise: tax.tdsPaise,
+          netPaise: tax.netPaise,
           utr,
           paidAt: input.paidAt,
           note: (input.note || "").slice(0, 240),
@@ -51,36 +74,41 @@ export async function payApprovedCommissions(input: {
       return { kind: "created" as const, payout, count: rows.length };
     });
     if (created.kind === "empty") return { ok: false as const, error: "Nothing approved to pay" };
-    if (created.kind === "again") {
-      return {
-        ok: true as const,
-        already: true,
-        payoutId: created.payout.id,
-        amountPaise: created.payout.amountPaise,
-        count: 0
-      };
+    if (created.kind === "kyc") {
+      return { ok: false as const, error: "Add a PAN and a UPI ID or bank account before a payout" };
     }
+    if (created.kind === "again") return paidResult(created.payout, true, 0);
     await notifyUser(
       input.agentId,
       "Payout sent",
-      `${formatINR(created.payout.amountPaise)} was paid. UTR ${utr}.`
+      `${formatINR(created.payout.netPaise)} was paid after TDS. UTR ${utr}.`
     );
-    return {
-      ok: true as const,
-      already: false,
-      payoutId: created.payout.id,
-      amountPaise: created.payout.amountPaise,
-      count: created.count
-    };
+    return paidResult(created.payout, false, created.count);
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       const raced = await replay();
-      if (raced) {
-        return { ok: true as const, already: true, payoutId: raced.id, amountPaise: raced.amountPaise, count: 0 };
-      }
+      if (raced) return paidResult(raced, true, 0);
     }
     throw error;
   }
+}
+
+function paidResult(
+  payout: { id: string; amountPaise: number; grossPaise: number; tdsPaise: number; netPaise: number },
+  already: boolean,
+  count: number
+) {
+  const netPaise = payout.netPaise || payout.amountPaise;
+  return {
+    ok: true as const,
+    already,
+    payoutId: payout.id,
+    amountPaise: netPaise,
+    grossPaise: payout.grossPaise || payout.amountPaise,
+    tdsPaise: payout.tdsPaise,
+    netPaise,
+    count
+  };
 }
 
 async function findPayout(

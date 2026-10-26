@@ -35,5 +35,11 @@ export async function POST(req: NextRequest) {
     metadata: { agentId: parsed.data.agentId, amountPaise: result.amountPaise },
     ip: getClientIp(req.headers)
   });
-  return NextResponse.json({ ok: true, amountPaise: result.amountPaise });
+  return NextResponse.json({
+    ok: true,
+    amountPaise: result.amountPaise,
+    grossPaise: result.grossPaise,
+    tdsPaise: result.tdsPaise,
+    netPaise: result.netPaise
+  });
 }

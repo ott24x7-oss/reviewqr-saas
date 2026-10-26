@@ -5,7 +5,7 @@
 import { prisma } from "@/lib/db";
 import { getShopCheckoutConfig } from "@/lib/settings";
 import { commissionPaise, soleAgentId } from "./commission";
-import { recordCommission } from "../plans/ledger";
+import { creditPooledCommission } from "../plans/pool";
 import { commissionAmount, holdUntil, pickCommissionRule, renewalStillPays, type CommissionRuleView } from "../plans/commission-rules";
 import { getPlanProgramSettings } from "../plans/settings";
 
@@ -81,13 +81,13 @@ export async function creditRenewalCommission(ownerId: string, paymentId: string
     amount = commissionAmount(basis, percent, flatPaise, amountPaise);
   }
   if (amount <= 0) return;
-  await recordCommission({
-    agentId,
-    kind: "RENEWAL",
+  await creditPooledCommission({
+    sellerId: agentId,
+    sellerKind: saleKind === "FIRST" ? "SALE" : "RENEWAL",
+    poolPaise: amount,
     sourceId: paymentId,
     paymentId,
     planId: payment?.planId || null,
-    amountPaise: amount,
     percent,
     basis,
     flatPaise,

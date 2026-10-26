@@ -13,6 +13,8 @@ export async function moveShopOrder(opts: {
   comment?: string | null;
   reprintApproved?: boolean;
   via?: string | null;
+  deviceId?: string | null;
+  ip?: string | null;
 }) {
   if (!isShopOrderStatus(opts.to)) return fail(400, "That status change is not allowed");
   const order = await prisma.shopOrder.findUnique({
@@ -41,6 +43,8 @@ export async function moveShopOrder(opts: {
     action: "shop.order.move",
     entity: "ShopOrder",
     entityId: order.id,
+    deviceId: opts.deviceId,
+    ip: opts.ip || undefined,
     metadata: { from: order.status, to, comment: opts.comment?.trim() || null, via: opts.via || null }
   });
   try {

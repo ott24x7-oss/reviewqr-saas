@@ -1,11 +1,13 @@
+import { adminDeviceRows } from "@/lib/admin/devices";
 import { appFunnel } from "@/lib/app/funnel";
 import { getAppReleaseConfig } from "@/lib/settings";
 import { AppReleaseForm } from "./app-form";
+import { AdminDevices } from "./devices";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminAppPage() {
-  const [release, funnel] = await Promise.all([getAppReleaseConfig(), appFunnel()]);
+  const [release, funnel, devices] = await Promise.all([getAppReleaseConfig(), appFunnel(), adminDeviceRows()]);
   return (
     <div className="space-y-5">
       <div>
@@ -15,6 +17,7 @@ export default async function AdminAppPage() {
         </p>
       </div>
       <AppReleaseForm initial={release} />
+      <AdminDevices initial={devices} />
       <div className="rounded-xl border bg-card">
         <div className="border-b px-4 py-3">
           <h2 className="font-display text-lg font-semibold">Funnel, last 30 days</h2>

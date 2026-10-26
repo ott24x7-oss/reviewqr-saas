@@ -55,9 +55,9 @@ export async function resolveV1User(req: NextRequest): Promise<V1User | null | "
     if (!claims) return "bad-bearer";
     const user = await prisma.user.findUnique({
       where: { id: claims.sub },
-      select: { id: true, email: true, name: true, phone: true, role: true, pushEnabled: true, deletedAt: true }
+      select: { id: true, email: true, name: true, phone: true, role: true, pushEnabled: true, deletedAt: true, suspendedAt: true }
     });
-    if (!user || user.deletedAt) return null;
+    if (!user || user.deletedAt || user.suspendedAt) return null;
     return {
       id: user.id,
       email: user.email,

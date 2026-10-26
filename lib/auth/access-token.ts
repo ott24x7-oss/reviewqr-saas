@@ -4,12 +4,16 @@ import crypto from "crypto";
 type EnvLike = Record<string, string | undefined>;
 
 export const ACCESS_TTL_SEC = 15 * 60;
+export const ADMIN_ACCESS_TTL_SEC = 10 * 60;
+export const STEP_UP_TTL_SEC = 5 * 60;
 
 export type AccessClaims = {
   sub: string;
   role: string;
   iat: number;
   exp: number;
+  aud?: string;
+  deviceId?: string;
 };
 
 function b64url(input: string) {
@@ -23,21 +27,23 @@ export function accessSecret(env: EnvLike = process.env): string | null {
 }
 
 export function signAccessToken(
-  claims: { sub: string; role: string },
+  claims: { sub: string; role: string; aud?: string; deviceId?: string },
   now = Math.floor(Date.now() / 1000),
-  env: EnvLike = process.env
+  env: EnvLike = process.env,
+  ttlSec = ACCESS_TTL_SEC
 ) {
   const secret = accessSecret(env);
   if (!secret) throw new Error("AUTH_TOKEN_SECRET is not set");
   const header = b64url(JSON.stringify({ alg: "HS256", typ: "JWT" }));
-  const payload = b64url(
-    JSON.stringify({
-      sub: claims.sub,
-      role: claims.role,
-      iat: now,
-      exp: now + ACCESS_TTL_SEC
-    })
-  );
+  const body: Record<string, string | number> = {
+    sub: claims.sub,
+    role: claims.role,
+    iat: now,
+    exp: now + ttlSec
+  };
+  if (claims.aud) body.aud = claims.aud;
+  if (claims.deviceId) body.deviceId = claims.deviceId;
+  const payload = b64url(JSON.stringify(body));
   const data = `${header}.${payload}`;
   const sig = crypto.createHmac("sha256", secret).update(data).digest("base64url");
   return `${data}.${sig}`;
