@@ -35,7 +35,7 @@ async function postHandler(req: NextRequest, context?: { params: Record<string, 
   const id = context?.params.id || "";
   const body = parsed.data;
   if (body.action === "role" || (body.action === "grant" && body.days > 30)) {
-    const step = await requireStepUp(req, auth.actor);
+    const step = await requireStepUp(req, auth.actor, body.action === "role" ? "change_role" : "grant_days_over_30");
     if (!step.ok) return step.response;
   }
   let result: ServiceResult<unknown>;

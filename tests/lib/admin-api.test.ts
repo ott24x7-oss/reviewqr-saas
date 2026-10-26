@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { randomUUID } from "crypto";
 import { NextRequest } from "next/server";
 import { GET as dashboardGet } from "../../app/api/v1/admin/dashboard/route";
 import { GET as inboxGet, POST as inboxPost } from "../../app/api/v1/admin/inbox/route";
@@ -36,7 +37,6 @@ let adminId = "";
 let personId = "";
 let ownerToken = "";
 let adminToken = "";
-let step = "";
 let deviceId = "";
 let businessId = "";
 let planId = "";
@@ -61,6 +61,16 @@ function call(path: string, opts: { method?: string; body?: unknown; token?: str
     },
     body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined
   });
+}
+
+/** A fresh single-use step-up token for one action, as /step-up would issue it. */
+function stepFor(act: string) {
+  return signAccessToken(
+    { sub: adminId, role: "ADMIN", aud: "admin-step-up", deviceId, act, jti: randomUUID() },
+    undefined,
+    undefined,
+    STEP_UP_TTL_SEC
+  );
 }
 
 async function auditRow(action: string, entityId?: string) {
@@ -101,12 +111,6 @@ describe("admin api", () => {
     adminToken = tokens.accessToken;
     const ownerTokens = await issueTokenPair(owner, { deviceName: "owner" });
     ownerToken = ownerTokens.accessToken;
-    step = signAccessToken(
-      { sub: admin.id, role: "ADMIN", aud: "admin-step-up", deviceId: device.id },
-      undefined,
-      undefined,
-      STEP_UP_TTL_SEC
-    );
 
     const business = await prisma.business.create({
       data: { ownerId: person.id, name: `Shop ${stamp}`, slug: `shop-${stamp}`, phone: "9811100099" }
@@ -294,10 +298,23 @@ describe("admin api", () => {
       { params: { id: personId } }
     );
     expect(role.status).toBe(403);
-    const roleOk = await userPost(
-      call(`/api/v1/admin/users/${personId}`, { token: adminToken, step, body: { action: "role", role: "STAFF" } }),
+    const wrongAction = await userPost(
+      call(`/api/v1/admin/users/${personId}`, { token: adminToken, step: stepFor("mark_payout_paid"), body: { action: "role", role: "STAFF" } }),
       { params: { id: personId } }
     );
+    expect(wrongAction.status).toBe(403);
+    expect((await prisma.user.findUnique({ where: { id: personId } }))?.role).toBe("USER");
+    const roleStep = stepFor("change_role");
+    const roleOk = await userPost(
+      call(`/api/v1/admin/users/${personId}`, { token: adminToken, step: roleStep, body: { action: "role", role: "STAFF" } }),
+      { params: { id: personId } }
+    );
+    const replayed = await userPost(
+      call(`/api/v1/admin/users/${personId}`, { token: adminToken, step: roleStep, body: { action: "role", role: "USER" } }),
+      { params: { id: personId } }
+    );
+    expect(replayed.status).toBe(403);
+    expect((await replayed.json()).error.code).toBe("STEP_UP_REQUIRED");
     expect(roleOk.status).toBe(200);
     expect((await auditRow("user.role.change", personId))?.deviceId).toBe(deviceId);
 
@@ -354,7 +371,7 @@ describe("admin api", () => {
     expect((await auditRow("payment.reject", pendingPay))?.deviceId).toBe(deviceId);
 
     const noReason = await paymentPost(
-      call(`/api/v1/admin/payments/${donePay}`, { token: adminToken, step, body: { action: "refund", refundUtr: "UTR123456" } }),
+      call(`/api/v1/admin/payments/${donePay}`, { token: adminToken, step: stepFor("refund_payment"), body: { action: "refund", refundUtr: "UTR123456" } }),
       { params: { id: donePay } }
     );
     expect(noReason.status).toBe(400);
@@ -368,7 +385,7 @@ describe("admin api", () => {
     const refunded = await paymentPost(
       call(`/api/v1/admin/payments/${donePay}`, {
         token: adminToken,
-        step,
+        step: stepFor("refund_payment"),
         body: { action: "refund", refundUtr: "UTR123456", reason: "Customer returned it" }
       }),
       { params: { id: donePay } }
@@ -394,13 +411,13 @@ describe("admin api", () => {
     );
     expect(blocked.status).toBe(403);
     const missing = await commissionsPost(
-      call("/api/v1/admin/commissions", { token: adminToken, step, body: { action: "pay", agentId, utr: "PAY123456" } })
+      call("/api/v1/admin/commissions", { token: adminToken, step: stepFor("mark_payout_paid"), body: { action: "pay", agentId, utr: "PAY123456" } })
     );
     expect(missing.status).toBe(400);
     const paid = await commissionsPost(
       call("/api/v1/admin/commissions", {
         token: adminToken,
-        step,
+        step: stepFor("mark_payout_paid"),
         body: { action: "pay", agentId, utr: "PAY123456", reason: "Weekly payout" }
       })
     );
@@ -432,7 +449,7 @@ describe("admin api", () => {
     const still = await prisma.planPrice.findUnique({ where: { planId_duration: { planId, duration: "MONTH_1" } } });
     expect(still?.pricePaise).toBe(10000);
     const changed = await planPatch(
-      call(`/api/v1/admin/plans/${planId}`, { method: "PATCH", token: adminToken, step, body: { duration: "MONTH_1", pricePaise: 25000 } }),
+      call(`/api/v1/admin/plans/${planId}`, { method: "PATCH", token: adminToken, step: stepFor("change_plan_price"), body: { duration: "MONTH_1", pricePaise: 25000 } }),
       { params: { id: planId } }
     );
     expect(changed.status).toBe(200);

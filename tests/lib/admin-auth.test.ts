@@ -217,13 +217,19 @@ describe("admin auth", () => {
     const sent = await stepPost(call("/api/v1/admin/step-up", {}, approverBody.accessToken));
     expect(sent.status).toBe(200);
     const stepCode = (await sent.json()).data.devCode as string;
-    const confirmed = await stepPost(call("/api/v1/admin/step-up", { code: stepCode }, approverBody.accessToken));
+    const noAction = await stepPost(call("/api/v1/admin/step-up", { code: stepCode }, approverBody.accessToken));
+    expect(noAction.status).toBe(400);
+    const confirmed = await stepPost(
+      call("/api/v1/admin/step-up", { code: stepCode, action: "approve_device" }, approverBody.accessToken)
+    );
     const confirmedBody = await confirmed.json();
     expect(confirmed.status).toBe(200);
     const stepUpToken = confirmedBody.data.stepUpToken as string;
     expect(confirmedBody.data.expiresIn).toBe(300);
 
-    const confirmedAgain = await stepPost(call("/api/v1/admin/step-up", { code: stepCode }, approverBody.accessToken));
+    const confirmedAgain = await stepPost(
+      call("/api/v1/admin/step-up", { code: stepCode, action: "approve_device" }, approverBody.accessToken)
+    );
     expect((await confirmedAgain.json()).error.message).toBe("Invalid code");
 
     const approved = await devicePost(
@@ -233,6 +239,18 @@ describe("admin auth", () => {
       { params: { id: pendingDevice.id } }
     );
     expect(approved.status).toBe(200);
+    const payload = JSON.parse(Buffer.from(stepUpToken.split(".")[1], "base64url").toString("utf8"));
+    expect(payload.act).toBe("approve_device");
+    expect(payload.jti).toBeTruthy();
+    // The same token cannot be spent twice, even on the same action.
+    const replay = await devicePost(
+      call(`/api/v1/admin/devices/${pendingDevice.id}`, { action: "approve" }, approverBody.accessToken, {
+        "x-step-up": stepUpToken
+      }),
+      { params: { id: pendingDevice.id } }
+    );
+    expect(replay.status).toBe(403);
+    expect((await replay.json()).error.code).toBe("STEP_UP_REQUIRED");
     const audit = await prisma.auditLog.findFirst({
       where: { action: "admin.device", entityId: pendingDevice.id, userId: approver.id }
     });

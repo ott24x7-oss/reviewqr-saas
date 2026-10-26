@@ -14,7 +14,7 @@ async function patchHandler(req: NextRequest, context?: { params: Record<string,
   const parsed = await parseJson(req, adminPlanPatchSchema);
   if (!parsed.ok) return parsed.response;
   if (planPatchIsSensitive(parsed.data)) {
-    const step = await requireStepUp(req, auth.actor);
+    const step = await requireStepUp(req, auth.actor, ["change_plan_price", "change_plan_modules"]);
     if (!step.ok) return step.response;
   }
   const id = context?.params.id || "";

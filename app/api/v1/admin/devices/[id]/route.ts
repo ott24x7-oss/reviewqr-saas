@@ -13,7 +13,7 @@ async function postHandler(req: NextRequest, context?: { params: Record<string, 
   const parsed = await parseJson(req, adminDeviceActionSchema);
   if (!parsed.ok) return parsed.response;
   if (parsed.data.action === "approve") {
-    const step = await requireStepUp(req, auth.actor);
+    const step = await requireStepUp(req, auth.actor, "approve_device");
     if (!step.ok) return step.response;
   }
   const result = await setAdminDeviceStatus({

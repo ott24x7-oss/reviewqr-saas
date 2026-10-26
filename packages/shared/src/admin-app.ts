@@ -28,8 +28,26 @@ export const adminSessionSchema = tokenPairSchema.extend({
   deviceSecret: z.string().optional()
 });
 
+/** Each step-up token confirms exactly one of these, once. */
+export const adminStepUpActionSchema = z.enum([
+  "approve_device",
+  "mark_payout_paid",
+  "refund_payment",
+  "approve_payment",
+  "grant_days_over_30",
+  "change_user_plan",
+  "change_role",
+  "change_plan_price",
+  "change_plan_modules",
+  "change_settings",
+  "whatsapp_pairing"
+]);
+export type AdminStepUpAction = z.infer<typeof adminStepUpActionSchema>;
+
 export const adminStepUpSchema = z.object({
-  code: z.string().regex(/^\d{6}$/, "Invalid code").optional()
+  code: z.string().regex(/^\d{6}$/, "Invalid code").optional(),
+  /** Required with a code. The token that comes back works only for this action. */
+  action: adminStepUpActionSchema.optional()
 });
 
 export const adminStepUpTokenSchema = z.object({

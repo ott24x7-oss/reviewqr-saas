@@ -26,7 +26,8 @@ async function postHandler(req: NextRequest) {
       })
     );
   }
-  const token = await consumeAdminStepUp(auth.actor.user.id, auth.actor.device.id, parsed.data.code);
+  if (!parsed.data.action) return v1Error(400, "VALIDATION", "Choose the action to confirm");
+  const token = await consumeAdminStepUp(auth.actor.user.id, auth.actor.device.id, parsed.data.code, parsed.data.action);
   if (!token.ok) return v1Error(token.status, "VALIDATION", token.error);
   return v1Data({ stepUpToken: token.stepUpToken, expiresIn: token.expiresIn });
 }

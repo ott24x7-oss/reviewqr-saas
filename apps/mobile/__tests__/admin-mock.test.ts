@@ -22,6 +22,15 @@ describe("admin mock API", () => {
     expect(updated.pricePaise).toBe(299900);
   });
 
+  it("accepts a step-up token only for its own action and only once", async () => {
+    const verified = await adminMockRequest<{ stepUpToken: string }>("/step-up", { method: "POST", body: JSON.stringify({ phase: "verify", action: "approve_device", challengeId: "c", code: "123456" }) });
+    const edit = { method: "PATCH", body: JSON.stringify({ pricePaise: 199900 }), headers: { "X-Step-Up": verified.stepUpToken } };
+    await expect(adminMockRequest("/plans/growth", edit)).rejects.toThrow("STEP_UP_REQUIRED");
+    const device = { method: "POST", body: JSON.stringify({ action: "approve" }), headers: { "X-Step-Up": verified.stepUpToken } };
+    await expect(adminMockRequest("/devices/d-1/action", device)).resolves.toEqual({ ok: true });
+    await expect(adminMockRequest("/devices/d-1/action", device)).rejects.toThrow("STEP_UP_REQUIRED");
+  });
+
   it("seeds the ninety-day dashboard and account lists", async () => {
     const dashboard = await adminMockRequest<{ revenue: unknown[] }>("/dashboard?range=90d");
     const team = await adminMockRequest<{ members: unknown[] }>("/team");

@@ -24,7 +24,7 @@ async function postHandler(req: NextRequest) {
   if (body.action === "pay") {
     const missing = moneyReason(body.reason);
     if (missing) return missing;
-    const step = await requireStepUp(req, auth.actor);
+    const step = await requireStepUp(req, auth.actor, "mark_payout_paid");
     if (!step.ok) return step.response;
   }
   const result =

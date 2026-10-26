@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 async function postHandler(req: NextRequest) {
   const auth = await requireAdminActor(req);
   if (!auth.ok) return auth.response;
-  const step = await requireStepUp(req, auth.actor);
+  const step = await requireStepUp(req, auth.actor, "whatsapp_pairing");
   if (!step.ok) return step.response;
   return commitAdminWrite(auth.actor, req, await reconnectAdminWhatsApp(), {
     action: "settings.whatsapp.update",

@@ -6,7 +6,7 @@ import { adminMockRequest } from "./mock";
 import type {
   AdminAccountDetail, AdminAuthRequest, AdminAuthResponse, AdminAuthVerify, AdminAuthStatus, AdminDashboard,
   AdminInbox, AdminInboxSegment, AdminMoney, AdminPlan, AdminSearchResult, AdminSettings,
-  AdminShopOrder, AdminSupportTicket, AdminTeam, AdminWhatsApp
+  AdminShopOrder, AdminStepUpAction, AdminSupportTicket, AdminTeam, AdminWhatsApp
 } from "./types";
 
 export const ADMIN_ACCESS_KEY = "qr24x7.admin.access";
@@ -87,8 +87,8 @@ export const adminAuth = {
   requestOtp: (body: AdminAuthRequest) => adminFetch<{ challengeId: string }>("/auth", { method: "POST", body: JSON.stringify(body) }),
   verifyOtp: (body: AdminAuthVerify) => adminFetch<AdminAuthResponse>("/auth", { method: "POST", body: JSON.stringify(body) }),
   status: () => adminFetch<AdminAuthStatus>("/auth"),
-  requestStepUp: (action: string, target?: string) => adminFetch<{ challengeId: string }>("/step-up", { method: "POST", body: JSON.stringify({ phase: "request", action, target }) }),
-  verifyStepUp: (action: string, challengeId: string, code: string) => adminFetch<{ challengeId: string; stepUpToken: string; expiresAt: string }>("/step-up", { method: "POST", body: JSON.stringify({ phase: "verify", action, challengeId, code }) })
+  requestStepUp: (action: AdminStepUpAction, target?: string) => adminFetch<{ challengeId: string }>("/step-up", { method: "POST", body: JSON.stringify({ phase: "request", action, target }) }),
+  verifyStepUp: (action: AdminStepUpAction, challengeId: string, code: string) => adminFetch<{ challengeId: string; stepUpToken: string; expiresAt: string }>("/step-up", { method: "POST", body: JSON.stringify({ phase: "verify", action, challengeId, code }) })
 };
 
 export function useAdminDashboard(range: string, from?: string, to?: string) {

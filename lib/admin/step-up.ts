@@ -1,3 +1,5 @@
+import crypto from "crypto";
+import type { AdminStepUpAction } from "@reviewqr/shared";
 import { STEP_UP_TTL_SEC, signAccessToken } from "@/lib/auth/access-token";
 import { prisma } from "@/lib/db";
 import { requestPurposeOtp, verifyPurposeOtp } from "@/lib/otp";
@@ -26,11 +28,12 @@ export async function sendAdminStepUp(userId: string) {
   return { ok: true as const, issuedCode: sent.issuedCode };
 }
 
-export async function consumeAdminStepUp(userId: string, deviceId: string, code: string) {
+/** The token is bound to one action and carries a jti, so the guard can spend it once. */
+export async function consumeAdminStepUp(userId: string, deviceId: string, code: string, action: AdminStepUpAction) {
   const checked = await verifyPurposeOtp(userId, PURPOSE, code);
   if (!checked.ok) return { ok: false as const, status: 400, error: "Invalid code" };
   const stepUpToken = signAccessToken(
-    { sub: userId, role: "ADMIN", aud: "admin-step-up", deviceId },
+    { sub: userId, role: "ADMIN", aud: "admin-step-up", deviceId, act: action, jti: crypto.randomUUID() },
     undefined,
     undefined,
     STEP_UP_TTL_SEC

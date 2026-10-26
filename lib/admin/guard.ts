@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
+import type { AdminStepUpAction } from "@reviewqr/shared";
 import { readBearer, verifyAccessToken } from "@/lib/auth/access-token";
 import { prisma } from "@/lib/db";
 import { rateLimitDb } from "@/lib/rate-limit";
@@ -55,11 +57,28 @@ export async function requireAdminActor(req: NextRequest, opts?: { allowPending?
   };
 }
 
-export async function requireStepUp(req: NextRequest, actor: AdminActor): Promise<AdminGate> {
+/**
+ * A step-up token works for the action it was issued for, on this admin and phone,
+ * and only once: its jti is written to StepUpUse and a second use is refused.
+ */
+export async function requireStepUp(
+  req: NextRequest,
+  actor: AdminActor,
+  action: AdminStepUpAction | readonly AdminStepUpAction[]
+): Promise<AdminGate> {
+  const denied = { ok: false as const, response: v1Error(403, "STEP_UP_REQUIRED", "Enter the WhatsApp code to confirm this") };
   const header = req.headers.get("x-step-up");
   const claims = header ? verifyAccessToken(header) : null;
   if (!claims || claims.aud !== "admin-step-up" || claims.sub !== actor.user.id || claims.deviceId !== actor.device.id) {
-    return { ok: false, response: v1Error(403, "STEP_UP_REQUIRED", "Enter the WhatsApp code to confirm this") };
+    return denied;
+  }
+  const allowed: readonly string[] = typeof action === "string" ? [action] : action;
+  if (!claims.act || !allowed.includes(claims.act) || !claims.jti || claims.jti.length > 64) return denied;
+  try {
+    await prisma.stepUpUse.create({ data: { jti: claims.jti } });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") return denied;
+    throw error;
   }
   return { ok: true, actor };
 }

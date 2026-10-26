@@ -20,7 +20,7 @@ async function postHandler(req: NextRequest) {
   const parsed = await parseJson(req, adminInboxActionSchema);
   if (!parsed.ok) return parsed.response;
   if (parsed.data.segment === "devices" && parsed.data.action === "approve") {
-    const step = await requireStepUp(req, auth.actor);
+    const step = await requireStepUp(req, auth.actor, "approve_device");
     if (!step.ok) return step.response;
   }
   const result = await applyInboxAction({

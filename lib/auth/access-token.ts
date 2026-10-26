@@ -14,6 +14,10 @@ export type AccessClaims = {
   exp: number;
   aud?: string;
   deviceId?: string;
+  /** Step-up only: the one admin action this token confirms. */
+  act?: string;
+  /** Step-up only: single-use id, recorded when the token is spent. */
+  jti?: string;
 };
 
 function b64url(input: string) {
@@ -27,7 +31,7 @@ export function accessSecret(env: EnvLike = process.env): string | null {
 }
 
 export function signAccessToken(
-  claims: { sub: string; role: string; aud?: string; deviceId?: string },
+  claims: { sub: string; role: string; aud?: string; deviceId?: string; act?: string; jti?: string },
   now = Math.floor(Date.now() / 1000),
   env: EnvLike = process.env,
   ttlSec = ACCESS_TTL_SEC
@@ -43,6 +47,8 @@ export function signAccessToken(
   };
   if (claims.aud) body.aud = claims.aud;
   if (claims.deviceId) body.deviceId = claims.deviceId;
+  if (claims.act) body.act = claims.act;
+  if (claims.jti) body.jti = claims.jti;
   const payload = b64url(JSON.stringify(body));
   const data = `${header}.${payload}`;
   const sig = crypto.createHmac("sha256", secret).update(data).digest("base64url");

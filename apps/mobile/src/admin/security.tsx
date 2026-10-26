@@ -9,9 +9,11 @@ import { Card, LoadErrorCard } from "../ui/bits";
 import { Field, PillButton } from "../ui/controls";
 import { useI18n } from "../i18n";
 import { useTheme } from "../ui/theme";
+import type { AdminStepUpAction } from "./types";
 
-type PendingStepUp = { action: string; target?: string; challengeId: string; resolve: (token: string | null) => void };
-type SecurityValue = { requestStepUpToken: (action: string, target?: string) => Promise<string | null> };
+// The action is sent with the code, and the token that comes back works for that action once.
+type PendingStepUp = { action: AdminStepUpAction; target?: string; challengeId: string; resolve: (token: string | null) => void };
+type SecurityValue = { requestStepUpToken: (action: AdminStepUpAction, target?: string) => Promise<string | null> };
 const SecurityContext = createContext<SecurityValue | null>(null);
 
 export function AdminSecurityProvider({ children }: { children: ReactNode }) {
@@ -22,7 +24,7 @@ export function AdminSecurityProvider({ children }: { children: ReactNode }) {
   const [code, setCode] = useState("");
   const [error, setError] = useState(false);
 
-  const requestStepUpToken = useCallback(async (action: string, target?: string) => {
+  const requestStepUpToken = useCallback(async (action: AdminStepUpAction, target?: string) => {
     const challenge = await adminAuth.requestStepUp(action, target);
     setError(false);
     setCode("");

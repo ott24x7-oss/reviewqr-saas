@@ -229,6 +229,14 @@ model AdminDevice {
   @@index([status, createdAt])
 }
 
+/// A spent admin step-up token. The jti is the key, so a token works once.
+model StepUpUse {
+  jti    String   @id
+  usedAt DateTime @default(now())
+
+  @@index([usedAt])
+}
+
 model AdminNotifyPref {
   userId        String  @id
   user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)

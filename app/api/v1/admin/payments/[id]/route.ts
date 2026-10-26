@@ -33,7 +33,7 @@ async function postHandler(req: NextRequest, context?: { params: Record<string, 
   if (body.action === "refund") {
     const missing = moneyReason(body.reason);
     if (missing) return missing;
-    const step = await requireStepUp(req, auth.actor);
+    const step = await requireStepUp(req, auth.actor, "refund_payment");
     if (!step.ok) return step.response;
   }
   let result: ServiceResult<unknown>;

@@ -123,7 +123,13 @@ export function resetAdminMock() {
 }
 
 function clone<T>(value: T): T { return JSON.parse(JSON.stringify(value)) as T; }
-function hasStepUp(init: RequestInit, action: string) { return new Headers(init.headers).get("X-Step-Up") === `step-up-${action}`; }
+/** Like the server: a step-up token is bound to one action and is spent on first use. */
+function hasStepUp(init: RequestInit, action: string) {
+  const header = new Headers(init.headers).get("X-Step-Up");
+  const ok = !!stepUpToken && header === stepUpToken && header === `step-up-${action}`;
+  if (ok) stepUpToken = "";
+  return ok;
+}
 function readBody(init: RequestInit) { try { return typeof init.body === "string" ? JSON.parse(init.body) as Record<string, unknown> : {}; } catch { return {}; } }
 function getSegment(path: string) { return new URLSearchParams(path.split("?")[1] ?? "").get("segment") ?? "agents"; }
 

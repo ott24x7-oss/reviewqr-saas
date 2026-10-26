@@ -1,3 +1,5 @@
+import type { AdminStepUpAction as AdminStepUpActionShared } from "@reviewqr/shared";
+
 export type AdminDeviceStatus = "PENDING" | "ACTIVE" | "REVOKED";
 export type AdminInboxSegment = "agents" | "devices" | "proofs" | "payouts" | "refunds" | "orders" | "support" | "payments";
 export type AdminInboxAction = "approve" | "reject" | "pause" | "mark-paid" | "reply" | "ship";
@@ -19,8 +21,10 @@ export type AdminAuthStatus = {
   admin: { id: string; name: string; phoneMasked: string };
   reason?: "DEVICE_REVOKED" | "DEVICE_PENDING";
 };
-export type AdminStepUpRequest = { action: string; phase: "request"; target?: string };
-export type AdminStepUpVerify = { action: string; phase: "verify"; challengeId: string; code: string };
+/** The server issues a single-use step-up token for exactly one of these actions. */
+export type AdminStepUpAction = AdminStepUpActionShared;
+export type AdminStepUpRequest = { action: AdminStepUpAction; phase: "request"; target?: string };
+export type AdminStepUpVerify = { action: AdminStepUpAction; phase: "verify"; challengeId: string; code: string };
 export type AdminStepUpResponse = { challengeId: string; stepUpToken?: string; expiresAt?: string };
 
 export type AdminKpiKey = "revenue" | "newPaid" | "mrr" | "activeSubs" | "trials" | "expiring" | "churned" | "signups" | "scans" | "shopOrders";

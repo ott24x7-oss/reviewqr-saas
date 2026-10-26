@@ -20,7 +20,7 @@ async function putHandler(req: NextRequest) {
   const parsed = await parseJson(req, adminSettingsPatchSchema);
   if (!parsed.ok) return parsed.response;
   if (settingsPatchIsSensitive(parsed.data)) {
-    const step = await requireStepUp(req, auth.actor);
+    const step = await requireStepUp(req, auth.actor, "change_settings");
     if (!step.ok) return step.response;
   }
   return commitAdminWrite(auth.actor, req, await patchAdminSettings(auth.actor.user.id, parsed.data), {
