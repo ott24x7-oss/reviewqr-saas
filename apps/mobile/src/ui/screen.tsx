@@ -20,7 +20,7 @@ export function Screen({
 }) {
   const insets = useSafeAreaInsets();
   const { palette, appTheme, cinematicAccent, scheme, reduceMotion, lowRam } = useTheme();
-  const statusColor = statusBarColor ?? palette.paper;
+  const statusColor = statusBarColor ?? (palette.cinematic ? palette.bg : palette.paper);
   const enteringCinematic = palette.cinematic && !reduceMotion && !lowRam;
   const opacity = useSharedValue(enteringCinematic ? 0 : 1);
   const scale = useSharedValue(enteringCinematic ? 0.98 : 1);
@@ -59,7 +59,7 @@ export function Screen({
     <View style={[styles.root, { backgroundColor: statusColor }, style]}>
       <View pointerEvents="none" style={{ height: topInset ? insets.top : 0, backgroundColor: statusColor, zIndex: 1 }} />
       {palette.cinematic ? (
-        <CinematicBackground accent={cinematicAccent} reduceMotion={reduceMotion} lowRam={lowRam} />
+        <CinematicBackground accent={cinematicAccent} palette={palette} reduceMotion={reduceMotion} lowRam={lowRam} />
       ) : null}
       <Animated.View style={[transition, { backgroundColor: palette.bg }]}>
         {children}

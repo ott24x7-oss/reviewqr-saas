@@ -425,7 +425,7 @@ export default function WizardScreen() {
             </Animated.View>
             <View style={styles.row}>
               {ONBOARDING_THEMES.map((item) => (
-                <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={item.id} accessibilityState={{ selected: draft.themeId === item.id }} onPress={() => patch({ themeId: item.id })} style={[styles.swatch, { backgroundColor: item.bg }, draft.themeId === item.id && styles.swatchOn]} />
+                <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={item.id} accessibilityState={{ selected: draft.themeId === item.id }} onPress={() => patch({ themeId: item.id })} style={[styles.swatch, { backgroundColor: item.bg, borderColor: palette.line }, draft.themeId === item.id && styles.swatchOn]} />
               ))}
             </View>
           </View>
@@ -566,7 +566,7 @@ function makeStyles(colors: Palette) {
   previewName: { fontFamily: fonts.display, fontSize: 28 },
   previewButton: { alignSelf: "flex-start", borderRadius: 999, paddingHorizontal: 16, paddingVertical: 10 },
   previewButtonText: { color: colors.white, fontFamily: fonts.bodyStrong },
-  swatch: { width: 48, height: 48, borderRadius: 24, borderWidth: 1, borderColor: "#DDD6C8" },
+  swatch: { width: 48, height: 48, borderRadius: 24, borderWidth: 1 },
   swatchOn: { borderColor: colors.ink, borderWidth: 3 },
   prefixRow: { minHeight: 56, borderRadius: 16, borderWidth: 1, flexDirection: "row", alignItems: "center", paddingHorizontal: 12, gap: 4 },
   prefix: { fontFamily: fonts.bodyStrong, fontSize: 16 },
