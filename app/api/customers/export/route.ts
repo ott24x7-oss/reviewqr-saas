@@ -6,7 +6,7 @@ import { loadCustomers } from "@/lib/store/customer-list";
 export async function GET() {
   const user = await requireUser().catch(() => null);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const rows = await loadCustomers(user.id);
+  const rows = await loadCustomers(user.id, new Date(), undefined, "manage");
   const csv = customersCsv(rows.map((row) => ({
     name: row.name,
     phone: row.phone,

@@ -10,7 +10,7 @@ async function getHandler(req: NextRequest) {
   const auth = await requireV1User(req);
   if (!auth.ok) return auth.response;
   const businessId = req.nextUrl.searchParams.get("businessId") || undefined;
-  const items = await loadCustomers(auth.user.id, new Date(), businessId);
+  const items = await loadCustomers(auth.user.id, new Date(), businessId, "manage");
   const csv = customersCsv(
     items.map((row) => ({
       name: row.name,

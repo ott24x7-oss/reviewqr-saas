@@ -35,6 +35,14 @@ export function readableBusinessWhere(userId: string) {
   };
 }
 
+/** Businesses this user may manage: owner, field agent or MANAGER member. STAFF stay out. */
+export function manageableBusinessWhere(userId: string) {
+  return {
+    archived: false as const,
+    OR: [{ ownerId: userId }, { agentId: userId }, { members: { some: { userId, role: "MANAGER" as const } } }]
+  };
+}
+
 /** Businesses this person owns or was assigned as a field agent. Memberships stay out. */
 export function ownedOrAssignedWhere(userId: string) {
   return {

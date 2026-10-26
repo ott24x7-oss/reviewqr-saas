@@ -1,13 +1,32 @@
 import { prisma } from "../db";
 import { fail, ok } from "../api/result";
 import { rateLimitDb } from "../rate-limit";
-import { requireBusinessRole } from "../tenant";
+import { planOwner, requireBusinessRole } from "../tenant";
+import { ownerLimitError } from "../entitlements";
 import { sendWhatsApp } from "../whatsapp";
 import { hashToken, randomToken } from "../tokens";
 import { absoluteUrl, slugify } from "../utils";
-import { sendEmail } from "../email";
+import { escapeHtml, sendEmail } from "../email";
 
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+type LimitKey = Parameters<typeof ownerLimitError>[1];
+
+/** Same plan caps as the web routes: counted across every business of the owner. */
+async function limitFor(userId: string, ownerId: string, key: LimitKey, used: number) {
+  const actor = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, subscriptionTier: true, subscriptionStatus: true, trialEndsAt: true, subscriptionEndsAt: true }
+  });
+  const owner = actor ? await planOwner(actor, ownerId) : null;
+  if (!owner) return "Not found";
+  return ownerLimitError(owner, key, used);
+}
+
+/** Free-text WhatsApp sends from the platform number stay off until template-only sending ships. */
+export function campaignSendEnabled() {
+  return process.env.CAMPAIGN_SEND_ENABLED === "1";
+}
 
 export function campaignMessage(template: string, name: string) {
   const who = name.trim().slice(0, 80) || "there";
@@ -95,6 +114,9 @@ export async function addHint(userId: string, businessId: string, content: strin
   if (!access) return fail(404, "Not found");
   const text = content.trim();
   if (text.length < 2 || text.length > 280) return fail(400, "Write a short topic hint");
+  const used = await prisma.reviewTemplate.count({ where: { business: { ownerId: access.ownerId } } });
+  const limit = await limitFor(userId, access.ownerId, "reviewTemplates", used);
+  if (limit) return fail(402, limit);
   const row = await prisma.reviewTemplate.create({ data: { businessId: access.id, content: text } });
   return ok({ id: row.id, content: row.content });
 }
@@ -122,6 +144,9 @@ export async function addLocation(userId: string, businessId: string, name: stri
   if (!access) return fail(404, "Not found");
   const label = name.trim();
   if (label.length < 2) return fail(400, "Name the location");
+  const used = await prisma.location.count({ where: { business: { ownerId: access.ownerId }, isActive: true } });
+  const limit = await limitFor(userId, access.ownerId, "locations", used);
+  if (limit) return fail(402, limit);
   const row = await prisma.location.create({
     data: { businessId: access.id, name: label, city: city.trim() || null, slug: `${slugify(label)}-${Date.now().toString(36)}` }
   });
@@ -147,6 +172,9 @@ export async function createCampaign(userId: string, businessId: string, name: s
   const text = template.trim();
   if (title.length < 2) return fail(400, "Name the campaign");
   if (text.length < 2) return fail(400, "Write the WhatsApp message");
+  const used = await prisma.campaign.count({ where: { business: { ownerId: access.ownerId } } });
+  const limit = await limitFor(userId, access.ownerId, "campaigns", used);
+  if (limit) return fail(402, limit);
   const row = await prisma.campaign.create({
     data: { businessId: access.id, name: title.slice(0, 80), whatsappTemplate: text.slice(0, 1000), status: "DRAFT" }
   });
@@ -156,6 +184,7 @@ export async function createCampaign(userId: string, businessId: string, name: s
 export async function sendCampaign(userId: string, businessId: string, campaignId: string) {
   const access = await requireBusinessRole(userId, businessId, "manage");
   if (!access) return fail(404, "Not found");
+  if (!campaignSendEnabled()) return fail(403, "Sending campaigns from the app is not available yet");
   const gate = await rateLimitDb({ key: `campaign-send:${access.id}`, limit: 3, windowSeconds: 3600 });
   if (!gate.ok) return fail(429, "Too many campaign sends. Try again later.");
   const campaign = await prisma.campaign.findFirst({ where: { id: campaignId, businessId: access.id } });
@@ -176,7 +205,11 @@ export async function sendCampaign(userId: string, businessId: string, campaignI
     [...reviewPhones, ...orderPhones].map((row) => row.customerPhone).filter((phone): phone is string => !!phone)
   );
   const contacts = await prisma.contact.findMany({
-    where: { businessId: access.id, phone: { in: [...allowed] } },
+    where: {
+      businessId: access.id,
+      phone: { in: [...allowed] },
+      campaigns: { none: { campaignId: campaign.id, sentAt: { not: null } } }
+    },
     select: { id: true, name: true, phone: true },
     take: 30
   });
@@ -263,8 +296,9 @@ export async function staffStats(userId: string, businessId: string, staffId: st
 }
 
 export async function inviteStaff(userId: string, businessId: string, email: string) {
+  // Owner only, like the web members route.
   const access = await requireBusinessRole(userId, businessId, "manage");
-  if (!access) return fail(404, "Not found");
+  if (!access || access.ownerId !== userId) return fail(404, "Not found");
   const gate = await rateLimitDb({ key: `invite:${userId}`, limit: 20, windowSeconds: 3600 });
   if (!gate.ok) return fail(429, "Too many invites");
   const to = email.trim().toLowerCase();
@@ -278,8 +312,8 @@ export async function inviteStaff(userId: string, businessId: string, email: str
   const url = absoluteUrl(`/invite/${token}`);
   await sendEmail({
     to,
-    subject: `Join ${access.name} on QR24x7`,
-    html: `<p>You are invited to ${access.name} as staff.</p><p><a href="${url}">Accept invite</a></p>`
+    subject: `Join ${access.name.replace(/\s+/g, " ").slice(0, 80)} on QR24x7`,
+    html: `<p>You are invited to ${escapeHtml(access.name)} as staff.</p><p><a href="${escapeHtml(url)}">Accept invite</a></p>`
   });
   return ok({ sent: true });
 }
