@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { motion } from "framer-motion";
+import { Activity, ArrowUpRight, Check, CircleDollarSign, ShieldCheck, ShoppingBag, UserRoundPlus } from "lucide-react";
 import { RelativeTime } from "./primitives";
 import { useMotionSafe } from "./motion";
 
@@ -16,7 +17,7 @@ export function DetailLayout({ main, side }: { main: React.ReactNode; side: Reac
 
 export function MetaCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-[14px] border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+    <section className="admin-card p-4">
       <h2 className="text-sm font-semibold">{title}</h2>
       <div className="mt-3 space-y-2 text-sm">{children}</div>
     </section>
@@ -29,11 +30,21 @@ export function Timeline({
   items: { id: string; action: string; createdAt: string; reason?: string | null }[];
 }) {
   if (!items.length) return <p className="text-sm text-zinc-500">No activity yet.</p>;
+  const iconFor = (action: string) => {
+    const text = action.toLowerCase();
+    if (/payment|payout|commission|refund/.test(text)) return CircleDollarSign;
+    if (/approve|complete|publish|paid/.test(text)) return Check;
+    if (/user|agent|signup|invite/.test(text)) return UserRoundPlus;
+    if (/order|shop|catalogue/.test(text)) return ShoppingBag;
+    if (/security|device|step.?up|audit/.test(text)) return ShieldCheck;
+    if (/setting|update|change/.test(text)) return ArrowUpRight;
+    return Activity;
+  };
   return (
-    <ol className="space-y-4 border-l border-zinc-200 pl-4 dark:border-zinc-800">
+    <ol className="space-y-5 border-l border-zinc-200 pl-5 dark:border-zinc-800">
       {items.map((item) => (
         <li key={item.id} className="relative">
-          <span className="absolute -left-[21px] top-1.5 h-2 w-2 rounded-full bg-emerald-600" />
+          {(() => { const Icon = iconFor(item.action); return <span className="admin-timeline-marker absolute -left-[31px] top-0.5 grid h-6 w-6 place-items-center rounded-full border border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300"><Icon className="h-3 w-3" /></span>; })()}
           <div className="text-sm font-medium">{item.action}</div>
           {item.reason ? <p className="text-sm text-zinc-500">{item.reason}</p> : null}
           <div className="text-xs text-zinc-400">
@@ -83,12 +94,12 @@ export function Drawer({
     </div>
   );
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-zinc-950/40" role="dialog" aria-modal="true" aria-label={title}>
+    <div className="admin-drawer-backdrop fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-label={title}>
       <button type="button" className="absolute inset-0" aria-label="Close drawer" onClick={onClose} />
       {reduce ? (
-        <div className="relative h-full">{panel}</div>
+        <div className="admin-drawer-panel relative h-full">{panel}</div>
       ) : (
-        <motion.div className="relative h-full" initial={{ x: 24, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ type: "spring", stiffness: 380, damping: 32 }}>
+        <motion.div className="admin-drawer-panel relative h-full" initial={{ x: 40, opacity: 0, filter: "blur(4px)" }} animate={{ x: 0, opacity: 1, filter: "blur(0px)" }} transition={{ type: "spring", stiffness: 380, damping: 34 }}>
           {panel}
         </motion.div>
       )}

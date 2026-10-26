@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+import { LoaderCircle } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
 import { Slot } from "@radix-ui/react-slot";
 import { cn } from "@/lib/utils";
 
@@ -9,16 +11,18 @@ const field =
 const focus = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/50 focus-visible:ring-offset-2 dark:focus-visible:ring-emerald-400/50 dark:focus-visible:ring-offset-zinc-950";
 
 export function AdminCard({ className, ...props }: React.HTMLAttributes<HTMLElement>) {
-  return <section {...props} className={cn("rounded-[14px] border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900", className)} />;
+  const reduce = useReducedMotion();
+  return <motion.section {...(props as unknown as React.ComponentProps<typeof motion.section>)} className={cn("admin-card", className)} whileHover={reduce ? undefined : { y: -2 }} transition={{ duration: 0.18 }} />;
 }
 
 export function AdminButton({
   variant = "primary",
   size = "md",
+  loading = false,
   className,
   type = "button",
   ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "outline" | "ghost" | "danger"; size?: "sm" | "md" | "lg" }) {
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "outline" | "ghost" | "danger"; size?: "sm" | "md" | "lg"; loading?: boolean }) {
   const tones = {
     primary: "border border-emerald-700 bg-emerald-700 text-white hover:bg-emerald-800 dark:border-emerald-500 dark:bg-emerald-500 dark:text-zinc-950 dark:hover:bg-emerald-400",
     outline: "border border-zinc-200 bg-white text-zinc-800 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:bg-zinc-800",
@@ -26,19 +30,19 @@ export function AdminButton({
     danger: "border border-rose-700 bg-rose-700 text-white hover:bg-rose-800 dark:border-rose-500 dark:bg-rose-500 dark:text-zinc-950 dark:hover:bg-rose-400"
   };
   const sizes = { sm: "min-h-9 px-3 text-xs", md: "min-h-10 px-3.5 text-sm", lg: "min-h-11 px-4 text-sm" };
-  return <button {...props} type={type} className={cn("inline-flex items-center justify-center gap-2 rounded-[10px] font-medium transition-colors disabled:pointer-events-none disabled:opacity-50", focus, tones[variant], sizes[size], className)} />;
+  return <button {...props} type={type} disabled={props.disabled || loading} aria-busy={loading || undefined} className={cn("admin-button inline-flex items-center justify-center gap-2 rounded-[11px] font-medium disabled:pointer-events-none disabled:opacity-50", focus, `admin-button--${variant}`, tones[variant], sizes[size], className)}>{loading ? <LoaderCircle aria-hidden className="admin-button__spinner h-4 w-4" /> : null}{props.children}</button>;
 }
 
 export function AdminInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...props} className={cn(field, focus, props.className)} />;
+  return <input {...props} className={cn("admin-input", field, focus, props.className)} />;
 }
 
 export function AdminTextarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea {...props} className={cn(field, "min-h-24 py-2", focus, props.className)} />;
+  return <textarea {...props} className={cn("admin-input", field, "min-h-24 py-2", focus, props.className)} />;
 }
 
 export function AdminSelect(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select {...props} className={cn(field, focus, props.className)} />;
+  return <select {...props} className={cn("admin-input", field, focus, props.className)} />;
 }
 
 export function AdminLabel({ className, ...props }: React.LabelHTMLAttributes<HTMLLabelElement>) {
@@ -66,9 +70,9 @@ export function AdminEmptyState({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="grid min-h-48 place-items-center rounded-[14px] border border-dashed border-zinc-300 px-5 py-8 text-center dark:border-zinc-700">
+    <div className="admin-card grid min-h-48 place-items-center border-dashed px-5 py-8 text-center">
       <div className="max-w-sm">
-        {icon ? <div className="mx-auto mb-3 grid h-10 w-10 place-items-center rounded-full bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">{icon}</div> : null}
+        {icon ? <div className="admin-empty-illustration">{icon}</div> : null}
         <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{title}</h2>
         <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{description}</p>
         {action ? <div className="mt-4 flex justify-center">{action}</div> : null}
@@ -97,18 +101,21 @@ export function AdminTabs<T extends string>({
   onChange: (value: T) => void;
   label?: string;
 }) {
+  const reduce = useReducedMotion();
+  const indicatorId = React.useId();
   return (
-    <div className="-mx-1 flex max-w-full gap-1 overflow-x-auto rounded-[12px] bg-zinc-100 p-1 dark:bg-zinc-900" role="tablist" aria-label={label}>
+    <div className="admin-tab-list -mx-1 flex max-w-full gap-1 overflow-x-auto rounded-[13px] p-1" role="tablist" aria-label={label}>
       {items.map((item) => (
         <button
           key={item.value}
           type="button"
           role="tab"
           aria-selected={value === item.value}
-          className={cn("min-h-9 shrink-0 rounded-[9px] px-3 text-sm font-medium transition-colors", focus, value === item.value ? "bg-white text-zinc-950 shadow-sm dark:bg-zinc-800 dark:text-white" : "text-zinc-600 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white")}
+          className={cn("admin-tab-trigger min-h-9 shrink-0 rounded-[10px] px-3 text-sm font-medium transition-colors", focus, value === item.value ? "text-zinc-950 dark:text-white" : "text-zinc-600 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white")}
           onClick={() => onChange(item.value)}
         >
-          {item.label}{item.count != null ? <span className="ml-1.5 tabular-nums text-xs opacity-70">{item.count}</span> : null}
+          {value === item.value ? <motion.span layoutId={`admin-tab-${indicatorId}`} aria-hidden className="admin-tab-indicator" transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 34 }} /> : null}
+          <span className="relative z-10">{item.label}{item.count != null ? <span className="ml-1.5 tabular-nums text-xs opacity-70">{item.count}</span> : null}</span>
         </button>
       ))}
     </div>
@@ -145,13 +152,14 @@ export const Button = React.forwardRef<
   }
 >(({ variant = "default", size = "default", asChild = false, className, ...props }, ref) => {
   const Component = asChild ? Slot : "button";
-  return <Component ref={ref} {...props} className={cn("inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[10px] font-medium transition-colors disabled:pointer-events-none disabled:opacity-50", focus, legacyButtonTone[variant], legacyButtonSize[size], className)} />;
+  return <Component ref={ref} {...props} className={cn("admin-button inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[11px] font-medium disabled:pointer-events-none disabled:opacity-50", `admin-button--${variant === "default" ? "primary" : variant}`, focus, legacyButtonTone[variant], legacyButtonSize[size], className)} />;
 });
 Button.displayName = "AdminButton";
 
-export const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(({ className, ...props }, ref) => (
-  <div ref={ref} {...props} className={cn("rounded-[14px] border border-zinc-200 bg-white text-zinc-950 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-50", className)} />
-));
+export const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(({ className, ...props }, ref) => {
+  const reduce = useReducedMotion();
+  return <motion.div ref={ref} {...(props as unknown as React.ComponentProps<typeof motion.div>)} className={cn("admin-card text-zinc-950 dark:text-zinc-50", className)} whileHover={reduce ? undefined : { y: -2 }} transition={{ duration: 0.18 }} />;
+});
 Card.displayName = "AdminCard";
 
 export const CardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(({ className, ...props }, ref) => (

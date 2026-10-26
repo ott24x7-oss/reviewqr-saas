@@ -157,8 +157,9 @@ export function AdminShell({
         key={entry.href}
         href={entry.href}
         title={entry.label}
+        aria-current={on ? "page" : undefined}
         className={cn(
-          "flex items-center gap-2 rounded-[10px] px-2.5 py-2 text-sm",
+          "admin-nav-link flex items-center gap-2 rounded-[11px] px-2.5 py-2 text-sm",
           on ? "bg-emerald-600/10 font-medium text-emerald-700 dark:text-emerald-300" : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-900"
         )}
       >
@@ -175,12 +176,15 @@ export function AdminShell({
   function navigation(compact: boolean) {
     return (
       <div className="flex h-full flex-col">
-        <div className="px-3 py-4 text-sm font-semibold">{compact ? "Q" : brand?.name || "QR24x7"}</div>
+        <div className="admin-brand flex min-h-16 items-center gap-3 px-4 py-3 text-sm font-semibold">
+          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 text-sm font-bold text-white shadow-md shadow-emerald-900/15">Q</div>
+          {compact ? null : <div className="min-w-0"><div className="truncate">{brand?.name || "QR24x7"}</div><div className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.16em] text-zinc-400">Control room</div></div>}
+        </div>
         <nav className="flex-1 space-y-4 overflow-y-auto px-2 pb-4">
           <div className="space-y-0.5">{ADMIN_PINNED.map((entry) => item(entry, compact))}</div>
-          {ADMIN_NAV.map((group) => (
+      {ADMIN_NAV.map((group) => (
             <div key={group.label}>
-              {compact ? null : <div className="px-2.5 pb-1 text-[11px] font-medium uppercase tracking-wide text-zinc-400">{group.label}</div>}
+              {compact ? null : <div className="px-2.5 pb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400">{group.label}</div>}
               <div className="space-y-0.5">{group.items.map((entry) => item(entry, compact))}</div>
             </div>
           ))}
@@ -190,13 +194,13 @@ export function AdminShell({
   }
 
   return (
-    <div className={cn("admin-root min-h-screen text-zinc-950", theme === "dark" && "dark")}>
-      <div className="flex min-h-screen bg-[var(--admin-canvas)] dark:text-zinc-50">
-        <aside className={cn("sticky top-0 hidden h-screen shrink-0 flex-col border-r border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950 md:flex", collapsed ? "w-14" : "w-60")}>
+    <div className={cn("admin-root text-zinc-950", theme === "dark" && "dark")}>
+      <div className="admin-canvas-content flex min-h-screen dark:text-zinc-50">
+        <aside className={cn("admin-sidebar sticky top-0 hidden h-screen shrink-0 flex-col border-r md:flex", collapsed ? "w-[68px]" : "w-[258px]")}>
           <div className="min-h-0 flex-1">{navigation(collapsed)}</div>
           <button
             type="button"
-            className="m-2 rounded-[10px] border px-2 py-1.5 text-xs text-zinc-500"
+            className="admin-button m-2 rounded-[10px] border border-zinc-200 bg-white/60 px-2 py-1.5 text-xs text-zinc-500 dark:bg-zinc-950/60"
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             onClick={() => {
               const next = !collapsed;
@@ -209,7 +213,7 @@ export function AdminShell({
         </aside>
         {open ? (
           <div className="fixed inset-0 z-40 bg-zinc-950/40 md:hidden" onClick={() => setOpen(false)}>
-            <aside className="h-full w-72 bg-white dark:bg-zinc-950" onClick={(event) => event.stopPropagation()}>
+            <aside className="admin-sidebar h-full w-72 border-r border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950" onClick={(event) => event.stopPropagation()}>
               <button type="button" className="absolute right-3 top-3" aria-label="Close menu" onClick={() => setOpen(false)}>
                 <X className="h-5 w-5" />
               </button>
@@ -218,8 +222,8 @@ export function AdminShell({
           </div>
         ) : null}
         <div className="min-w-0 flex-1">
-          <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-zinc-200 bg-white/95 px-3 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/90">
-            <button type="button" className="inline-flex h-9 w-9 items-center justify-center rounded-[10px] border md:hidden" aria-label="Open menu" onClick={() => setOpen(true)}>
+          <header className="admin-topbar sticky top-0 z-30 flex h-[62px] items-center gap-2 border-b px-3 sm:px-5">
+            <button type="button" className="admin-button inline-flex h-9 w-9 items-center justify-center rounded-[11px] border border-zinc-200 bg-white/70 md:hidden dark:bg-zinc-950/70" aria-label="Open menu" onClick={() => setOpen(true)}>
               <Menu className="h-4 w-4" />
             </button>
             <div className="hidden text-sm text-zinc-500 sm:block">
@@ -231,7 +235,7 @@ export function AdminShell({
             </div>
             <button
               type="button"
-              className="ml-auto inline-flex h-9 min-w-40 items-center gap-2 rounded-[10px] border border-zinc-200 px-3 text-sm text-zinc-500 dark:border-zinc-700"
+              className="admin-input ml-auto inline-flex h-9 min-h-9 min-w-40 items-center gap-2 px-3 text-sm text-zinc-500 dark:bg-zinc-950/60 sm:min-w-52"
               onClick={() => setSearchOpen(true)}
             >
               Search
@@ -240,11 +244,11 @@ export function AdminShell({
             <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${envLabel === "LIVE" ? "bg-emerald-600 text-white" : "bg-amber-100 text-amber-800"}`}>
               {envLabel}
             </span>
-            <Link href="/admin/inbox" className="relative inline-flex h-9 w-9 items-center justify-center rounded-[10px] border" aria-label="Notifications">
+            <Link href="/admin/inbox" className="admin-button relative inline-flex h-9 w-9 items-center justify-center rounded-[11px] border border-zinc-200 bg-white/70 dark:bg-zinc-950/70" aria-label="Notifications">
               <Inbox className="h-4 w-4" />
               {inbox > 0 ? <span className="absolute -right-1 -top-1 rounded-full bg-emerald-600 px-1 text-[10px] text-white">{inbox}</span> : null}
             </Link>
-            <button type="button" className="inline-flex h-9 w-9 items-center justify-center rounded-[10px] border" aria-label={theme === "dark" ? "Use light theme" : "Use dark theme"} onClick={toggleTheme}>
+            <button type="button" className="admin-button inline-flex h-9 w-9 items-center justify-center rounded-[11px] border border-zinc-200 bg-white/70 dark:bg-zinc-950/70" aria-label={theme === "dark" ? "Use light theme" : "Use dark theme"} onClick={toggleTheme}>
               {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>
             <div className="relative">
