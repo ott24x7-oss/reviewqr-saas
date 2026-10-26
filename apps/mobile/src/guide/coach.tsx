@@ -1,6 +1,7 @@
 import { ArrowUp } from "lucide-react-native";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import type { ElementRef } from "react";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useI18n } from "../i18n";
 import { fonts } from "../theme";
@@ -13,13 +14,29 @@ import {
   type CoachScreen
 } from "./store";
 
-export type CoachStep = { title: string; body: string; top: number };
+export type CoachStep = { title: string; body: string; top: number; target?: string };
+type NativeView = ElementRef<typeof View>;
 
-export function CoachTour({ screen, steps, force }: { screen: CoachScreen; steps: CoachStep[]; force?: boolean }) {
+export function CoachTour({
+  screen,
+  steps,
+  force,
+  targets,
+  lastLabel,
+  onComplete
+}: {
+  screen: CoachScreen;
+  steps: CoachStep[];
+  force?: boolean;
+  targets?: Record<string, RefObject<NativeView | null>>;
+  lastLabel?: string;
+  onComplete?: () => void | Promise<void>;
+}) {
   const { t, lang } = useI18n();
   const { palette, reduceMotion } = useTheme();
   const [open, setOpen] = useState(false);
   const [index, setIndex] = useState(0);
+  const layerRef = useRef<NativeView>(null);
   const scale = useSharedValue(reduceMotion ? 1 : 0.96);
 
   useEffect(() => {
@@ -51,8 +68,29 @@ export function CoachTour({ screen, steps, force }: { screen: CoachScreen; steps
   const hole = useSharedValue(targetTop);
   useEffect(() => {
     if (!open) return;
-    hole.value = reduceMotion ? targetTop : withTiming(targetTop, { duration: 250 });
-  }, [hole, open, reduceMotion, targetTop]);
+    let active = true;
+    const target = step?.target ? targets?.[step.target]?.current : null;
+    const moveHole = (nextTop: number) => {
+      hole.value = reduceMotion ? nextTop : withTiming(nextTop, { duration: 250 });
+    };
+    moveHole(targetTop);
+    if (target && layerRef.current) {
+      const frame = requestAnimationFrame(() => {
+        layerRef.current?.measureInWindow((_, layerTop) => {
+          target.measureInWindow((_, targetY, __, targetHeight) => {
+            if (active) moveHole(Math.max(12, targetY - layerTop + targetHeight / 2 - 32));
+          });
+        });
+      });
+      return () => {
+        active = false;
+        cancelAnimationFrame(frame);
+      };
+    }
+    return () => {
+      active = false;
+    };
+  }, [hole, index, open, reduceMotion, step?.target, targetTop, targets]);
   const topScrim = useAnimatedStyle(() => ({ height: Math.max(0, hole.value) }));
   const band = useAnimatedStyle(() => ({ top: hole.value }));
   const below = useAnimatedStyle(() => ({ top: hole.value + 64 }));
@@ -66,7 +104,7 @@ export function CoachTour({ screen, steps, force }: { screen: CoachScreen; steps
   const last = index >= steps.length - 1;
 
   return (
-    <View style={styles.layer} pointerEvents="box-none" accessibilityViewIsModal>
+    <View ref={layerRef} style={styles.layer} pointerEvents="box-none" accessibilityViewIsModal>
       <Animated.View pointerEvents="auto" style={[styles.topScrim, { backgroundColor: palette.scrim }, topScrim]} />
       <Animated.View pointerEvents="none" style={[styles.band, band]}>
         <View style={[styles.side, { backgroundColor: palette.scrim }]} />
@@ -87,10 +125,15 @@ export function CoachTour({ screen, steps, force }: { screen: CoachScreen; steps
           </Pressable>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={last ? t.coachGotIt : t.coachNext}
+            accessibilityLabel={last ? (lastLabel ?? t.coachGotIt) : t.coachNext}
             onPress={() => {
               if (last) {
-                close().catch(() => undefined);
+                if (onComplete) {
+                  setOpen(false);
+                  Promise.resolve(onComplete()).catch(() => undefined);
+                } else {
+                  close().catch(() => undefined);
+                }
                 return;
               }
               setIndex((value) => value + 1);
@@ -101,7 +144,7 @@ export function CoachTour({ screen, steps, force }: { screen: CoachScreen; steps
             }}
             style={styles.hit}
           >
-            <Text style={[styles.next, lang === "hi" && styles.hindi]}>{last ? t.coachGotIt : t.coachNext}</Text>
+            <Text style={[styles.next, lang === "hi" && styles.hindi]}>{last ? (lastLabel ?? t.coachGotIt) : t.coachNext}</Text>
           </Pressable>
         </View>
       </Animated.View>
