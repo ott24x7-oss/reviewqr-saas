@@ -7,6 +7,7 @@ import {
   rememberTour,
   replayAllTours,
   replayTours,
+  shouldShowQrPageTour,
   shouldShowTour
 } from "../src/guide/store";
 
@@ -32,6 +33,14 @@ describe("coach-mark store", () => {
     expect(shouldShowTour(again, "home")).toBe(true);
     expect(shouldShowTour(again, "qr")).toBe(true);
     expect(seen.home).toBe(true);
+  });
+
+  it("shows the QR tour only on the QR view and outside setup walkthroughs", () => {
+    expect(shouldShowQrPageTour(undefined, false)).toBe(true);
+    expect(shouldShowQrPageTour("qr", false)).toBe(true);
+    expect(shouldShowQrPageTour("buttons", false)).toBe(false);
+    expect(shouldShowQrPageTour("link", false)).toBe(false);
+    expect(shouldShowQrPageTour("qr", true)).toBe(false);
   });
 
   it("ignores a broken cache and remembers a finished tour", async () => {

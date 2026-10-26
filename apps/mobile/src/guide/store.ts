@@ -29,6 +29,10 @@ export function shouldShowTour(state: CoachState, screen: CoachScreen) {
   return state[screen] !== true;
 }
 
+export function shouldShowQrPageTour(section: string | undefined, setupTourActive: boolean) {
+  return !setupTourActive && (!section || section === "qr");
+}
+
 export function markTourSeen(state: CoachState, screen: CoachScreen): CoachState {
   return { ...state, [screen]: true };
 }

@@ -478,8 +478,7 @@ export default function WizardScreen() {
         ) : null}
         {step === 4 ? (
           <View style={styles.stack}>
-            <Field label={t.searchPlaces} tone="paper" value={placeQuery} onChangeText={setPlaceQuery} />
-            <PillButton label={t.searchPlaces} tone="outline" onPress={searchPlaces} />
+            <Field label={t.searchPlaces} tone="paper" value={placeQuery} onChangeText={setPlaceQuery} returnKeyType="search" onSubmitEditing={searchPlaces} />
             {places.map((place) => (
               <Pressable key={place.placeId} accessibilityRole="button" accessibilityLabel={place.description} onPress={() => choosePlace(place.placeId)} style={styles.chip}>
                 <Text>{place.description}</Text>

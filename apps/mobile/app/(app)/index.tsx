@@ -29,7 +29,7 @@ import { useReviewMoment } from "../../src/review/watch";
 import { useBusiness } from "../../src/state/business";
 import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
-import { BottomSheet, Card, Chip, KpiCard, LoadErrorCard, Skeleton } from "../../src/ui/bits";
+import { BottomSheet, Card, KpiCard, LoadErrorCard, Skeleton } from "../../src/ui/bits";
 import { TextButton } from "../../src/ui/buttons";
 import { rowTintFor } from "../../src/ui/rows";
 import { useTheme } from "../../src/ui/theme";
@@ -294,14 +294,36 @@ function HomeScreenContent() {
               feedback.refetch().catch(() => undefined);
             }} />
           ) : null}
-          <View style={styles.filters}>
-            <Chip label={t.liveView} tone="live" selected={live} onPress={() => setLive(true)} />
-            <Chip
-              label={range === "7d" ? t.range7 : t.range30}
-              selected={!live}
-              onPress={() => { setLive(false); setRange((current) => current === "7d" ? "30d" : "7d"); }}
-            />
-            <TextButton label={t.analytics} onPress={() => router.push("/(app)/analytics")} />
+          <View style={[styles.segmentedControl, { backgroundColor: palette.chip, borderColor: palette.line }]}>
+            <Pressable
+              accessibilityRole="tab"
+              accessibilityState={{ selected: live }}
+              accessibilityLabel={t.liveView}
+              onPress={() => setLive(true)}
+              style={[styles.segment, live && { backgroundColor: palette.primary }]}
+            >
+              <Text style={[styles.segmentText, { color: live ? palette.onPrimary : palette.ink }, lang === "hi" && styles.hindi]} numberOfLines={1}>{t.liveView}</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="tab"
+              accessibilityState={{ selected: !live }}
+              accessibilityLabel={range === "7d" ? t.range7 : t.range30}
+              onPress={() => {
+                if (live) setLive(false);
+                else setRange((current) => current === "7d" ? "30d" : "7d");
+              }}
+              style={[styles.segment, !live && { backgroundColor: palette.primary }]}
+            >
+              <Text style={[styles.segmentText, { color: !live ? palette.onPrimary : palette.ink }, lang === "hi" && styles.hindi]} numberOfLines={1}>{range === "7d" ? t.range7 : t.range30}</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="tab"
+              accessibilityLabel={t.analytics}
+              onPress={() => router.push("/(app)/analytics")}
+              style={styles.segment}
+            >
+              <Text style={[styles.segmentText, { color: palette.ink }, lang === "hi" && styles.hindi]} numberOfLines={1}>{t.analytics}</Text>
+            </Pressable>
           </View>
           {home.isLoading ? (
             <View style={styles.kpiGrid}>
@@ -572,7 +594,9 @@ const styles = StyleSheet.create({
   bell: { width: 48, height: 48, borderRadius: 14, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   bellDot: { position: "absolute", top: 9, right: 10, width: 8, height: 8, borderRadius: 4 },
   overlap: { marginTop: -40, paddingHorizontal: 14, gap: 10 },
-  filters: { flexDirection: "row", gap: 8, alignItems: "center", flexWrap: "wrap" },
+  segmentedControl: { flexDirection: "row", alignItems: "center", borderWidth: 1, borderRadius: 16, padding: 4, gap: 3 },
+  segment: { flex: 1, minWidth: 0, minHeight: 40, borderRadius: 12, alignItems: "center", justifyContent: "center", paddingHorizontal: 5 },
+  segmentText: { fontFamily: fonts.bodyStrong, fontSize: 11, textAlign: "center" },
   kpiGrid: { flexDirection: "row", flexWrap: "wrap", marginHorizontal: -5 },
   kpiCell: { width: "50%", padding: 5 },
   recentHeading: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
