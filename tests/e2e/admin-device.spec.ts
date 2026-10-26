@@ -93,7 +93,19 @@ test("approving an admin phone on the web lets that device call the API", async 
     await page.goto("/admin/app", { timeout: 120_000 });
     await expect(page.getByRole("heading", { name: "Admin devices" })).toBeVisible();
     const row = page.getByRole("row", { name: new RegExp(deviceName) });
+    // Approving needs a single-use step-up code bound to approve_device.
+    const stepUpSent = page.waitForResponse(
+      (res) => res.url().includes("/api/admin/step-up") && res.request().method() === "POST" && !res.request().postData()?.includes("code"),
+      { timeout: 120_000 }
+    );
     await row.getByRole("button", { name: "Approve" }).click();
+    const dialog = page.getByRole("dialog", { name: "Confirm device approval" });
+    await expect(dialog).toBeVisible();
+    const stepBody = await (await stepUpSent).json();
+    expect(stepBody.devCode).toMatch(/^\d{6}$/);
+    await page.locator("#admin-step-code").fill(stepBody.devCode);
+    await dialog.getByRole("button", { name: "Confirm" }).click();
+    await expect(dialog).toBeHidden({ timeout: 30_000 });
     await expect(row).toContainText("ACTIVE");
 
     const open = await page.request.get("/api/v1/admin/dashboard?range=today", {
@@ -105,6 +117,11 @@ test("approving an admin phone on the web lets that device call the API", async 
     expect(typeof body.data.kpis.revenuePaise).toBe("number");
   } finally {
     await prisma.emailOtp.deleteMany({ where: { identifier: phone } });
+    const admin = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+    if (admin) {
+      await prisma.emailOtp.deleteMany({ where: { identifier: admin.id } });
+      await prisma.rateLimit.deleteMany({ where: { key: { contains: admin.id } } });
+    }
     await prisma.rateLimit.deleteMany({ where: { OR: [{ key: { contains: phone } }, { key: { contains: ip } }] } });
     await prisma.user.deleteMany({ where: { email } });
     await prisma.$disconnect();

@@ -62,7 +62,20 @@ function CampaignsScreenContent() {
     <KeyboardAwareScrollView ref={scrollRef} style={{ flex: 1, backgroundColor: palette.paper }} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <Text style={[styles.title, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.campaigns}</Text>
       <Field label={t.campaignName} tone="paper" value={name} onChangeText={setName} />
-      <Field label={t.whatsAppCustomer} tone="paper" value={template} onChangeText={setTemplate} />
+      <Field
+        label={t.campaignMessage}
+        tone="paper"
+        value={template}
+        onChangeText={setTemplate}
+        multiline
+        numberOfLines={4}
+        maxLength={500}
+        textAlignVertical="top"
+        style={styles.message}
+      />
+      <Text style={[styles.counter, { color: palette.muted }]}>
+        {t.campaignCharacterCount.replace("{count}", String(Array.from(template).length))}
+      </Text>
       <PillButton label={t.addCampaign} tone="dark" disabled={name.trim().length < 2} onPress={create} />
       {rows.isLoading ? <><Skeleton height={110} /><Skeleton height={110} /></> : null}
       {rows.isError ? <LoadErrorCard onRetry={() => rows.refetch().catch(() => undefined)} /> : null}
@@ -88,6 +101,8 @@ const styles = StyleSheet.create({
   name: { fontFamily: fonts.bodyStrong, fontSize: 16 },
   note: { fontFamily: fonts.body, fontSize: 14 },
   card: { gap: 6 },
+  message: { minHeight: 112, paddingTop: 12 },
+  counter: { alignSelf: "flex-end", fontFamily: fonts.body, fontSize: 12, marginTop: -6 },
   hindi: { fontFamily: fonts.hindi }
 });
 

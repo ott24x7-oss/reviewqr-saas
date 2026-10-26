@@ -13,7 +13,8 @@ const schema = z.object({
   businessId: z.string().optional(),
   agentUserId: z.string().optional(),
   sharePercent: z.number().int().optional(),
-  leaderUserId: z.string().optional()
+  leaderUserId: z.string().optional(),
+  reason: z.string().trim().max(500).optional()
 });
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
@@ -22,7 +23,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const parsed = schema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
 
-  const result = await applyAdminTeamAction(params.id, parsed.data, guard.user.id);
+  const { reason, ...body } = parsed.data;
+  const result = await applyAdminTeamAction(params.id, body, guard.user.id);
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
 
   await logAudit({
@@ -30,8 +32,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     action: "agent.update",
     entity: "AgentProfile",
     entityId: params.id,
+    reason: reason || null,
+    before: result.data.before,
+    after: result.data.after,
     metadata: { op: parsed.data.action },
-    ip: getClientIp(req.headers)
+    ip: getClientIp(req.headers),
+    userAgent: req.headers.get("user-agent") || undefined
   });
   return NextResponse.json({ ok: true });
 }

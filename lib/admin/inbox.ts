@@ -24,12 +24,7 @@ function card(row: { id: string; title: string; subtitle: string; status: string
   return { ...row, createdAt: row.createdAt.toISOString() };
 }
 
-export async function loadAdminInbox(search: URLSearchParams) {
-  const segment = search.get("segment") || "agents";
-  const allowed = ["agents", "devices", "proofs", "payouts", "refunds", "shop", "support", "failed"];
-  if (!allowed.includes(segment)) return fail(400, "Unknown inbox segment");
-  const page = readPage(search);
-  if (isPageError(page)) return fail(400, page.error);
+async function inboxCountRows() {
   const stale = new Date(Date.now() - 30 * 60 * 1000);
   const [agents, devices, proofs, payoutGroups, refunds, shop, support, failed] = await Promise.all([
     prisma.agentProfile.count({ where: { status: "PENDING" } }),
@@ -43,6 +38,46 @@ export async function loadAdminInbox(search: URLSearchParams) {
       where: { OR: [{ status: "FAILED" }, { status: "PENDING", createdAt: { lt: stale } }] }
     })
   ]);
+  return { agents, devices, proofs, payoutGroups, refunds, shop, support, failed };
+}
+
+/** Sidebar badge and the queue counts next to matching nav items. One count query. */
+export async function adminShellCounts() {
+  const counts = await inboxCountRows();
+  const inbox =
+    counts.agents +
+    counts.devices +
+    counts.proofs +
+    counts.payoutGroups.length +
+    counts.refunds +
+    counts.shop +
+    counts.support +
+    counts.failed;
+  return {
+    inbox,
+    "/admin/agents": counts.agents,
+    "/admin/apps": counts.devices,
+    "/admin/support": counts.support,
+    "/admin/production": counts.shop + counts.proofs,
+    "/admin/commissions": counts.payoutGroups.length,
+    "/admin/payments": counts.failed
+  };
+}
+
+/** Sidebar badge. Counts only, so the shell does not load a queue. */
+export async function adminInboxBadge() {
+  const counts = await adminShellCounts();
+  return counts.inbox;
+}
+
+export async function loadAdminInbox(search: URLSearchParams) {
+  const segment = search.get("segment") || "agents";
+  const allowed = ["agents", "devices", "proofs", "payouts", "refunds", "shop", "support", "failed"];
+  if (!allowed.includes(segment)) return fail(400, "Unknown inbox segment");
+  const page = readPage(search);
+  if (isPageError(page)) return fail(400, page.error);
+  const stale = new Date(Date.now() - 30 * 60 * 1000);
+  const { agents, devices, proofs, payoutGroups, refunds, shop, support, failed } = await inboxCountRows();
 
   let items: Array<{ id: string; title: string; subtitle: string; status: string; createdAt: string }> = [];
   let nextCursor: string | null = null;
@@ -184,16 +219,27 @@ export async function applyInboxAction(input: {
   ids?: string[];
   actorId: string;
   actorDeviceId?: string | null;
+  reason?: string | null;
   ip?: string;
 }) {
   const ids = [...new Set([...(input.ids || []), ...(input.id ? [input.id] : [])])].slice(0, 50);
   if (!ids.length) return fail(400, "Choose at least one item");
   if (input.segment === "payouts") return fail(400, "Mark a payout paid from Money");
   let changed = 0;
+  /** Per-item before/after for the audit row. */
+  const before: Array<Record<string, unknown>> = [];
+  const after: Array<Record<string, unknown>> = [];
   for (const id of ids) {
     if (input.segment === "agents" && (input.action === "approve" || input.action === "reject")) {
-      const result = await setAgentTeamStatus(id, input.action === "approve" ? "ACTIVE" : "REJECTED", input.actorId);
-      if (result.ok) changed += 1;
+      const prior = await prisma.agentProfile.findUnique({ where: { id }, select: { status: true, active: true } });
+      // A rejection is REJECTED, never PAUSED, so a leader cannot resume it.
+      const status = input.action === "approve" ? "ACTIVE" : "REJECTED";
+      const result = await setAgentTeamStatus(id, status, input.actorId);
+      if (result.ok) {
+        changed += 1;
+        before.push({ id, status: prior?.status ?? null, active: prior?.active ?? null });
+        after.push({ id, status, active: status === "ACTIVE" });
+      }
       continue;
     }
     if (input.segment === "devices" && input.action === "approve") {
@@ -202,6 +248,7 @@ export async function applyInboxAction(input: {
         action: "approve",
         actorId: input.actorId,
         actorDeviceId: input.actorDeviceId,
+        reason: input.reason,
         ip: input.ip
       });
       if (result.ok) changed += 1;
@@ -213,6 +260,7 @@ export async function applyInboxAction(input: {
         action: "revoke",
         actorId: input.actorId,
         actorDeviceId: input.actorDeviceId,
+        reason: input.reason,
         ip: input.ip
       });
       if (result.ok) changed += 1;
@@ -242,9 +290,13 @@ export async function applyInboxAction(input: {
     }
     if (input.segment === "failed" && input.action === "reject") {
       const result = await rejectAdminPayment(id);
-      if (result.ok) changed += 1;
+      if (result.ok) {
+        changed += 1;
+        before.push({ id, ...result.data.before });
+        after.push({ id, ...result.data.after });
+      }
     }
   }
   if (!changed) return fail(400, "Nothing could be updated");
-  return ok({ changed });
+  return ok({ changed, before, after });
 }

@@ -23,12 +23,13 @@ function databaseUrl() {
   throw new Error("DATABASE_URL is missing");
 }
 
-async function createCode(page: Page, businessUrl: string, label: string) {
-  await page.goto(`${businessUrl}/qr`);
+async function createCode(page: Page, businessId: string, label: string) {
+  await page.goto(`/dashboard/page/qr?businessId=${businessId}&tab=create`);
   await page.getByLabel(/^Label/).fill(label);
   await page.getByRole("button", { name: "Create QR code" }).click();
-  await page.waitForURL(/\/dashboard\/qr-codes\/[^/]+$/);
-  const code = decodeURIComponent(new URL(page.url()).pathname.split("/").pop() || "");
+  await expect(page.getByText("Short URL")).toBeVisible();
+  const shortUrl = await page.locator("code").first().innerText();
+  const code = shortUrl.match(/\/q\/([^/?#\s]+)/)?.[1] || "";
   expect(code).toBeTruthy();
   return code;
 }
@@ -49,15 +50,15 @@ test("a direct scan opens the chosen link, and one device can open the menu inst
     await page.getByRole("button", { name: "Create account" }).click();
     await page.waitForURL("**/dashboard**");
 
-    await page.goto("/dashboard/businesses");
-    await page.getByRole("link", { name: "Manage", exact: true }).click();
-    await page.waitForURL(/\/dashboard\/businesses\/[^/]+$/);
-    const businessUrl = page.url().split("?")[0].replace(/\/$/, "");
+    await page.goto("/dashboard/account/settings?section=businesses");
+    const manage = page.getByRole("link", { name: "Manage", exact: true });
+    const businessId = (await manage.getAttribute("href"))?.match(/\/dashboard\/businesses\/([^/?#]+)/)?.[1] || "";
+    expect(businessId).toBeTruthy();
 
-    const counter = await createCode(page, businessUrl, "Counter");
-    const table = await createCode(page, businessUrl, "Table");
+    const counter = await createCode(page, businessId, "Counter");
+    const table = await createCode(page, businessId, "Table");
 
-    await page.goto(`${businessUrl}/tap`);
+    await page.goto(`/dashboard/page?businessId=${businessId}&tab=buttons`);
     await expect(page.getByRole("heading", { name: "Customer page" })).toBeVisible();
 
     await page.getByRole("button", { name: "Add button" }).click();
@@ -78,7 +79,7 @@ test("a direct scan opens the chosen link, and one device can open the menu inst
     await page.getByRole("combobox", { name: "Direct link" }).selectOption({ label: "Google review" });
     await expect(page.getByText("Scanning your QR will open: Google review")).toBeVisible();
     await page.getByRole("button", { name: "Publish" }).click();
-    await expect(page.getByText("Page published")).toBeVisible();
+    await expect(page.getByText("Page published").first()).toBeVisible();
 
     const before = await prisma.qRCode.findUnique({ where: { shortCode: counter }, select: { scans: true } });
     await page.goto(`/q/${counter}`);
@@ -87,7 +88,7 @@ test("a direct scan opens the chosen link, and one device can open the menu inst
     const after = await prisma.qRCode.findUnique({ where: { shortCode: counter }, select: { scans: true } });
     expect(after?.scans).toBe((before?.scans || 0) + 1);
 
-    await page.goto("/dashboard/qr-codes");
+    await page.goto(`/dashboard/page/qr?businessId=${businessId}`);
     await page.getByRole("combobox", { name: `Opens for ${table}` }).selectOption({ label: "Menu" });
     await expect(page.getByText("Opens: Menu")).toBeVisible();
 

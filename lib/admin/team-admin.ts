@@ -62,7 +62,39 @@ export async function applyAdminTeamAction(id: string, body: TeamAction, actorUs
       await prisma.user.update({ where: { id: profile.userId }, data: { name: body.name } });
     }
   }
-  return ok({ before, after: { action: body.action } });
+  const after = await prisma.agentProfile.findUnique({
+    where: { id },
+    select: { status: true, active: true, sharePercent: true, leaderId: true, city: true, pausedBy: true }
+  });
+  return ok({ before, after: { action: body.action, ...(after || {}) } });
+}
+
+export async function loadAdminAgent(id: string) {
+  const profile = await prisma.agentProfile.findUnique({
+    where: { id },
+    include: {
+      user: { select: { id: true, name: true, email: true, phone: true } },
+      leader: { select: { id: true, code: true, user: { select: { name: true } } } }
+    }
+  });
+  if (!profile) return fail(404, "Agent not found");
+  return ok({
+    id: profile.id,
+    userId: profile.userId,
+    name: profile.user.name || "Agent",
+    email: profile.user.email,
+    phone: maskPhone(profile.user.phone),
+    code: profile.code,
+    status: profile.status,
+    city: profile.city,
+    active: profile.active,
+    depth: profile.depth,
+    sharePercent: profile.sharePercent,
+    upiId: profile.upiId,
+    leader: profile.leader
+      ? { id: profile.leader.id, code: profile.leader.code, name: profile.leader.user.name || "Leader" }
+      : null
+  });
 }
 
 export async function loadAdminTeam() {

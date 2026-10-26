@@ -2,11 +2,12 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { formatRupees } from "@/lib/tap/order-message";
 import type { DaySummary } from "@/lib/store/day";
+import { AppText, useAppLanguage } from "@/components/app-ui/i18n";
+import { DetailDrawer, EmptyState, StatusBadge } from "@/components/app-ui/primitives";
+import { LayoutGrid, List } from "lucide-react";
 import {
   ORDER_STATUSES,
   STATUS_LABEL,
@@ -16,29 +17,10 @@ import {
   type OrderStatus
 } from "@/lib/store/order-status";
 
-const TYPE_LABEL: Record<string, string> = {
-  DINE_IN: "Dine-in",
-  TAKEAWAY: "Takeaway",
-  DELIVERY: "Delivery"
-};
-
-const PAY_LABEL: Record<string, string> = {
-  CASH: "Cash",
-  UPI: "UPI"
-};
-
-function statusVariant(status: OrderStatus) {
-  if (status === "NEW") return "info" as const;
-  if (status === "REJECTED") return "destructive" as const;
-  if (status === "COMPLETED") return "success" as const;
-  if (status === "READY" || status === "OUT_FOR_DELIVERY") return "warning" as const;
-  return "secondary" as const;
-}
-
-function formatWhen(iso: string) {
+function formatWhen(iso: string, language: "en" | "hi" = "en") {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "";
-  return new Intl.DateTimeFormat("en-IN", {
+  return new Intl.DateTimeFormat(language === "hi" ? "hi-IN" : "en-IN", {
     timeZone: "Asia/Kolkata",
     day: "numeric",
     month: "short",
@@ -79,11 +61,15 @@ function beep() {
   }
 }
 
-export function OrdersBoard({ initial, summary }: { initial: OrderCard[]; summary: DaySummary }) {
+export function OrdersBoard({ initial, summary, live = true }: { initial: OrderCard[]; summary: DaySummary; live?: boolean }) {
+  const { language } = useAppLanguage();
   const [orders, setOrders] = React.useState(initial);
   const [totals, setTotals] = React.useState(summary);
   const [banner, setBanner] = React.useState("");
   const [pendingId, setPendingId] = React.useState<string | null>(null);
+  const [activeOrderId, setActiveOrderId] = React.useState<string | null>(null);
+  const [view, setView] = React.useState<"table" | "cards">("table");
+  const activeOrder = orders.find((order) => order.id === activeOrderId) || null;
   const seen = React.useRef<Set<string> | null>(null);
   const armed = React.useRef(false);
   const initialRef = React.useRef(initial);
@@ -101,6 +87,7 @@ export function OrdersBoard({ initial, summary }: { initial: OrderCard[]; summar
   }, []);
 
   React.useEffect(() => {
+    if (!live) return;
     seen.current = new Set(initialRef.current.map((order) => order.id));
     let active = true;
     let running = false;
@@ -117,8 +104,8 @@ export function OrdersBoard({ initial, summary }: { initial: OrderCard[]; summar
         const fresh = next.filter((order) => !known.has(order.id));
         for (const order of next) known.add(order.id);
         seen.current = known;
-        if (fresh.length === 1) setBanner(`New order ${fresh[0].number}`);
-        else if (fresh.length > 1) setBanner(`${fresh.length} new orders`);
+        if (fresh.length === 1) setBanner(language === "hi" ? `नया ऑर्डर ${fresh[0].number}` : `New order ${fresh[0].number}`);
+        else if (fresh.length > 1) setBanner(language === "hi" ? `${fresh.length} नए ऑर्डर` : `${fresh.length} new orders`);
         if (fresh.length > 0 && armed.current) beep();
         if (active) {
           setOrders(next);
@@ -137,7 +124,7 @@ export function OrdersBoard({ initial, summary }: { initial: OrderCard[]; summar
       active = false;
       window.clearInterval(interval);
     };
-  }, []);
+  }, [language, live]);
 
   async function setStatus(id: string, status: OrderStatus) {
     setPendingId(id);
@@ -149,119 +136,87 @@ export function OrdersBoard({ initial, summary }: { initial: OrderCard[]; summar
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json.order) {
-        toast.error(typeof json.error === "string" ? json.error : "Could not update the order");
+        toast.error(typeof json.error === "string" ? json.error : language === "hi" ? "ऑर्डर अपडेट नहीं हो सका" : "Could not update the order");
         return;
       }
       setOrders((prev) => prev.map((order) => (order.id === id ? (json.order as OrderCard) : order)));
     } catch {
-      toast.error("Could not update the order");
+      toast.error(language === "hi" ? "ऑर्डर अपडेट नहीं हो सका" : "Could not update the order");
     } finally {
       setPendingId(null);
     }
   }
 
-  const summaryLine = (
-    <p className="text-sm">
-      Today {formatRupees(totals.totalPaise)} · {totals.count} {totals.count === 1 ? "order" : "orders"}
-      <span className="text-muted-foreground"> · Asia/Kolkata, excluding rejected</span>
-    </p>
-  );
-
   if (orders.length === 0) {
-    return (
-      <div className="space-y-3">
-        {summaryLine}
-        <p className="text-sm text-muted-foreground">No orders yet.</p>
-      </div>
-    );
+    return <EmptyState title={<AppText en="No orders match this view" hi="इस फ़िल्टर में कोई ऑर्डर नहीं" />} description={<AppText en="New customer orders will appear here." hi="ग्राहकों के नए ऑर्डर यहाँ दिखेंगे।" />} />;
   }
 
   return (
-    <div className="grid grid-cols-1 gap-3">
-      {summaryLine}
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground"><AppText en="Today" hi="आज" /> {formatRupees(totals.totalPaise)} · {totals.count} <AppText en={totals.count === 1 ? "order" : "orders"} hi="ऑर्डर" /><span className="hidden sm:inline"> · <AppText en="India time, rejected orders excluded" hi="भारत का समय, रद्द ऑर्डर शामिल नहीं" /></span></p>
       {banner ? (
-        <p role="status" className="rounded-lg border border-primary/30 bg-primary-100 px-3 py-2 text-sm text-primary-800">
+        <p role="status" className="rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-foreground">
           {banner}
         </p>
       ) : null}
-      {orders.map((order) => {
-        const place = [order.place, order.pincode].filter(Boolean).join(", ");
-        const who = [order.customerName || "No name", TYPE_LABEL[order.orderType] || order.orderType, place]
-          .filter(Boolean)
-          .join(" · ");
-        const when = [formatWhen(order.createdAt), PAY_LABEL[order.payment] || order.payment].filter(Boolean).join(" · ");
-        const actions = ORDER_STATUSES.filter((status) => status !== order.status && canSetStatus(order.status, status));
+      <div className="flex justify-end gap-1">
+        <button type="button" aria-pressed={view === "table"} onClick={() => setView("table")} className={`app-ui-focus inline-flex min-h-9 items-center gap-2 rounded-md px-3 text-sm ${view === "table" ? "bg-primary/10 font-medium text-primary" : "text-muted-foreground hover:bg-muted"}`}><List className="h-4 w-4" /><AppText en="Table" hi="टेबल" /></button>
+        <button type="button" aria-pressed={view === "cards"} onClick={() => setView("cards")} className={`app-ui-focus inline-flex min-h-9 items-center gap-2 rounded-md px-3 text-sm ${view === "cards" ? "bg-primary/10 font-medium text-primary" : "text-muted-foreground hover:bg-muted"}`}><LayoutGrid className="h-4 w-4" /><AppText en="Cards" hi="कार्ड" /></button>
+      </div>
+      {view === "table" ? <div className="app-ui-panel overflow-hidden">
+        <div className="overflow-x-auto"><table className="w-full border-collapse text-left text-sm"><thead className="bg-muted/70 text-xs text-muted-foreground"><tr>
+          {[["Order", "ऑर्डर"], ["Customer", "ग्राहक"], ["Business", "कारोबार"], ["Status", "स्थिति"], ["Total", "कुल"]].map(([en, hi]) => <th className="border-b px-4 py-3 font-medium" key={en}><AppText en={en} hi={hi} /></th>)}
+        </tr></thead><tbody className="divide-y">{orders.map((order) => <tr key={order.id} className="cursor-pointer transition-colors hover:bg-muted/40" onClick={() => setActiveOrderId(order.id)}>
+          <td className="px-4 py-3"><button type="button" className="app-ui-focus rounded-sm font-medium text-primary" onClick={(event) => { event.stopPropagation(); setActiveOrderId(order.id); }}>{order.number}</button><p className="mt-0.5 text-xs text-muted-foreground">{formatWhen(order.createdAt, language)}</p></td>
+          <td className="px-4 py-3">{order.customerName || <AppText en="Customer" hi="ग्राहक" />}</td><td className="px-4 py-3">{order.businessName}</td><td className="px-4 py-3"><StatusBadge tone={statusTone(order.status)}>{statusLabel(order.status, language)}</StatusBadge></td><td className="px-4 py-3 text-right font-medium tabular-nums">{formatRupees(order.totalPaise)}</td>
+        </tr>)}</tbody></table></div>
+      </div> : <div className="space-y-3">{orders.map((order) => {
         return (
-          <Card key={order.id}>
-            <CardContent className="space-y-3 p-4 sm:p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="font-semibold">{order.number}</div>
-                  <div className="text-sm text-muted-foreground">{order.businessName}</div>
-                </div>
-                <div className="text-right">
-                  <div className="font-semibold">{formatRupees(order.totalPaise)}</div>
-                  <Badge variant={statusVariant(order.status)}>{STATUS_LABEL[order.status]}</Badge>
-                </div>
-              </div>
-              <p className="text-sm">{who}</p>
-              {order.phone ? <p className="text-sm">Phone {order.phone}</p> : null}
-              {when ? <p className="text-sm text-muted-foreground">{when}</p> : null}
-              <ul className="text-sm">
-                {order.items.map((line, index) => (
-                  <li key={`${order.id}-${index}`}>
-                    {line.qty} × {line.name}
-                    {line.note ? <span className="text-muted-foreground"> — {line.note}</span> : null}
-                  </li>
-                ))}
-              </ul>
-              {order.note ? <p className="text-sm text-muted-foreground">{order.note}</p> : null}
-              {order.canManage ? (
-                <div className="flex flex-wrap gap-2">
-                  {actions.map((status) => (
-                    <Button
-                      key={status}
-                      type="button"
-                      variant={status === "REJECTED" ? "destructive" : "outline"}
-                      className="h-11 min-h-11"
-                      disabled={pendingId === order.id}
-                      aria-label={`${statusActionLabel(status)} ${order.number}`}
-                      onClick={() => setStatus(order.id, status)}
-                    >
-                      {statusActionLabel(status)}
-                    </Button>
-                  ))}
-                </div>
-              ) : null}
-              <div className="flex flex-wrap gap-2">
-                {order.whatsAppUrl ? (
-                  <a
-                    className="inline-flex h-11 min-h-11 items-center justify-center rounded-lg border border-border bg-background px-4 text-sm font-medium"
-                    href={order.whatsAppUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    aria-label={`WhatsApp this status for ${order.number}`}
-                  >
-                    WhatsApp this status
-                  </a>
-                ) : null}
-                <a className="inline-flex h-11 min-h-11 items-center justify-center rounded-lg border border-border bg-background px-3 text-sm font-medium" href={`/orders/${order.id}?doc=kot&mm=58`} target="_blank" rel="noreferrer">
-                  KOT 58mm
-                </a>
-                <a className="inline-flex h-11 min-h-11 items-center justify-center rounded-lg border border-border bg-background px-3 text-sm font-medium" href={`/orders/${order.id}?doc=kot&mm=80`} target="_blank" rel="noreferrer">
-                  KOT 80mm
-                </a>
-                <a className="inline-flex h-11 min-h-11 items-center justify-center rounded-lg border border-border bg-background px-3 text-sm font-medium" href={`/orders/${order.id}?doc=bill&mm=58`} target="_blank" rel="noreferrer">
-                  Bill 58mm
-                </a>
-                <a className="inline-flex h-11 min-h-11 items-center justify-center rounded-lg border border-border bg-background px-3 text-sm font-medium" href={`/orders/${order.id}?doc=bill&mm=80`} target="_blank" rel="noreferrer">
-                  Bill 80mm
-                </a>
-              </div>
-            </CardContent>
-          </Card>
+          <button key={order.id} type="button" onClick={() => setActiveOrderId(order.id)} className="app-ui-focus app-ui-panel flex min-h-[76px] w-full items-center gap-3 p-4 text-left transition-colors hover:bg-muted/40">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-primary/10 text-primary"><span className="text-xs font-semibold">#{order.number.slice(-3)}</span></span>
+            <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold">{order.customerName || (language === "hi" ? "ग्राहक" : "Customer")} · {order.number}</span><span className="mt-0.5 block truncate text-xs text-muted-foreground">{order.businessName} · {formatWhen(order.createdAt, language)}</span></span>
+            <span className="shrink-0 text-right"><span className="block text-sm font-semibold tabular-nums">{formatRupees(order.totalPaise)}</span><StatusBadge tone={statusTone(order.status)}>{statusLabel(order.status, language)}</StatusBadge></span>
+          </button>
         );
-      })}
+      })}</div>}
+      <DetailDrawer open={!!activeOrder} onOpenChange={(open) => { if (!open) setActiveOrderId(null); }} title={activeOrder?.number || ""} description={activeOrder?.businessName}>
+        {activeOrder ? <OrderDetails order={activeOrder} language={language} pending={pendingId === activeOrder.id} onSetStatus={(status) => void setStatus(activeOrder.id, status)} /> : null}
+      </DetailDrawer>
     </div>
   );
+}
+
+function statusTone(status: OrderStatus): "neutral" | "success" | "warning" | "danger" | "info" {
+  if (status === "REJECTED") return "danger";
+  if (status === "COMPLETED") return "success";
+  if (status === "NEW" || status === "READY" || status === "OUT_FOR_DELIVERY") return "warning";
+  return "info";
+}
+
+function statusLabel(status: OrderStatus, language: "en" | "hi") {
+  if (language === "en") return STATUS_LABEL[status];
+  const labels: Record<OrderStatus, string> = { NEW: "नया", ACCEPTED: "स्वीकार", REJECTED: "रद्द", PREPARING: "तैयार हो रहा", READY: "तैयार", OUT_FOR_DELIVERY: "डिलीवरी पर", COMPLETED: "पूरा" };
+  return labels[status];
+}
+
+function OrderDetails({ order, language, pending, onSetStatus }: { order: OrderCard; language: "en" | "hi"; pending: boolean; onSetStatus: (status: OrderStatus) => void }) {
+  const actions = ORDER_STATUSES.filter((status) => status !== order.status && canSetStatus(order.status, status));
+  const type = order.orderType === "DINE_IN" ? language === "hi" ? "यहाँ खाएँ" : "Dine-in" : order.orderType === "TAKEAWAY" ? language === "hi" ? "पार्सल" : "Takeaway" : order.orderType === "DELIVERY" ? language === "hi" ? "डिलीवरी" : "Delivery" : order.orderType;
+  const payment = order.payment === "CASH" ? language === "hi" ? "नकद" : "Cash" : order.payment === "UPI" ? "UPI" : order.payment;
+  return <div className="space-y-6">
+    <section><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"><AppText en="Order status" hi="ऑर्डर की स्थिति" /></p><div className="mt-2 flex items-center gap-2"><StatusBadge tone={statusTone(order.status)}>{statusLabel(order.status, language)}</StatusBadge><span className="text-sm text-muted-foreground">{formatWhen(order.createdAt, language)}</span></div></section>
+    <section className="space-y-2 border-t pt-4"><h3 className="text-sm font-semibold"><AppText en="Customer" hi="ग्राहक" /></h3><p className="text-sm">{order.customerName || <AppText en="No name provided" hi="नाम नहीं दिया" />}</p>{order.phone ? <p className="text-sm text-muted-foreground">{order.phone}</p> : null}<p className="text-sm text-muted-foreground">{[type, order.place, order.pincode].filter(Boolean).join(" · ")}</p><p className="text-sm text-muted-foreground"><AppText en="Payment" hi="भुगतान" /> · {payment}</p></section>
+    <section className="border-t pt-4"><h3 className="text-sm font-semibold"><AppText en="Items" hi="आइटम" /></h3><ul className="mt-2 divide-y">{order.items.map((line, index) => <li className="flex justify-between gap-3 py-2 text-sm" key={`${order.id}-${index}`}><span>{line.qty} × {line.name}{line.note ? <span className="block text-xs text-muted-foreground">{line.note}</span> : null}</span></li>)}</ul><div className="flex justify-between border-t pt-3 font-semibold"><span><AppText en="Total" hi="कुल" /></span><span className="tabular-nums">{formatRupees(order.totalPaise)}</span></div>{order.note ? <p className="mt-3 rounded-md bg-muted/60 p-3 text-sm text-muted-foreground">{order.note}</p> : null}</section>
+    {order.canManage ? <section className="border-t pt-4"><h3 className="text-sm font-semibold"><AppText en="Update order" hi="ऑर्डर अपडेट करें" /></h3><div className="mt-3 flex flex-wrap gap-2">{actions.map((status) => <Button key={status} type="button" variant={status === "REJECTED" ? "destructive" : "outline"} disabled={pending} onClick={() => onSetStatus(status)}>{actionLabel(status, language)}</Button>)}</div></section> : null}
+    <section className="flex flex-wrap gap-2 border-t pt-4">
+      {order.whatsAppUrl ? <a className="inline-flex min-h-10 items-center rounded-md border px-3 text-sm font-medium" href={order.whatsAppUrl} target="_blank" rel="noreferrer"><AppText en="WhatsApp status" hi="WhatsApp स्थिति" /></a> : null}
+      {[ ["kot", "58", "KOT 58mm"], ["kot", "80", "KOT 80mm"], ["bill", "58", "Bill 58mm"], ["bill", "80", "Bill 80mm"] ].map(([doc, mm, label]) => <a key={`${doc}${mm}`} className="inline-flex min-h-10 items-center rounded-md border px-3 text-sm" href={`/orders/${order.id}?doc=${doc}&mm=${mm}`} target="_blank" rel="noreferrer">{label}</a>)}
+    </section>
+  </div>;
+}
+
+function actionLabel(status: OrderStatus, language: "en" | "hi") {
+  if (language === "en") return statusActionLabel(status);
+  const labels: Record<OrderStatus, string> = { NEW: "नया", ACCEPTED: "स्वीकार करें", REJECTED: "रद्द करें", PREPARING: "तैयार हो रहा", READY: "तैयार", OUT_FOR_DELIVERY: "डिलीवरी पर भेजें", COMPLETED: "पूरा करें" };
+  return labels[status];
 }

@@ -174,8 +174,7 @@ export function BusinessForm({ initial, businessId }: { initial?: BusinessCard |
       <KeyboardAwareScrollView style={{ flex: 1 }} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" bottomOffset={88}>
         <Text style={[styles.title, lang === "hi" && styles.hindi]}>{t.businessDetails}</Text>
         <View ref={placesTarget} collapsable={false} style={styles.card}>
-          <FilledField label={t.searchPlaces} value={query} onChangeText={setQuery} />
-          <PillButton label={t.searchPlaces} onPress={search} disabled={busy || query.trim().length < 2} tone="outline" />
+          <FilledField label={t.searchPlaces} value={query} onChangeText={setQuery} returnKeyType="search" onSubmitEditing={() => search().catch(() => undefined)} />
           {places && !places.enabled ? <Text style={[styles.note, lang === "hi" && styles.hindi]}>{t.placesOff}</Text> : null}
           {places?.predictions.map((row) => (
             <Pressable key={row.placeId} accessibilityRole="button" accessibilityLabel={row.description} onPress={() => pick(row.placeId)} style={styles.hit}>

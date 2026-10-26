@@ -17,6 +17,7 @@ import { trackOnce } from "../../src/analytics/events";
 import { apiData } from "../../src/api/data";
 import { ApiError } from "../../src/api/http";
 import { CoachTour } from "../../src/guide/coach";
+import { shouldShowQrPageTour } from "../../src/guide/store";
 import { SetupWalkthrough } from "../../src/guide/setup-tour";
 import { HelpButton } from "../../src/guide/help-sheet";
 import { useI18n } from "../../src/i18n";
@@ -118,6 +119,7 @@ function TapScreenContent() {
   const base = apiBaseUrl();
   const preview = data?.publicPath && base ? `${base}${data.publicPath}` : "";
   const showSetupTour = SETUP_TAP_STEPS.some((key) => params.setupGuide === key);
+  const showQrPageTour = shouldShowQrPageTour(section, showSetupTour);
 
   async function saveColour() {
     if (!business) return;
@@ -450,7 +452,7 @@ function TapScreenContent() {
         </View>
       )}
       <CoachTour
-        disabled={showSetupTour}
+        disabled={!showQrPageTour}
         screen="qr"
         steps={[
           { title: t.coachQrShow, body: t.coachQrShowBody, top: 140 },

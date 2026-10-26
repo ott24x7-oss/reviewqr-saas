@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { agentLeaderboard, loadTeamAdmin } from "@/lib/plans/admin-team";
 import { formatINR } from "@/lib/utils";
@@ -22,11 +23,20 @@ export default async function AdminAgentsPage({ searchParams }: { searchParams?:
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="font-display text-2xl font-bold sm:text-3xl">Agents</h1>
+        <h1 className="font-display text-2xl font-bold sm:text-3xl">Agents & teams</h1>
         <p className="text-sm text-muted-foreground">
           An agent signs in with WhatsApp OTP. Their link is /join/code. The first attribution wins unless you reassign it here.
         </p>
       </div>
+      <ul className="flex flex-wrap gap-2 text-sm">
+        {agents.map((agent) => (
+          <li key={agent.id}>
+            <Link href={`/admin/agents/${agent.id}`} className="rounded-full border px-3 py-1 hover:border-emerald-600">
+              {agent.user.name || "Agent"}
+            </Link>
+          </li>
+        ))}
+      </ul>
       <AgentsBoard
         agents={agents.map((agent) => ({
           id: agent.id,

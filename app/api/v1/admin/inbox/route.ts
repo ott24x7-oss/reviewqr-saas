@@ -30,6 +30,7 @@ async function postHandler(req: NextRequest) {
     ids: parsed.data.ids,
     actorId: auth.actor.user.id,
     actorDeviceId: auth.actor.device.id,
+    reason: parsed.data.reason,
     ip: auth.actor.ip
   });
   const selfAudit = parsed.data.segment === "devices" || parsed.data.segment === "proofs" || parsed.data.segment === "shop";
