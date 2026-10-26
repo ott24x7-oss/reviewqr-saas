@@ -64,10 +64,25 @@ export function Screen({
       <Animated.View style={[transition, { backgroundColor: palette.bg }]}>
         {children}
       </Animated.View>
+      <View
+        pointerEvents="none"
+        style={[
+          styles.statusBarStrip,
+          { height: insets.top, backgroundColor: statusColor }
+        ]}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 }
+  root: { flex: 1 },
+  statusBarStrip: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+    elevation: 1000
+  }
 });

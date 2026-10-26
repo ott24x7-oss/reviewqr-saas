@@ -60,7 +60,7 @@ function CampaignsScreenContent() {
   return (
     <KeyboardAwareScrollView ref={scrollRef} style={{ flex: 1, backgroundColor: palette.paper }} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <Text style={[styles.title, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.campaigns}</Text>
-      <Field label={t.name} tone="paper" value={name} onChangeText={setName} />
+      <Field label={t.campaignName} tone="paper" value={name} onChangeText={setName} />
       <Field label={t.whatsAppCustomer} tone="paper" value={template} onChangeText={setTemplate} />
       <PillButton label={t.addCampaign} tone="dark" disabled={name.trim().length < 2} onPress={create} />
       {rows.isLoading ? <><Skeleton height={110} /><Skeleton height={110} /></> : null}

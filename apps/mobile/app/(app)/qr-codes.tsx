@@ -66,7 +66,7 @@ function QrCodesScreenContent() {
   return (
     <KeyboardAwareScrollView ref={scrollRef} style={{ flex: 1, backgroundColor: palette.paper }} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <Text style={[styles.title, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.qrList}</Text>
-      <Field label={t.name} tone="paper" value={label} onChangeText={setLabel} />
+      <Field label={t.qrLabel} tone="paper" value={label} onChangeText={setLabel} />
       <PillButton label={t.tableQr} tone="dark" disabled={!label.trim()} onPress={() => create("TABLE")} />
       <PillButton label={t.counterQr} tone="outline" disabled={!label.trim()} onPress={() => create("COUNTER")} />
       {rows.isLoading ? <><Skeleton height={96} /><Skeleton height={96} /></> : null}

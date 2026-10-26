@@ -58,11 +58,11 @@ function OffersScreenContent() {
       <Text style={[styles.title, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.offers}</Text>
       <Field label={t.couponCode} tone="paper" value={code} onChangeText={setCode} autoCapitalize="characters" />
       <Field label="%" tone="paper" value={percent} onChangeText={setPercent} keyboardType="number-pad" />
-      <PillButton label={t.addCoupon} tone="dark" disabled={code.trim().length < 3} onPress={() => post({ action: "coupon", code, kind: "PERCENT", amount: Number(percent) || 10 }, "coupons")} />
+      <PillButton label={t.addOffer} tone="dark" disabled={code.trim().length < 3} onPress={() => post({ action: "coupon", code, kind: "PERCENT", amount: Number(percent) || 10 }, "coupons")} />
       {coupons.isLoading ? <><Skeleton height={72} /><Skeleton height={72} /></> : null}
       {coupons.isError ? <LoadErrorCard onRetry={() => coupons.refetch().catch(() => undefined)} /> : null}
       {!coupons.isLoading && !coupons.isError && (coupons.data?.items ?? []).length === 0 ? (
-        <EmptyState icon={TicketPercent} title={t.emptyCouponsTitle} body={t.emptyCouponsBody} action={t.addCoupon} onAction={() => scrollRef.current?.scrollTo({ x: 0, y: 0, animated: true })} />
+        <EmptyState icon={TicketPercent} title={t.emptyCouponsTitle} body={t.emptyCouponsBody} action={t.addOffer} onAction={() => scrollRef.current?.scrollTo({ x: 0, y: 0, animated: true })} />
       ) : null}
       {!coupons.isLoading && !coupons.isError ? (coupons.data?.items ?? []).map((row) => (
         <Card key={row.id} style={styles.card}>

@@ -171,7 +171,7 @@ export function BusinessForm({ initial, businessId }: { initial?: BusinessCard |
 
   return (
     <View style={styles.screen}>
-      <KeyboardAwareScrollView style={{ flex: 1 }} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" bottomOffset={12}>
+      <KeyboardAwareScrollView style={{ flex: 1 }} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" bottomOffset={88}>
         <Text style={[styles.title, lang === "hi" && styles.hindi]}>{t.businessDetails}</Text>
         <View ref={placesTarget} collapsable={false} style={styles.card}>
           <FilledField label={t.searchPlaces} value={query} onChangeText={setQuery} />
@@ -233,7 +233,7 @@ export function BusinessForm({ initial, businessId }: { initial?: BusinessCard |
 function makeStyles(colors: Palette) {
   return StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.paper },
-  content: { padding: 16, gap: 12, paddingBottom: 24 },
+  content: { padding: 16, gap: 12, paddingBottom: 120 },
   title: { fontFamily: fonts.display, fontSize: 28, color: colors.ink },
   card: { backgroundColor: colors.card, borderRadius: 20, padding: 12, gap: 10 },
   hit: { minHeight: 48, justifyContent: "center", backgroundColor: colors.paper, borderRadius: 14, paddingHorizontal: 14 },

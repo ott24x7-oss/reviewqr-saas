@@ -20,7 +20,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { apiData } from "../../src/api/data";
 import { widgetPaletteFromPalette } from "../../src/widgets/format";
-import { CoachTour } from "../../src/guide/coach";
 import { consumeSetupStep, nextSetupStep, SETUP_STEP_KEYS, type SetupStepKey } from "../../src/guide/setup";
 import { SetupCompleteCard, SetupGuideCard, type SetupGuideStep } from "../../src/guide/setup-guide";
 import { useI18n } from "../../src/i18n";
@@ -559,14 +558,6 @@ function HomeScreenContent() {
         ))}
       </BottomSheet>
 
-      <CoachTour
-        screen="home"
-        steps={[
-          { title: t.coachHomeStats, body: t.coachHomeStatsBody, top: 168 },
-          { title: t.coachHomeGrowth, body: t.coachHomeGrowthBody, top: 300 },
-          { title: t.coachHomeActions, body: t.coachHomeActionsBody, top: 420 }
-        ]}
-      />
     </View>
   );
 }
