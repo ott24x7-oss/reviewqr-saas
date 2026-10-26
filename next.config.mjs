@@ -28,6 +28,10 @@ const nextConfig = {
       { source: "/admin/app", destination: "/admin/apps", permanent: true }
     ];
   },
+  async rewrites() {
+    // App Router ignores folders prefixed with _. The preview stays at this URL.
+    return [{ source: "/admin/_kit", destination: "/admin/kit" }];
+  },
   async headers() {
     const security = [
       { key: "X-Frame-Options", value: "SAMEORIGIN" },
