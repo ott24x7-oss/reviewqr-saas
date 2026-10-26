@@ -54,7 +54,11 @@ export const tapLinkSchema = z
 export const tapThemeSchema = z.object({
   id: z.string(),
   name: z.string(),
-  premium: z.boolean()
+  premium: z.boolean(),
+  bg: z.string(),
+  ink: z.string(),
+  buttonBg: z.string(),
+  buttonInk: z.string()
 });
 
 export const tapPageSchema = z.object({

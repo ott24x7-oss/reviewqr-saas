@@ -1,6 +1,7 @@
+import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { apiBaseUrl } from "../../src/api/instance";
 import { apiData } from "../../src/api/data";
@@ -8,13 +9,16 @@ import { ApiError } from "../../src/api/http";
 import { devCodeFrom } from "../../src/auth/otp";
 import { setPendingOtp } from "../../src/auth/pending";
 import { useI18n } from "../../src/i18n";
-import { colors, fonts } from "../../src/theme";
-import { Field, Muted, PillButton } from "../../src/ui/controls";
+import { fonts } from "../../src/theme";
+import { PrimaryButton, TextButton } from "../../src/ui/buttons";
+import { BLURHASH } from "../../src/ui/tokens";
+import { useTheme } from "../../src/ui/theme";
 
 type Sent = { sent: true; channel?: "whatsapp" | "email" | "dev"; resendAfterSec?: number; devCode?: string };
 
 export default function LoginScreen() {
   const { t, lang, toggle } = useI18n();
+  const { palette } = useTheme();
   const [phone, setPhone] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -48,51 +52,58 @@ export default function LoginScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
-      <View style={styles.glow} />
-      <View style={styles.card}>
-        <Pressable onPress={toggle} style={styles.lang}>
-          <Text style={styles.langText}>{t.language}</Text>
+    <SafeAreaView style={[styles.screen, { backgroundColor: palette.paper }]}>
+      <Image source={require("../../assets/onboarding/photo-cafe.webp")} style={styles.strip} contentFit="cover" placeholder={{ blurhash: BLURHASH }} />
+      <View style={styles.body}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t.language} accessibilityState={{ selected: lang === "hi" }} onPress={toggle} style={styles.lang}>
+          <Text style={[styles.langText, { color: palette.deep }]}>{t.language}</Text>
         </Pressable>
-        <Text style={[styles.title, lang === "hi" && styles.hindi]}>{t.welcome}</Text>
-        <Muted>{t.welcomeSub}</Muted>
-        <Field label={t.phone} value={phone} onChangeText={setPhone} keyboardType="phone-pad" autoComplete="tel" textContentType="telephoneNumber" />
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-        <PillButton label={t.sendCode} onPress={send} disabled={busy || phone.trim().length < 10} />
-        <Pressable onPress={() => router.push("/(auth)/signup")}>
-          <Text style={[styles.link, lang === "hi" && styles.hindi]}>{t.haveAccount}</Text>
-        </Pressable>
-        <Pressable onPress={() => router.push("/(auth)/email")}>
-          <Text style={[styles.link, lang === "hi" && styles.hindi]}>{t.emailInstead}</Text>
-        </Pressable>
+        <Text style={[styles.title, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.welcome}</Text>
+        <Text style={[styles.sub, { color: palette.muted }, lang === "hi" && styles.hindi]}>{t.welcomeSub}</Text>
+        <Text style={[styles.label, { color: palette.muted }, lang === "hi" && styles.hindi]}>{t.phone}</Text>
+        <View style={[styles.phoneRow, { backgroundColor: palette.card, borderColor: palette.line }]}>
+          <View style={[styles.prefix, { backgroundColor: palette.paper }]}>
+            <Text style={[styles.prefixText, { color: palette.ink }]}>+91</Text>
+          </View>
+          <TextInput
+            accessibilityLabel={t.phone}
+            value={phone}
+            onChangeText={setPhone}
+            keyboardType="phone-pad"
+            autoComplete="tel"
+            textContentType="telephoneNumber"
+            placeholder="98765 43210"
+            placeholderTextColor={palette.muted}
+            style={[styles.input, { color: palette.ink }]}
+          />
+        </View>
+        {error ? <Text style={[styles.error, { color: palette.danger }]}>{error}</Text> : null}
+        <PrimaryButton
+          label={t.sendCode}
+          onPress={send}
+          disabled={busy || phone.trim().length < 10}
+          hint={phone.trim().length < 10 ? t.hintPhone : t.hintWait}
+        />
+        <TextButton label={t.haveAccount} onPress={() => router.push("/(auth)/signup")} />
+        <TextButton label={t.emailInstead} onPress={() => router.push("/(auth)/email")} />
       </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.navy, padding: 16, justifyContent: "center" },
-  glow: {
-    position: "absolute",
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    backgroundColor: "rgba(53,200,240,0.16)",
-    top: 80,
-    alignSelf: "center"
-  },
-  card: {
-    gap: 16,
-    padding: 22,
-    borderRadius: 24,
-    backgroundColor: colors.glass,
-    borderWidth: 1,
-    borderColor: colors.line
-  },
-  title: { color: colors.cyanSoft, fontFamily: fonts.display, fontSize: 36 },
-  link: { color: colors.cyanSoft, fontFamily: fonts.bodyStrong, minHeight: 44 },
-  error: { color: "#FFB4B4", fontFamily: fonts.body },
-  lang: { alignSelf: "flex-end", minHeight: 44, justifyContent: "center" },
-  langText: { color: colors.cyan, fontFamily: fonts.bodyStrong },
+  screen: { flex: 1 },
+  strip: { height: 180, width: "100%" },
+  body: { padding: 22, gap: 12 },
+  lang: { alignSelf: "flex-end", minHeight: 48, justifyContent: "center", paddingHorizontal: 8 },
+  langText: { fontFamily: fonts.bodyStrong },
+  title: { fontFamily: fonts.display, fontSize: 32 },
+  sub: { fontFamily: fonts.body, fontSize: 16, lineHeight: 22 },
+  label: { fontFamily: fonts.bodyStrong, fontSize: 14 },
+  phoneRow: { minHeight: 56, borderRadius: 16, borderWidth: 1, flexDirection: "row", alignItems: "center", padding: 6, gap: 8 },
+  prefix: { minHeight: 48, borderRadius: 12, paddingHorizontal: 12, alignItems: "center", justifyContent: "center" },
+  prefixText: { fontFamily: fonts.bodyStrong, fontSize: 16 },
+  input: { flex: 1, minHeight: 48, fontFamily: fonts.body, fontSize: 18 },
+  error: { fontFamily: fonts.body },
   hindi: { fontFamily: fonts.hindi }
 });

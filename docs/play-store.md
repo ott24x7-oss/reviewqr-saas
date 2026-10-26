@@ -2,7 +2,7 @@
 
 The Android application id in `apps/mobile/app.config.ts` is `com.qr24x7.app`. The app name is QR24x7. Deep links use `qr24x7://`, and `reviewqr://` still opens the same screens. Changing the application id later means a new Play listing. The Expo project slug stays `reviewqr` so an existing EAS project id keeps working.
 
-`versionCode` is `1`. `compileSdkVersion` and `targetSdkVersion` are `36` (Android 16). From 31 August 2026, new apps and updates must target API 36. `minSdkVersion` is `24`. The splash image is the `expo-splash-screen` plugin. Icons are in `apps/mobile/assets`.
+`versionCode` is `3`. `compileSdkVersion` is `37` and `targetSdkVersion` is `36` (Android 16). From 31 August 2026, new apps and updates must target API 36. `minSdkVersion` is `24`. The splash image is the `expo-splash-screen` plugin. Icons are in `apps/mobile/assets`.
 
 Digital plans are not sold in the app. See [play-billing.md](play-billing.md). Physical QR stands and NFC cards still check out through the server.
 
@@ -50,6 +50,18 @@ Users can request deletion in the app and at `/account/delete`. Data is encrypte
 - Camera: photograph a product so the server can suggest a name and price. The owner can add a product without a photo.
 - Notifications: new order, new feedback, shipping update, and plan expiry. The owner can turn them off in More.
 - NFC: write the tap-page URL onto a stand, read it back, and optionally lock the tag. Shown to owners and field roles. A phone without NFC sees a plain message.
+
+## Store listing
+
+Phone screenshots (1080×1920), the 1024×500 feature graphic, English and Hindi captions, the short and full descriptions, and a 30-second promo script are in [play-store/](play-store/). The screenshots are the redesigned app. The listing does not sell plans. Plans stay on the website.
+
+## Crash reports
+
+The app uses `@sentry/react-native`. It starts only when `EXPO_PUBLIC_SENTRY_DSN` is set. An empty value sends nothing. Events do not include the user block. Phone numbers, email addresses, and tokens are stripped before send. `release` is `com.qr24x7.app@<version>+<versionCode>` and `dist` is the `versionCode`.
+
+Source maps upload on EAS Build. The Expo plugin is `@sentry/react-native/expo` in `apps/mobile/app.config.ts`. Set these EAS secrets for the upload: `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, and `SENTRY_PROJECT`. Do not put the auth token in the app config.
+
+`apps/mobile/package.json` runs `node ./scripts/upload-sentry-sourcemaps.mjs` as `eas-build-on-success`. The script does nothing when the DSN is unset. When the token, org, and project are set and a `dist` folder exists, it runs `sentry-expo-upload-sourcemaps`. During the native build the Expo plugin also uploads maps when those secrets are present. Do not run an EAS build from this repository unless you mean to.
 
 ## Closed testing
 

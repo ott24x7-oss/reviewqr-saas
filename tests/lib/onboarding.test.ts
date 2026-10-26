@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { prisma } from "../../lib/db";
-import { resumeStep, slugProblem, wizardIssues, emptyDraft, lockedModuleText, mergeDraft } from "../../packages/shared/src/onboarding";
+import { resumeStep, slugProblem, wizardIssues, emptyDraft, lockedModuleText, mergeDraft, normalizeSlug } from "../../packages/shared/src/onboarding";
 import { checkSlug } from "../../lib/onboarding/slug";
 import { readOnboarding, saveOnboarding } from "../../lib/onboarding/progress";
 
@@ -90,5 +90,11 @@ describe("onboarding API helpers", () => {
     const rejected = await saveOnboarding(user.id, { step: 1, draft: { name: "" } }, { email: user.email });
     expect(rejected.ok).toBe(false);
     expect(mergeDraft({ slug: "My Cafe!" }).slug).toBe("my-cafe");
+    expect(normalizeSlug("https://chat.whatsapp.com/gsgecvjdzctggrwv")).toBe("");
+    const pasted = await checkSlug("https://chat.whatsapp.com/gsgecvjdzctggrwv", "Mango Cafe");
+    expect(pasted.available).toBe(false);
+    expect(pasted.reason).toBe("invalid");
+    expect(pasted.slug).toBe("");
+    expect(pasted.suggestions.some((item) => item.startsWith("mango-cafe"))).toBe(true);
   });
 });

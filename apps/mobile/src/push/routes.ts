@@ -28,10 +28,18 @@ function orderFromShopPath(url: string) {
   return url.slice(at + "/shop/orders/".length).split(/[?#]/)[0];
 }
 
+/** Widget and notification URLs. qr24x7://qr opens the QR screen. */
+export function routeForDeepLink(url: string) {
+  const value = url.trim();
+  if (/^(?:qr24x7|reviewqr):\/\/qr\/?(?:\?.*)?$/.test(value)) return "/(app)/tap";
+  return routeForPush({ url: value });
+}
+
 /** Maps a push payload from /api/v1 onto an in-app screen. */
 export function routeForPush(data: Record<string, unknown> | null | undefined) {
   const type = typeof data?.type === "string" ? data.type : "";
   const url = typeof data?.url === "string" ? data.url : "";
+  if (/^(?:qr24x7|reviewqr):\/\/qr\/?$/.test(url)) return "/(app)/tap";
   if (type === "negative_feedback" || url.includes("/feedback")) return "/(app)/orders?tab=feedback";
   if (type === "store_order" || type === "order_status" || url.includes("/dashboard/orders")) return "/(app)/orders?tab=orders";
   if (type === "plan_active") return "/(app)/plan";

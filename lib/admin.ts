@@ -39,6 +39,7 @@ export type AuditAction =
   | "settings.whatsapp.update"
   | "settings.ai.update"
   | "settings.site.update"
+  | "settings.app.update"
   | "settings.turnstile.update"
   | "pricing.update"
   | "email.test"

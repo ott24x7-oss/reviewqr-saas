@@ -243,6 +243,24 @@ export async function runMenuAction(userId: string, businessId: string, raw: unk
     });
     added = fit.take;
     message = fit.skipped > 0 ? `Added ${fit.take} items. ${fit.skipped} did not fit the plan.` : `Added ${fit.take} items.`;
+  } else if (data.action === "category-rename" && data.id) {
+    const name = (data.name || "").trim();
+    if (!name) return fail(400, "Name the category");
+    await prisma.menuCategory.updateMany({
+      where: { id: data.id, businessId: business.id },
+      data: { name }
+    });
+  } else if (data.action === "category-reorder") {
+    const ids = data.ids || [];
+    if (!ids.length) return fail(400, "Choose the category order");
+    await prisma.$transaction(
+      ids.map((id, index) =>
+        prisma.menuCategory.updateMany({
+          where: { id, businessId: business.id },
+          data: { sortOrder: index }
+        })
+      )
+    );
   } else if (data.action === "delete" && data.id) {
     if (data.kind === "category") {
       await prisma.menuCategory.deleteMany({ where: { id: data.id, businessId: business.id } });

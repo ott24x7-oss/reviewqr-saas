@@ -1,7 +1,11 @@
+import { Screen } from "../../src/ui/screen";
 import type { TapPage } from "@reviewqr/shared";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
-import { Alert, ScrollView, StyleSheet, Text } from "react-native";
+import LottieView from "lottie-react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Smartphone } from "lucide-react-native";
+import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
+import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from "react-native-reanimated";
 import { apiBaseUrl } from "../../src/api/instance";
 import { apiData } from "../../src/api/data";
 import { useI18n } from "../../src/i18n";
@@ -10,8 +14,11 @@ import { nfcPayloadMatches, nfcUrlIsPublicHttps } from "../../src/nfc/url";
 import { accountKey } from "../../src/query/keys";
 import { useBusiness } from "../../src/state/business";
 import { useSession } from "../../src/state/session";
-import { colors, fonts } from "../../src/theme";
+import { fonts } from "../../src/theme";
+import { BottomSheet } from "../../src/ui/bits";
 import { PillButton } from "../../src/ui/controls";
+import { useTheme } from "../../src/ui/theme";
+import type { Palette } from "../../src/ui/tokens";
 
 async function loadNfc() {
   try {
@@ -21,8 +28,10 @@ async function loadNfc() {
   }
 }
 
-export default function NfcScreen() {
+function NfcScreenContent() {
   const { t, lang } = useI18n();
+  const { palette, reduceMotion, lowRam } = useTheme();
+  const styles = useMemo(() => makeStyles(palette), [palette]);
   const { user } = useSession();
   const { business } = useBusiness();
   const tap = useQuery({
@@ -129,23 +138,90 @@ export default function NfcScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={[styles.title, lang === "hi" && styles.hindi]}>{t.nfc}</Text>
+      <Text style={[styles.title, lang === "hi" && styles.hindi]}>{t.nfcOne}</Text>
+      <View style={styles.hold}>
+        {!reduceMotion && !lowRam ? (
+          <LottieView source={require("../../assets/lottie/nfc.json")} autoPlay loop style={styles.lottie} />
+        ) : (
+          <HoldMark still={reduceMotion || lowRam} color={palette.deep} background={palette.accentSoft} />
+        )}
+        <Text style={[styles.holdTitle, lang === "hi" && styles.hindi]}>{t.holdTag}</Text>
+        <Text style={[styles.note, lang === "hi" && styles.hindi]}>{safe ? url : path ? t.nfcUnsafeUrl : t.noQr}</Text>
+      </View>
       {!base ? <Text style={styles.note}>{t.missingApi}</Text> : null}
       {business && !tap.isLoading && !path ? <Text style={styles.note}>{t.noQr}</Text> : null}
       {path && !safe ? <Text style={[styles.note, lang === "hi" && styles.hindi]}>{t.nfcUnsafeUrl}</Text> : null}
       {safe ? <Text style={styles.url}>{url}</Text> : null}
       {status ? <Text style={[styles.note, lang === "hi" && styles.hindi]}>{status}</Text> : null}
-      <PillButton label={t.nfc} onPress={() => { void write(); }} disabled={busy || !safe} tone="dark" />
+      {verified ? <Text style={styles.title}>{t.nfcSuccess}</Text> : null}
+      {!busy && !verified && (status === t.nfcMismatch || status === t.nfcRetry) ? <Text style={styles.note}>{t.nfcFail}</Text> : null}
+      <PillButton
+        label={t.nfc}
+        onPress={() => { void write(); }}
+        disabled={busy || !safe}
+        hint={!safe ? (path ? t.nfcUnsafeUrl : t.noQr) : t.hintWait}
+        tone="dark"
+      />
       {verified ? <PillButton label={t.lockTag} onPress={askLock} disabled={busy} tone="outline" /> : null}
+      <BottomSheet visible={busy} title={t.holdTag} onClose={() => { void import("react-native-nfc-manager").then((nfc) => nfc.default.cancelTechnologyRequest()).catch(() => undefined); }}>
+        <View style={styles.lottie}>
+          {!reduceMotion && !lowRam ? (
+            <LottieView source={require("../../assets/lottie/nfc.json")} autoPlay loop style={styles.lottie} />
+          ) : (
+            <Text style={styles.note}>{t.holdTag}</Text>
+          )}
+        </View>
+      </BottomSheet>
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
+function HoldMark({ still, color, background }: { still: boolean; color: string; background: string }) {
+  const scale = useSharedValue(still ? 1 : 0.92);
+  useEffect(() => {
+    if (still) return;
+    scale.value = withRepeat(withSequence(withTiming(1.06, { duration: 900 }), withTiming(0.92, { duration: 900 })), -1, false);
+  }, [scale, still]);
+  const anim = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  return (
+    <Animated.View style={[stylesHold.ring, { backgroundColor: background }, anim]}>
+      <Smartphone color={color} size={36} strokeWidth={1.75} />
+    </Animated.View>
+  );
+}
+
+const stylesHold = StyleSheet.create({
+  ring: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    alignItems: "center",
+    justifyContent: "center"
+  }
+});
+
+function makeStyles(colors: Palette) {
+  return StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.paper },
   content: { padding: 20, gap: 16 },
   title: { fontFamily: fonts.display, fontSize: 28, color: colors.ink },
   note: { color: colors.inkSoft, fontFamily: fonts.body, fontSize: 16 },
   url: { color: colors.ink, fontFamily: fonts.bodyStrong, fontSize: 14 },
-  hindi: { fontFamily: fonts.hindi }
+  hindi: { fontFamily: fonts.hindi },
+  lottie: { width: 180, height: 180, alignSelf: "center" },
+  hold: {
+    backgroundColor: colors.card,
+    borderRadius: 20,
+    padding: 16,
+    alignItems: "center",
+    gap: 8
+  },
+  holdTitle: { fontFamily: fonts.title, fontSize: 18, color: colors.ink, textAlign: "center" }
 });
+}
+
+export default function NfcScreen() {
+  return (
+    <Screen topInset={true}><NfcScreenContent /></Screen>
+  );
+}

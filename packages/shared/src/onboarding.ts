@@ -32,6 +32,12 @@ export type WizardDraft = {
 
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
+/** A pasted web or WhatsApp link. Protocol is ignored; dots, slashes, and "http" stay rejected. */
+export function pastedLinkRejected(value: string) {
+  const text = value.trim().toLowerCase().replace(/^[a-z][a-z0-9+.-]*:\/\//, "");
+  return text.includes("http") || text.includes("/") || text.includes(".");
+}
+
 export function emptyDraft(): WizardDraft {
   return {
     name: "",
@@ -72,12 +78,28 @@ export function mergeDraft(value: unknown): WizardDraft {
 }
 
 export function normalizeSlug(value: string) {
+  if (pastedLinkRejected(value)) return "";
   return value
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 40);
+}
+
+/** Page names to offer: the cleaned name, then name-2, name-3… */
+export function slugCandidates(nameOrSlug: string) {
+  const base = normalizeSlug(nameOrSlug).replace(/-\d+$/, "");
+  if (!base || slugProblem(base)) return [];
+  const list = [base];
+  for (let n = 2; n <= 6; n += 1) list.push(`${base}-${n}`.slice(0, 40));
+  return [...new Set(list)].filter((slug) => slugProblem(slug) === null);
+}
+
+/** Skip uses the typed link when it is free, otherwise the first free suggestion. */
+export function skipSlugChoice(current: string, available: boolean, suggestions: string[]) {
+  if (available && slugProblem(current) === null) return current;
+  return suggestions.find((slug) => slugProblem(slug) === null) || null;
 }
 
 /** Shape only. Reserved names and taken names are checked on the server. */

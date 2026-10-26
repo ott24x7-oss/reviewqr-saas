@@ -3,9 +3,10 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { readIntroSeen } from "../src/onboarding/seen";
 import { useSession } from "../src/state/session";
-import { colors } from "../src/theme";
+import { usePalette } from "../src/ui/theme";
 
 export default function Gate() {
+  const palette = usePalette();
   const { ready, user } = useSession();
   const [introReady, setIntroReady] = useState(false);
   const [introSeen, setIntroSeen] = useState(false);
@@ -17,8 +18,8 @@ export default function Gate() {
   }, []);
   if (!ready || !introReady) {
     return (
-      <View style={{ flex: 1, backgroundColor: colors.navy, alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator color={colors.cyan} />
+      <View style={{ flex: 1, backgroundColor: palette.paper, alignItems: "center", justifyContent: "center" }}>
+        <ActivityIndicator color={palette.primary} />
       </View>
     );
   }

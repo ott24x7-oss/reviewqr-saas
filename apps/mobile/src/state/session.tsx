@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { endSession } from "../auth/end-session";
+import { clearWidgetSnapshot } from "../widgets/cache";
 import { apiData } from "../api/data";
 import { apiBaseUrl, mobileApi } from "../api/instance";
 import { forgetPushToken, readPushToken } from "../push/stored-token";
@@ -47,6 +48,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       clearBusinessId: () => AsyncStorage.removeItem(BUSINESS_ID_KEY),
       clearPushToken: () => forgetPushToken()
     });
+    await clearWidgetSnapshot().catch(() => undefined);
     setUser(null);
   }, [queryClient]);
 
@@ -54,6 +56,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     let live = true;
     mobileApi.setSessionListener(() => {
       if (!live) return;
+      clearWidgetSnapshot().catch(() => undefined);
       setUser(null);
       router.replace("/(auth)/login");
     });

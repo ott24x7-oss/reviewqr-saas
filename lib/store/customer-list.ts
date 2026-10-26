@@ -1,10 +1,11 @@
 import { prisma } from "../db";
-import { accessRole, allows, readableBusinessWhere } from "../tenant";
+import { accessRole, allows, manageableBusinessWhere, readableBusinessWhere } from "../tenant";
 import { isInactive } from "./customers";
 import { consentedPhone } from "./order-status";
 
 export type CustomerRow = {
   id: string;
+  businessId: string;
   businessName: string;
   name: string;
   phone: string;
@@ -28,8 +29,14 @@ function dayLabel(value: Date | null) {
 }
 
 /** Creates a contact for each consented order or review phone that is not saved yet. */
-export async function loadCustomers(userId: string, now = new Date()): Promise<CustomerRow[]> {
-  const scope = readableBusinessWhere(userId);
+export async function loadCustomers(
+  userId: string,
+  now = new Date(),
+  businessId?: string,
+  level: "read" | "manage" = "read"
+): Promise<CustomerRow[]> {
+  // Exports pass "manage" so STAFF can't download every customer's phone number.
+  const scope = level === "manage" ? manageableBusinessWhere(userId) : readableBusinessWhere(userId);
   const [reviews, orders] = await Promise.all([
     prisma.review.findMany({
       where: { business: scope, consentAt: { not: null }, NOT: { customerPhone: null } },
@@ -111,8 +118,10 @@ export async function loadCustomers(userId: string, now = new Date()): Promise<C
     if (!contact.phone) return [];
     const stat = stats.get(`${contact.businessId}:${contact.phone}`);
     const role = accessRole(contact.business.ownerId, userId, contact.business.members[0]?.role, contact.business.agentId);
+    if (businessId && contact.businessId !== businessId) return [];
     return [{
       id: contact.id,
+      businessId: contact.businessId,
       businessName: contact.business.name,
       name: contact.name || "",
       phone: contact.phone,

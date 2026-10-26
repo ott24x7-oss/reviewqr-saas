@@ -80,23 +80,43 @@ export async function patchFeedback(
       entityId: feedback.reviewId,
       ip
     });
+    if (parsed.data.tags) await replaceFeedbackTags(feedback.businessId, feedback.id, parsed.data.tags);
     if (!parsed.data.status && parsed.data.internalNote === undefined) {
       return ok({ ok: true as const, erased: true as const });
     }
   }
 
-  const updated = await prisma.feedback.update({
-    where: { id: feedback.id },
-    data: {
-      ...(parsed.data.status && { status: parsed.data.status }),
-      ...(parsed.data.internalNote !== undefined && { internalNote: parsed.data.internalNote }),
-      ...(parsed.data.status === "RESOLVED" && {
-        resolvedAt: new Date(),
-        resolvedBy: userId
-      })
-    }
-  });
+  const data = {
+    ...(parsed.data.status && { status: parsed.data.status }),
+    ...(parsed.data.internalNote !== undefined && { internalNote: parsed.data.internalNote }),
+    ...(parsed.data.status === "RESOLVED" && {
+      resolvedAt: new Date(),
+      resolvedBy: userId
+    })
+  };
+  const updated = Object.keys(data).length
+    ? await prisma.feedback.update({ where: { id: feedback.id }, data })
+    : feedback;
+  if (parsed.data.tags) await replaceFeedbackTags(feedback.businessId, feedback.id, parsed.data.tags);
   return ok({ feedback: updated });
+}
+
+async function replaceFeedbackTags(businessId: string, feedbackId: string, tags: string[]) {
+  const names: string[] = [];
+  for (const raw of tags) {
+    const name = raw.trim().replace(/\s+/g, " ").slice(0, 24);
+    if (!name || names.some((item) => item.toLowerCase() === name.toLowerCase())) continue;
+    names.push(name);
+  }
+  await prisma.feedbackTagOnFeedback.deleteMany({ where: { feedbackId } });
+  for (const name of names) {
+    const tag = await prisma.feedbackTag.upsert({
+      where: { businessId_name: { businessId, name } },
+      create: { businessId, name },
+      update: {}
+    });
+    await prisma.feedbackTagOnFeedback.create({ data: { feedbackId, tagId: tag.id } });
+  }
 }
 
 /** Suggests a public reply and a private WhatsApp reply. Nothing is posted. */

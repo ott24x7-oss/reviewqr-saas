@@ -1,14 +1,18 @@
 import { router } from "expo-router";
-import { useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { useState , useMemo } from "react";
+import { StyleSheet, Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { apiData } from "../../src/api/data";
 import { ApiError } from "../../src/api/http";
 import { useI18n } from "../../src/i18n";
-import { colors, fonts } from "../../src/theme";
+import { fonts } from "../../src/theme";
+import { usePalette } from "../../src/ui/theme";
+import type { Palette } from "../../src/ui/tokens";
 import { Field, Muted, PillButton } from "../../src/ui/controls";
 
 export default function ReferralScreen() {
+  const palette = usePalette();
+  const styles = useMemo(() => makeStyles(palette), [palette]);
   const { t, lang } = useI18n();
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -36,15 +40,22 @@ export default function ReferralScreen() {
       <Muted>{t.referralHint}</Muted>
       <Field label={t.referralTitle} tone="paper" value={code} onChangeText={setCode} autoCapitalize="characters" />
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      <PillButton label={t.referralContinue} onPress={() => send(code.trim())} disabled={busy || code.trim().length < 4} />
+      <PillButton
+        label={t.referralContinue}
+        onPress={() => send(code.trim())}
+        disabled={busy || code.trim().length < 4}
+        hint={code.trim().length < 4 ? t.hintReferral : t.hintWait}
+      />
       <PillButton label={t.referralSkip} tone="outline" onPress={() => send("")} disabled={busy} />
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+  return StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.paper, padding: 20, gap: 16 },
   title: { fontFamily: fonts.display, fontSize: 32, color: colors.ink },
   error: { color: colors.danger, fontFamily: fonts.body },
   hindi: { fontFamily: fonts.hindi }
 });
+}

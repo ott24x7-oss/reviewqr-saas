@@ -1,18 +1,24 @@
-import { useEffect, useState } from "react";
+import { Screen } from "../../src/ui/screen";
+import { useEffect, useState , useMemo } from "react";
 import { ScrollView, StyleSheet, Text, TextInput } from "react-native";
 import { apiBaseUrl } from "../../src/api/instance";
 import { apiData } from "../../src/api/data";
 import { ApiError } from "../../src/api/http";
+import { devSurfaceAllowed } from "../../src/auth/dev-surface";
 import { devCodeFrom, digitsFrom } from "../../src/auth/otp";
 import { channelCopy } from "../../src/i18n/copy";
 import { useI18n } from "../../src/i18n";
 import { useSession } from "../../src/state/session";
-import { colors, fonts } from "../../src/theme";
+import { fonts } from "../../src/theme";
+import { usePalette } from "../../src/ui/theme";
+import type { Palette } from "../../src/ui/tokens";
 import { PillButton } from "../../src/ui/controls";
 
 type Sent = { channel?: string; resendAfterSec?: number; devCode?: string; message?: string };
 
-export default function DeleteAccountScreen() {
+function DeleteAccountScreenContent() {
+  const palette = usePalette();
+  const styles = useMemo(() => makeStyles(palette), [palette]);
   const { t, lang } = useI18n();
   const { logout } = useSession();
   const [sent, setSent] = useState<Sent | null>(null);
@@ -92,7 +98,7 @@ export default function DeleteAccountScreen() {
             maxLength={6}
             style={styles.code}
           />
-          {shownCode ? (
+          {devSurfaceAllowed() && shownCode ? (
             <Text style={styles.dev}>
               {t.devHint}: {shownCode}
             </Text>
@@ -100,10 +106,16 @@ export default function DeleteAccountScreen() {
         </>
       ) : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      {!done && !sent ? <PillButton label={t.deleteSend} onPress={() => { void requestCode(); }} disabled={busy} tone="dark" /> : null}
+      {!done && !sent ? <PillButton label={t.deleteSend} onPress={() => { void requestCode(); }} disabled={busy} hint={t.hintWait} tone="dark" /> : null}
       {!done && sent ? (
         <>
-          <PillButton label={t.deleteAccount} onPress={() => { void confirm(); }} disabled={busy || code.length !== 6} tone="dark" />
+          <PillButton
+            label={t.deleteAccount}
+            onPress={() => { void confirm(); }}
+            disabled={busy || code.length !== 6}
+            hint={code.length !== 6 ? t.hintCode : t.hintWait}
+            tone="dark"
+          />
           <PillButton label={secondsLeft > 0 ? `${t.resendIn} ${secondsLeft}s` : t.resend} onPress={() => { void requestCode(); }} disabled={busy || secondsLeft > 0} tone="outline" />
         </>
       ) : null}
@@ -111,7 +123,8 @@ export default function DeleteAccountScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+  return StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.paper },
   content: { padding: 20, gap: 16 },
   title: { fontFamily: fonts.display, fontSize: 28, color: colors.ink },
@@ -133,3 +146,10 @@ const styles = StyleSheet.create({
   error: { color: colors.danger, fontFamily: fonts.body },
   hindi: { fontFamily: fonts.hindi }
 });
+}
+
+export default function DeleteAccountScreen() {
+  return (
+    <Screen topInset={true}><DeleteAccountScreenContent /></Screen>
+  );
+}

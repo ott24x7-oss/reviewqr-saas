@@ -2,19 +2,45 @@ import { Manrope_400Regular, Manrope_600SemiBold, Manrope_700Bold } from "@expo-
 import { Mukta_500Medium } from "@expo-google-fonts/mukta";
 import { NotoSansDevanagari_400Regular, NotoSansDevanagari_700Bold } from "@expo-google-fonts/noto-sans-devanagari";
 import { Sora_700Bold, Sora_800ExtraBold } from "@expo-google-fonts/sora";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { useFonts } from "expo-font";
-import { Stack } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { Stack, usePathname } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { AppOpenEvent } from "../src/analytics/open";
 import { I18nProvider } from "../src/i18n";
-import { SessionProvider } from "../src/state/session";
+import { OrderStatusSync } from "../src/orders/sync";
+import { queryClient, queryPersistOptions } from "../src/query/persist";
+import { initSentry, wrapRoot } from "../src/sentry/init";
+import { SessionProvider, useSession } from "../src/state/session";
+import { AppUpdateCheck } from "../src/updates/check";
+import { LaunchFrame } from "../src/ui/launch";
+import { ConnectivityBanner, QueryRetryBar } from "../src/ui/offline-banner";
+import { ThemeProvider, useTheme } from "../src/ui/theme";
+
+initSentry();
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
-const queryClient = new QueryClient();
+function Boot({ fontsReady }: { fontsReady: boolean }) {
+  const { ready } = useSession();
+  const { ready: themeReady, scheme } = useTheme();
+  const path = usePathname();
+  const motionLab = path.includes("motion-lab");
+  return (
+    <>
+      <StatusBar style={scheme === "dark" ? "light" : "dark"} />
+      <LaunchFrame fontsReady={fontsReady} sessionReady={ready && themeReady} skip={motionLab}>
+        <ConnectivityBanner />
+        <QueryRetryBar />
+        {fontsReady && themeReady ? <Stack screenOptions={{ headerShown: false }} /> : null}
+      </LaunchFrame>
+    </>
+  );
+}
 
-export default function RootLayout() {
+function RootLayout() {
   const [loaded] = useFonts({
     Sora_700Bold,
     Sora_800ExtraBold,
@@ -26,19 +52,22 @@ export default function RootLayout() {
     Mukta_500Medium
   });
 
-  useEffect(() => {
-    if (loaded) SplashScreen.hideAsync().catch(() => undefined);
-  }, [loaded]);
-
-  if (!loaded) return null;
-
   return (
-    <I18nProvider>
-      <QueryClientProvider client={queryClient}>
-        <SessionProvider>
-          <Stack screenOptions={{ headerShown: false }} />
-        </SessionProvider>
-      </QueryClientProvider>
-    </I18nProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <I18nProvider>
+        <PersistQueryClientProvider client={queryClient} persistOptions={queryPersistOptions}>
+          <SessionProvider>
+            <ThemeProvider>
+              <AppOpenEvent />
+              <OrderStatusSync />
+              <AppUpdateCheck />
+              <Boot fontsReady={Boolean(loaded)} />
+            </ThemeProvider>
+          </SessionProvider>
+        </PersistQueryClientProvider>
+      </I18nProvider>
+    </GestureHandlerRootView>
   );
 }
+
+export default wrapRoot(RootLayout);
