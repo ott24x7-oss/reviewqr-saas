@@ -1,0 +1,44 @@
+{
+  "photos": [
+    {
+      "id": "cafe",
+      "alt": "Café checkout counter in Raipur, India",
+      "photographer": "Karan Sahu",
+      "sourceUrl": "https://www.pexels.com/photo/cozy-coffee-shop-checkout-counter-setup-38684687/",
+      "licence": "Pexels License",
+      "downloadUrl": "https://images.pexels.com/photos/38684687/pexels-photo-38684687.jpeg?auto=compress&cs=tinysrgb&w=1600"
+    },
+    {
+      "id": "kirana",
+      "alt": "Indian grocery shop interior",
+      "photographer": "Narasimhan AVPL",
+      "sourceUrl": "https://www.pexels.com/photo/bustling-indian-grocery-store-interior-scene-36317181/",
+      "licence": "Pexels License",
+      "downloadUrl": "https://images.pexels.com/photos/36317181/pexels-photo-36317181.jpeg?auto=compress&cs=tinysrgb&w=1600"
+    },
+    {
+      "id": "salon",
+      "alt": "Salon chairs in front of round mirrors",
+      "photographer": "Max Vakhtbovych",
+      "sourceUrl": "https://www.pexels.com/photo/leather-chairs-in-front-of-round-mirrors-7750124/",
+      "licence": "Pexels License",
+      "downloadUrl": "https://images.pexels.com/photos/7750124/pexels-photo-7750124.jpeg?auto=compress&cs=tinysrgb&w=1600"
+    },
+    {
+      "id": "clinic",
+      "alt": "Empty clinic room with a desk",
+      "photographer": "Yusuf P",
+      "sourceUrl": "https://www.pexels.com/photo/empty-doctors-office-12454146/",
+      "licence": "Pexels License",
+      "downloadUrl": "https://images.pexels.com/photos/12454146/pexels-photo-12454146.jpeg?auto=compress&cs=tinysrgb&w=1600"
+    },
+    {
+      "id": "scan",
+      "alt": "Hand holding a phone scanning a QR code at a counter",
+      "photographer": "iMin Technology",
+      "sourceUrl": "https://www.pexels.com/photo/a-close-up-shot-of-a-person-scanning-a-qr-code-12935064/",
+      "licence": "Pexels License",
+      "downloadUrl": "https://images.pexels.com/photos/12935064/pexels-photo-12935064.jpeg?auto=compress&cs=tinysrgb&w=1600"
+    }
+  ]
+}

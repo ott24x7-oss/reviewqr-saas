@@ -21,6 +21,7 @@
     "seed:admin": "tsx prisma/seed-admin.ts",
     "worker": "tsx scripts/worker.ts",
     "brand:icons": "tsx scripts/brand-icons.ts",
+    "landing:shots": "tsx scripts/capture-landing-shots.ts",
     "test": "vitest run",
     "test:e2e": "playwright test"
   },
