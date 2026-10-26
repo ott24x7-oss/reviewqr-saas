@@ -49,7 +49,7 @@ test("owner registers, collects a private review, and sees UPI checkout", async 
   await expect(page.getByText("Saved")).toBeVisible();
   await page.goBack();
   const reviewHref = await page.getByRole("link", { name: "Open live page" }).getAttribute("href");
-  const reviewPath = new URL(reviewHref || "http://localhost/r/missing").pathname;
+  const reviewPath = new URL(reviewHref || "/r/missing", page.url()).pathname;
   await page.goto(reviewPath);
   await page.getByRole("button", { name: "2 stars" }).click();
   await expect(page.getByRole("heading", { name: "Leave a public review" })).toBeVisible();
