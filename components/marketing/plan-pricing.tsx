@@ -86,7 +86,7 @@ export function PlanPricing({ plans, sectionId = "pricing" }: { plans: PublicPla
                     mrpPaise={price?.mrpPaise}
                     periodLabel={price ? label : hindi ? "इस अवधि पर उपलब्ध नहीं" : "Not offered for this duration"}
                     savings={price?.savings}
-                    modules={plan.modules.map((id) => moduleName(id, hindi))}
+                    modules={(plan.bullets.length ? plan.bullets.map((bullet) => (hindi ? bullet.hi : bullet.en)) : plan.modules.map((id) => moduleName(id, hindi)))}
                     href={price ? `/register?plan=${encodeURIComponent(plan.slug)}&duration=${duration}` : undefined}
                     cta={price && price.pricePaise > 0 ? (hindi ? "शुरू करें" : "Get started") : hindi ? "शामिल" : "Included"}
                   />

@@ -1,5 +1,6 @@
 import { planDescriptionOrDefault } from "../brand-defaults";
 import { prisma } from "../db";
+import { resolveBullets, type PlanBullet } from "./bullets";
 import { DURATIONS, pricingTab, savingsPercent, type PricingTab } from "./catalog";
 
 export type PublicPlan = {
@@ -12,6 +13,7 @@ export type PublicPlan = {
   category: string;
   imageUrl: string;
   modules: string[];
+  bullets: PlanBullet[];
   tab: PricingTab;
   prices: Array<{
     duration: (typeof DURATIONS)[number];
@@ -49,6 +51,7 @@ export async function listPublicPlans(): Promise<PublicPlan[]> {
     category: plan.category,
     imageUrl: plan.imageUrl,
     modules: plan.modules,
+    bullets: resolveBullets(plan.bullets, plan.modules),
     tab: pricingTab(plan.modules),
     prices: DURATIONS.flatMap((duration) => {
       const price = plan.prices.find((row) => row.duration === duration);

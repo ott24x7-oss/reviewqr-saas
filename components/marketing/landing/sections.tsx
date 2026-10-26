@@ -22,18 +22,14 @@ import {
   Truck,
   Search,
   Check,
-  X,
   IndianRupee,
   MessageCircle,
   Languages
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger
-} from "@/components/ui/accordion";
+import { PricingFaqList } from "@/components/marketing/pricing-faq";
+import { StickerTable } from "@/components/marketing/sticker-compare";
+import type { PricingFaq, StickerRow } from "@/lib/plans/pricing-copy";
 import { cn } from "@/lib/utils";
 import { SectionShell, SectionHeading, SoonBadge, Phone } from "./ui";
 import { StoreScreen, WhatsAppOrderBubble, ReviewScreen, AlertToast, TapPageScreen, TAP_THEMES } from "./mockups";
@@ -476,7 +472,10 @@ const ROWS: [string, boolean, boolean][] = [
   ["Themes with your branding", false, true]
 ];
 
-export function Comparison() {
+export function Comparison({ rows }: { rows?: StickerRow[] } = {}) {
+  const list: StickerRow[] = rows?.length
+    ? rows
+    : ROWS.map(([label, sticker, qr24x7]) => ({ labelEn: label, labelHi: label, sticker, qr24x7 }));
   return (
     <SectionShell id="compare">
       <SectionHeading
@@ -484,27 +483,7 @@ export function Comparison() {
         title="A normal QR sticker vs. QR24x7"
         sub={<span className="marketing-rupee">A ₹200 sticker opens one link. QR24x7 runs your counter.</span>}
       />
-      <div className="mx-auto mt-8 max-w-2xl overflow-hidden rounded-2xl bg-white/90 ring-1 ring-white">
-        <div className="grid grid-cols-[1fr_72px_88px] sm:grid-cols-[1fr_120px_120px] items-center border-b border-slate-100 px-4 py-3 text-xs sm:text-sm font-bold text-ink">
-          <span>Feature</span>
-          <span className="text-center text-muted-ink">QR sticker</span>
-          <span className="text-center text-primary-800">QR24x7</span>
-        </div>
-        {ROWS.map(([label, a, b]) => (
-          <div
-            key={label}
-            className="grid grid-cols-[1fr_72px_88px] sm:grid-cols-[1fr_120px_120px] items-center border-b border-slate-100 px-4 py-3 last:border-0"
-          >
-            <span className="text-sm text-ink/85">{label}</span>
-            <span className="flex justify-center">
-              {a ? <Check className="h-5 w-5 text-slate-400" /> : <X className="h-5 w-5 text-rose-400" />}
-            </span>
-            <span className="flex justify-center">
-              {b ? <Check className="h-5 w-5 text-primary-600" /> : <X className="h-5 w-5 text-rose-400" />}
-            </span>
-          </div>
-        ))}
-      </div>
+      <StickerTable rows={list} />
       <p className="mx-auto mt-6 max-w-xl text-center text-sm text-muted-ink">
         Save on delivery-app commission: orders through your own WhatsApp store carry <b className="text-ink">0% commission</b>.
       </p>
@@ -548,20 +527,14 @@ const FAQS = [
   }
 ];
 
-export function FaqV2() {
+export function FaqV2({ faqs }: { faqs?: PricingFaq[] } = {}) {
+  const items: PricingFaq[] = faqs?.length
+    ? faqs
+    : FAQS.map((item) => ({ qEn: item.q, qHi: item.q, aEn: item.a, aHi: item.a }));
   return (
     <SectionShell id="faq">
       <SectionHeading eyebrow="FAQ" title="Questions owners ask us" />
-      <Accordion type="single" collapsible className="mx-auto mt-8 max-w-3xl space-y-2.5">
-        {FAQS.map((f, i) => (
-          <AccordionItem key={f.q} value={`f${i}`} className="rounded-2xl border-0 bg-white/80 px-4 sm:px-5 ring-1 ring-white">
-            <AccordionTrigger className="py-4 text-left text-sm sm:text-base font-semibold text-ink hover:no-underline">
-              {f.q}
-            </AccordionTrigger>
-            <AccordionContent className="pb-4 text-sm leading-relaxed text-muted-ink">{f.a}</AccordionContent>
-          </AccordionItem>
-        ))}
-      </Accordion>
+      <PricingFaqList faqs={items} />
     </SectionShell>
   );
 }

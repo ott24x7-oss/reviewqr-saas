@@ -20,10 +20,10 @@ export type HeroAnchor = {
 function anchorLabel(anchor: HeroAnchor, lang: "en" | "hi") {
   if (!anchor) return null;
   const money = formatRupees(anchor.paise);
-  if (anchor.perMonth) return pick(lang, `From ${money}/month`, `${money}/महीना से`);
+  if (anchor.perMonth) return pick(lang, `Plans from ${money}/month`, `प्लान ${money}/महीना से`);
   const duration = DURATION_LABELS[anchor.duration];
   const name = lang === "hi" ? duration.hi : duration.en;
-  return pick(lang, `From ${money} (${name})`, `${money} से (${name})`);
+  return pick(lang, `Plans from ${money} (${name})`, `प्लान ${money} से (${name})`);
 }
 
 export function SellHero({

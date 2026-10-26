@@ -1,6 +1,7 @@
 import { MarketingNavbar } from "@/components/marketing/navbar";
 import { Footer } from "@/components/marketing/footer";
 import { LegacyHashRedirect } from "@/components/marketing/landing/legacy-hash-redirect";
+import { PlanCompare } from "@/components/marketing/plan-compare";
 import { Comparison, FaqV2, CtaV2 } from "@/components/marketing/landing/sections";
 import type { Metadata } from "next";
 import { listActivePlanPrices, listPublicPlans } from "@/lib/plans/public";
@@ -15,6 +16,7 @@ import { SellHero, StickyBuy } from "@/components/marketing/landing-v2/sell-hero
 import { ProductGrid } from "@/components/marketing/landing-v2/product-grid";
 import { HowTeaser, LiveDemo, RealTestimonials, UseCases } from "@/components/marketing/landing-v2/story";
 import { listStandAddons } from "@/lib/landing/hardware";
+import { getPricingCopy } from "@/lib/plans/pricing-copy";
 
 export const dynamic = "force-dynamic";
 
@@ -34,13 +36,14 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function HomePage() {
-  const [catalog, priced, brand, trust, hardware, quotes] = await Promise.all([
+  const [catalog, priced, brand, trust, hardware, quotes, copy] = await Promise.all([
     listPublicPlans(),
     listActivePlanPrices(),
     getBrand(),
     landingTrust(),
     listStandAddons(),
-    landingQuotes()
+    landingQuotes(),
+    getPricingCopy()
   ]);
   const anchor = priceAnchor(catalog);
   const free = freePlanOffer(priced);
@@ -66,8 +69,9 @@ export default async function HomePage() {
       <UseCases />
       <HowTeaser />
       <RealTestimonials quotes={quotes} />
-      <Comparison />
-      <FaqV2 />
+      <Comparison rows={copy.stickerRows} />
+      <PlanCompare plans={catalog} />
+      <FaqV2 faqs={copy.faqs} />
       <CtaV2 />
 
       <Footer brand={brand} />
