@@ -18,6 +18,8 @@ export type CustomerRow = {
   canManage: boolean;
 };
 
+export type CustomerPage = { rows: CustomerRow[]; total: number; pageIndex: number; pageSize: number };
+
 function dayLabel(value: Date | null) {
   if (!value) return "";
   return new Intl.DateTimeFormat("en-CA", {
@@ -134,4 +136,24 @@ export async function loadCustomers(
       canManage: allows(role, "manage")
     }];
   }).sort((a, b) => (b.lastOrderAt || "").localeCompare(a.lastOrderAt || ""));
+}
+
+/** Server-filtered and paginated customer rows for the dashboard table. */
+export async function loadCustomerPage(
+  userId: string,
+  input: { query?: string; pageIndex?: number; pageSize?: number; sort?: string; direction?: "asc" | "desc"; businessId?: string }
+): Promise<CustomerPage> {
+  const pageSize = Math.max(10, Math.min(50, input.pageSize || 20));
+  const pageIndex = Math.max(0, input.pageIndex || 0);
+  const query = (input.query || "").trim().toLocaleLowerCase("en-IN");
+  const all = await loadCustomers(userId, new Date(), input.businessId);
+  const filtered = all.filter((row) => !query || [row.name, row.phone, row.businessName].some((value) => value.toLocaleLowerCase("en-IN").includes(query)));
+  const direction = input.direction === "asc" ? 1 : -1;
+  const sort = input.sort || "lastOrderAt";
+  filtered.sort((a, b) => {
+    const left = sort === "name" ? a.name : sort === "business" ? a.businessName : sort === "spendPaise" ? a.spendPaise : sort === "orders" ? a.orders : a.lastOrderAt || "";
+    const right = sort === "name" ? b.name : sort === "business" ? b.businessName : sort === "spendPaise" ? b.spendPaise : sort === "orders" ? b.orders : b.lastOrderAt || "";
+    return (typeof left === "number" && typeof right === "number" ? left - right : String(left).localeCompare(String(right), "en-IN")) * direction;
+  });
+  return { rows: filtered.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize), total: filtered.length, pageIndex, pageSize };
 }
