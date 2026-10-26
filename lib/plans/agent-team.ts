@@ -1,4 +1,4 @@
-import type { ShopCommissionKind } from "@prisma/client";
+import { Prisma, type ShopCommissionKind } from "@prisma/client";
 import type { AgentCommissionKind, AgentProfilePut } from "@reviewqr/shared";
 import { prisma } from "../db";
 import { rateLimitDb } from "../rate-limit";
@@ -538,7 +538,15 @@ export async function patchTeamMember(
   return ok({ sharePercent: share });
 }
 
-export async function joinTeam(userId: string, codeRaw: string): Promise<ServiceResult<{ status: "PENDING" | "ACTIVE" | "PAUSED" | "REJECTED"; leaderName: string }>> {
+class JoinRefused extends Error {
+  constructor(public status: number, message: string) {
+    super(message);
+  }
+}
+
+type JoinStatus = "PENDING" | "ACTIVE" | "PAUSED" | "REJECTED";
+
+export async function joinTeam(userId: string, codeRaw: string): Promise<ServiceResult<{ status: JoinStatus; leaderName: string }>> {
   const code = normalizeCode(codeRaw);
   if (!code) return fail(400, "Enter a valid team code");
   const invite = await prisma.agentInvite.findUnique({
@@ -552,59 +560,80 @@ export async function joinTeam(userId: string, codeRaw: string): Promise<Service
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
   if (!user) return fail(404, "Account not found");
   if (user.role === "ADMIN") return fail(400, "An admin cannot join a team");
+  // Only a plain account or an agent can join. Agency and staff roles are never rewritten.
+  if (user.role !== "USER" && user.role !== "AGENT") return fail(400, "Only a customer or agent account can join a team");
   const settings = await getTeamProgramSettings();
-  const depth = invite.leader.depth + 1;
-  if (depth > settings.maxTeamDepth) return fail(400, "This team cannot add another level");
-  let cursor = invite.leader.leaderId;
-  const seen = new Set<string>();
-  while (cursor && !seen.has(cursor)) {
-    seen.add(cursor);
-    const ancestor = await prisma.agentProfile.findUnique({
-      where: { id: cursor },
-      select: { userId: true, leaderId: true }
-    });
-    if (!ancestor) break;
-    if (ancestor.userId === userId) return fail(400, "You cannot join a team under you");
-    cursor = ancestor.leaderId;
-  }
-  const existing = await prisma.agentProfile.findUnique({ where: { userId } });
-  if (existing?.leaderId) return fail(400, "You are already on a team");
-  if (existing) {
-    const children = await prisma.agentProfile.count({ where: { leaderId: existing.id } });
-    if (children > 0) return fail(400, "Move this team from the admin page");
-  }
-  const status = settings.autoApproveSubAgents ? "ACTIVE" : "PENDING";
-  const agentCode = existing ? null : await freshAgentCode();
+  const preExisting = await prisma.agentProfile.findUnique({ where: { userId }, select: { id: true } });
+  const agentCode = preExisting ? null : await freshAgentCode();
+  let status: JoinStatus = settings.autoApproveSubAgents ? "ACTIVE" : "PENDING";
   try {
-    await prisma.$transaction(async (tx) => {
+    status = await prisma.$transaction(async (tx) => {
+      // Lock the leader and the joiner so a parallel join or move cannot make a loop.
+      await tx.$queryRaw`
+        SELECT "id" FROM "AgentProfile"
+        WHERE "id" = ${invite.leader.id} OR "userId" = ${userId}
+        ORDER BY "id"
+        FOR UPDATE
+      `;
+      const leader = await tx.agentProfile.findUnique({ where: { id: invite.leader.id } });
+      if (!leader || !canRecruit(leader, settings.maxTeamDepth)) {
+        throw new JoinRefused(400, "This leader cannot add members right now");
+      }
+      const depth = leader.depth + 1;
+      if (depth > settings.maxTeamDepth) throw new JoinRefused(400, "This team cannot add another level");
+      let cursor = leader.leaderId;
+      const seen = new Set<string>();
+      while (cursor && !seen.has(cursor)) {
+        seen.add(cursor);
+        const ancestor: { userId: string; leaderId: string | null } | null = await tx.agentProfile.findUnique({
+          where: { id: cursor },
+          select: { userId: true, leaderId: true }
+        });
+        if (!ancestor) break;
+        if (ancestor.userId === userId) throw new JoinRefused(400, "You cannot join a team under you");
+        cursor = ancestor.leaderId;
+      }
+      const existing = await tx.agentProfile.findUnique({ where: { userId } });
+      if (existing?.leaderId) throw new JoinRefused(400, "You are already on a team");
+      if (existing?.status === "REJECTED") throw new JoinRefused(400, "Your agent account was not approved");
+      if (existing) {
+        const children = await tx.agentProfile.count({ where: { leaderId: existing.id } });
+        if (children > 0) throw new JoinRefused(400, "Move this team from the admin page");
+      }
+      // An admin pause survives a join. Otherwise the team approval setting decides.
+      const next: JoinStatus = existing?.status === "PAUSED" ? "PAUSED" : settings.autoApproveSubAgents ? "ACTIVE" : "PENDING";
       const claimed = await tx.agentInvite.updateMany({
         where: { id: invite.id, usedAt: null },
         data: { usedAt: new Date() }
       });
-      if (claimed.count !== 1) throw new Error("used");
-      await tx.user.update({ where: { id: userId }, data: { role: "AGENT" } });
+      if (claimed.count !== 1) throw new JoinRefused(400, "This invite is no longer valid");
+      if (user.role === "USER") await tx.user.update({ where: { id: userId }, data: { role: "AGENT" } });
       if (existing) {
         await tx.agentProfile.update({
           where: { id: existing.id },
-          data: { leaderId: invite.leader.id, depth, status, active: status === "ACTIVE" }
+          data: { leaderId: leader.id, depth, status: next, active: next === "ACTIVE" }
         });
       } else {
         await tx.agentProfile.create({
           data: {
             userId,
             code: agentCode || makeCode(8),
-            leaderId: invite.leader.id,
+            leaderId: leader.id,
             depth,
-            status,
-            active: status === "ACTIVE",
+            status: next,
+            active: next === "ACTIVE",
             upiId: "",
             city: ""
           }
         });
       }
+      return next;
     });
   } catch (error) {
-    if (error instanceof Error && error.message === "used") return fail(400, "This invite is no longer valid");
+    if (error instanceof JoinRefused) return fail(error.status, error.message);
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return fail(400, "You are already on a team");
+    }
     throw error;
   }
   if (status === "PENDING") {

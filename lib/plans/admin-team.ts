@@ -61,7 +61,10 @@ async function subtree(rootId: string) {
     children.set(row.leaderId, list);
   }
   const out: typeof all = [];
+  const visited = new Set<string>();
   const walk = (id: string) => {
+    if (visited.has(id)) return;
+    visited.add(id);
     const row = all.find((item) => item.id === id);
     if (!row) return;
     out.push(row);
