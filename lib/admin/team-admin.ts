@@ -62,7 +62,11 @@ export async function applyAdminTeamAction(id: string, body: TeamAction, actorUs
       await prisma.user.update({ where: { id: profile.userId }, data: { name: body.name } });
     }
   }
-  return ok({ before, after: { action: body.action } });
+  const after = await prisma.agentProfile.findUnique({
+    where: { id },
+    select: { status: true, active: true, sharePercent: true, leaderId: true, city: true, pausedBy: true }
+  });
+  return ok({ before, after: { action: body.action, ...(after || {}) } });
 }
 
 export async function loadAdminAgent(id: string) {

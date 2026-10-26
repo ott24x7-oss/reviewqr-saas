@@ -17,7 +17,8 @@ const patchSchema = z.object({
     .optional(),
   trialEndsAt: z.string().nullable().optional(),
   subscriptionEndsAt: z.string().nullable().optional(),
-  password: z.string().min(8).optional()
+  password: z.string().min(8).optional(),
+  reason: z.string().trim().max(500).optional()
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
@@ -57,15 +58,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     update.password = await hashPassword(data.password);
   }
 
-  const before = await prisma.user.findUnique({
-    where: { id: params.id },
-    select: {
-      role: true,
-      subscriptionTier: true,
-      subscriptionStatus: true,
-      subscriptionEndsAt: true
-    }
-  });
+  const auditSelect = {
+    role: true,
+    subscriptionTier: true,
+    subscriptionStatus: true,
+    subscriptionEndsAt: true,
+    trialEndsAt: true
+  } as const;
+  const before = await prisma.user.findUnique({ where: { id: params.id }, select: auditSelect });
   if (!before) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
   const subscriptionTouched =
@@ -73,6 +73,22 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     data.subscriptionStatus != null ||
     data.subscriptionEndsAt !== undefined ||
     data.trialEndsAt !== undefined;
+  const sameTime = (a: Date | null, b: string | null | undefined) =>
+    (a ? a.toISOString().slice(0, 10) : null) === (b ? new Date(b).toISOString().slice(0, 10) : null);
+  const roleChanged = !!data.role && data.role !== before.role;
+  const subscriptionChanged =
+    (data.subscriptionTier != null && data.subscriptionTier !== before.subscriptionTier) ||
+    (data.subscriptionStatus != null && data.subscriptionStatus !== before.subscriptionStatus) ||
+    (data.subscriptionEndsAt !== undefined && !sameTime(before.subscriptionEndsAt, data.subscriptionEndsAt)) ||
+    (data.trialEndsAt !== undefined && !sameTime(before.trialEndsAt, data.trialEndsAt));
+  const reason = data.reason || "";
+  // A role change (for example to ADMIN) or a change of paid access needs a reason on the audit row.
+  if ((roleChanged || subscriptionChanged) && !reason) {
+    return NextResponse.json({ error: "A reason is required to change the role or subscription" }, { status: 400 });
+  }
+  if (params.id === guard.user.id && roleChanged) {
+    return NextResponse.json({ error: "You cannot change your own role" }, { status: 400 });
+  }
   const user = await prisma.$transaction(async (tx) => {
     const updated = await tx.user.update({ where: { id: params.id }, data: update });
     if (subscriptionTouched) {
@@ -89,12 +105,16 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return updated;
   });
 
+  const after = await prisma.user.findUnique({ where: { id: params.id }, select: auditSelect });
   await logAudit({
     userId: guard.user.id,
-    action: "user.update",
+    action: roleChanged ? "user.role.change" : subscriptionChanged ? "user.tier.change" : "user.update",
     entity: "user",
     entityId: params.id,
-    metadata: { changedFields: Object.keys(update) },
+    reason: reason || null,
+    before,
+    after,
+    metadata: { changedFields: Object.keys(update).filter((key) => key !== "password"), passwordReset: !!data.password },
     ip: getClientIp(req.headers),
     userAgent: req.headers.get("user-agent") || undefined
   });

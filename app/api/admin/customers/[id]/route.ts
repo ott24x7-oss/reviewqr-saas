@@ -3,6 +3,7 @@ import type { PlanDuration, UserRole } from "@prisma/client";
 import { z } from "zod";
 import { logAudit, requireAdminApi, type AuditAction } from "@/lib/admin";
 import {
+  adminPlanChangeIsLong,
   cancelAdminUser,
   changeAdminUserPlan,
   grantAdminDays,
@@ -35,7 +36,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const parsed = schema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message || "Check the form" }, { status: 400 });
   const body = parsed.data;
-  const stepAction = body.action === "role" ? "change_role" : body.action === "grant" && body.days > 30 ? "grant_days_over_30" : null;
+  // Same rules as the admin app: more than 30 days of paid access needs a reason and a
+  // one-time code for that action; so does a role change.
+  const longPlan = body.action === "plan" && (await adminPlanChangeIsLong(body.planId, body.duration as PlanDuration | undefined));
+  const longGrant = body.action === "grant" && body.days > 30;
+  if (longPlan && !body.reason?.trim()) return NextResponse.json({ error: "A reason is required" }, { status: 400 });
+  const stepAction = body.action === "role" ? "change_role" : longPlan ? "change_user_plan" : longGrant ? "grant_days_over_30" : null;
   if (stepAction && !(await spendWebStepUp(req, guard.user.id, stepAction))) return stepUpRequired(stepAction);
   const id = params.id;
   let action: AuditAction = "user.update";
@@ -76,7 +82,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     reason,
     before: data.before,
     after: data.after,
-    ip: getClientIp(req.headers)
+    ip: getClientIp(req.headers),
+    userAgent: req.headers.get("user-agent") || undefined
   });
   if (body.action === "reveal") return NextResponse.json({ ok: true, phone: data.phone || "" });
   return NextResponse.json({ ok: true });

@@ -86,6 +86,7 @@ export async function setAdminDeviceStatus(opts: {
   actorId: string;
   ip?: string;
   actorDeviceId?: string | null;
+  reason?: string | null;
 }) {
   const device = await prisma.adminDevice.findUnique({ where: { id: opts.deviceId } });
   if (!device) return { ok: false as const, status: 404, error: "Device not found" };
@@ -106,6 +107,7 @@ export async function setAdminDeviceStatus(opts: {
       entityId: device.id,
       deviceId: opts.actorDeviceId,
       ip: opts.ip,
+      reason: opts.reason || null,
       before: { status: device.status },
       after: { status: "ACTIVE" },
       metadata: { op: "approve" }
@@ -128,6 +130,7 @@ export async function setAdminDeviceStatus(opts: {
     entityId: device.id,
     deviceId: opts.actorDeviceId,
     ip: opts.ip,
+    reason: opts.reason || null,
     before: { status: device.status },
     after: { status: "REVOKED" },
     metadata: { op: "revoke" }

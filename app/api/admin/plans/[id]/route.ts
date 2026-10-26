@@ -1,11 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { logAudit, requireAdminApi } from "@/lib/admin";
+import { prisma } from "@/lib/db";
 import { archivePlan, duplicatePlan, planWriteSchema, updatePlanRecord } from "@/lib/plans/admin-write";
 import { revalidatePricing } from "@/lib/plans/revalidate";
 import { getClientIp } from "@/lib/utils";
 
 const actionSchema = z.object({ action: z.enum(["archive", "duplicate"]) });
+
+/** Price, modules and limits for the audit row, so a price change shows before and after. */
+async function planSnapshot(id: string) {
+  const plan = await prisma.plan.findUnique({
+    where: { id },
+    select: {
+      active: true,
+      modules: true,
+      limits: true,
+      visibleOnPricingPage: true,
+      prices: { select: { duration: true, pricePaise: true, mrpPaise: true, active: true } }
+    }
+  });
+  return plan ? { ...plan, prices: [...plan.prices].sort((a, b) => a.duration.localeCompare(b.duration)) } : null;
+}
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const guard = await requireAdminApi();
@@ -14,6 +30,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message || "Invalid plan" }, { status: 400 });
   }
+  const before = await planSnapshot(params.id);
   const result = await updatePlanRecord(params.id, parsed.data);
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.error === "Plan not found" ? 404 : 400 });
   revalidatePricing(result.plan.slug);
@@ -22,8 +39,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     action: "plan.update",
     entity: "Plan",
     entityId: params.id,
+    before,
+    after: await planSnapshot(params.id),
     metadata: { op: "edit" },
-    ip: getClientIp(req.headers)
+    ip: getClientIp(req.headers),
+    userAgent: req.headers.get("user-agent") || undefined
   });
   return NextResponse.json({ ok: true, slug: result.plan.slug });
 }

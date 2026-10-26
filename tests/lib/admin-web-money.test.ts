@@ -8,6 +8,7 @@ vi.mock("../../lib/plans/notify", () => ({ notifyUser }));
 
 import { POST as paymentPost } from "../../app/api/admin/payments/[id]/route";
 import { POST as payoutPost } from "../../app/api/admin/commissions/route";
+import { PATCH as userPatch } from "../../app/api/admin/users/[id]/route";
 import { WEB_STEP_COOKIE, WEB_STEP_DEVICE } from "../../lib/admin/web-step";
 import { signAccessToken, STEP_UP_TTL_SEC } from "../../lib/auth/access-token";
 import { encryptSecret } from "../../lib/crypto";
@@ -127,5 +128,21 @@ describe("web admin money routes", () => {
     expect(row?.reason).toBe("Weekly");
     expect(row?.before).toMatchObject({ approvedPaise: 4000, approvedCount: 1 });
     expect(row?.after).toMatchObject({ payoutId: payout.id, grossPaise: 4000 });
+  });
+
+  it("needs a reason to change a role on the web user editor and audits before and after", async () => {
+    const ctx = { params: { id: ownerId } };
+    const patch = (body: unknown) =>
+      new NextRequest(`http://localhost/api/admin/users/${ownerId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body)
+      });
+    expect(must(await userPatch(patch({ role: "ADMIN" }), ctx)).status).toBe(400);
+    expect((await prisma.user.findUnique({ where: { id: ownerId } }))?.role).toBe("USER");
+    expect(must(await userPatch(patch({ role: "ADMIN", reason: "New ops hire" }), ctx)).status).toBe(200);
+    const row = await prisma.auditLog.findFirst({ where: { userId: adminId, action: "user.role.change", entityId: ownerId } });
+    expect(row).toMatchObject({ reason: "New ops hire", before: { role: "USER" }, after: { role: "ADMIN" } });
+    expect(must(await userPatch(patch({ role: "USER", reason: "Undo" }), ctx)).status).toBe(200);
   });
 });

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
+import { StepUpDialog } from "@/components/admin/ui/dialogs";
 import { Button } from "@/components/ui/button";
 
 type DeviceRow = {
@@ -16,6 +17,7 @@ type DeviceRow = {
 export function AdminDevices({ initial }: { initial: DeviceRow[] }) {
   const [rows, setRows] = useState(initial);
   const [busy, setBusy] = useState<string | null>(null);
+  const [stepFor, setStepFor] = useState<string | null>(null);
 
   async function post(action: "approve" | "revoke" | "signout", deviceId?: string) {
     setBusy(deviceId || action);
@@ -25,7 +27,11 @@ export function AdminDevices({ initial }: { initial: DeviceRow[] }) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ action, deviceId })
       });
-      const json = (await res.json().catch(() => ({}))) as { error?: string; devices?: DeviceRow[] };
+      const json = (await res.json().catch(() => ({}))) as { error?: string; devices?: DeviceRow[]; stepUp?: string };
+      if (res.status === 403 && json.stepUp === "approve_device" && deviceId) {
+        setStepFor(deviceId);
+        return;
+      }
       if (!res.ok) throw new Error(json.error || "Could not update the device");
       if (json.devices) setRows(json.devices);
       if (action === "signout") toast.success("Signed out every admin device");
@@ -97,6 +103,15 @@ export function AdminDevices({ initial }: { initial: DeviceRow[] }) {
           )}
         </tbody>
       </table>
+      <StepUpDialog
+        open={!!stepFor}
+        title="Confirm device approval"
+        action="approve_device"
+        onClose={() => setStepFor(null)}
+        onConfirmed={async () => {
+          if (stepFor) await post("approve", stepFor);
+        }}
+      />
     </div>
   );
 }

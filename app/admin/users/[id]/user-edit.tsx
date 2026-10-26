@@ -41,7 +41,8 @@ export function UserEditForm({ user }: Props) {
     subscriptionStatus: user.subscriptionStatus,
     trialEndsAt: dateInputValue(user.trialEndsAt),
     subscriptionEndsAt: dateInputValue(user.subscriptionEndsAt),
-    newPassword: ""
+    newPassword: "",
+    reason: ""
   });
 
   function update<K extends keyof typeof form>(k: K, v: (typeof form)[K]) {
@@ -60,7 +61,8 @@ export function UserEditForm({ user }: Props) {
         trialEndsAt: form.trialEndsAt ? new Date(form.trialEndsAt).toISOString() : null,
         subscriptionEndsAt: form.subscriptionEndsAt
           ? new Date(form.subscriptionEndsAt).toISOString()
-          : null
+          : null,
+        reason: form.reason.trim() || undefined
       };
       const res = await fetch(`/api/admin/users/${user.id}`, {
         method: "PATCH",
@@ -220,6 +222,11 @@ export function UserEditForm({ user }: Props) {
               </Button>
             </div>
           </div>
+        </div>
+
+        <div>
+          <Label>Reason (required to change the role or subscription)</Label>
+          <Input value={form.reason} onChange={(e) => update("reason", e.target.value)} />
         </div>
 
         <div className="pt-2 flex flex-wrap gap-2">

@@ -219,16 +219,27 @@ export async function applyInboxAction(input: {
   ids?: string[];
   actorId: string;
   actorDeviceId?: string | null;
+  reason?: string | null;
   ip?: string;
 }) {
   const ids = [...new Set([...(input.ids || []), ...(input.id ? [input.id] : [])])].slice(0, 50);
   if (!ids.length) return fail(400, "Choose at least one item");
   if (input.segment === "payouts") return fail(400, "Mark a payout paid from Money");
   let changed = 0;
+  /** Per-item before/after for the audit row. */
+  const before: Array<Record<string, unknown>> = [];
+  const after: Array<Record<string, unknown>> = [];
   for (const id of ids) {
     if (input.segment === "agents" && (input.action === "approve" || input.action === "reject")) {
-      const result = await setAgentTeamStatus(id, input.action === "approve" ? "ACTIVE" : "REJECTED", input.actorId);
-      if (result.ok) changed += 1;
+      const prior = await prisma.agentProfile.findUnique({ where: { id }, select: { status: true, active: true } });
+      // A rejection is REJECTED, never PAUSED, so a leader cannot resume it.
+      const status = input.action === "approve" ? "ACTIVE" : "REJECTED";
+      const result = await setAgentTeamStatus(id, status, input.actorId);
+      if (result.ok) {
+        changed += 1;
+        before.push({ id, status: prior?.status ?? null, active: prior?.active ?? null });
+        after.push({ id, status, active: status === "ACTIVE" });
+      }
       continue;
     }
     if (input.segment === "devices" && input.action === "approve") {
@@ -237,6 +248,7 @@ export async function applyInboxAction(input: {
         action: "approve",
         actorId: input.actorId,
         actorDeviceId: input.actorDeviceId,
+        reason: input.reason,
         ip: input.ip
       });
       if (result.ok) changed += 1;
@@ -248,6 +260,7 @@ export async function applyInboxAction(input: {
         action: "revoke",
         actorId: input.actorId,
         actorDeviceId: input.actorDeviceId,
+        reason: input.reason,
         ip: input.ip
       });
       if (result.ok) changed += 1;
@@ -277,9 +290,13 @@ export async function applyInboxAction(input: {
     }
     if (input.segment === "failed" && input.action === "reject") {
       const result = await rejectAdminPayment(id);
-      if (result.ok) changed += 1;
+      if (result.ok) {
+        changed += 1;
+        before.push({ id, ...result.data.before });
+        after.push({ id, ...result.data.after });
+      }
     }
   }
   if (!changed) return fail(400, "Nothing could be updated");
-  return ok({ changed });
+  return ok({ changed, before, after });
 }

@@ -31,6 +31,7 @@ export async function POST(req: NextRequest) {
     id: parsed.data.id,
     ids: parsed.data.ids,
     actorId: guard.user.id,
+    reason: parsed.data.reason,
     ip: getClientIp(req.headers)
   });
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
@@ -40,8 +41,11 @@ export async function POST(req: NextRequest) {
     entity: "Inbox",
     entityId: parsed.data.id || parsed.data.ids?.[0],
     reason: parsed.data.reason,
+    before: result.data.before,
+    after: result.data.after,
     metadata: { segment: parsed.data.segment, op: parsed.data.action, changed: result.data.changed },
-    ip: getClientIp(req.headers)
+    ip: getClientIp(req.headers),
+    userAgent: req.headers.get("user-agent") || undefined
   });
   return NextResponse.json({ ok: true, changed: result.data.changed });
 }
