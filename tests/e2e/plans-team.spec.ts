@@ -168,7 +168,7 @@ test("a leader's member sale splits into SALE and TEAM_OVERRIDE", async ({ page 
     await page.getByRole("button", { name: "1 month" }).click();
     await page.locator(`[data-plan="${slug}"]`).getByRole("button", { name: "Choose" }).click();
     await page.getByRole("button", { name: "Pay with UPI" }).click();
-    await expect(page.getByText("Plan updated")).toBeVisible();
+    await expect(page.getByText("Plan updated").first()).toBeVisible();
 
     const owner = await prisma.user.findUnique({ where: { email: ownerEmail }, select: { id: true } });
     const payment = await prisma.payment.findFirst({

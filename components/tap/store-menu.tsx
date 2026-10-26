@@ -201,7 +201,7 @@ export function StoreMenu({
     if (!ready || !canOrder) return;
     window.localStorage.setItem(storageKey, JSON.stringify(cart));
     window.localStorage.setItem("rq-lang", lang);
-  }, [cart, lang, ready, storageKey]);
+  }, [canOrder, cart, lang, ready, storageKey]);
 
   const text = (key: Parameters<typeof tapText>[1]) => tapText(lang, key);
   const pickingItem = items.find((item) => item.id === picking) || null;

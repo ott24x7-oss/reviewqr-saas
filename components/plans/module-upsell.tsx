@@ -1,5 +1,5 @@
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { AppText } from "@/components/app-ui/i18n";
+import { PlanLockNotice } from "@/components/app-ui/primitives";
 
 export function ModuleUpsell({
   title,
@@ -10,13 +10,15 @@ export function ModuleUpsell({
   body: string;
   href: string;
 }) {
-  return (
-    <div className="rounded-2xl border bg-card p-6 sm:p-8">
-      <h2 className="font-display text-xl font-bold">{title}</h2>
-      <p className="mt-2 max-w-xl text-sm text-muted-foreground">{body}</p>
-      <Button asChild className="mt-5">
-        <Link href={href}>See plans</Link>
-      </Button>
-    </div>
-  );
+  const hindi: Record<string, string> = {
+    "Add Reviews to collect feedback and public review links.": "रिव्यू और पब्लिक रिव्यू लिंक के लिए Reviews जोड़ें।",
+    "Add Menu to show your catalogue on the tap page.": "टैप पेज पर अपने उत्पाद दिखाने के लिए Menu जोड़ें।",
+    "Add WhatsApp Store to take orders.": "ऑर्डर लेने के लिए WhatsApp Store जोड़ें।"
+  };
+  const titleHindi = title.startsWith("Add WhatsApp Store") ? title.replace("Add WhatsApp Store", "WhatsApp Store जोड़ें") : title;
+  return <PlanLockNotice
+    title={<AppText en={title} hi={titleHindi} />}
+    body={<AppText en={body} hi={hindi[body] || body} />}
+    href={href}
+  />;
 }

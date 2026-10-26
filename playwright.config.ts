@@ -48,7 +48,7 @@ export default defineConfig({
   projects: [
     {
       name: "app",
-      testMatch: /owner-smoke\.spec\.ts/,
+      testMatch: /owner-(smoke|web)\.spec\.ts/,
       use: { ...devices["Desktop Chrome"], baseURL }
     },
     {
