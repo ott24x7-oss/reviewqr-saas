@@ -1,61 +1,59 @@
 # Play Store listing copy
 
-Plans are bought on the website. The app does not sell plans and this copy does not link to a checkout.
+Plans are managed on the QR24x7 website. The app shows the current plan and has no plan checkout.
 
 ## Short description
 
 80 characters maximum.
 
-English (53):
+English (65):
 
-Google reviews and WhatsApp orders from one QR stand.
+QR, NFC, WhatsApp orders, bookings and reviews for your business.
 
-Hindi (49):
+Hindi (55):
 
-एक QR स्टैंड से Google समीक्षा और WhatsApp ऑर्डर।
+QR, NFC, WhatsApp ऑर्डर, बुकिंग और समीक्षाएँ—एक ऐप में।
 
 ## Full description
 
 ### English
 
-QR24x7 is the Android app for the stand on your counter.
-
-Customers scan the QR or tap the NFC card. They can open your Google review page, read the menu, and send a WhatsApp order. You see the scan, the order, and the private note in one place. There is no commission on the order.
+QR24x7 helps shops, cafés, restaurants, salons, and service businesses manage the customer page opened by their QR and NFC stand. Customers can scan or tap to see a menu or services, send a WhatsApp order, request a booking, and leave a Google review.
 
 What you can do in the app:
 
-- Show today’s scans, orders, and reviews
-- Move an order from new to preparing, ready, and done
-- Read private feedback and the public star rating
-- Edit the menu, with a photo if you want a suggested name and price
-- Show, share, or print the QR for your page
-- Write the same link onto an NFC stand
-- Read a short weekly picture of scans and orders
+- See scans, WhatsApp orders, bookings, reviews, and private feedback
+- Manage your menu, services, business hours, page buttons, offers, campaigns, and staff
+- Create and share QR codes, then write your page link onto an NFC tag
+- Follow orders and booking requests from one place
+- Choose from eight app themes, including Cinematic, and use the app in English or Hindi
+- Join agent mode to onboard businesses, build a team, and follow sales and commissions
+- Order QR stands and cards from the in-app catalogue
+- Keep working with saved information when the network is slow, then sync changes when it returns
 
-The app is in English and Hindi. It works on the phone you already use. Saved screens stay available when the network is slow, and an order status you set offline is sent when you are back online.
+Your plan is managed on qr24x7.in. The app shows your current plan and plan history; it does not sell plans or open a plan checkout.
 
-QR24x7 is made for cafés, shops, and salons in India. A plan, a printed stand, or a replacement card is bought on the QR24x7 website, not inside this app.
+For cafés, shops, restaurants, salons, and service businesses in India.
 
 Scan. Tap. Grow.
 
 ### Hindi
 
-QR24x7 काउंटर पर रखे स्टैंड का Android ऐप है।
-
-ग्राहक QR स्कैन करते हैं या NFC कार्ड टैप करते हैं। वे Google समीक्षा खोल सकते हैं, मेनू पढ़ सकते हैं, और WhatsApp ऑर्डर भेज सकते हैं। स्कैन, ऑर्डर, और निजी नोट एक जगह दिखते हैं। ऑर्डर पर कोई कमीशन नहीं है।
+QR24x7 दुकानों, कैफ़े, रेस्टोरेंट, सैलून और सेवा व्यवसायों को QR और NFC स्टैंड से खुलने वाला ग्राहक पेज संभालने में मदद करता है। ग्राहक स्कैन या टैप करके मेनू या सेवाएँ देख सकते हैं, WhatsApp ऑर्डर भेज सकते हैं, बुकिंग का अनुरोध कर सकते हैं और Google समीक्षा दे सकते हैं।
 
 ऐप में आप यह कर सकते हैं:
 
-- आज के स्कैन, ऑर्डर, और समीक्षा देखना
-- ऑर्डर को नया से तैयार तक ले जाना
-- निजी फ़ीडबैक और सार्वजनिक स्टार पढ़ना
-- मेनू बदलना, चाहें तो फोटो से नाम और कीमत सुझाव
-- अपने पेज का QR दिखाना, शेयर करना, या छापना
-- वही लिंक NFC स्टैंड पर लिखना
-- हफ्ते के स्कैन और ऑर्डर देखना
+- स्कैन, WhatsApp ऑर्डर, बुकिंग, समीक्षा और निजी फ़ीडबैक देखना
+- मेनू, सेवाएँ, दुकान के घंटे, पेज बटन, ऑफर, अभियान और स्टाफ संभालना
+- QR कोड बनाना और शेयर करना, फिर अपने पेज का लिंक NFC टैग पर लिखना
+- ऑर्डर और बुकिंग के अनुरोध एक जगह देखना
+- Cinematic सहित आठ ऐप थीम में से चुनना और ऐप को हिंदी या अंग्रेज़ी में चलाना
+- एजेंट मोड में व्यवसाय जोड़ना, टीम बनाना और बिक्री व कमीशन देखना
+- ऐप की कैटलॉग से QR स्टैंड और कार्ड मँगाना
+- नेटवर्क धीमा होने पर सेव की गई जानकारी से काम करना और नेटवर्क लौटने पर बदलाव सिंक करना
 
-ऐप अंग्रेज़ी और हिंदी में है। नेटवर्क धीमा हो तो आखिरी स्क्रीन दिखती रहती है। ऑफ़लाइन बदला गया ऑर्डर स्टेटस ऑनलाइन आते ही सिंक हो जाता है।
+आपका प्लान qr24x7.in पर मैनेज होता है। ऐप आपका मौजूदा प्लान और भुगतान इतिहास दिखाता है; इसमें प्लान की बिक्री या भुगतान सुविधा नहीं है।
 
-QR24x7 भारत के कैफ़े, दुकान, और सैलून के लिए बना है। प्लान, छपा स्टैंड, या नया कार्ड QR24x7 वेबसाइट पर खरीदा जाता है, इस ऐप में नहीं।
+भारत के कैफ़े, दुकानों, रेस्टोरेंट, सैलून और सेवा व्यवसायों के लिए।
 
 Scan. Tap. Grow.
