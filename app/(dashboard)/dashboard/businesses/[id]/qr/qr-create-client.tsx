@@ -49,7 +49,7 @@ export function QrCreateClient({
         return;
       }
       toast.success("QR code created!");
-      router.push(`/dashboard/qr-codes/${json.qrCode.shortCode}`);
+      router.push(`/dashboard/page/qr?tab=detail&code=${encodeURIComponent(json.qrCode.shortCode)}&businessId=${businessId}`);
     } finally {
       setLoading(false);
     }

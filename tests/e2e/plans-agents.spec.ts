@@ -115,7 +115,7 @@ test("admin publishes a combo, an agent earns commission, and a referral extends
     await page.getByRole("button", { name: "1 month" }).click();
     await page.locator(`[data-plan="${slug}"]`).getByRole("button", { name: "Choose" }).click();
     await page.getByRole("button", { name: "Pay with UPI" }).click();
-    await expect(page.getByText("Plan updated")).toBeVisible();
+    await expect(page.getByText("Plan updated").first()).toBeVisible();
 
     const before = await prisma.user.findUnique({ where: { email: ownerA }, select: { id: true, subscriptionEndsAt: true } });
     expect(before?.subscriptionEndsAt).toBeTruthy();
@@ -148,7 +148,7 @@ test("admin publishes a combo, an agent earns commission, and a referral extends
     await page.getByRole("button", { name: "6 months" }).click();
     await page.locator(`[data-plan="${slug}"]`).getByRole("button", { name: "Choose" }).click();
     await page.getByRole("button", { name: "Pay with UPI" }).click();
-    await expect(page.getByText("Plan updated")).toBeVisible();
+    await expect(page.getByText("Plan updated").first()).toBeVisible();
 
     const past = new Date(Date.now() - 60_000);
     await prisma.referralReward.updateMany({

@@ -146,7 +146,7 @@ test("owner reads analytics, growth tips, help, and dismisses an announcement", 
     await page.screenshot({ path: "docs/phase-8/announcement-360.png", fullPage: true });
 
     await page.getByRole("button", { name: "Open navigation" }).click();
-    await page.getByRole("link", { name: "Analytics" }).click();
+    await page.getByRole("link", { name: "Analytics", exact: true }).click();
     await expect(page.getByTestId("analytics-board")).toBeVisible();
     await expect(page.getByTestId("scans-value")).toHaveText("14");
     await expect(page.getByTestId("heat-cell")).toHaveCount(168);
@@ -154,7 +154,7 @@ test("owner reads analytics, growth tips, help, and dismisses an announcement", 
     expect(heat && heat.width > 0 && heat.width <= 360).toBeTruthy();
     const fits = await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1);
     expect(fits).toBe(true);
-    await expect(page.getByTestId("growth-tip")).toHaveCount(3);
+    await expect(page.getByTestId("growth-card").locator("li")).toHaveCount(3);
     await page.screenshot({ path: "docs/phase-8/analytics-360.png", fullPage: true });
     await page.getByTestId("growth-card").screenshot({ path: "docs/phase-8/growth-360.png" });
 

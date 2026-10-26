@@ -79,7 +79,7 @@ test("a direct scan opens the chosen link, and one device can open the menu inst
     await page.getByRole("combobox", { name: "Direct link" }).selectOption({ label: "Google review" });
     await expect(page.getByText("Scanning your QR will open: Google review")).toBeVisible();
     await page.getByRole("button", { name: "Publish" }).click();
-    await expect(page.getByText("Page published")).toBeVisible();
+    await expect(page.getByText("Page published").first()).toBeVisible();
 
     const before = await prisma.qRCode.findUnique({ where: { shortCode: counter }, select: { scans: true } });
     await page.goto(`/q/${counter}`);

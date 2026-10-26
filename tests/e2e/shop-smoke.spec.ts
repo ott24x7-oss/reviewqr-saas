@@ -58,8 +58,7 @@ test("owner buys a combo, approves the proof, and the board shows Printing", asy
     const businessId = href?.match(/\/dashboard\/businesses\/([^/?#]+)/)?.[1];
     expect(businessId).toBeTruthy();
     await manage.click();
-    await page.getByRole("link", { name: "QR codes & NFC" }).click();
-    await page.getByRole("link", { name: "Create a code" }).click();
+    await page.goto(`/dashboard/page/qr?tab=create&businessId=${businessId}`);
     await page.getByLabel(/^Label/).fill("Front counter");
     await page.getByRole("button", { name: "Create QR code" }).click();
     await expect(page.getByText("Short URL")).toBeVisible();
@@ -78,8 +77,10 @@ test("owner buys a combo, approves the proof, and the board shows Printing", asy
     });
 
     await page.goto("/dashboard/shop/nfc-qr-combo");
+    const cartItemAdded = page.waitForResponse((response) => response.url().includes("/api/v1/shop/cart/items") && response.request().method() === "POST");
     await page.getByRole("button", { name: "Add to cart" }).click();
-    await page.goto("/dashboard/shop/cart");
+    await cartItemAdded;
+    await page.goto("/dashboard/page/print?tab=cart");
     await page.locator("#cart-business").selectOption(businessId!);
     await page.getByRole("button", { name: "Save cart" }).click();
     await expect(page.locator(`#COMBO-NFC-QR-qr option[value="${code}"]`)).toHaveCount(1);
@@ -99,7 +100,7 @@ test("owner buys a combo, approves the proof, and the board shows Printing", asy
     await expect(page.locator("#address option")).toHaveCount(2);
     await page.locator("#address").selectOption({ index: 1 });
     await page.getByRole("button", { name: "Pay now" }).click();
-    await page.waitForURL(/\/dashboard\/shop\/orders\/[^/]+$/, { timeout: 60_000 });
+    await page.waitForURL((url) => url.pathname === "/dashboard/page/print" && url.searchParams.get("tab") === "order" && Boolean(url.searchParams.get("orderId")), { timeout: 60_000 });
     const orderUrl = page.url();
     await expect(page.getByRole("heading", { name: "Paid" })).toBeVisible();
 
@@ -190,7 +191,7 @@ test("owner adds products from the shop grid and the cart count follows", async 
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.getByTestId("shop-cart-link").click();
-  await page.waitForURL("**/dashboard/shop/cart");
+  await page.waitForURL((url) => url.pathname === "/dashboard/page/print" && url.searchParams.get("tab") === "cart");
   await expect(page.getByText("QR table stand").first()).toBeVisible();
   await expect(page.getByText("Pack of 10").first()).toBeVisible();
 });

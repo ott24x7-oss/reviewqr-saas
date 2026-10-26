@@ -52,14 +52,13 @@ test("a free owner still takes a store order after the plan migration", async ({
     await expect(page.getByLabel("Store layout")).toBeVisible();
     await page.getByLabel("Store layout").selectOption("FOOD");
     await page.getByRole("button", { name: "Save store settings" }).click();
-    await expect(page.getByText("Store settings saved")).toBeVisible();
+    await expect(page.getByText("Store settings saved").first()).toBeVisible();
     await page.goto(`/dashboard/sell/menu?businessId=${business!.id}`);
     await page.getByLabel("Item name").fill("Free Tea");
     await page.getByLabel("Price in rupees").fill("20");
     await page.getByRole("button", { name: "Add item" }).click();
     await expect(page.getByText("Free Tea").first()).toBeVisible();
-    await page.getByRole("link", { name: "QR codes & NFC" }).click();
-    await page.getByRole("link", { name: "Create a code" }).click();
+    await page.goto(`/dashboard/page/qr?tab=create&businessId=${business!.id}`);
     await page.getByLabel("Label").fill("Counter");
     await page.getByRole("button", { name: "Create QR code" }).click();
     await expect(page.getByText("Short URL")).toBeVisible();
