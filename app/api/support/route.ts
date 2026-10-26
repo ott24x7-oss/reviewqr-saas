@@ -49,7 +49,8 @@ export async function POST(req: NextRequest) {
     event: "supportTicket",
     collapseKey: ticket.id,
     title: "Support ticket",
-    body: parsed.data.subject.trim().slice(0, 80),
+    // Push text shows on a lock screen. Keep the customer's own words out of it.
+    body: "New support ticket",
     windowSeconds: 3600
   });
   return NextResponse.json({ id: ticket.id });
