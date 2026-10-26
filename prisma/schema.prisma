@@ -138,6 +138,7 @@ model User {
   referralRewardReceived ReferralReward? @relation("RewardReferred")
   referralCredit ReferralCredit?
   agentOnboardings AgentOnboarding[]
+  commissionLeaderSnapshots ShopCommission[] @relation("CommissionLeaderSnapshot")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1713,6 +1714,15 @@ model ShopCarrierEvent {
 enum ShopCommissionKind {
   ORDER
   RENEWAL
+  SALE
+  HARDWARE
+  TEAM_OVERRIDE
+}
+
+enum AgentStatus {
+  PENDING
+  ACTIVE
+  PAUSED
 }
 
 // One credit per agent, kind, and source. An order and a renewal never share a source.
@@ -1739,6 +1749,11 @@ model ShopCommission {
   planId      String?
   payoutId    String?
   payout      CommissionPayout?  @relation(fields: [payoutId], references: [id], onDelete: SetNull)
+  /// Team share used for this row, frozen at sale time.
+  sharePercent Int?
+  /// Leader who sits above this earner, frozen at sale time.
+  leaderId    String?
+  leader      User?              @relation("CommissionLeaderSnapshot", fields: [leaderId], references: [id], onDelete: SetNull)
   createdAt   DateTime           @default(now())
 
   @@unique([agentId, kind, sourceId])
@@ -1747,6 +1762,7 @@ model ShopCommission {
   @@index([paymentId])
   @@index([status, holdUntil])
   @@index([payoutId])
+  @@index([leaderId])
 }
 
 // Damage or misprint after delivery. Approval is what allows Delivered → Reprint.
@@ -1851,15 +1867,45 @@ model Subscription {
 }
 
 model AgentProfile {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  upiId     String   @default("")
-  city      String   @default("")
-  active    Boolean  @default(true)
-  code      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String         @id @default(cuid())
+  userId       String         @unique
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  upiId        String         @default("")
+  city         String         @default("")
+  active       Boolean        @default(true)
+  code         String         @unique
+  leaderId     String?
+  leader       AgentProfile?  @relation("AgentTeam", fields: [leaderId], references: [id], onDelete: SetNull)
+  members      AgentProfile[] @relation("AgentTeam")
+  status       AgentStatus    @default(ACTIVE)
+  sharePercent Int?
+  depth        Int            @default(1)
+  /// PAN, encrypted with the platform secret helper. Readers show the last 4 only.
+  pan          String?
+  /// Bank account number, encrypted. Optional.
+  bankAccount  String?
+  bankIfsc     String?
+  bankName     String?
+  invites      AgentInvite[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([leaderId])
+  @@index([status])
+}
+
+// A leader's invite. Joining never charges a fee and never creates a commission.
+model AgentInvite {
+  id        String       @id @default(cuid())
+  code      String       @unique
+  leaderId  String
+  leader    AgentProfile @relation(fields: [leaderId], references: [id], onDelete: Cascade)
+  phone     String?
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime     @default(now())
+
+  @@index([leaderId, createdAt])
 }
 
 // Null agentId is the default rule. Null planId applies to every plan.
@@ -1890,6 +1936,9 @@ model CommissionPayout {
   agentId        String
   agent          User             @relation(fields: [agentId], references: [id], onDelete: Restrict)
   amountPaise    Int
+  grossPaise     Int              @default(0)
+  tdsPaise       Int              @default(0)
+  netPaise       Int              @default(0)
   utr            String
   paidAt         DateTime
   note           String           @default("")
