@@ -145,7 +145,7 @@ test("owner reads analytics, growth tips, help, and dismisses an announcement", 
     await expect(banner).toBeVisible();
     await page.screenshot({ path: "docs/phase-8/announcement-360.png", fullPage: true });
 
-    await page.getByRole("button", { name: "Toggle menu" }).click();
+    await page.getByRole("button", { name: "Open navigation" }).click();
     await page.getByRole("link", { name: "Analytics" }).click();
     await expect(page.getByTestId("analytics-board")).toBeVisible();
     await expect(page.getByTestId("scans-value")).toHaveText("14");
