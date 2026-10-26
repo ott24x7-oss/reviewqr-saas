@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { staffSchema } from "@/lib/validations";
 import { slugify, nanoSlug } from "@/lib/utils";
 import { ownerLimitError } from "@/lib/entitlements";
+import { denyFeatureResponse } from "@/lib/plans/feature-gate";
 import { locationInBusiness, planOwner, requireBusinessRole } from "@/lib/tenant";
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
@@ -13,6 +14,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (!business) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const owner = await planOwner(user, business.ownerId);
   if (!owner) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const denied = await denyFeatureResponse(business.ownerId, "staff");
+  if (denied) return denied;
 
   const count = await prisma.staff.count({
     where: { business: { ownerId: business.ownerId }, isActive: true }

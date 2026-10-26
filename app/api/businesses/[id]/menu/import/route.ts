@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import sharp from "sharp";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
+import { planDeniedResponse } from "@/lib/plans/feature-gate";
 import { menuAiAccess } from "@/lib/store/menu-access";
 import { rateLimitDb } from "@/lib/rate-limit";
 import { getAiConfig } from "@/lib/settings";
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const access = await menuAiAccess(user.id, params.id);
   if (!access) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if ("blocked" in access) return NextResponse.json({ error: access.blocked }, { status: 403 });
+  if ("blocked" in access && access.blocked) return planDeniedResponse(access.blocked);
   const business = access.business;
 
   const cfg = await getAiConfig();

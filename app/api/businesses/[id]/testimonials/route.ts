@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
+import { denyFeatureResponse } from "@/lib/plans/feature-gate";
 import { requireBusinessRole } from "@/lib/tenant";
 
 const manualSchema = z.object({
@@ -19,6 +20,8 @@ export async function POST(
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const biz = await requireBusinessRole(user.id, params.id, "manage");
   if (!biz) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const denied = await denyFeatureResponse(biz.ownerId, "testimonials");
+  if (denied) return denied;
 
   const parsed = manualSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {

@@ -1,5 +1,7 @@
+import type { FeatureId } from "@reviewqr/shared";
 import { prisma } from "../db";
 import { fail, ok } from "../api/result";
+import { featureBlock } from "../plans/feature-gate";
 import { rateLimitDb } from "../rate-limit";
 import { requireBusinessRole } from "../tenant";
 import { sendWhatsApp } from "../whatsapp";
@@ -14,9 +16,17 @@ export function campaignMessage(template: string, name: string) {
   return template.replaceAll("{name}", who).trim().slice(0, 1000);
 }
 
-export async function listReviews(userId: string, businessId: string, rating?: string | null) {
-  const access = await requireBusinessRole(userId, businessId, "read");
+async function openFeature(userId: string, businessId: string, level: "read" | "manage", feature: FeatureId) {
+  const access = await requireBusinessRole(userId, businessId, level);
   if (!access) return fail(404, "Not found");
+  const blocked = await featureBlock(access.ownerId, feature);
+  if (blocked) return blocked;
+  return access;
+}
+
+export async function listReviews(userId: string, businessId: string, rating?: string | null) {
+  const access = await openFeature(userId, businessId, "read", "reviews-log");
+  if (!("id" in access)) return access;
   const score = rating ? Number(rating) : null;
   if (rating && (!Number.isInteger(score) || (score || 0) < 1 || (score || 0) > 5)) return fail(400, "Pick a rating from 1 to 5");
   const items = await prisma.review.findMany({
@@ -49,8 +59,8 @@ export async function listReviews(userId: string, businessId: string, rating?: s
 }
 
 export async function listTestimonials(userId: string, businessId: string) {
-  const access = await requireBusinessRole(userId, businessId, "read");
-  if (!access) return fail(404, "Not found");
+  const access = await openFeature(userId, businessId, "read", "testimonials");
+  if (!("id" in access)) return access;
   const items = await prisma.testimonial.findMany({
     where: { businessId: access.id },
     orderBy: { createdAt: "desc" },
@@ -68,8 +78,8 @@ export async function listTestimonials(userId: string, businessId: string) {
 }
 
 export async function setTestimonialPublic(userId: string, businessId: string, id: string, isPublic: boolean) {
-  const access = await requireBusinessRole(userId, businessId, "manage");
-  if (!access) return fail(404, "Not found");
+  const access = await openFeature(userId, businessId, "manage", "testimonials");
+  if (!("id" in access)) return access;
   const updated = await prisma.testimonial.updateMany({
     where: { id, businessId: access.id },
     data: { isPublic, isApproved: isPublic }
@@ -79,8 +89,8 @@ export async function setTestimonialPublic(userId: string, businessId: string, i
 }
 
 export async function listHints(userId: string, businessId: string) {
-  const access = await requireBusinessRole(userId, businessId, "read");
-  if (!access) return fail(404, "Not found");
+  const access = await openFeature(userId, businessId, "read", "reviews-log");
+  if (!("id" in access)) return access;
   const items = await prisma.reviewTemplate.findMany({
     where: { businessId: access.id },
     orderBy: { createdAt: "desc" },
@@ -91,8 +101,8 @@ export async function listHints(userId: string, businessId: string) {
 }
 
 export async function addHint(userId: string, businessId: string, content: string) {
-  const access = await requireBusinessRole(userId, businessId, "manage");
-  if (!access) return fail(404, "Not found");
+  const access = await openFeature(userId, businessId, "manage", "reviews-log");
+  if (!("id" in access)) return access;
   const text = content.trim();
   if (text.length < 2 || text.length > 280) return fail(400, "Write a short topic hint");
   const row = await prisma.reviewTemplate.create({ data: { businessId: access.id, content: text } });
@@ -100,15 +110,15 @@ export async function addHint(userId: string, businessId: string, content: strin
 }
 
 export async function removeHint(userId: string, businessId: string, id: string) {
-  const access = await requireBusinessRole(userId, businessId, "manage");
-  if (!access) return fail(404, "Not found");
+  const access = await openFeature(userId, businessId, "manage", "reviews-log");
+  if (!("id" in access)) return access;
   await prisma.reviewTemplate.deleteMany({ where: { id, businessId: access.id } });
   return ok({ id });
 }
 
 export async function listLocations(userId: string, businessId: string) {
-  const access = await requireBusinessRole(userId, businessId, "read");
-  if (!access) return fail(404, "Not found");
+  const access = await openFeature(userId, businessId, "read", "locations");
+  if (!("id" in access)) return access;
   const items = await prisma.location.findMany({
     where: { businessId: access.id, isActive: true },
     orderBy: { name: "asc" },
@@ -118,8 +128,8 @@ export async function listLocations(userId: string, businessId: string) {
 }
 
 export async function addLocation(userId: string, businessId: string, name: string, city: string) {
-  const access = await requireBusinessRole(userId, businessId, "manage");
-  if (!access) return fail(404, "Not found");
+  const access = await openFeature(userId, businessId, "manage", "locations");
+  if (!("id" in access)) return access;
   const label = name.trim();
   if (label.length < 2) return fail(400, "Name the location");
   const row = await prisma.location.create({
@@ -129,8 +139,8 @@ export async function addLocation(userId: string, businessId: string, name: stri
 }
 
 export async function listCampaigns(userId: string, businessId: string) {
-  const access = await requireBusinessRole(userId, businessId, "read");
-  if (!access) return fail(404, "Not found");
+  const access = await openFeature(userId, businessId, "read", "campaigns");
+  if (!("id" in access)) return access;
   const items = await prisma.campaign.findMany({
     where: { businessId: access.id },
     orderBy: { createdAt: "desc" },
@@ -141,8 +151,8 @@ export async function listCampaigns(userId: string, businessId: string) {
 }
 
 export async function createCampaign(userId: string, businessId: string, name: string, template: string) {
-  const access = await requireBusinessRole(userId, businessId, "manage");
-  if (!access) return fail(404, "Not found");
+  const access = await openFeature(userId, businessId, "manage", "campaigns");
+  if (!("id" in access)) return access;
   const title = name.trim();
   const text = template.trim();
   if (title.length < 2) return fail(400, "Name the campaign");
@@ -154,8 +164,8 @@ export async function createCampaign(userId: string, businessId: string, name: s
 }
 
 export async function sendCampaign(userId: string, businessId: string, campaignId: string) {
-  const access = await requireBusinessRole(userId, businessId, "manage");
-  if (!access) return fail(404, "Not found");
+  const access = await openFeature(userId, businessId, "manage", "campaigns");
+  if (!("id" in access)) return access;
   const gate = await rateLimitDb({ key: `campaign-send:${access.id}`, limit: 3, windowSeconds: 3600 });
   if (!gate.ok) return fail(429, "Too many campaign sends. Try again later.");
   const campaign = await prisma.campaign.findFirst({ where: { id: campaignId, businessId: access.id } });
@@ -219,8 +229,8 @@ export async function ownerReferHome(userId: string) {
 }
 
 export async function readAiSettings(userId: string, businessId: string) {
-  const access = await requireBusinessRole(userId, businessId, "read");
-  if (!access) return fail(404, "Not found");
+  const access = await openFeature(userId, businessId, "read", "ai-replies");
+  if (!("id" in access)) return access;
   const row = await prisma.business.findUnique({
     where: { id: access.id },
     select: { aiReviewsEnabled: true, services: true }
@@ -229,8 +239,8 @@ export async function readAiSettings(userId: string, businessId: string) {
 }
 
 export async function saveAiSettings(userId: string, businessId: string, enabled: boolean, services: string) {
-  const access = await requireBusinessRole(userId, businessId, "manage");
-  if (!access) return fail(404, "Not found");
+  const access = await openFeature(userId, businessId, "manage", "ai-replies");
+  if (!("id" in access)) return access;
   await prisma.business.update({
     where: { id: access.id },
     data: { aiReviewsEnabled: enabled, services: services.trim().slice(0, 500) }
@@ -239,8 +249,8 @@ export async function saveAiSettings(userId: string, businessId: string, enabled
 }
 
 export async function updateStaff(userId: string, businessId: string, staffId: string, name: string) {
-  const access = await requireBusinessRole(userId, businessId, "manage");
-  if (!access) return fail(404, "Not found");
+  const access = await openFeature(userId, businessId, "manage", "staff");
+  if (!("id" in access)) return access;
   const label = name.trim();
   if (label.length < 2) return fail(400, "Name the person");
   const updated = await prisma.staff.updateMany({ where: { id: staffId, businessId: access.id }, data: { name: label } });
@@ -249,22 +259,22 @@ export async function updateStaff(userId: string, businessId: string, staffId: s
 }
 
 export async function removeStaff(userId: string, businessId: string, staffId: string) {
-  const access = await requireBusinessRole(userId, businessId, "manage");
-  if (!access) return fail(404, "Not found");
+  const access = await openFeature(userId, businessId, "manage", "staff");
+  if (!("id" in access)) return access;
   await prisma.staff.updateMany({ where: { id: staffId, businessId: access.id }, data: { isActive: false } });
   return ok({ id: staffId });
 }
 
 export async function staffStats(userId: string, businessId: string, staffId: string) {
-  const access = await requireBusinessRole(userId, businessId, "read");
-  if (!access) return fail(404, "Not found");
+  const access = await openFeature(userId, businessId, "read", "staff");
+  if (!("id" in access)) return access;
   const reviews = await prisma.review.count({ where: { businessId: access.id, staffId } });
   return ok({ reviews });
 }
 
 export async function inviteStaff(userId: string, businessId: string, email: string) {
-  const access = await requireBusinessRole(userId, businessId, "manage");
-  if (!access) return fail(404, "Not found");
+  const access = await openFeature(userId, businessId, "manage", "staff");
+  if (!("id" in access)) return access;
   const gate = await rateLimitDb({ key: `invite:${userId}`, limit: 20, windowSeconds: 3600 });
   if (!gate.ok) return fail(429, "Too many invites");
   const to = email.trim().toLowerCase();

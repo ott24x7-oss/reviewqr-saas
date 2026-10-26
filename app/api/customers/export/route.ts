@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
+import { accountFeatureBlock, planDeniedResponse } from "@/lib/plans/feature-gate";
 import { customersCsv } from "@/lib/store/customers";
 import { loadCustomers } from "@/lib/store/customer-list";
 
 export async function GET() {
   const user = await requireUser().catch(() => null);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const blocked = await accountFeatureBlock(user.id, "customers");
+  if (blocked) return planDeniedResponse(blocked);
   const rows = await loadCustomers(user.id);
   const csv = customersCsv(rows.map((row) => ({
     name: row.name,

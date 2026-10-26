@@ -7,6 +7,7 @@ export const errorCodes = [
   "VALIDATION",
   "RATE_LIMIT",
   "PLAN_LIMIT",
+  "PLAN_REQUIRED",
   "CONFLICT",
   "INTERNAL"
 ] as const;

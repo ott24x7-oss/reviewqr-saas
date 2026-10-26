@@ -2,11 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
+import { featureBlock, planDeniedResponse } from "@/lib/plans/feature-gate";
 import { requireBusinessRole } from "@/lib/tenant";
 
 async function managedTemplate(businessId: string, tid: string, userId: string) {
   const business = await requireBusinessRole(userId, businessId, "manage");
   if (!business) return null;
+  const blocked = await featureBlock(business.ownerId, "reviews-log");
+  if (blocked) return { blocked } as const;
   return prisma.reviewTemplate.findFirst({
     where: { id: tid, businessId: business.id }
   });
@@ -24,6 +27,7 @@ export async function PATCH(
   const user = await requireUser().catch(() => null);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const tpl = await managedTemplate(params.id, params.tid, user.id);
+  if (tpl && "blocked" in tpl) return planDeniedResponse(tpl.blocked);
   if (!tpl) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const parsed = patchSchema.safeParse(await req.json().catch(() => ({})));
@@ -52,6 +56,7 @@ export async function DELETE(
   const user = await requireUser().catch(() => null);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const tpl = await managedTemplate(params.id, params.tid, user.id);
+  if (tpl && "blocked" in tpl) return planDeniedResponse(tpl.blocked);
   if (!tpl) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   await prisma.reviewTemplate.delete({ where: { id: tpl.id } });

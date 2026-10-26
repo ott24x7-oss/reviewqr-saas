@@ -2,6 +2,7 @@ import { cursorQuery, type PageQuery } from "../api/cursor";
 import { takePage } from "../api/page";
 import { fail, ok } from "../api/result";
 import { prisma } from "../db";
+import { featureBlock } from "../plans/feature-gate";
 import { moduleBlock } from "../plans/entitlements";
 import { accessRole, allows, readableBusinessWhere } from "../tenant";
 import { kolkataDayWindow, type DaySummary } from "./day";
@@ -14,7 +15,7 @@ export type { DaySummary };
  * Owning one locked business does not hide a Store business they can already read.
  */
 export async function ownedStoreBlock(userId: string) {
-  const locked = await moduleBlock(userId, "STORE");
+  const locked = await featureBlock(userId, "orders");
   if (!locked) return null;
   const readable = await prisma.business.findFirst({
     where: await storeReadableWhere(userId),
@@ -120,7 +121,7 @@ export async function loadOrderCardPage(
   page: PageQuery & { businessId?: string | null; since?: Date | null }
 ) {
   const locked = await ownedStoreBlock(userId);
-  if (locked) return fail(403, locked);
+  if (locked) return locked;
   const readable = await storeReadableWhere(userId);
   const summary = await loadDaySummary(userId);
   const paged = await takePage(async () => {

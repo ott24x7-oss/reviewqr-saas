@@ -24,7 +24,19 @@ export function v1Data<T>(data: T, status = 200) {
 }
 
 export function v1From<T>(result: ServiceResult<T>) {
-  if (!result.ok) return v1Error(result.status, codeForStatus(result.status), result.error);
+  if (!result.ok) {
+    if (result.code === "PLAN_REQUIRED" && result.feature) {
+      return NextResponse.json(
+        {
+          code: "PLAN_REQUIRED",
+          feature: result.feature,
+          error: { code: "PLAN_REQUIRED", message: result.error, feature: result.feature }
+        },
+        { status: 403 }
+      );
+    }
+    return v1Error(result.status, result.code || codeForStatus(result.status), result.error);
+  }
   return v1Data(result.data);
 }
 

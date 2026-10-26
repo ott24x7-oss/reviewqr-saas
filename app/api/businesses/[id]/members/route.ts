@@ -7,6 +7,7 @@ import { emailSchema } from "@/lib/validations";
 import { hashToken, randomToken } from "@/lib/tokens";
 import { absoluteUrl } from "@/lib/utils";
 import { escapeHtml, sendEmail } from "@/lib/email";
+import { denyFeatureResponse } from "@/lib/plans/feature-gate";
 import { rateLimitDb } from "@/lib/rate-limit";
 
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -16,6 +17,8 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const business = await loadOwnedBusiness(user.id, params.id);
   if (!business) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const denied = await denyFeatureResponse(business.ownerId, "staff");
+  if (denied) return denied;
 
   const [members, invites] = await Promise.all([
     prisma.businessMember.findMany({
@@ -44,6 +47,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const business = await loadOwnedBusiness(user.id, params.id);
   if (!business) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const denied = await denyFeatureResponse(business.ownerId, "staff");
+  if (denied) return denied;
 
   const rl = await rateLimitDb({ key: `invite:${user.id}`, limit: 20, windowSeconds: 3600 });
   if (!rl.ok) return NextResponse.json({ error: "Too many invites" }, { status: 429 });

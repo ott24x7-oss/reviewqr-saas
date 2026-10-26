@@ -5,14 +5,13 @@ import { takePage } from "../api/page";
 import { fail, ok, type Fail } from "../api/result";
 import { endOfKolkataDay, normalizeCouponCode } from "./coupons";
 import { revalidateBusinessTap } from "../tap/theme-store";
-import { moduleBlock } from "../plans/entitlements";
+import { featureBlock } from "../plans/feature-gate";
 import { requireBusinessRole } from "../tenant";
 
 type OfferBody = ReturnType<typeof offerActionSchema.parse>;
 
 async function storeLocked(ownerId: string) {
-  const locked = await moduleBlock(ownerId, "STORE");
-  return locked ? fail(403, locked) : null;
+  return featureBlock(ownerId, "offers");
 }
 
 export async function listCoupons(userId: string, businessId: string, page: PageQuery) {

@@ -1,6 +1,6 @@
 import { observe } from "@/lib/api/observe";
 import { NextRequest } from "next/server";
-import { requireV1User, v1Data, v1Error } from "@/lib/api/v1";
+import { requireV1User, v1Data, v1Error, v1From } from "@/lib/api/v1";
 import { readBusinessAnalytics } from "@/lib/analytics/read";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +16,7 @@ async function getHandler(req: NextRequest) {
     to: req.nextUrl.searchParams.get("to")
   });
   if (!result.ok) {
+    if ("code" in result && result.code === "PLAN_REQUIRED" && result.feature) return v1From(result);
     const code = result.status === 429 ? "RATE_LIMIT" : result.status === 400 ? "VALIDATION" : "NOT_FOUND";
     return v1Error(result.status, code, result.error);
   }

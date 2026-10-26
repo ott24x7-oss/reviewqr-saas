@@ -3,7 +3,7 @@ import { z } from "zod";
 import { readProductPhoto } from "../ai";
 import { fail, ok } from "../api/result";
 import { AiQuotaError } from "../entitlements";
-import { moduleBlock } from "../plans/entitlements";
+import { featureBlock } from "../plans/feature-gate";
 import { rateLimitDb } from "../rate-limit";
 import { getAiConfig } from "../settings";
 import { requireBusinessRole } from "../tenant";
@@ -16,8 +16,8 @@ const schema = z.object({
 export async function snapMenuPhoto(userId: string, businessId: string, raw: unknown) {
   const business = await requireBusinessRole(userId, businessId, "manage");
   if (!business) return fail(404, "Not found");
-  const locked = await moduleBlock(business.ownerId, "MENU");
-  if (locked) return fail(403, locked);
+  const locked = await featureBlock(business.ownerId, "menu");
+  if (locked) return locked;
 
   const cfg = await getAiConfig();
   if (!cfg.enabled || !cfg.apiKey) {

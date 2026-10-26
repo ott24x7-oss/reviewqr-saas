@@ -5,6 +5,7 @@ import { getClientIp } from "@/lib/utils";
 import { getAiConfig } from "@/lib/settings";
 import { polishReviewDraft, type BusinessContext } from "@/lib/ai";
 import { AiQuotaError } from "@/lib/entitlements";
+import { featureBlock, planDeniedResponse } from "@/lib/plans/feature-gate";
 import { draftWordCount } from "@/lib/review-policy";
 
 /** Cleans up words the customer already wrote. Never posts the result. */
@@ -34,12 +35,15 @@ export async function POST(req: NextRequest) {
       website: true,
       isActive: true,
       archived: true,
-      aiReviewsEnabled: true
+      aiReviewsEnabled: true,
+      ownerId: true
     }
   });
   if (!business || !business.isActive || business.archived || !business.aiReviewsEnabled) {
     return NextResponse.json({ suggestion: null, fallback: true });
   }
+  const locked = await featureBlock(business.ownerId, "ai-replies");
+  if (locked) return planDeniedResponse(locked);
 
   const cfg = await getAiConfig();
   if (!cfg.enabled || !cfg.apiKey) return NextResponse.json({ suggestion: null, fallback: true });
