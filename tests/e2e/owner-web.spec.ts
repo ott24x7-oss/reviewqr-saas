@@ -1,4 +1,4 @@
-import { mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { PrismaClient } from "@prisma/client";
 import { expect, test } from "@playwright/test";
@@ -56,6 +56,12 @@ for (const [source, destination] of legacyRedirects) {
 
 function databaseUrl() {
   if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
+  for (const file of [".env.local", ".env"]) {
+    const envFile = path.join(process.cwd(), file);
+    if (!existsSync(envFile)) continue;
+    const entry = readFileSync(envFile, "utf8").split(/\r?\n/).find((line) => /^\s*DATABASE_URL\s*=/.test(line));
+    if (entry) return entry.slice(entry.indexOf("=") + 1).trim().replace(/^["']|["']$/g, "");
+  }
   throw new Error("DATABASE_URL must be set for owner web E2E fixtures");
 }
 
