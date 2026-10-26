@@ -3,6 +3,8 @@ import type { CommissionBasis, ShopCommissionKind } from "@prisma/client";
 import { prisma } from "../db";
 import { readyToApprove } from "./commission-rules";
 
+export type LedgerDb = Prisma.TransactionClient | typeof prisma;
+
 export type LedgerInput = {
   agentId: string;
   kind: ShopCommissionKind;
@@ -16,10 +18,12 @@ export type LedgerInput = {
   flatPaise?: number;
   saleKind?: string;
   holdUntil?: Date | null;
+  sharePercent?: number | null;
+  leaderId?: string | null;
 };
 
 /** One row per agent, kind, and source. A repeat webhook does not insert a second credit. */
-export async function recordCommission(input: LedgerInput) {
+export async function recordCommission(input: LedgerInput, db: LedgerDb = prisma) {
   const where = {
     agentId_kind_sourceId: {
       agentId: input.agentId,
@@ -27,26 +31,32 @@ export async function recordCommission(input: LedgerInput) {
       sourceId: input.sourceId
     }
   };
-  const existing = await prisma.shopCommission.findUnique({ where });
+  const data = {
+    agentId: input.agentId,
+    kind: input.kind,
+    sourceId: input.sourceId,
+    orderId: input.orderId || null,
+    paymentId: input.paymentId || null,
+    planId: input.planId || null,
+    amountPaise: Math.max(0, Math.floor(input.amountPaise)),
+    percent: Math.max(0, Math.floor(input.percent)),
+    basis: input.basis || "PERCENT",
+    flatPaise: Math.max(0, Math.floor(input.flatPaise || 0)),
+    saleKind: input.saleKind || "RENEWAL",
+    status: "PENDING" as const,
+    holdUntil: input.holdUntil || null,
+    sharePercent: input.sharePercent == null ? null : Math.max(0, Math.floor(input.sharePercent)),
+    leaderId: input.leaderId || null
+  };
+  const existing = await db.shopCommission.findUnique({ where });
   if (existing) return { created: false as const, row: existing };
+  // A caught unique violation inside an interactive transaction aborts that transaction.
+  if (db !== prisma) {
+    const row = await db.shopCommission.create({ data });
+    return { created: true as const, row };
+  }
   try {
-    const row = await prisma.shopCommission.create({
-      data: {
-        agentId: input.agentId,
-        kind: input.kind,
-        sourceId: input.sourceId,
-        orderId: input.orderId || null,
-        paymentId: input.paymentId || null,
-        planId: input.planId || null,
-        amountPaise: Math.max(0, Math.floor(input.amountPaise)),
-        percent: Math.max(0, Math.floor(input.percent)),
-        basis: input.basis || "PERCENT",
-        flatPaise: Math.max(0, Math.floor(input.flatPaise || 0)),
-        saleKind: input.saleKind || "RENEWAL",
-        status: "PENDING",
-        holdUntil: input.holdUntil || null
-      }
-    });
+    const row = await prisma.shopCommission.create({ data });
     return { created: true as const, row };
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
