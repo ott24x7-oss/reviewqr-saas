@@ -278,6 +278,64 @@ export async function noteAdminBusiness(id: string, note: string) {
   return ok({ after: { note } });
 }
 
+export async function loadAdminUserEditor(id: string) {
+  const user = await prisma.user.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      phone: true,
+      role: true,
+      subscriptionTier: true,
+      subscriptionStatus: true,
+      trialEndsAt: true,
+      subscriptionEndsAt: true
+    }
+  });
+  if (!user) return fail(404, "User not found");
+  return ok({
+    ...user,
+    trialEndsAt: user.trialEndsAt?.toISOString() || null,
+    subscriptionEndsAt: user.subscriptionEndsAt?.toISOString() || null
+  });
+}
+
+export async function loadAdminBusinessDesk(id: string) {
+  const business = await prisma.business.findUnique({
+    where: { id },
+    select: { id: true, reviewGating: true, ratingThreshold: true }
+  });
+  if (!business) return fail(404, "Business not found");
+  const [qrs, orders, reviews] = await Promise.all([
+    prisma.qRCode.findMany({
+      where: { businessId: id },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      select: { id: true, shortCode: true, label: true, status: true, scans: true }
+    }),
+    prisma.shopOrder.findMany({
+      where: { businessId: id },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      select: { id: true, status: true, totalPaise: true, invoiceNumber: true, createdAt: true }
+    }),
+    prisma.review.findMany({
+      where: { businessId: id },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      select: { id: true, rating: true, createdAt: true }
+    })
+  ]);
+  return ok({
+    reviewGating: business.reviewGating,
+    ratingThreshold: business.ratingThreshold,
+    qrs,
+    orders: orders.map((row) => ({ ...row, createdAt: row.createdAt.toISOString() })),
+    reviews: reviews.map((row) => ({ ...row, createdAt: row.createdAt.toISOString() }))
+  });
+}
+
 export async function setAdminBusinessActive(id: string, active: boolean) {
   const business = await prisma.business.findUnique({ where: { id }, select: { id: true, isActive: true } });
   if (!business) return fail(404, "Business not found");
