@@ -258,7 +258,8 @@ test("owner signs in, follows setup, filters lists, opens an order, sees plan lo
     await prisma.agentProfile.create({ data: { userId, code: agentCode } });
     await prisma.user.update({ where: { id: userId }, data: { role: "AGENT" } });
     await page.getByRole("button", { name: "Sign out" }).click();
-    await page.goto("/login");
+    await page.waitForURL((url) => url.pathname === "/");
+    await page.goto("/login", { waitUntil: "domcontentloaded" });
     await page.getByLabel("Email").fill(email);
     await page.getByLabel("Password").fill(password);
     await page.getByRole("button", { name: "Sign in" }).click();
