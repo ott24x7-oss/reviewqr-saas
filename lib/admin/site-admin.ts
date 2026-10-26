@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/db";
+import { maskSecret } from "@/lib/admin";
+import { getSiteConfig, getTurnstileConfig } from "@/lib/settings";
 import { CODE_PRESETS } from "@/lib/tap/presets";
 import { readAdminThemes } from "@/lib/tap/theme-store";
 
@@ -12,6 +14,11 @@ export async function loadAdminPlatformBranding(): Promise<PlatformBranding> {
   } catch {
     return EMPTY_BRANDING;
   }
+}
+
+export async function loadAdminWebsiteSettings() {
+  const [site, turnstile, branding] = await Promise.all([getSiteConfig(), getTurnstileConfig(), loadAdminPlatformBranding()]);
+  return { site, turnstile: { ...turnstile, secretKey: maskSecret(turnstile.secretKey) }, branding };
 }
 
 export async function loadAdminThemeSettings() {

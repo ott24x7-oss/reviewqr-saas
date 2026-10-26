@@ -1,11 +1,10 @@
-import { getAiConfig } from "@/lib/settings";
-import { maskSecret } from "@/lib/admin";
+import { loadAdminAiSettings } from "@/lib/admin/channel-settings";
 import { AiConfigForm } from "./ai-form";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminAiPage() {
-  const cfg = await getAiConfig();
+  const cfg = await loadAdminAiSettings();
   return (
     <div className="space-y-5">
       <div>
@@ -17,7 +16,7 @@ export default async function AdminAiPage() {
           in <span className="font-medium text-foreground">Dashboard → Business → AI Reviews</span>.
         </p>
       </div>
-      <AiConfigForm initial={{ ...cfg, apiKey: maskSecret(cfg.apiKey) }} />
+      <AiConfigForm initial={cfg} />
     </div>
   );
 }
