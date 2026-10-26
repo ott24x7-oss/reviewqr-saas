@@ -73,6 +73,50 @@
   }
 }
 
+/* Admin shell tokens. Scoped so the owner app keeps its own palette. */
+.admin-root {
+  --background: 0 0% 98%;
+  --foreground: 240 6% 10%;
+  --card: 0 0% 100%;
+  --card-foreground: 240 6% 10%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 240 6% 10%;
+  --primary: 142 76% 36%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 240 5% 96%;
+  --secondary-foreground: 240 6% 10%;
+  --muted: 240 5% 96%;
+  --muted-foreground: 240 4% 46%;
+  --accent: 142 76% 36%;
+  --accent-foreground: 0 0% 100%;
+  --border: 240 6% 90%;
+  --input: 240 6% 90%;
+  --ring: 142 76% 36%;
+  --radius: 10px;
+  color: hsl(var(--foreground));
+  background: hsl(var(--background));
+}
+
+.admin-root.dark {
+  --background: 240 6% 6%;
+  --foreground: 0 0% 98%;
+  --card: 240 5% 9%;
+  --card-foreground: 0 0% 98%;
+  --popover: 240 5% 9%;
+  --popover-foreground: 0 0% 98%;
+  --primary: 142 71% 45%;
+  --primary-foreground: 144 61% 8%;
+  --secondary: 240 4% 14%;
+  --secondary-foreground: 0 0% 98%;
+  --muted: 240 4% 14%;
+  --muted-foreground: 240 5% 65%;
+  --accent: 142 71% 45%;
+  --accent-foreground: 144 61% 8%;
+  --border: 240 4% 16%;
+  --input: 240 4% 16%;
+  --ring: 142 71% 45%;
+}
+
 @layer components {
   .btn {
     @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;

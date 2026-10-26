@@ -97,7 +97,8 @@ export type AuditAction =
   | "user.reveal"
   | "business.reveal"
   | "shop.order.track"
-  | "inbox.action";
+  | "inbox.action"
+  | "admin.export";
 
 export async function logAudit(opts: {
   userId?: string;
