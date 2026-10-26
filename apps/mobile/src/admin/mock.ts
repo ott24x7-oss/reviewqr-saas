@@ -84,9 +84,15 @@ function seed(): State {
     team: {
       settings: { maxTeamDepth: 2, minSharePercent: 50, maxSharePercent: 90, autoApproveSubAgents: false, tdsPercent: 5, tdsYearlyThresholdPaise: 1500000 },
       agents: [
-        { id: "ap-1", userId: "user-agent-1", name: "Amit Verma", phone: "•••• 4218", status: "ACTIVE", active: true, sharePercent: null, depth: 1, leaderId: null, code: "AMIT7X" },
-        { id: "ap-2", userId: "user-agent-2", name: "Neha Singh", phone: "•••• 1094", status: "PENDING", active: true, sharePercent: 70, depth: 2, leaderId: "ap-1", code: "NEHA3K" },
-        { id: "ap-3", userId: "user-agent-3", name: "Rahul Jain", phone: "•••• 8110", status: "PAUSED", active: true, sharePercent: 60, depth: 2, leaderId: "ap-1", code: "RAHUL9" }
+        { id: "ap-1", userId: "user-agent-1", name: "Amit Verma", phone: "•••• 4218", status: "ACTIVE", active: true, sharePercent: null, depth: 1, leaderId: null, code: "AMIT7X", businessCount: 12 },
+        { id: "ap-2", userId: "user-agent-2", name: "Neha Singh", phone: "•••• 1094", status: "PENDING", active: true, sharePercent: 70, depth: 2, leaderId: "ap-1", code: "NEHA3K", businessCount: 4 },
+        { id: "ap-3", userId: "user-agent-3", name: "Rahul Jain", phone: "•••• 8110", status: "PAUSED", active: true, sharePercent: 60, depth: 2, leaderId: "ap-1", code: "RAHUL9", businessCount: 0 }
+      ],
+      leaderboard: { label: "2026-10", rows: [{ leaderId: "ap-1", name: "Amit Verma", monthSalesPaise: 18340000, overridePaise: 84000 }] },
+      businessCounts: [
+        { agentId: "user-agent-1", name: "Amit Verma", businesses: 12 },
+        { agentId: "user-agent-2", name: "Neha Singh", businesses: 4 },
+        { agentId: "user-agent-3", name: "Rahul Jain", businesses: 0 }
       ]
     },
     orders: [
@@ -269,7 +275,7 @@ export async function adminMockTransport(path: string, request: AdminTransportRe
   const input = body(request);
   if (input === null) return validation("Invalid request");
   const parts = pathname.replace(/^\/+|\/+$/g, "").split("/");
-  const route = `${method} /${parts.map((part, index) => (index > 0 && /^(users|businesses|payments|plans|orders|support|devices)$/.test(parts[index - 1]) ? ":id" : part)).join("/")}`;
+  const route = `${method} /${parts.map((part, index) => (index > 0 && part !== "mine" && /^(users|businesses|payments|plans|orders|support|devices)$/.test(parts[index - 1]) ? ":id" : part)).join("/")}`;
   const id = decodeURIComponent(parts[parts.length - 1] ?? "");
 
   // ----- auth (no bearer) -----
@@ -541,7 +547,29 @@ export async function adminMockTransport(path: string, request: AdminTransportRe
   if (route === "GET /shop/orders/:id") {
     const row = state.orders.find((item) => item.id === id);
     if (!row) return error(404, "NOT_FOUND", "Order not found");
-    const detail: AdminShopOrderDetail = { ...row, paymentStatus: "PAID", subtotalPaise: row.totalPaise, discountPaise: 0, advancePaise: row.totalPaise, balancePaise: 0, buyerLegalName: null, email: "owner@example.in", shipment: null, lines: [{ id: `${row.id}-l1`, sku: "STAND-A5", name: "Acrylic QR stand", qty: 12, unitPaise: Math.round(row.totalPaise / 12), needsNfc: false }] };
+    const unitPaise = Math.round(row.totalPaise / 12);
+    const detail: AdminShopOrderDetail = {
+      ...row,
+      paymentStatus: "PAID",
+      subtotalPaise: row.totalPaise,
+      discountPaise: 0,
+      advancePaise: row.totalPaise,
+      balancePaise: 0,
+      buyerLegalName: null,
+      email: "owner@example.in",
+      shipment: row.status === "PACKED" || row.status === "SHIPPED" ? { awb: "AWB12345", courierName: "Delhivery", provider: "manual", shipmentId: "ship-1" } : null,
+      lines: [{
+        id: `${row.id}-l1`,
+        sku: "STAND-A5",
+        name: "Acrylic QR stand",
+        qty: 12,
+        unitPaise,
+        pricePaise: unitPaise,
+        needsNfc: false,
+        proofUrl: row.status === "PROOF_SENT" ? "https://example.test/proof.png" : null,
+        proofContentType: row.status === "PROOF_SENT" ? "image/png" : null
+      }]
+    };
     return data(detail);
   }
   if (route === "POST /shop/orders/:id") {
@@ -593,7 +621,8 @@ export async function adminMockTransport(path: string, request: AdminTransportRe
   if (route === "GET /whatsapp") {
     const info: AdminWhatsApp = {
       status: state.whatsappStatus, qrPng: null, phoneNumber: "919876542180", error: null, connectedAt: iso(DAY), lastEvent: "connection.open",
-      delivery: { lastAt: iso(120_000), lastChannel: "whatsapp", counts: { whatsapp: 42, email: 3, dev: 0 } }
+      delivery: { lastAt: iso(120_000), lastChannel: "whatsapp", counts: { whatsapp: 42, email: 3, dev: 0 } },
+      cloud: { configured: false, templates: [] }
     };
     return data(info);
   }
@@ -618,6 +647,37 @@ export async function adminMockTransport(path: string, request: AdminTransportRe
     return data({ before, after: state.settings });
   }
 
+  if (route === "GET /me") {
+    return data({ name: "Diwakar Sharma", phoneMasked: "••••4218", device: { name: gate.device.name, status: gate.device.status } });
+  }
+  if (route === "GET /money/summary") {
+    const range = params.get("range") || "30d";
+    if (!["today", "7d", "30d", "mtd", "custom"].includes(range)) return validation("range must be today, 7d, 30d, mtd, or custom");
+    if (range === "custom" && (!params.get("from") || !params.get("to"))) return validation("Use from and to as YYYY-MM-DD");
+    return data({ range, collectedPaise: 2499000, refundsPaise: 0, pendingCommissionsPaise: 620000, approvedUnpaidPaise: 1000000, paidThisFyPaise: 950000, tdsThisFyPaise: 50000 });
+  }
+  if (route === "GET /payouts") {
+    const items = [
+      { id: "payout-2", agentId: "user-agent-1", agentName: "Amit Verma", grossPaise: 1000000, tdsPaise: 50000, netPaise: 950000, utr: "UTR998877", paidAt: iso(DAY) },
+      { id: "payout-1", agentId: "user-agent-2", agentName: "Neha Singh", grossPaise: 200000, tdsPaise: 0, netPaise: 200000, utr: "UTR112233", paidAt: iso(2 * DAY) }
+    ];
+    const cursor = params.get("cursor");
+    const start = cursor ? items.findIndex((row) => row.id === cursor) + 1 : 0;
+    const page = items.slice(Math.max(0, start), Math.max(0, start) + 20);
+    return data({ items: page, nextCursor: null });
+  }
+  if (route === "GET /devices/mine") {
+    return data({
+      devices: [...state.devices.values()].map((device) => ({
+        id: device.id,
+        name: device.name,
+        platform: device.platform,
+        status: device.status,
+        lastSeenAt: iso(60_000),
+        current: device.id === gate.device.id
+      }))
+    });
+  }
   if (route === "GET /devices") return data({ devices: state.adminDevices });
   if (route === "POST /devices/:id") {
     if (input.action !== "approve" && input.action !== "revoke") return validation("Invalid request");
@@ -626,9 +686,12 @@ export async function adminMockTransport(path: string, request: AdminTransportRe
       if (denied) return denied;
     }
     const row = state.adminDevices.find((item) => item.id === id);
-    if (!row) return error(404, "NOT_FOUND", "Device not found");
-    if (input.action === "approve" && row.status === "REVOKED") return validation("Revoked devices need a new sign-in");
-    row.status = input.action === "approve" ? "ACTIVE" : "REVOKED";
+    const own = state.devices.get(id);
+    if (!row && !own) return error(404, "NOT_FOUND", "Device not found");
+    if (input.action === "approve" && (row?.status === "REVOKED" || own?.status === "REVOKED")) return validation("Revoked devices need a new sign-in");
+    const next = input.action === "approve" ? "ACTIVE" : "REVOKED";
+    if (row) row.status = next;
+    if (own) own.status = next;
     return data({ devices: state.adminDevices });
   }
 

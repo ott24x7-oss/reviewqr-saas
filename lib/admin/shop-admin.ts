@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { moveShopOrder } from "@/lib/shop/order-move";
 import { isShopOrderStatus, moveError, SHOP_ORDER_STATUSES } from "@/lib/shop/order-status";
 import { maskPhone } from "./mask";
+import { publicShopProof } from "./shop-proof";
 
 const STATUSES = new Set<string>(SHOP_ORDER_STATUSES);
 
@@ -87,7 +88,12 @@ export async function loadAdminShopOrder(id: string) {
     phone: maskPhone(order.user.phone),
     createdAt: order.createdAt.toISOString(),
     shipment: order.shipment
-      ? { awb: order.shipment.awb, courierName: order.shipment.courierName, provider: order.shipment.provider }
+      ? {
+          awb: order.shipment.awb,
+          courierName: order.shipment.courierName,
+          provider: order.shipment.provider,
+          shipmentId: order.shipment.shipmentId
+        }
       : null,
     lines: order.lines.map((line) => ({
       id: line.id,
@@ -95,7 +101,9 @@ export async function loadAdminShopOrder(id: string) {
       name: line.name,
       qty: line.qty,
       unitPaise: line.unitPaise,
-      needsNfc: line.needsNfc
+      pricePaise: line.unitPaise,
+      needsNfc: line.needsNfc,
+      ...publicShopProof(order.id, line.id, line.proofUrl)
     }))
   });
 }

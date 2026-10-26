@@ -248,8 +248,16 @@ export type AdminTeamAgent = {
   /** Leader's agent profile id. */
   leaderId: string | null;
   code: string;
+  businessCount: number;
 };
-export type AdminTeam = { settings: AdminTeamSettings; agents: AdminTeamAgent[] };
+export type AdminTeamLeader = { leaderId: string; name: string; monthSalesPaise: number; overridePaise: number };
+export type AdminTeamBusinessCount = { agentId: string; name: string; businesses: number };
+export type AdminTeam = {
+  settings: AdminTeamSettings;
+  agents: AdminTeamAgent[];
+  leaderboard: { label: string; rows: AdminTeamLeader[] };
+  businessCounts: AdminTeamBusinessCount[];
+};
 export type AdminTeamActionBody = z.input<typeof adminTeamActionSchema>;
 
 // ---------- shop ----------
@@ -284,8 +292,8 @@ export type AdminShopOrderDetail = {
   email: string;
   phone: string;
   createdAt: string;
-  shipment: { awb: string | null; courierName: string | null; provider: string } | null;
-  lines: { id: string; sku: string; name: string; qty: number; unitPaise: number; needsNfc: boolean }[];
+  shipment: { awb: string | null; courierName: string | null; provider: string; shipmentId: string | null } | null;
+  lines: { id: string; sku: string; name: string; qty: number; unitPaise: number; pricePaise: number; needsNfc: boolean; proofUrl: string | null; proofContentType: string | null }[];
 };
 export type AdminShopActionBody = z.input<typeof adminShopActionSchema>;
 export type AdminShopTracked = { moved: boolean; awb: string; status: string };
@@ -320,8 +328,10 @@ export type AdminWhatsAppInfo = {
   connectedAt: string | null;
   lastEvent: string | null;
 };
+export type AdminWhatsAppTemplate = { name: string; language: string; status: string };
 export type AdminWhatsApp = AdminWhatsAppInfo & {
   delivery: { lastAt: string | null; lastChannel: string | null; counts: { whatsapp: number; email: number; dev: number } };
+  cloud: { configured: boolean; templates: AdminWhatsAppTemplate[] };
 };
 export type AdminWhatsAppTestResult = { via: string; to: string };
 
@@ -342,6 +352,38 @@ export type AdminSettings = {
   notify: AdminNotifyPrefs;
 };
 export type AdminSettingsPatch = z.input<typeof adminSettingsPatchSchema>;
+export type AdminMe = {
+  name: string;
+  phoneMasked: string;
+  device: { name: string; status: AdminDeviceStatus };
+};
+export type AdminMyDevice = {
+  id: string;
+  name: string;
+  platform: string;
+  status: AdminDeviceStatus;
+  lastSeenAt: string | null;
+  current: boolean;
+};
+export type AdminMoneySummary = {
+  range: AdminRange;
+  collectedPaise: number;
+  refundsPaise: number;
+  pendingCommissionsPaise: number;
+  approvedUnpaidPaise: number;
+  paidThisFyPaise: number;
+  tdsThisFyPaise: number;
+};
+export type AdminPayout = {
+  id: string;
+  agentId: string;
+  agentName: string;
+  grossPaise: number;
+  tdsPaise: number;
+  netPaise: number;
+  utr: string;
+  paidAt: string;
+};
 export type AdminDeviceRow = {
   id: string;
   name: string;

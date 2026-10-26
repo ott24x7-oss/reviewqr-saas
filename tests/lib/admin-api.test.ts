@@ -22,11 +22,26 @@ import { POST as whatsAppTestPost } from "../../app/api/v1/admin/whatsapp/test/r
 import { GET as settingsGet, PUT as settingsPut } from "../../app/api/v1/admin/settings/route";
 import { GET as auditGet } from "../../app/api/v1/admin/audit/route";
 import { GET as devicesGet } from "../../app/api/v1/admin/devices/route";
+import { POST as devicePost } from "../../app/api/v1/admin/devices/[id]/route";
+import { GET as meGet } from "../../app/api/v1/admin/me/route";
+import { GET as mineGet } from "../../app/api/v1/admin/devices/mine/route";
+import { GET as summaryGet } from "../../app/api/v1/admin/money/summary/route";
+import { GET as payoutsGet } from "../../app/api/v1/admin/payouts/route";
+import { GET as proofGet } from "../../app/api/shop-proof/route";
 import { signAccessToken, STEP_UP_TTL_SEC } from "../../lib/auth/access-token";
 import { issueAdminTokenPair, issueTokenPair } from "../../lib/auth/sessions";
 import { encryptSecret } from "../../lib/crypto";
 import { prisma } from "../../lib/db";
 import { openApiDocument } from "../../lib/api/openapi";
+import {
+  adminMeSchema,
+  adminMoneySummarySchema,
+  adminMyDevicesSchema,
+  adminPayoutsPageSchema,
+  adminShopOrderDetailSchema,
+  adminTeamResponseSchema,
+  adminWhatsAppStatusSchema
+} from "@reviewqr/shared";
 
 const stamp = Date.now();
 const phone = `98000${String(stamp).slice(-5)}`;
@@ -48,6 +63,7 @@ let profileId = "";
 let orderId = "";
 let ticketId = "";
 let pendingDeviceId = "";
+const proofBytes = Buffer.from("shop-proof-bytes");
 
 function call(path: string, opts: { method?: string; body?: unknown; token?: string; step?: string } = {}) {
   const method = opts.method || (opts.body === undefined ? "GET" : "POST");
@@ -174,6 +190,28 @@ describe("admin api", () => {
     });
     orderId = order.id;
     orderIds.push(order.id);
+    await prisma.shopOrderLine.create({
+      data: {
+        orderId: order.id,
+        sku: "STAND",
+        name: "Acrylic stand",
+        qty: 2,
+        unitPaise: 50,
+        hsn: "4911",
+        gstPercent: 0,
+        discountPaise: 0,
+        netPaise: 100,
+        taxablePaise: 100,
+        cgstPaise: 0,
+        sgstPaise: 0,
+        igstPaise: 0,
+        ships: true,
+        needsDesign: false,
+        needsNfc: false,
+        weightGrams: 200,
+        proofUrl: `data:image/png;base64,${proofBytes.toString("base64")}`
+      }
+    });
     const ticket = await prisma.supportTicket.create({
       data: { userId: person.id, subject: `Help ${stamp}`, status: "OPEN" }
     });
@@ -182,6 +220,7 @@ describe("admin api", () => {
 
   afterAll(async () => {
     await prisma.shopShipment.deleteMany({ where: { orderId: { in: orderIds } } });
+    await prisma.shopOrderLine.deleteMany({ where: { orderId: { in: orderIds } } });
     await prisma.shopOrder.deleteMany({ where: { id: { in: orderIds } } });
     await prisma.shopCommission.deleteMany({ where: { agentId: { in: users } } });
     await prisma.commissionPayout.deleteMany({ where: { agentId: { in: users } } });
@@ -219,7 +258,11 @@ describe("admin api", () => {
       ["/api/v1/admin/whatsapp", whatsAppGet],
       ["/api/v1/admin/settings", settingsGet],
       ["/api/v1/admin/audit", auditGet],
-      ["/api/v1/admin/devices", devicesGet]
+      ["/api/v1/admin/devices", devicesGet],
+      ["/api/v1/admin/me", meGet],
+      ["/api/v1/admin/devices/mine", mineGet],
+      ["/api/v1/admin/money/summary?range=30d", summaryGet],
+      ["/api/v1/admin/payouts", payoutsGet]
     ];
     for (const [path, handler] of gets) {
       const res = await handler(call(path, { token: ownerToken }), { params: { id: personId } });
@@ -614,6 +657,213 @@ describe("admin api", () => {
     expect((await auditRow("settings.admin", adminId))?.deviceId).toBe(deviceId);
     const view = await settingsGet(call("/api/v1/admin/settings", { token: adminToken }));
     expect((await view.json()).data.notify.signup).toBe(false);
+    const cloudBody = await whatsAppGet(call("/api/v1/admin/whatsapp", { token: adminToken }));
+    const cloud = await cloudBody.json();
+    expect(adminWhatsAppStatusSchema.safeParse(cloud.data).success).toBe(true);
+    expect(cloud.data.cloud.configured).toEqual(expect.any(Boolean));
+    expect(Array.isArray(cloud.data.cloud.templates)).toBe(true);
+    const raw = JSON.stringify(cloud);
+    expect(raw).not.toContain("apiToken");
+    expect(raw).not.toContain("Bearer ");
+    if (cloud.data.cloud.configured) {
+      for (const template of cloud.data.cloud.templates) {
+        expect(template.name).toEqual(expect.any(String));
+        expect(template.language).toEqual(expect.any(String));
+        expect(template.status).toEqual(expect.any(String));
+      }
+    } else {
+      expect(cloud.data.cloud.templates).toEqual([]);
+    }
+  });
+
+  it("returns the signed-in admin and only their devices", async () => {
+    const anon = await meGet(call("/api/v1/admin/me"));
+    expect(anon.status).toBe(401);
+    const pendingToken = signAccessToken(
+      { sub: adminId, role: "ADMIN", aud: "admin", deviceId: pendingDeviceId },
+      undefined,
+      undefined,
+      600
+    );
+    const pending = await meGet(call("/api/v1/admin/me", { token: pendingToken }));
+    expect(pending.status).toBe(403);
+    expect((await pending.json()).error.code).toBe("DEVICE_PENDING");
+
+    const me = await meGet(call("/api/v1/admin/me", { token: adminToken }));
+    expect(me.status).toBe(200);
+    const profile = await me.json();
+    expect(adminMeSchema.safeParse(profile.data).success).toBe(true);
+    expect(profile.data.name).toBe("Api Admin");
+    expect(profile.data.phoneMasked).toBe(`••••${phone.slice(-4)}`);
+    expect(profile.data.device).toEqual({ name: "Api phone", status: "ACTIVE" });
+    const profileRaw = JSON.stringify(profile);
+    expect(profileRaw).not.toContain(phone);
+    expect(profileRaw).not.toContain(`admin-api-${stamp}@example.test`);
+
+    const other = await prisma.user.create({
+      data: { email: `other-admin-${stamp}@example.test`, role: "ADMIN", name: "Other Admin", phone: "9000011111" }
+    });
+    users.push(other.id);
+    const foreign = await prisma.adminDevice.create({
+      data: { userId: other.id, name: "Foreign phone", platform: "ios", status: "ACTIVE" }
+    });
+    const spare = await prisma.adminDevice.create({
+      data: { userId: adminId, name: "Spare phone", platform: "android", status: "ACTIVE" }
+    });
+    const mine = await mineGet(call("/api/v1/admin/devices/mine", { token: adminToken }));
+    expect(mine.status).toBe(200);
+    const listed = await mine.json();
+    expect(adminMyDevicesSchema.safeParse(listed.data).success).toBe(true);
+    const ids = listed.data.devices.map((row: { id: string }) => row.id);
+    expect(ids).toContain(deviceId);
+    expect(ids).toContain(spare.id);
+    expect(ids).not.toContain(foreign.id);
+    expect(listed.data.devices.find((row: { id: string }) => row.id === deviceId).current).toBe(true);
+    expect(JSON.stringify(listed)).not.toContain("Other Admin");
+    expect(JSON.stringify(listed)).not.toContain("9000011111");
+    expect(JSON.stringify(listed)).not.toContain(`other-admin-${stamp}@example.test`);
+
+    const revoked = await devicePost(
+      call(`/api/v1/admin/devices/${spare.id}`, { token: adminToken, body: { action: "revoke" } }),
+      { params: { id: spare.id } }
+    );
+    expect(revoked.status).toBe(200);
+    const after = await mineGet(call("/api/v1/admin/devices/mine", { token: adminToken }));
+    const afterBody = await after.json();
+    expect(afterBody.data.devices.find((row: { id: string }) => row.id === spare.id).status).toBe("REVOKED");
+    expect((await prisma.adminDevice.findUnique({ where: { id: deviceId } }))?.status).toBe("ACTIVE");
+  });
+
+  it("summarises money from the database and pages payout history", async () => {
+    const denied = await summaryGet(call("/api/v1/admin/money/summary"));
+    expect(denied.status).toBe(401);
+    const badRange = await summaryGet(call("/api/v1/admin/money/summary?range=nope", { token: adminToken }));
+    expect(badRange.status).toBe(400);
+    const badCustom = await summaryGet(call("/api/v1/admin/money/summary?range=custom", { token: adminToken }));
+    expect(badCustom.status).toBe(400);
+
+    const beforeRes = await summaryGet(call("/api/v1/admin/money/summary?range=today", { token: adminToken }));
+    expect(beforeRes.status).toBe(200);
+    const before = (await beforeRes.json()).data;
+    expect(adminMoneySummarySchema.safeParse(before).success).toBe(true);
+
+    const collected = await prisma.payment.create({
+      data: { userId: personId, amount: 888, status: "COMPLETED", tier: "STARTER", provider: "MANUAL", planId }
+    });
+    const refunded = await prisma.payment.create({
+      data: { userId: personId, amount: 777, status: "REFUNDED", tier: "STARTER", provider: "MANUAL", planId }
+    });
+    paymentIds.push(collected.id, refunded.id);
+    await prisma.shopCommission.create({
+      data: { agentId, kind: "SALE", sourceId: `pend-${stamp}`, amountPaise: 321, percent: 10, status: "PENDING" }
+    });
+    await prisma.shopCommission.create({
+      data: { agentId, kind: "SALE", sourceId: `appr-${stamp}`, amountPaise: 555, percent: 10, status: "APPROVED" }
+    });
+    const note = `secret-note-${stamp}`;
+    await prisma.commissionPayout.create({
+      data: {
+        agentId,
+        amountPaise: 377,
+        grossPaise: 377,
+        tdsPaise: 44,
+        netPaise: 333,
+        utr: `UTR${String(stamp).slice(-8)}`,
+        paidAt: new Date(),
+        note
+      }
+    });
+
+    const afterRes = await summaryGet(call("/api/v1/admin/money/summary?range=today", { token: adminToken }));
+    const after = (await afterRes.json()).data;
+    expect(after.collectedPaise - before.collectedPaise).toBe(888);
+    expect(after.refundsPaise - before.refundsPaise).toBe(777);
+    expect(after.pendingCommissionsPaise - before.pendingCommissionsPaise).toBe(321);
+    expect(after.approvedUnpaidPaise - before.approvedUnpaidPaise).toBe(555);
+    expect(after.paidThisFyPaise - before.paidThisFyPaise).toBe(333);
+    expect(after.tdsThisFyPaise - before.tdsThisFyPaise).toBe(44);
+
+    const page = await payoutsGet(call("/api/v1/admin/payouts?limit=20", { token: adminToken }));
+    expect(page.status).toBe(200);
+    const history = await page.json();
+    expect(adminPayoutsPageSchema.safeParse(history.data).success).toBe(true);
+    const row = history.data.items.find((item: { utr: string }) => item.utr === `UTR${String(stamp).slice(-8)}`);
+    expect(row).toMatchObject({ agentName: "Api Agent", grossPaise: 377, tdsPaise: 44, netPaise: 333 });
+    expect(row).not.toHaveProperty("phone");
+    expect(row).not.toHaveProperty("note");
+    expect(row).not.toHaveProperty("email");
+    expect(JSON.stringify(history)).not.toContain(note);
+    expect(JSON.stringify(history)).not.toContain(phone);
+
+    await prisma.commissionPayout.create({
+      data: {
+        agentId,
+        amountPaise: 100,
+        grossPaise: 100,
+        tdsPaise: 0,
+        netPaise: 100,
+        utr: `UTR${String(stamp).slice(-6)}B`,
+        paidAt: new Date(),
+        note: `secret-note-b-${stamp}`
+      }
+    });
+    const first = await payoutsGet(call("/api/v1/admin/payouts?limit=1", { token: adminToken }));
+    const firstBody = (await first.json()).data;
+    expect(firstBody.items).toHaveLength(1);
+    expect(firstBody.nextCursor).toEqual(expect.any(String));
+    expect(JSON.stringify(firstBody)).not.toContain(`secret-note-b-${stamp}`);
+    const second = await payoutsGet(call(`/api/v1/admin/payouts?limit=1&cursor=${encodeURIComponent(firstBody.nextCursor)}`, { token: adminToken }));
+    expect(second.status).toBe(200);
+    const secondBody = (await second.json()).data;
+    expect(secondBody.items).toHaveLength(1);
+    expect(secondBody.items[0].id).not.toBe(firstBody.items[0].id);
+    const badCursor = await payoutsGet(call("/api/v1/admin/payouts?cursor=not-a-cursor", { token: adminToken }));
+    expect(badCursor.status).toBe(400);
+  });
+
+  it("adds the leaderboard and business counts to the team", async () => {
+    await prisma.business.update({ where: { id: businessId }, data: { agentId } });
+    await prisma.shopCommission.create({
+      data: { agentId, kind: "TEAM_OVERRIDE", sourceId: `ovr-${stamp}`, amountPaise: 4242, percent: 0, status: "APPROVED" }
+    });
+    const team = await teamGet(call("/api/v1/admin/agents/team", { token: adminToken }));
+    expect(team.status).toBe(200);
+    const body = await team.json();
+    expect(adminTeamResponseSchema.safeParse(body.data).success).toBe(true);
+    const agent = body.data.agents.find((row: { id: string }) => row.id === profileId);
+    expect(agent.businessCount).toBeGreaterThanOrEqual(1);
+    expect(agent.phone === "" || agent.phone.startsWith("••••")).toBe(true);
+    const counted = body.data.businessCounts.find((row: { agentId: string }) => row.agentId === agentId);
+    expect(counted.businesses).toBeGreaterThanOrEqual(1);
+    expect(counted.name).toBe("Api Agent");
+    const leader = body.data.leaderboard.rows.find((row: { leaderId: string }) => row.leaderId === profileId);
+    expect(leader.monthSalesPaise).toBeGreaterThanOrEqual(10000);
+    expect(leader.overridePaise).toBeGreaterThanOrEqual(4242);
+    expect(leader).not.toHaveProperty("email");
+    expect(leader).not.toHaveProperty("phone");
+  });
+
+  it("returns shop lines, a short-lived proof, and shipment fields", async () => {
+    const detail = await orderGet(call(`/api/v1/admin/shop/orders/${orderId}`, { token: adminToken }), { params: { id: orderId } });
+    expect(detail.status).toBe(200);
+    const body = await detail.json();
+    expect(adminShopOrderDetailSchema.safeParse(body.data).success).toBe(true);
+    const raw = JSON.stringify(body);
+    expect(raw).not.toContain("base64");
+    expect(raw).not.toContain(`98111${String(stamp).slice(-5)}`);
+    const line = body.data.lines.find((row: { name: string }) => row.name === "Acrylic stand");
+    expect(line).toMatchObject({ qty: 2, pricePaise: 50, unitPaise: 50, proofContentType: "image/png" });
+    expect(line.proofUrl).toContain("/api/shop-proof");
+    expect(body.data.shipment).toEqual(expect.objectContaining({ awb: "AWB12345", courierName: "Manual", provider: "manual", shipmentId: "AWB12345" }));
+
+    const file = await proofGet(new NextRequest(line.proofUrl));
+    expect(file.status).toBe(200);
+    expect(file.headers.get("content-type")).toBe("image/png");
+    expect(Buffer.from(await file.arrayBuffer()).equals(proofBytes)).toBe(true);
+    const badUrl = new URL(line.proofUrl);
+    badUrl.searchParams.set("sig", "tampered-signature");
+    const bad = await proofGet(new NextRequest(badUrl));
+    expect(bad.status).toBe(401);
   });
 
   it("publishes the admin paths", () => {
@@ -635,7 +885,11 @@ describe("admin api", () => {
       "/api/v1/admin/whatsapp/reconnect",
       "/api/v1/admin/settings",
       "/api/v1/admin/audit",
-      "/api/v1/admin/devices/{id}"
+      "/api/v1/admin/devices/{id}",
+      "/api/v1/admin/me",
+      "/api/v1/admin/devices/mine",
+      "/api/v1/admin/money/summary",
+      "/api/v1/admin/payouts"
     ]) {
       expect(doc.paths?.[path], path).toBeTruthy();
     }
