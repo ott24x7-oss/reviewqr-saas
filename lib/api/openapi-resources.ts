@@ -34,7 +34,20 @@ import {
   staffRenameSchema,
   staffInviteSchema,
   agentOnboardSchema,
-  themeActionSchema
+  themeActionSchema,
+  agentHomeSchema,
+  agentBusinessesSchema,
+  agentCommissionsSchema,
+  agentPayoutsSchema,
+  agentProfileSchema,
+  agentProfilePutSchema,
+  agentTeamSchema,
+  agentInviteBodySchema,
+  agentInviteResultSchema,
+  agentMemberPatchSchema,
+  agentMemberDetailSchema,
+  agentJoinBodySchema,
+  agentJoinResultSchema
 } from "@reviewqr/shared";
 import { businessSchema, qrCodeSchema } from "../validations";
 
@@ -639,5 +652,94 @@ export function registerResourcePaths(registry: OpenAPIRegistry, errorRef: JsonS
     security: bearer,
     request: jsonBody(agentOnboardSchema),
     responses: { 200: jsonResponse("Started", dataSchema(loose)), 400: validation, 401: unauthorized, 403: forbidden }
+  });
+  const agentResponses = { 401: unauthorized, 403: forbidden, 404: notFound };
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/agent/home",
+    summary: "Agent earnings, business count, and team summary",
+    security: bearer,
+    responses: { 200: jsonResponse("Agent home", dataSchema(agentHomeSchema)), ...agentResponses }
+  });
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/agent/businesses",
+    summary: "Businesses this agent brought in. No customer contact details.",
+    security: bearer,
+    responses: { 200: jsonResponse("Businesses", dataSchema(agentBusinessesSchema)), ...agentResponses }
+  });
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/agent/commissions",
+    summary: "Commission ledger, including team overrides",
+    security: bearer,
+    request: { query: pageQuery },
+    responses: { 200: jsonResponse("Commissions", dataSchema(agentCommissionsSchema)), 400: validation, ...agentResponses }
+  });
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/agent/payouts",
+    summary: "Payout statement with gross, TDS, and net",
+    security: bearer,
+    responses: { 200: jsonResponse("Payouts", dataSchema(agentPayoutsSchema)), ...agentResponses }
+  });
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/agent/profile",
+    summary: "Agent profile. PAN is masked to the last 4.",
+    security: bearer,
+    responses: { 200: jsonResponse("Profile", dataSchema(agentProfileSchema)), ...agentResponses }
+  });
+  registry.registerPath({
+    method: "put",
+    path: "/api/v1/agent/profile",
+    summary: "Update name, city, UPI, PAN, and bank details",
+    security: bearer,
+    request: jsonBody(agentProfilePutSchema),
+    responses: { 200: jsonResponse("Profile", dataSchema(agentProfileSchema)), 400: validation, ...agentResponses }
+  });
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/agent/team",
+    summary: "Team members, caps, and the current invite link",
+    security: bearer,
+    responses: { 200: jsonResponse("Team", dataSchema(agentTeamSchema)), ...agentResponses }
+  });
+  registry.registerPath({
+    method: "post",
+    path: "/api/v1/agent/team/invite",
+    summary: "Create a team invite. A phone also sends WhatsApp. Limited to 10 an hour.",
+    security: bearer,
+    request: jsonBody(agentInviteBodySchema),
+    responses: {
+      200: jsonResponse("Invite", dataSchema(agentInviteResultSchema)),
+      400: validation,
+      429: rateLimit,
+      ...agentResponses
+    }
+  });
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/agent/team/{memberId}",
+    summary: "A member's stats and last 20 sales. Only their leader can call this.",
+    security: bearer,
+    request: { params: z.object({ memberId: z.string() }) },
+    responses: { 200: jsonResponse("Member", dataSchema(agentMemberDetailSchema)), ...agentResponses }
+  });
+  registry.registerPath({
+    method: "patch",
+    path: "/api/v1/agent/team/{memberId}",
+    summary: "Set a member's share or pause and resume them. Only their leader.",
+    security: bearer,
+    request: { params: z.object({ memberId: z.string() }), ...jsonBody(agentMemberPatchSchema) },
+    responses: { 200: jsonResponse("Updated", dataSchema(loose)), 400: validation, ...agentResponses }
+  });
+  registry.registerPath({
+    method: "post",
+    path: "/api/v1/agent/join",
+    summary: "Join a team with an invite code. There is no joining fee.",
+    security: bearer,
+    request: jsonBody(agentJoinBodySchema),
+    responses: { 200: jsonResponse("Joined", dataSchema(agentJoinResultSchema)), 400: validation, 401: unauthorized }
   });
 }
