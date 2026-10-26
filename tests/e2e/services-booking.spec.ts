@@ -100,3 +100,87 @@ test("a customer books a service and the owner sees the request", async ({ page 
     await prisma.$disconnect();
   }
 });
+
+test("a store-only business does not show booking buttons", async ({ page }) => {
+  test.setTimeout(120_000);
+  const stamp = Date.now();
+  const email = `svc-lock-${stamp}@example.com`;
+  const code = `sl${String(stamp).slice(-8)}`;
+  const slug = `store-only-${stamp}`;
+  const prisma = new PrismaClient({ datasources: { db: { url: databaseUrl() } } });
+  let userId = "";
+  let planId = "";
+
+  try {
+    const owner = await prisma.user.create({
+      data: {
+        email,
+        role: "USER",
+        subscriptionTier: "STARTER",
+        subscriptionStatus: "ACTIVE",
+        subscriptionEndsAt: new Date("2027-08-01T00:00:00.000Z")
+      }
+    });
+    userId = owner.id;
+    const plan = await prisma.plan.create({
+      data: {
+        nameEn: "Store only",
+        nameHi: "Store only",
+        slug: `e2e-store-${stamp}`,
+        modules: ["STORE"],
+        limits: { businesses: 5, qrCodes: 10, products: 50, staff: 5, aiCalls: 10, storeProducts: 50, storeOrders: 50 },
+        legacyTier: "STARTER",
+        visibleOnPricingPage: false
+      }
+    });
+    planId = plan.id;
+    await prisma.subscription.create({
+      data: {
+        userId: owner.id,
+        planId: plan.id,
+        modules: ["STORE"],
+        limits: { businesses: 5 },
+        tier: "STARTER",
+        status: "ACTIVE",
+        endsAt: owner.subscriptionEndsAt
+      }
+    });
+    const business = await prisma.business.create({
+      data: {
+        ownerId: owner.id,
+        name: "Store Only Salon",
+        slug,
+        catalogMode: "SERVICES",
+        whatsappNumber: "9876543210"
+      }
+    });
+    await prisma.menuItem.create({
+      data: {
+        businessId: business.id,
+        name: "Haircut",
+        pricePaise: 30000,
+        durationMinutes: 45,
+        kind: "SERVICE",
+        priceType: "FIXED",
+        bookable: true
+      }
+    });
+    await prisma.qRCode.create({
+      data: { businessId: business.id, label: "Desk", shortCode: code, status: "ACTIVE", isActive: true }
+    });
+
+    await page.goto(`/q/${code}/menu`);
+    await expect(page.getByTestId("services-unavailable")).toBeVisible();
+    await expect(page.getByText("Services are not available on this page.")).toBeVisible();
+    await expect(page.getByTestId("services-board")).toHaveCount(0);
+    await expect(page.getByTestId("book-open")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Book" })).toHaveCount(0);
+  } finally {
+    if (userId) {
+      await prisma.qRCode.deleteMany({ where: { shortCode: code } });
+      await prisma.user.delete({ where: { id: userId } });
+    }
+    if (planId) await prisma.plan.delete({ where: { id: planId } });
+    await prisma.$disconnect();
+  }
+});

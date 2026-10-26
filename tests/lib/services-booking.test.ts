@@ -36,6 +36,8 @@ import { issueTokenPair } from "../../lib/auth/sessions";
 import { runClaimedJob } from "../../lib/jobs/dispatch";
 import { prisma } from "../../lib/db";
 import { runMenuAction } from "../../lib/store/menu-action";
+import { publicCatalogue } from "../../lib/store/public-catalogue";
+import { publicServicesView } from "../../lib/tap/services-gate";
 import { backfillServiceKinds } from "../../lib/store/service-backfill";
 
 const userIds: string[] = [];
@@ -496,6 +498,61 @@ describe("service booking", () => {
     const listed = await v1List(bearer(`/api/v1/bookings?businessId=${business.id}`, pair.accessToken));
     expect(listed.status).toBe(403);
     expect((await listed.json()).feature).toBe("services-booking");
+  });
+
+  it("keeps the product catalogue when Store is on and booking is locked", async () => {
+    const stamp = Date.now().toString(36);
+    const owner = await prisma.user.create({
+      data: {
+        email: `svc-store-${stamp}@example.test`,
+        role: "USER",
+        subscriptionTier: "STARTER",
+        subscriptionStatus: "ACTIVE",
+        subscriptionEndsAt: new Date("2027-08-01T00:00:00.000Z")
+      }
+    });
+    userIds.push(owner.id);
+    const plan = await prisma.plan.create({
+      data: {
+        nameEn: "Store only",
+        nameHi: "Store only",
+        slug: `svc-store-${stamp}`,
+        modules: ["STORE"],
+        limits: { businesses: 5, qrCodes: 10, products: 50, staff: 5, aiCalls: 10, storeProducts: 50, storeOrders: 50 },
+        legacyTier: "STARTER",
+        visibleOnPricingPage: false
+      }
+    });
+    planIds.push(plan.id);
+    await prisma.subscription.create({
+      data: {
+        userId: owner.id,
+        planId: plan.id,
+        modules: ["STORE"],
+        limits: { businesses: 5 },
+        tier: "STARTER",
+        status: "ACTIVE",
+        endsAt: owner.subscriptionEndsAt
+      }
+    });
+    const business = await prisma.business.create({
+      data: {
+        ownerId: owner.id,
+        name: "Store only",
+        slug: `svc-store-${stamp}`,
+        catalogMode: "SERVICES"
+      }
+    });
+    businessIds.push(business.id);
+    const catalogue = await publicCatalogue(owner.id);
+    expect(catalogue).toEqual({ showCatalogue: true, canOrder: true, canBookServices: false });
+    const mode = await prisma.business.findUnique({ where: { id: business.id } });
+    expect(mode?.catalogMode).toBe("SERVICES");
+    expect(publicServicesView({ catalogMode: "SERVICES", canBookServices: catalogue.canBookServices })).toBe("message");
+    expect(publicServicesView({ catalogMode: "BOTH", canBookServices: false })).toBe("menu");
+    expect(publicServicesView({ catalogMode: "MENU", view: "services", canBookServices: false })).toBe("menu");
+    expect(publicServicesView({ catalogMode: "MENU", canBookServices: true })).toBe("menu");
+    expect(publicServicesView({ catalogMode: "SERVICES", canBookServices: true })).toBe("board");
   });
 });
 

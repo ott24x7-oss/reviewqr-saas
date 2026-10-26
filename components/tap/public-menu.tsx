@@ -78,6 +78,7 @@ export async function PublicMenu({
   const catalogue = profile ? await publicCatalogue(profile.ownerId) : null;
   const showCatalogue = !!catalogue?.showCatalogue;
   const canOrder = !!catalogue?.canOrder;
+  const canBookServices = !!catalogue?.canBookServices;
   if (!showCatalogue) {
     return <PublicTap code={code} channel={channel} countScan={false} />;
   }
@@ -146,6 +147,7 @@ export async function PublicMenu({
         logoUrl={profile?.logo || ""}
         homeHref={homeHref}
         canOrder={canOrder}
+        canBookServices={canBookServices}
         askBase={whatsAppNumberUrl(record.business.whatsappNumber) || ""}
         catalogMode={profile?.catalogMode || "MENU"}
         initialView={view}
