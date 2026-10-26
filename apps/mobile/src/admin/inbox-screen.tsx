@@ -91,7 +91,7 @@ export function AdminInboxScreen() {
 
   return (
     <AdminFrame title={t.inbox} subtitle={`${t.inboxSubtitle} · ${total}`} refreshing={inboxQuery.isRefetching} onRefresh={() => inboxQuery.refetch()}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.segmentRow}>
+      <ScrollView horizontal testID="admin-inbox-segments" showsHorizontalScrollIndicator={false} style={styles.segmentScroll} contentContainerStyle={styles.segmentRow}>
         {INBOX_SEGMENTS.map((key) => <AdminChip key={key} label={`${labels[key]} · ${inbox?.counts[key] ?? 0}`} selected={segment === key} onPress={() => selectSegment(key)} />)}
       </ScrollView>
       {pendingAgents.length > 1 ? <AdminAction label={t.approveAll} onPress={() => perform(pendingAgents, "approve").catch(() => undefined)} disabled={workingId === "bulk"} icon={workingId === "bulk" ? <ActivityIndicator color={palette.onPrimary} /> : <ShieldCheck color={palette.onPrimary} size={17} />} /> : null}
@@ -140,5 +140,5 @@ function actionLabel(action: InboxButton, t: ReturnType<typeof useAdminCopy>) {
 }
 
 const styles = StyleSheet.create({
-  segmentRow: { gap: 7, paddingBottom: 2 }, itemCard: { gap: 12 }, itemTop: { flexDirection: "row", alignItems: "flex-start", gap: 12 }, itemTitle: { fontFamily: fonts.bodyStrong, fontSize: 16 }, itemSubtitle: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18 }, itemMeta: { flexDirection: "row", alignItems: "center", gap: 10, flexWrap: "wrap" }, metaText: { fontFamily: fonts.body, fontSize: 11 }, amount: { marginLeft: "auto", fontFamily: fonts.bodyStrong, fontSize: 14 }, actions: { flexDirection: "row", gap: 8 }, swipeHint: { fontFamily: fonts.body, fontSize: 10, textAlign: "right", marginTop: -5 }, error: { borderRadius: 12, padding: 10, flexDirection: "row", alignItems: "center", gap: 7 }, errorText: { fontFamily: fonts.bodyStrong, fontSize: 12 }
+  segmentScroll: { height: 40, flexGrow: 0 }, segmentRow: { height: 40, alignItems: "center", gap: 7 }, itemCard: { gap: 12 }, itemTop: { flexDirection: "row", alignItems: "flex-start", gap: 12 }, itemTitle: { fontFamily: fonts.bodyStrong, fontSize: 16 }, itemSubtitle: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18 }, itemMeta: { flexDirection: "row", alignItems: "center", gap: 10, flexWrap: "wrap" }, metaText: { fontFamily: fonts.body, fontSize: 11 }, amount: { marginLeft: "auto", fontFamily: fonts.bodyStrong, fontSize: 14 }, actions: { flexDirection: "row", gap: 8 }, swipeHint: { fontFamily: fonts.body, fontSize: 10, textAlign: "right", marginTop: -5 }, error: { borderRadius: 12, padding: 10, flexDirection: "row", alignItems: "center", gap: 7 }, errorText: { fontFamily: fonts.bodyStrong, fontSize: 12 }
 });

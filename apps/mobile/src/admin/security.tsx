@@ -1,6 +1,7 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { Modal, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { useFocusEffect } from "expo-router";
 import * as ScreenCapture from "expo-screen-capture";
 import { adminApi, isStepUpRequired } from "./api";
 import { useAdminCopy } from "./copy";
@@ -105,12 +106,13 @@ export function useAdminSecurity() {
   return value;
 }
 
+/** Blocks screenshots only while this screen is focused. Tab screens stay mounted, so blur must allow capture again. */
 export function useAdminScreenCapture(key: string) {
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     if (Platform.OS === "web") return;
     ScreenCapture.preventScreenCaptureAsync(key).catch(() => undefined);
     return () => { ScreenCapture.allowScreenCaptureAsync(key).catch(() => undefined); };
-  }, [key]);
+  }, [key]));
 }
 
 const styles = StyleSheet.create({
