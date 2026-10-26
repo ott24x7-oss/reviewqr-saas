@@ -5,7 +5,7 @@ import { ownerLimitError } from "../entitlements";
 import { limit } from "../plans/entitlements";
 import { featureBlock } from "../plans/feature-gate";
 import { adjustedPricePaise } from "./variants";
-import { flattenTemplate, templateById } from "./templates";
+import { flattenTemplate, isServiceTemplate, templateById } from "./templates";
 import { takeForSave } from "./entry";
 import { revalidateBusinessTap } from "../tap/theme-store";
 import { planOwner, requireBusinessRole } from "../tenant";
@@ -88,9 +88,15 @@ export async function runMenuAction(userId: string, businessId: string, raw: unk
             bestseller: row.item.bestseller === true,
             brand: row.item.brand || "",
             durationMinutes: row.item.durationMinutes ?? null,
+            kind: isServiceTemplate(data.templateId) || row.item.durationMinutes != null ? "SERVICE" : "PRODUCT",
+            priceType: row.item.priceType || "FIXED",
+            bookable: true,
             sortOrder: count + index
           }
         });
+      }
+      if (isServiceTemplate(data.templateId) && business.catalogMode === "MENU") {
+        await tx.business.update({ where: { id: business.id }, data: { catalogMode: "SERVICES" } });
       }
     });
     added = fit.take;
@@ -139,6 +145,9 @@ export async function runMenuAction(userId: string, businessId: string, raw: unk
         photos: (data.photos || []).map((src) => src.trim()).filter(Boolean).slice(0, 5),
         brand: (data.brand || "").trim().slice(0, 40),
         durationMinutes: data.durationMinutes ?? null,
+        kind: data.itemKind || (data.durationMinutes != null ? "SERVICE" : "PRODUCT"),
+        priceType: data.priceType || "FIXED",
+        bookable: data.bookable !== false,
         barcode: (data.barcode || "").trim().slice(0, 64)
       }
     });
@@ -179,6 +188,9 @@ export async function runMenuAction(userId: string, businessId: string, raw: unk
           : {}),
         ...(data.brand !== undefined ? { brand: data.brand.trim().slice(0, 40) } : {}),
         ...(data.durationMinutes !== undefined ? { durationMinutes: data.durationMinutes } : {}),
+        ...(data.itemKind ? { kind: data.itemKind } : {}),
+        ...(data.priceType ? { priceType: data.priceType } : {}),
+        ...(data.bookable !== undefined ? { bookable: data.bookable } : {}),
         ...(data.barcode !== undefined ? { barcode: data.barcode.trim().slice(0, 64) } : {})
       }
     });
@@ -224,6 +236,9 @@ export async function runMenuAction(userId: string, businessId: string, raw: unk
             photo: (item.photo || "").trim() || null,
             barcode: (item.barcode || "").trim().slice(0, 64),
             durationMinutes: item.durationMinutes ?? null,
+            kind: item.itemKind || (item.durationMinutes != null ? "SERVICE" : "PRODUCT"),
+            priceType: item.priceType || "FIXED",
+            bookable: item.bookable !== false,
             sortOrder: count + index
           }
         });
@@ -309,6 +324,9 @@ export async function runMenuAction(userId: string, businessId: string, raw: unk
           photos: item.photos,
           brand: item.brand,
           durationMinutes: item.durationMinutes,
+          kind: item.kind,
+          priceType: item.priceType,
+          bookable: item.bookable,
           sortOrder: count
         }
       });
@@ -376,6 +394,7 @@ async function createVariant(businessId: string, data: MenuBody): Promise<Fail |
       size,
       colour,
       pricePaise: Math.round((data.priceRupees || 0) * 100),
+      durationMinutes: data.durationMinutes ?? null,
       inStock: data.inStock !== false,
       sortOrder
     }
@@ -397,6 +416,7 @@ async function updateVariant(businessId: string, data: MenuBody): Promise<Fail |
       colour,
       ...(data.nameHi !== undefined ? { labelHi: data.nameHi.trim() || null } : {}),
       ...(data.priceRupees !== undefined ? { pricePaise: Math.round(data.priceRupees * 100) } : {}),
+      ...(data.durationMinutes !== undefined ? { durationMinutes: data.durationMinutes } : {}),
       ...(data.inStock !== undefined ? { inStock: data.inStock } : {})
     }
   });

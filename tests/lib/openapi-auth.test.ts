@@ -20,6 +20,10 @@ describe("OpenAPI auth document", () => {
     expect(doc.paths?.["/api/v1/businesses/{id}/qr-codes/claim"]?.post).toBeTruthy();
     expect(doc.paths?.["/api/v1/orders"]?.get).toBeTruthy();
     expect(doc.paths?.["/api/v1/orders/{id}/status"]?.post).toBeTruthy();
+    expect(doc.paths?.["/api/public/bookings"]?.post).toBeTruthy();
+    expect(doc.paths?.["/api/v1/bookings"]?.get).toBeTruthy();
+    expect(doc.paths?.["/api/v1/bookings/{id}"]?.get).toBeTruthy();
+    expect(doc.paths?.["/api/v1/bookings/{id}/status"]?.post).toBeTruthy();
     expect(doc.paths?.["/api/v1/feedback"]?.get).toBeTruthy();
     expect(doc.paths?.["/api/v1/feedback/{id}"]?.patch).toBeTruthy();
     expect(doc.paths?.["/api/v1/notifications"]?.get).toBeTruthy();

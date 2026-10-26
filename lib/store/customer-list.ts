@@ -39,12 +39,16 @@ export async function loadCustomers(
 ): Promise<CustomerRow[]> {
   // Exports pass "manage" so STAFF can't download every customer's phone number.
   const scope = level === "manage" ? manageableBusinessWhere(userId) : readableBusinessWhere(userId);
-  const [reviews, orders] = await Promise.all([
+  const [reviews, orders, bookings] = await Promise.all([
     prisma.review.findMany({
       where: { business: scope, consentAt: { not: null }, NOT: { customerPhone: null } },
       select: { businessId: true, customerPhone: true, customerName: true }
     }),
     prisma.menuOrder.findMany({
+      where: { business: scope, consentAt: { not: null }, NOT: { customerPhone: null } },
+      select: { businessId: true, customerPhone: true, customerName: true }
+    }),
+    prisma.bookingRequest.findMany({
       where: { business: scope, consentAt: { not: null }, NOT: { customerPhone: null } },
       select: { businessId: true, customerPhone: true, customerName: true }
     })
@@ -65,6 +69,7 @@ export async function loadCustomers(
   };
   for (const review of reviews) add(review.businessId, review.customerPhone, review.customerName, "feedback");
   for (const order of orders) add(order.businessId, order.customerPhone, order.customerName, "order");
+  for (const booking of bookings) add(booking.businessId, booking.customerPhone, booking.customerName, "booking");
 
   const known = await prisma.contact.findMany({
     where: { business: scope, NOT: { phone: null } },

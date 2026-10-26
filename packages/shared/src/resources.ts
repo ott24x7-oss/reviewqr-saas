@@ -37,9 +37,12 @@ export const menuActionSchema = z.object({
   photos: z.array(z.string().max(1_500_000)).max(5).optional(),
   brand: z.string().max(40).optional(),
   durationMinutes: z.number().int().min(1).max(480).nullable().optional(),
+  itemKind: z.enum(["PRODUCT", "SERVICE"]).optional(),
+  priceType: z.enum(["FIXED", "FROM", "ON_REQUEST"]).optional(),
+  bookable: z.boolean().optional(),
   barcode: z.string().max(64).optional(),
   category: z.string().max(80).optional(),
-  templateId: z.enum(["cafe", "restaurant", "mobile", "clothing", "kirana", "salon"]).optional(),
+  templateId: z.enum(["cafe", "restaurant", "mobile", "clothing", "kirana", "salon", "spa", "clinic", "gym", "tutor"]).optional(),
   size: z.string().max(40).optional(),
   colour: z.string().max(40).optional(),
   inStock: z.boolean().optional(),
@@ -59,7 +62,10 @@ export const menuActionSchema = z.object({
         colour: z.string().max(40).optional(),
         photo: z.string().max(1_500_000).optional(),
         barcode: z.string().max(64).optional(),
-        durationMinutes: z.number().int().min(1).max(480).nullable().optional()
+        durationMinutes: z.number().int().min(1).max(480).nullable().optional(),
+        itemKind: z.enum(["PRODUCT", "SERVICE"]).optional(),
+        priceType: z.enum(["FIXED", "FROM", "ON_REQUEST"]).optional(),
+        bookable: z.boolean().optional()
       })
     )
     .max(50)

@@ -4,6 +4,14 @@ export const dashboardSchema = z.object({
   ordersToday: z.number().int(),
   feedbackToday: z.number().int(),
   scansToday: z.number().int(),
+  bookingsToday: z.number().int(),
+  todayBookings: z.array(z.object({
+    id: z.string(),
+    customerName: z.string(),
+    serviceName: z.string(),
+    timeLabel: z.string(),
+    status: z.string()
+  })),
   businessId: z.string().nullable(),
   plan: z.object({
     tier: z.string(),

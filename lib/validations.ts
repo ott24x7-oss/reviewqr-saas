@@ -77,7 +77,8 @@ export const businessSchema = z.object({
   primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#1a73e8"),
   customThankYou: z.string().max(500).optional().or(z.literal("")),
   aiReviewsEnabled: z.boolean().optional(),
-  services: z.string().max(2000).optional().or(z.literal(""))
+  services: z.string().max(2000).optional().or(z.literal("")),
+  catalogMode: z.enum(["MENU", "SERVICES", "BOTH"]).optional()
 });
 
 export const locationSchema = z.object({

@@ -48,6 +48,49 @@ export async function deliverNewOrder(input: {
   });
 }
 
+/** Same push path as a new order, with a booking payload the app can route and chime. */
+export async function notifyNewBooking(input: {
+  businessId: string;
+  ownerId: string;
+  businessName: string;
+  serviceName: string;
+  customerName: string;
+  bookingId: string;
+}) {
+  await dispatchJob("notify.booking", input, `notify.booking:${input.bookingId}`);
+}
+
+export async function deliverNewBooking(input: {
+  businessId: string;
+  ownerId: string;
+  businessName: string;
+  serviceName: string;
+  customerName: string;
+  bookingId: string;
+}) {
+  const members = await prisma.businessMember.findMany({
+    where: { businessId: input.businessId },
+    select: { userId: true }
+  });
+  const userIds = [...new Set([input.ownerId, ...members.map((member) => member.userId)])];
+  if (userIds.length === 0) return;
+  await prisma.notification.createMany({
+    data: userIds.map((userId) => ({
+      userId,
+      type: "booking_request",
+      title: `New booking`,
+      message: `${input.businessName} · ${input.serviceName} · ${input.customerName}`,
+      link: "/dashboard/sell/bookings",
+      metadata: { bookingId: input.bookingId, businessId: input.businessId }
+    }))
+  });
+  await sendPushToUsers(userIds, {
+    title: "New booking",
+    body: `${input.businessName} · ${input.serviceName}`,
+    data: { type: "booking_request", bookingId: input.bookingId, businessId: input.businessId, sound: "order" }
+  });
+}
+
 export async function notifyOrderStatus(input: {
   businessId: string;
   ownerId: string;
