@@ -5,6 +5,7 @@ import {
   indiaE164,
   otpGateError,
   otpIpLimits,
+  otpEmailHtml,
   otpLoginMessage,
   otpPhoneLimits,
   otpWrongCodeError,
@@ -46,9 +47,18 @@ function deps(over: Partial<DeliverOtpDeps> = {}): DeliverOtpDeps & {
 describe("OTP message and phone", () => {
   it("builds the bilingual template with the platform brand", () => {
     const text = otpLoginMessage("123456", " WatShop ");
-    expect(text).toContain("123456 is your WatShop login code. Valid 5 minutes. Do not share it with anyone.");
-    expect(text).toContain("123456 आपका WatShop लॉगिन कोड है। 5 मिनट तक वैध। किसी से शेयर न करें।");
+    expect(text.split("\n")[0]).toBe("*123456* is your WatShop login code.");
+    expect(text).toContain("Valid for 5 minutes. Do not share this code with anyone.");
+    expect(text).toContain("*123456* आपका WatShop लॉगिन कोड है।");
+    expect(text).toContain("यह 5 मिनट तक मान्य है।");
     expect(otpLoginMessage("123456", "  ")).toContain("your QR24x7 login code");
+  });
+
+  it("turns the WhatsApp text into email HTML with a bold code and no asterisks", () => {
+    const html = otpEmailHtml(otpLoginMessage("123456", "QR24x7"));
+    expect(html).toContain("<strong>123456</strong> is your QR24x7 login code.");
+    expect(html).not.toContain("*");
+    expect(html).toContain("<br>");
   });
 
   it("normalises Indian numbers to +91 and rejects short input", () => {
