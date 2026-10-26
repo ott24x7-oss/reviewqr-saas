@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/admin/ui/controls";
+import { Badge } from "@/components/admin/ui/controls";
 import { timeAgo, formatDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";

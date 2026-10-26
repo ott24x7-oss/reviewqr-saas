@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/admin/ui/controls";
+import { Badge } from "@/components/admin/ui/controls";
+import { Input } from "@/components/admin/ui/controls";
 import { Search } from "lucide-react";
 import { formatDate, timeAgo } from "@/lib/utils";
 

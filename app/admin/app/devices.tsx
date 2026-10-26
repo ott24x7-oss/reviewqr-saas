@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { StepUpDialog } from "@/components/admin/ui/dialogs";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/admin/ui/controls";
 
 type DeviceRow = {
   id: string;

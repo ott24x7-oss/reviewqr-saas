@@ -2,10 +2,10 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/admin/ui/controls";
+import { Button } from "@/components/admin/ui/controls";
+import { Input } from "@/components/admin/ui/controls";
+import { Label } from "@/components/admin/ui/controls";
 import { Loader2, Trash2, Save, KeyRound } from "lucide-react";
 
 type Props = {

@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/db";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/admin/ui/controls";
+import { Badge } from "@/components/admin/ui/controls";
 import { ArrowLeft } from "lucide-react";
 import { formatDate, formatINR, timeAgo } from "@/lib/utils";
 import { UserEditForm } from "./user-edit";

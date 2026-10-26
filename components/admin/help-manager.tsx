@@ -2,9 +2,9 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/admin/ui/controls";
+import { Input } from "@/components/admin/ui/controls";
+import { Textarea } from "@/components/admin/ui/controls";
 
 type Article = {
   id: string;

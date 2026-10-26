@@ -191,7 +191,7 @@ export function AdminShell({
 
   return (
     <div className={cn("admin-root min-h-screen text-zinc-950", theme === "dark" && "dark")}>
-      <div className="flex min-h-screen bg-[#fafafa] dark:bg-zinc-950 dark:text-zinc-50">
+      <div className="flex min-h-screen bg-[var(--admin-canvas)] dark:text-zinc-50">
         <aside className={cn("sticky top-0 hidden h-screen shrink-0 flex-col border-r border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950 md:flex", collapsed ? "w-14" : "w-60")}>
           <div className="min-h-0 flex-1">{navigation(collapsed)}</div>
           <button

@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { requireAdminPage } from "@/lib/admin";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/admin/ui/controls";
 import { StockBoard } from "./stock-board";
 import type { QrStatus } from "@prisma/client";
 

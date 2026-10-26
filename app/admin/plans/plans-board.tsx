@@ -3,13 +3,13 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/components/admin/ui/controls";
+import { Input } from "@/components/admin/ui/controls";
+import { Label } from "@/components/admin/ui/controls";
 import { PriceCard } from "@/components/plans/price-card";
 import { DURATIONS, DURATION_LABELS, MODULES, savingsPercent, type ModuleId } from "@/lib/plans/catalog";
 import { PLAN_CATEGORIES } from "@/lib/plans/categories";
-import { ImageUpload } from "@/components/ui/image-upload";
+import { ImageUpload } from "@/components/admin/ui/image-upload";
 
 type Price = { duration: string; pricePaise: number; mrpPaise: number | null; active: boolean };
 type Bullet = { en: string; hi: string; compare: boolean };
