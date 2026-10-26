@@ -110,6 +110,8 @@ export const adminPlanPatchSchema = z
   })
   .refine((value) => Object.values(value).some((item) => item !== undefined), { message: "Nothing to update" });
 
+export type AdminPlanPatch = z.infer<typeof adminPlanPatchSchema>;
+
 export const adminTeamActionSchema = z.object({
   action: z.enum(["update", "reassign", "approve", "reject", "pause", "resume", "share", "move"]),
   id: z.string().min(1).max(64),

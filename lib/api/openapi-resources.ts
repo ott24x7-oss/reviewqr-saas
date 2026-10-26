@@ -50,6 +50,7 @@ import {
   agentJoinResultSchema
 } from "@reviewqr/shared";
 import { businessSchema, qrCodeSchema } from "../validations";
+import { registerAdminPaths } from "./openapi-admin";
 
 type JsonSchema = z.ZodTypeAny;
 
@@ -742,4 +743,6 @@ export function registerResourcePaths(registry: OpenAPIRegistry, errorRef: JsonS
     request: jsonBody(agentJoinBodySchema),
     responses: { 200: jsonResponse("Joined", dataSchema(agentJoinResultSchema)), 400: validation, 401: unauthorized }
   });
+
+  registerAdminPaths(registry, errorRef);
 }
