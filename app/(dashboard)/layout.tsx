@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getDashboardViewer } from "@/lib/auth";
-import { DashboardShell } from "@/components/dashboard/shell";
+import { AppShell } from "@/components/app-ui/app-shell";
 import { prisma } from "@/lib/db";
 import { getBrand } from "@/lib/brand";
 import { readableBusinessWhere } from "@/lib/tenant";
@@ -20,7 +20,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   ]);
 
   return (
-    <DashboardShell
+    <AppShell
       user={{
         id: user.id,
         name: user.name,
@@ -37,6 +37,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
       impersonation={view.impersonation}
     >
       {children}
-    </DashboardShell>
+    </AppShell>
   );
 }

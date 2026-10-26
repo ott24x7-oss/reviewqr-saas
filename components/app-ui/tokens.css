@@ -1,0 +1,83 @@
+.app-dashboard {
+  --background: 0 0% 98%;
+  --foreground: 240 10% 4%;
+  --card: 0 0% 100%;
+  --card-foreground: 240 10% 4%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 240 10% 4%;
+  --primary: 142 76% 36%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 240 5% 96%;
+  --secondary-foreground: 240 6% 10%;
+  --muted: 240 5% 96%;
+  --muted-foreground: 240 4% 46%;
+  --accent: 142 76% 36%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 240 6% 90%;
+  --input: 240 6% 90%;
+  --ring: 142 76% 36%;
+  --success: 142 76% 36%;
+  --warning: 38 92% 50%;
+  --danger: 0 72% 51%;
+  --info: 217 91% 60%;
+  --radius: 0.625rem;
+  --radius-sm: 0.625rem;
+  --radius-md: 0.875rem;
+  --radius-lg: 0.875rem;
+  --shadow-popover: 0 4px 10px rgb(0 0 0 / 0.08);
+  color: hsl(var(--foreground));
+  background: hsl(var(--background));
+  min-height: 100vh;
+}
+
+html.dark .app-dashboard {
+  --background: 240 10% 4%;
+  --foreground: 0 0% 98%;
+  --card: 240 7% 8%;
+  --card-foreground: 0 0% 98%;
+  --popover: 240 7% 8%;
+  --popover-foreground: 0 0% 98%;
+  --primary: 142 71% 45%;
+  --primary-foreground: 240 10% 4%;
+  --secondary: 240 5% 12%;
+  --secondary-foreground: 0 0% 98%;
+  --muted: 240 5% 12%;
+  --muted-foreground: 240 5% 65%;
+  --accent: 142 71% 45%;
+  --accent-foreground: 240 10% 4%;
+  --destructive: 0 63% 45%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 240 5% 18%;
+  --input: 240 5% 18%;
+  --ring: 142 71% 45%;
+  --success: 142 71% 45%;
+  --warning: 38 92% 50%;
+  --danger: 0 63% 55%;
+  --info: 217 91% 65%;
+  --shadow-popover: 0 6px 18px rgb(0 0 0 / 0.35);
+}
+
+.app-dashboard :is(input, select, textarea) {
+  color-scheme: light;
+}
+
+html.dark .app-dashboard :is(input, select, textarea) {
+  color-scheme: dark;
+}
+
+.app-ui-panel {
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius-md);
+  background: hsl(var(--card));
+}
+
+.app-ui-popover {
+  box-shadow: var(--shadow-popover);
+}
+
+.app-ui-focus:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
