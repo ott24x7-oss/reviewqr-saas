@@ -1,8 +1,9 @@
+import { Prisma } from "@prisma/client";
 import { fail, ok } from "@/lib/api/result";
 import { prisma } from "@/lib/db";
 import { agentLeaderboard } from "@/lib/plans/admin-team";
 import { indiaMonthRange } from "@/lib/plans/india";
-import { activationStats, planMix, revenueBreakdown } from "./dashboard-math";
+import { planMix } from "./dashboard-math";
 import { adminWindow, dayKey, eachDay } from "./range";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -18,24 +19,80 @@ function previousMonth(month: string) {
   return `${priorYear}-${String(priorMonth).padStart(2, "0")}`;
 }
 
-async function firstPaymentsInRange(rows: Array<{ id: string; userId: string; createdAt: Date }>, before: Date) {
-  const ids = [...new Set(rows.map((row) => row.userId))];
-  const earlier = ids.length
-    ? await prisma.payment.findMany({
-        where: { status: "COMPLETED", amount: { gt: 0 }, createdAt: { lt: before }, userId: { in: ids } },
-        select: { userId: true },
-        distinct: ["userId"]
-      })
-    : [];
-  const paidBefore = new Set(earlier.map((row) => row.userId));
-  const seen = new Set(paidBefore);
-  const firstIds = new Set<string>();
-  for (const row of [...rows].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())) {
-    if (seen.has(row.userId)) continue;
-    seen.add(row.userId);
-    firstIds.add(row.id);
+type DayRow = { day: string; count: number | bigint; amount: number | bigint | null };
+
+/** The India calendar day of a timestamp column, as YYYY-MM-DD, to match dayKey(). */
+const IST_DAY = Prisma.sql`to_char(date_trunc('day', ("createdAt" AT TIME ZONE 'UTC') AT TIME ZONE 'Asia/Kolkata'), 'YYYY-MM-DD')`;
+
+/** A UTC wall-clock timestamp, whatever the session time zone, to compare with Prisma timestamp columns. */
+function utc(value: Date) {
+  return Prisma.sql`(${value.toISOString()}::timestamptz AT TIME ZONE 'UTC')`;
+}
+
+function dayMaps(rows: DayRow[]) {
+  const count = new Map<string, number>();
+  const amount = new Map<string, number>();
+  for (const row of rows) {
+    count.set(row.day, Number(row.count));
+    amount.set(row.day, Number(row.amount ?? 0));
   }
-  return firstIds;
+  return { count, amount };
+}
+
+function mapTotal(map: Map<string, number>) {
+  let total = 0;
+  for (const value of map.values()) total += value;
+  return total;
+}
+
+/** Paid payments per India day: how many and how much. */
+function paidByDay(start: Date, end: Date) {
+  return prisma.$queryRaw<DayRow[]>`
+    SELECT ${IST_DAY} AS day, COUNT(*)::int AS count, COALESCE(SUM("amount"), 0)::bigint AS amount
+    FROM "Payment"
+    WHERE "status" = 'COMPLETED' AND "amount" > 0 AND "createdAt" >= ${utc(start)} AND "createdAt" < ${utc(end)}
+    GROUP BY 1
+  `;
+}
+
+/**
+ * Each payer's first paid payment (earliest createdAt, then id), counted per India day
+ * when it falls inside the range. One query, no per-user id list.
+ */
+function firstPaidByDay(start: Date, end: Date) {
+  return prisma.$queryRaw<DayRow[]>`
+    WITH first AS (
+      SELECT DISTINCT ON ("userId") "amount", "createdAt"
+      FROM "Payment"
+      WHERE "status" = 'COMPLETED' AND "amount" > 0 AND "createdAt" < ${utc(end)}
+      ORDER BY "userId", "createdAt", "id"
+    )
+    SELECT ${IST_DAY} AS day, COUNT(*)::int AS count, COALESCE(SUM("amount"), 0)::bigint AS amount
+    FROM first
+    WHERE "createdAt" >= ${utc(start)}
+    GROUP BY 1
+  `;
+}
+
+/** Signups per India day. amount holds how many of them added a business. */
+function signupsByDay(start: Date, end: Date) {
+  return prisma.$queryRaw<DayRow[]>`
+    SELECT ${IST_DAY} AS day,
+      COUNT(*)::int AS count,
+      COUNT(*) FILTER (WHERE EXISTS (SELECT 1 FROM "Business" b WHERE b."ownerId" = u."id"))::int AS amount
+    FROM "User" u
+    WHERE u."deletedAt" IS NULL AND u."createdAt" >= ${utc(start)} AND u."createdAt" < ${utc(end)}
+    GROUP BY 1
+  `;
+}
+
+function shopOrdersByDay(start: Date, end: Date) {
+  return prisma.$queryRaw<DayRow[]>`
+    SELECT ${IST_DAY} AS day, COUNT(*)::int AS count, NULL::bigint AS amount
+    FROM "ShopOrder"
+    WHERE "createdAt" >= ${utc(start)} AND "createdAt" < ${utc(end)}
+    GROUP BY 1
+  `;
 }
 
 async function dashboardLeaderboard(month: string) {
@@ -90,36 +147,31 @@ export async function loadAdminDashboard(search: URLSearchParams) {
   const days = eachDay(window.start, window.end);
   const prevDays = eachDay(window.prevStart, window.prevEnd);
 
-  const [paidRows, prevPaidRows, signups, prevSignups, scans, prevScans, shopRows, prevShopRows, refunds, prevRefunds, subs, churned, expiring, activeSubs, trials] =
+  const [paid, prevPaid, firstPaid, prevFirstPaid, signupDays, prevSignups, scans, prevScans, shopDays, prevShopOrders, refunds, prevRefunds, subGroups, churned, expiring, activeSubs, trials] =
     await Promise.all([
-      prisma.payment.findMany({
-        where: { status: "COMPLETED", amount: { gt: 0 }, createdAt: { gte: window.start, lt: window.end } },
-        select: { id: true, amount: true, createdAt: true, userId: true }
-      }),
-      prisma.payment.findMany({
-        where: { status: "COMPLETED", amount: { gt: 0 }, createdAt: { gte: window.prevStart, lt: window.prevEnd } },
-        select: { id: true, amount: true, createdAt: true, userId: true }
-      }),
-      prisma.user.findMany({
-        where: { createdAt: { gte: window.start, lt: window.end }, deletedAt: null },
-        select: { createdAt: true, _count: { select: { businesses: true } } }
-      }),
+      paidByDay(window.start, window.end),
+      paidByDay(window.prevStart, window.prevEnd),
+      firstPaidByDay(window.start, window.end),
+      firstPaidByDay(window.prevStart, window.prevEnd),
+      signupsByDay(window.start, window.end),
       prisma.user.count({ where: { createdAt: { gte: window.prevStart, lt: window.prevEnd }, deletedAt: null } }),
-      prisma.analyticsDaily.findMany({
+      prisma.analyticsDaily.groupBy({
+        by: ["day"],
         where: { day: { gte: window.start, lt: window.end } },
-        select: { day: true, scans: true }
+        _sum: { scans: true }
       }),
-      prisma.analyticsDaily.findMany({
+      prisma.analyticsDaily.aggregate({
         where: { day: { gte: window.prevStart, lt: window.prevEnd } },
-        select: { day: true, scans: true }
+        _sum: { scans: true }
       }),
-      prisma.shopOrder.findMany({ where: { createdAt: { gte: window.start, lt: window.end } }, select: { createdAt: true } }),
-      prisma.shopOrder.findMany({ where: { createdAt: { gte: window.prevStart, lt: window.prevEnd } }, select: { createdAt: true } }),
-      prisma.shopCreditNote.findMany({ where: { createdAt: { gte: window.start, lt: window.end } }, select: { amountPaise: true, createdAt: true } }),
-      prisma.shopCreditNote.findMany({ where: { createdAt: { gte: window.prevStart, lt: window.prevEnd } }, select: { amountPaise: true, createdAt: true } }),
-      prisma.subscription.findMany({
+      shopOrdersByDay(window.start, window.end),
+      prisma.shopOrder.count({ where: { createdAt: { gte: window.prevStart, lt: window.prevEnd } } }),
+      prisma.shopCreditNote.aggregate({ where: { createdAt: { gte: window.start, lt: window.end } }, _sum: { amountPaise: true } }),
+      prisma.shopCreditNote.aggregate({ where: { createdAt: { gte: window.prevStart, lt: window.prevEnd } }, _sum: { amountPaise: true } }),
+      prisma.subscription.groupBy({
+        by: ["planId", "status", "pricePaise", "duration"],
         where: { status: { in: ["ACTIVE", "TRIALING"] } },
-        select: { planId: true, pricePaise: true, duration: true, status: true, plan: { select: { nameEn: true } } }
+        _count: { _all: true }
       }),
       prisma.subscription.count({
         where: { status: { in: ["CANCELED", "EXPIRED"] }, updatedAt: { gte: window.start, lt: window.end } }
@@ -131,58 +183,57 @@ export async function loadAdminDashboard(search: URLSearchParams) {
       prisma.subscription.count({ where: { status: "TRIALING" } })
     ]);
 
-  const revenueMap = new Map<string, number>();
-  const paymentCountMap = new Map<string, number>();
-  const revenuePaise = paidRows.reduce((sum, row) => sum + row.amount, 0);
-  for (const row of paidRows) {
-    const key = dayKey(row.createdAt);
-    revenueMap.set(key, (revenueMap.get(key) || 0) + row.amount);
-    paymentCountMap.set(key, (paymentCountMap.get(key) || 0) + 1);
-  }
-  const previousMap = new Map<string, number>();
-  for (const row of prevPaidRows) {
-    const key = dayKey(row.createdAt);
-    previousMap.set(key, (previousMap.get(key) || 0) + row.amount);
-  }
-  const signupMap = new Map<string, number>();
-  for (const row of signups) {
-    const key = dayKey(row.createdAt);
-    signupMap.set(key, (signupMap.get(key) || 0) + 1);
-  }
-  const shopMap = new Map<string, number>();
-  for (const row of shopRows) {
-    const key = dayKey(row.createdAt);
-    shopMap.set(key, (shopMap.get(key) || 0) + 1);
-  }
+  const paidMaps = dayMaps(paid);
+  const revenueMap = paidMaps.amount;
+  const paymentCountMap = paidMaps.count;
+  const revenuePaise = mapTotal(revenueMap);
+  const previousMap = dayMaps(prevPaid).amount;
+  const previousRevenuePaise = mapTotal(previousMap);
+  const firstMaps = dayMaps(firstPaid);
+  const firstPaymentMap = firstMaps.count;
+  const newPaid = mapTotal(firstPaymentMap);
+  const newPaise = mapTotal(firstMaps.amount);
+  const previousNewPaid = mapTotal(dayMaps(prevFirstPaid).count);
+  const signupMaps = dayMaps(signupDays);
+  const signupMap = signupMaps.count;
+  const signupCount = mapTotal(signupMap);
+  const activated = mapTotal(signupMaps.amount);
+  const shopMap = dayMaps(shopDays).count;
+  const shopOrders = mapTotal(shopMap);
   const scanMap = new Map<string, number>();
   const scanTotal = scans.reduce((sum, row) => {
     const key = dayKey(row.day);
-    scanMap.set(key, (scanMap.get(key) || 0) + row.scans);
-    return sum + row.scans;
+    const value = row._sum.scans || 0;
+    scanMap.set(key, (scanMap.get(key) || 0) + value);
+    return sum + value;
   }, 0);
-  const prevScanTotal = prevScans.reduce((sum, row) => sum + row.scans, 0);
+  const prevScanTotal = prevScans._sum.scans || 0;
 
-  const firstPaymentIds = await firstPaymentsInRange(paidRows, window.start);
-  const prevFirstPaymentIds = await firstPaymentsInRange(prevPaidRows, window.prevStart);
-  const firstPaymentMap = new Map<string, number>();
-  const currentRowsById = new Map(paidRows.map((row) => [row.id, row]));
-  for (const id of firstPaymentIds) {
-    const row = currentRowsById.get(id);
-    if (!row) continue;
-    const key = dayKey(row.createdAt);
-    firstPaymentMap.set(key, (firstPaymentMap.get(key) || 0) + 1);
-  }
-  const previousRevenuePaise = prevPaidRows.reduce((sum, row) => sum + row.amount, 0);
-  const refundsPaise = refunds.reduce((sum, row) => sum + row.amountPaise, 0);
-  const previousRefundsPaise = prevRefunds.reduce((sum, row) => sum + row.amountPaise, 0);
-  const waterfall = revenueBreakdown(paidRows, firstPaymentIds, refundsPaise);
-  const activation = activationStats(signups.map((row) => ({ hasBusiness: row._count.businesses > 0 })));
-  const mixRows = planMix(subs.map((row) => ({
+  const refundsPaise = refunds._sum.amountPaise || 0;
+  const previousRefundsPaise = prevRefunds._sum.amountPaise || 0;
+  const waterfall = {
+    newPaise,
+    renewalPaise: revenuePaise - newPaise,
+    refundPaise: refundsPaise,
+    netPaise: revenuePaise - refundsPaise
+  };
+  const activation = {
+    activated,
+    total: signupCount,
+    rate: signupCount ? Math.round((activated / signupCount) * 100) : 0
+  };
+  const planIds = [...new Set(subGroups.flatMap((row) => (row.planId ? [row.planId] : [])))];
+  const planNames = new Map(
+    (planIds.length ? await prisma.plan.findMany({ where: { id: { in: planIds } }, select: { id: true, nameEn: true } }) : [])
+      .map((plan) => [plan.id, plan.nameEn] as const)
+  );
+  const mixRows = planMix(subGroups.map((row) => ({
     planId: row.planId,
-    name: row.plan?.nameEn || "Custom",
+    name: (row.planId && planNames.get(row.planId)) || "Custom",
     status: row.status,
     pricePaise: row.pricePaise,
-    duration: row.duration
+    duration: row.duration,
+    count: row._count._all
   })));
   const mrrPaise = mixRows.reduce((sum, row) => sum + row.mrrPaise, 0);
 
@@ -219,29 +270,29 @@ export async function loadAdminDashboard(search: URLSearchParams) {
     kpis: {
       revenuePaise,
       previousRevenuePaise,
-      newPaid: firstPaymentIds.size,
-      previousNewPaid: prevFirstPaymentIds.size,
+      newPaid,
+      previousNewPaid,
       mrrPaise,
       arrPaise: mrrPaise * 12,
       activeSubs,
       trials,
       expiring,
       churned,
-      signups: signups.length,
+      signups: signupCount,
       previousSignups: prevSignups,
       scans: scanTotal,
       previousScans: prevScanTotal,
-      shopOrders: shopRows.length,
-      previousShopOrders: prevShopRows.length,
+      shopOrders,
+      previousShopOrders: prevShopOrders,
       refundsPaise,
       previousRefundsPaise
     },
     waterfall,
     activation,
     funnel: [
-      { name: "Signups", value: signups.length },
+      { name: "Signups", value: signupCount },
       { name: "Added a business", value: activation.activated },
-      { name: "First payment", value: firstPaymentIds.size }
+      { name: "First payment", value: newPaid }
     ],
     series: {
       days,
@@ -250,7 +301,7 @@ export async function loadAdminDashboard(search: URLSearchParams) {
       signups: fill(days, signupMap),
       paymentCount: fill(days, paymentCountMap),
       newPaid: fill(days, firstPaymentMap),
-      previousNewPaid: prevFirstPaymentIds.size,
+      previousNewPaid,
       shopOrders: fill(days, shopMap),
       scans: fill(days, scanMap)
     },

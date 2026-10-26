@@ -30,7 +30,8 @@ export function activationStats(signups: Array<{ hasBusiness: boolean }>) {
   };
 }
 
-export function planMix(rows: Array<{ planId: string | null; name: string; status: string; pricePaise: number; duration: string | null }>) {
+/** Rows may be grouped: count says how many subscriptions share the row (default 1). */
+export function planMix(rows: Array<{ planId: string | null; name: string; status: string; pricePaise: number; duration: string | null; count?: number }>) {
   const monthly = (price: number, duration: string | null) => {
     if (duration === "YEAR_1") return Math.round(price / 12);
     if (duration === "MONTH_6") return Math.round(price / 6);
@@ -41,8 +42,9 @@ export function planMix(rows: Array<{ planId: string | null; name: string; statu
   for (const row of rows) {
     const key = row.planId || row.name || "custom";
     const current = mix.get(key) || { planId: row.planId, name: row.name || "Custom", count: 0, mrrPaise: 0 };
-    current.count += 1;
-    if (row.status === "ACTIVE") current.mrrPaise += monthly(row.pricePaise, row.duration);
+    const count = row.count ?? 1;
+    current.count += count;
+    if (row.status === "ACTIVE") current.mrrPaise += monthly(row.pricePaise, row.duration) * count;
     mix.set(key, current);
   }
   return [...mix.values()].sort((a, b) => b.count - a.count);
