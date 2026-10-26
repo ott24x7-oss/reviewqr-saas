@@ -30,9 +30,9 @@ type SessionValue = {
 
 const SessionContext = createContext<SessionValue | null>(null);
 
-export function SessionProvider({ children }: { children: ReactNode }) {
+export function SessionProvider({ children, disabled = false }: { children: ReactNode; disabled?: boolean }) {
   const queryClient = useQueryClient();
-  const [ready, setReady] = useState(false);
+  const [ready, setReady] = useState(disabled);
   const [user, setUser] = useState<Me | null>(null);
 
   const refreshUser = useCallback(async () => {
@@ -73,6 +73,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let live = true;
+    if (disabled) {
+      return () => { live = false; };
+    }
     mobileApi.setSessionListener(() => {
       if (!live) return;
       clearWidgetSnapshot().catch(() => undefined);
@@ -104,7 +107,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       live = false;
       mobileApi.setSessionListener(null);
     };
-  }, [refreshUser]);
+  }, [disabled, refreshUser]);
 
   const value = useMemo(
     () => ({ ready, user, saveSession, refreshUser, logout }),
