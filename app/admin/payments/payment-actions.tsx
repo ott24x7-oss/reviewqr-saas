@@ -2,6 +2,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { StepUpDialog } from "@/components/admin/ui/dialogs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -17,18 +18,30 @@ export function PaymentActions({
   const router = useRouter();
   const [busy, setBusy] = React.useState<string | null>(null);
   const [refundUtr, setRefundUtr] = React.useState("");
+  const [reason, setReason] = React.useState("");
+  const [step, setStep] = React.useState(false);
 
-  async function run(action: "approve" | "reject" | "refund") {
+  async function run(action: "approve" | "reject" | "refund" | "reconcile" | "invoice") {
+    if (action === "refund" && !reason.trim()) {
+      toast.error("Enter a reason");
+      return;
+    }
     setBusy(action);
     try {
       const res = await fetch(`/api/admin/payments/${id}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action, refundUtr })
+        body: JSON.stringify({ action, refundUtr, reason: reason.trim() || undefined })
       });
+      if (res.status === 403 && action === "refund") {
+        setStep(true);
+        return;
+      }
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error || "Request failed");
-      toast.success(action === "approve" ? "Payment approved" : action === "reject" ? "Payment rejected" : "Marked refunded");
+      toast.success(
+        action === "approve" ? "Payment approved" : action === "reject" ? "Payment rejected" : action === "reconcile" ? "Reconciled" : action === "invoice" ? "Invoice sent" : "Marked refunded"
+      );
       router.refresh();
     } catch (e: any) {
       toast.error(e.message);
@@ -56,6 +69,14 @@ export function PaymentActions({
             value={refundUtr}
             onChange={(e) => setRefundUtr(e.target.value)}
             placeholder="Refund UTR"
+            aria-label="Refund UTR"
+            className="h-8 w-28 text-xs"
+          />
+          <Input
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="Reason"
+            aria-label="Refund reason"
             className="h-8 w-28 text-xs"
           />
           <Button size="sm" variant="outline" disabled={busy !== null} onClick={() => run("refund")}>
@@ -63,6 +84,7 @@ export function PaymentActions({
           </Button>
         </div>
       )}
+      <StepUpDialog open={step} title="Confirm refund" onClose={() => setStep(false)} onConfirmed={async () => run("refund")} />
     </div>
   );
 }
