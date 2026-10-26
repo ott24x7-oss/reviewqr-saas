@@ -1,296 +1,113 @@
 import Link from "next/link";
-import { prisma } from "@/lib/db";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatINR, formatNumber, timeAgo } from "@/lib/utils";
-import {
-  Users,
-  Building2,
-  Star,
-  CreditCard,
-  TrendingUp,
-  AlertCircle,
-  ArrowRight
-} from "lucide-react";
-import { getPaymentsConfig, getEmailConfig, getWhatsAppConfig } from "@/lib/settings";
-import { medianMinutes, pairSetupMarks } from "@/lib/tap/setup-time";
+import { FunnelBars, MixDonut, RevenueChart } from "@/components/admin/ui/charts";
+import { Timeline } from "@/components/admin/ui/detail";
+import { KpiCard, PageHeader, StatStrip } from "@/components/admin/ui/primitives";
+import { listAdminAudit } from "@/lib/admin/audit-query";
+import { loadAdminDashboard } from "@/lib/admin/dashboard";
+import { adminSearchParams } from "@/lib/admin/web-search";
+import { formatINR, formatNumber } from "@/lib/utils";
 
-export default async function AdminOverview() {
-  const since30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-  const since7 = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+export const dynamic = "force-dynamic";
 
-  const [
-    userCount,
-    activeUsers,
-    newUsers7,
-    businessCount,
-    reviewCount,
-    feedbackCount,
-    revenueAgg,
-    revenue30Agg,
-    pendingPayments,
-    recentUsers,
-    payments,
-    plansStat
-  ] = await Promise.all([
-    prisma.user.count(),
-    prisma.user.count({ where: { subscriptionStatus: { in: ["ACTIVE", "TRIALING"] } } }),
-    prisma.user.count({ where: { createdAt: { gte: since7 } } }),
-    prisma.business.count({ where: { archived: false } }),
-    prisma.review.count(),
-    prisma.feedback.count({ where: { status: "NEW" } }),
-    prisma.payment.aggregate({
-      _sum: { amount: true },
-      where: { status: "COMPLETED" }
-    }),
-    prisma.payment.aggregate({
-      _sum: { amount: true },
-      where: { status: "COMPLETED", createdAt: { gte: since30 } }
-    }),
-    prisma.payment.count({ where: { status: "PENDING" } }),
-    prisma.user.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 5,
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        subscriptionTier: true,
-        createdAt: true
-      }
-    }),
-    prisma.payment.findMany({
-      where: { status: "COMPLETED" },
-      orderBy: { createdAt: "desc" },
-      take: 5,
-      include: { user: { select: { email: true, name: true } } }
-    }),
-    prisma.user.groupBy({
-      by: ["subscriptionTier"],
-      _count: { _all: true }
-    })
-  ]);
+const RANGES = [
+  { id: "today", label: "Today" },
+  { id: "7d", label: "7 days" },
+  { id: "30d", label: "30 days" },
+  { id: "mtd", label: "Month" }
+];
 
-  const setupMarks = await prisma.onboardingMark.findMany({
-    where: { kind: { in: ["start", "qr_activated"] } },
-    select: { userId: true, kind: true, createdAt: true }
-  });
-  const setupTime = medianMinutes(pairSetupMarks(setupMarks));
+function percent(current: number, previous: number) {
+  if (!previous) return current ? 100 : 0;
+  return Math.round(((current - previous) / previous) * 100);
+}
 
-  const totalRevenue = revenueAgg._sum.amount || 0;
-  const revenue30 = revenue30Agg._sum.amount || 0;
-
-  const [payCfg, emailCfg, waCfg] = await Promise.all([
-    getPaymentsConfig(),
-    getEmailConfig(),
-    getWhatsAppConfig()
-  ]);
-
-  const checks = [
-    {
-      ok: !!(payCfg.razorpayKeyId && payCfg.razorpayKeySecret),
-      label: "Razorpay configured",
-      href: "/admin/payments"
-    },
-    {
-      ok: !!(emailCfg.relayUrl || (emailCfg.smtpHost && emailCfg.smtpUser)),
-      label: "Email transport configured",
-      href: "/admin/email"
-    },
-    {
-      ok: !!(waCfg.apiToken && waCfg.phoneId),
-      label: "WhatsApp Cloud API (optional)",
-      href: "/admin/whatsapp"
-    }
-  ];
-
-  const tiles = [
-    {
-      label: "Total users",
-      value: formatNumber(userCount),
-      sub: `${formatNumber(activeUsers)} active · +${newUsers7} this week`,
-      icon: Users,
-      href: "/admin/users"
-    },
-    {
-      label: "Businesses",
-      value: formatNumber(businessCount),
-      sub: `${formatNumber(reviewCount)} total reviews`,
-      icon: Building2,
-      href: "/admin/businesses"
-    },
-    {
-      label: "Open feedback",
-      value: formatNumber(feedbackCount),
-      sub: feedbackCount > 0 ? "Awaiting reply" : "All clear",
-      icon: Star,
-      href: "/admin/businesses"
-    },
-    {
-      label: "Total revenue",
-      value: formatINR(totalRevenue),
-      sub: `${formatINR(revenue30)} (30d) · ${pendingPayments} pending`,
-      icon: TrendingUp,
-      href: "/admin/payments"
-    }
-  ];
-
+export default async function AdminHome({ searchParams }: { searchParams?: Record<string, string | undefined> }) {
+  const search = adminSearchParams(searchParams);
+  if (!search.get("range")) search.set("range", "7d");
+  const [dash, activity] = await Promise.all([loadAdminDashboard(search), listAdminAudit(new URLSearchParams("limit=8"))]);
+  if (!dash.ok) return <p className="text-sm text-rose-600">{dash.error}</p>;
+  const data = dash.data;
+  const kpis = data.kpis;
+  const range = search.get("range") || "7d";
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold font-display">Admin overview</h1>
-        <p className="text-sm text-muted-foreground">System-wide activity and configuration</p>
-      </div>
-
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {tiles.map((t) => (
-          <Link
-            key={t.label}
-            href={t.href}
-            className="rounded-xl border dark:border-slate-800 bg-white dark:bg-slate-900 p-4 hover:shadow-soft transition"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-muted-foreground">{t.label}</span>
-              <t.icon className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <div className="text-2xl font-bold mt-2">{t.value}</div>
-            <div className="text-xs text-muted-foreground mt-1">{t.sub}</div>
-          </Link>
-        ))}
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Time to first QR</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">
-            {setupTime.median === null ? "—" : `${setupTime.median} min`}
+    <div>
+      <PageHeader
+        title="Home"
+        subtitle="Revenue, subscriptions, and what needs a look."
+        actions={
+          <div className="flex gap-1 rounded-full border border-zinc-200 p-1 dark:border-zinc-700">
+            {RANGES.map((item) => (
+              <Link
+                key={item.id}
+                href={`/admin?range=${item.id}`}
+                className={`rounded-full px-3 py-1 text-sm ${range === item.id ? "bg-zinc-950 text-white dark:bg-white dark:text-zinc-950" : "text-zinc-500"}`}
+              >
+                {item.label}
+              </Link>
+            ))}
           </div>
-          <p className="text-sm text-muted-foreground">
-            Median from signup to the first active code. Sample size {setupTime.sample}.
-          </p>
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Recent signups</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {recentUsers.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No users yet.</p>
-            ) : (
-              <ul className="divide-y -mx-2">
-                {recentUsers.map((u) => (
-                  <li key={u.id} className="py-2.5 px-2 flex items-center justify-between">
-                    <div className="min-w-0">
-                      <div className="text-sm font-medium truncate">{u.name || u.email}</div>
-                      <div className="text-xs text-muted-foreground truncate">{u.email}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-xs font-medium">{u.subscriptionTier}</div>
-                      <div className="text-[11px] text-muted-foreground">{timeAgo(u.createdAt)}</div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <Link
-              href="/admin/users"
-              className="mt-3 inline-flex items-center gap-1 text-xs text-primary font-medium hover:underline"
-            >
-              View all users <ArrowRight className="h-3 w-3" />
-            </Link>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Plan mix</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-2">
-              {(["FREE", "STARTER", "GROWTH", "AGENCY"] as const).map((tier) => {
-                const row = plansStat.find((p) => p.subscriptionTier === tier);
-                const c = row?._count._all || 0;
-                return (
-                  <li key={tier} className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{tier}</span>
-                    <span className="font-medium">{formatNumber(c)}</span>
-                  </li>
-                );
-              })}
-            </ul>
-          </CardContent>
-        </Card>
+        }
+      />
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <KpiCard label="Revenue" value={formatINR(kpis.revenuePaise)} delta={percent(kpis.revenuePaise, kpis.previousRevenuePaise)} series={data.series.revenue} />
+        <KpiCard label="New paid" value={formatNumber(kpis.newPaid)} series={data.series.newPaid} />
+        <KpiCard label="MRR" value={formatINR(kpis.mrrPaise)} />
+        <KpiCard label="Active subs" value={formatNumber(kpis.activeSubs)} />
+        <KpiCard label="Trials" value={formatNumber(kpis.trials)} />
+        <KpiCard label="Expiring 7d" value={formatNumber(kpis.expiring)} />
+        <KpiCard label="Churn" value={formatNumber(kpis.churned)} />
+        <KpiCard label="Signups" value={formatNumber(kpis.signups)} delta={percent(kpis.signups, kpis.previousSignups)} series={data.series.signups} />
       </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent payments</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {payments.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No completed payments yet.</p>
-            ) : (
-              <ul className="divide-y -mx-2">
-                {payments.map((p) => (
-                  <li key={p.id} className="py-2.5 px-2 flex items-center justify-between">
-                    <div className="min-w-0">
-                      <div className="text-sm font-medium truncate">
-                        {p.user.name || p.user.email}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {p.tier} · {p.periodMonths === 12 ? "yearly" : "monthly"} ·{" "}
-                        {timeAgo(p.createdAt)}
-                      </div>
-                    </div>
-                    <div className="text-sm font-semibold">{formatINR(p.amount)}</div>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <Link
-              href="/admin/payments"
-              className="mt-3 inline-flex items-center gap-1 text-xs text-primary font-medium hover:underline"
-            >
-              All payments <ArrowRight className="h-3 w-3" />
-            </Link>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Setup checklist</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-2">
-              {checks.map((c) => (
-                <li key={c.label}>
-                  <Link
-                    href={c.href}
-                    className="flex items-center justify-between p-2 rounded-lg hover:bg-secondary text-sm"
-                  >
-                    <span className="flex items-center gap-2">
-                      {c.ok ? (
-                        <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                      ) : (
-                        <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
-                      )}
-                      {c.label}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {c.ok ? "OK" : "Configure"}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
+      <div className="mt-4">
+        <StatStrip
+          items={[
+            { label: "Scans", value: formatNumber(kpis.scans) },
+            { label: "Shop orders", value: formatNumber(kpis.shopOrders) },
+            { label: "ARR", value: formatINR(kpis.arrPaise) },
+            { label: "Error rate", value: String(data.health.errorRate) }
+          ]}
+        />
       </div>
+      <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+        <section className="rounded-[14px] border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+          <h2 className="mb-2 text-sm font-semibold">Revenue vs previous</h2>
+          <RevenueChart days={data.series.days} revenue={data.series.revenue} previous={data.series.previousRevenue} />
+        </section>
+        <section className="rounded-[14px] border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+          <h2 className="mb-2 text-sm font-semibold">Plan mix</h2>
+          <MixDonut rows={data.planMix.map((row) => ({ name: row.name, count: row.count }))} />
+        </section>
+      </div>
+      <div className="mt-4 grid gap-4 lg:grid-cols-3">
+        <section className="rounded-[14px] border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+          <h2 className="mb-2 text-sm font-semibold">Signup to paid</h2>
+          <FunnelBars steps={[{ name: "Signups", value: kpis.signups }, { name: "Paid", value: kpis.newPaid }]} />
+        </section>
+        <section className="rounded-[14px] border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+          <h2 className="text-sm font-semibold">Top agents</h2>
+          <ol className="mt-3 space-y-2 text-sm">
+            {data.leaderboard.rows.length === 0 ? <li className="text-zinc-500">No commission this period.</li> : null}
+            {data.leaderboard.rows.map((row, index) => (
+              <li key={row.agentId} className="flex justify-between gap-3">
+                <span>{index + 1}. {row.name}</span>
+                <span className="tabular-nums">{formatINR(row.amountPaise)}</span>
+              </li>
+            ))}
+          </ol>
+        </section>
+        <section className="rounded-[14px] border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+          <h2 className="text-sm font-semibold">System</h2>
+          <dl className="mt-3 space-y-2 text-sm">
+            <div className="flex justify-between gap-3"><dt className="text-zinc-500">WhatsApp</dt><dd>{data.health.whatsapp}</dd></div>
+            <div className="flex justify-between gap-3"><dt className="text-zinc-500">Last payment</dt><dd>{data.health.lastPaymentAt ? new Date(data.health.lastPaymentAt).toLocaleString("en-IN") : "—"}</dd></div>
+            <div className="flex justify-between gap-3"><dt className="text-zinc-500">Last reconcile</dt><dd>{data.health.lastReconcileAt ? new Date(data.health.lastReconcileAt).toLocaleString("en-IN") : "—"}</dd></div>
+          </dl>
+        </section>
+      </div>
+      <section className="mt-6">
+        <h2 className="mb-3 text-sm font-semibold">Recent activity</h2>
+        {activity.ok ? <Timeline items={activity.data.items.map((row) => ({ id: row.id, action: row.action, createdAt: row.createdAt, reason: row.reason }))} /> : <p className="text-sm text-zinc-500">Activity is unavailable.</p>}
+      </section>
     </div>
   );
 }

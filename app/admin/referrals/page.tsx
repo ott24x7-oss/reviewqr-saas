@@ -1,19 +1,24 @@
+import { Suspense } from "react";
+import { PageHeader, TableSkeleton } from "@/components/admin/ui/primitives";
+import { listAdminReferrals } from "@/lib/admin/directory";
+import { adminSearchParams } from "@/lib/admin/web-search";
 import { getPlanProgramSettings } from "@/lib/plans/settings";
 import { RewardForm } from "./reward-form";
+import { ReferralsTable } from "./table";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminReferralsPage() {
-  const settings = await getPlanProgramSettings();
+export default async function AdminReferralsPage({ searchParams }: { searchParams?: Record<string, string | undefined> }) {
+  const [settings, listed] = await Promise.all([getPlanProgramSettings(), listAdminReferrals(adminSearchParams(searchParams))]);
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="font-display text-2xl font-bold sm:text-3xl">Referral rewards</h1>
-        <p className="text-sm text-muted-foreground">
-          Months are added to the referrer after the new business pays and the hold passes. A trial is not a paid plan, so the months wait as credit.
-        </p>
-      </div>
+      <PageHeader title="Referrals" subtitle="Months are added to the referrer after the new business pays and the hold passes." />
       <RewardForm initial={settings} />
+      {!listed.ok ? <p className="text-sm text-rose-600">{listed.error}</p> : (
+        <Suspense fallback={<TableSkeleton />}>
+          <ReferralsTable rows={listed.data.items} total={listed.data.total} page={listed.data.page} pageSize={listed.data.pageSize} />
+        </Suspense>
+      )}
     </div>
   );
 }

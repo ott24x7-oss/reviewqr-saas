@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { logAudit, requireAdminApi } from "@/lib/admin";
+import { spendWebStepUp, stepUpRequired } from "@/lib/admin/web-step";
 import { prisma } from "@/lib/db";
-import { payApprovedCommissions } from "@/lib/plans/payout";
+import { checkPayoutDate, payApprovedCommissions } from "@/lib/plans/payout";
 import { getClientIp } from "@/lib/utils";
 
 const schema = z.object({
   agentId: z.string().min(1),
   utr: z.string().min(6),
   paidAt: z.string().optional(),
-  note: z.string().max(240).optional(),
+  note: z.string().trim().max(240).optional(),
   reason: z.string().trim().max(500).optional(),
   idempotencyKey: z.string().min(8).max(120).optional()
 });
@@ -34,6 +35,12 @@ export async function POST(req: NextRequest) {
   if (!reason) return NextResponse.json({ error: "A reason is required" }, { status: 400 });
   const paidAt = readPaidAt(parsed.data.paidAt);
   if (Number.isNaN(paidAt.getTime())) return NextResponse.json({ error: "Invalid date" }, { status: 400 });
+  // Refuse a bad date before the one-time code is spent; payApprovedCommissions checks it again.
+  const badDate = checkPayoutDate(paidAt);
+  if (badDate) return NextResponse.json({ error: badDate }, { status: 400 });
+  if (!(await spendWebStepUp(req, guard.user.id, "mark_payout_paid"))) {
+    return stepUpRequired("mark_payout_paid", "Enter the WhatsApp code to confirm this payout");
+  }
   const approved = await prisma.shopCommission.aggregate({
     where: { agentId: parsed.data.agentId, status: "APPROVED" },
     _sum: { amountPaise: true },

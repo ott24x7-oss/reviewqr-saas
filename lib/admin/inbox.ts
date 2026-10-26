@@ -24,12 +24,7 @@ function card(row: { id: string; title: string; subtitle: string; status: string
   return { ...row, createdAt: row.createdAt.toISOString() };
 }
 
-export async function loadAdminInbox(search: URLSearchParams) {
-  const segment = search.get("segment") || "agents";
-  const allowed = ["agents", "devices", "proofs", "payouts", "refunds", "shop", "support", "failed"];
-  if (!allowed.includes(segment)) return fail(400, "Unknown inbox segment");
-  const page = readPage(search);
-  if (isPageError(page)) return fail(400, page.error);
+async function inboxCountRows() {
   const stale = new Date(Date.now() - 30 * 60 * 1000);
   const [agents, devices, proofs, payoutGroups, refunds, shop, support, failed] = await Promise.all([
     prisma.agentProfile.count({ where: { status: "PENDING" } }),
@@ -43,6 +38,46 @@ export async function loadAdminInbox(search: URLSearchParams) {
       where: { OR: [{ status: "FAILED" }, { status: "PENDING", createdAt: { lt: stale } }] }
     })
   ]);
+  return { agents, devices, proofs, payoutGroups, refunds, shop, support, failed };
+}
+
+/** Sidebar badge and the queue counts next to matching nav items. One count query. */
+export async function adminShellCounts() {
+  const counts = await inboxCountRows();
+  const inbox =
+    counts.agents +
+    counts.devices +
+    counts.proofs +
+    counts.payoutGroups.length +
+    counts.refunds +
+    counts.shop +
+    counts.support +
+    counts.failed;
+  return {
+    inbox,
+    "/admin/agents": counts.agents,
+    "/admin/apps": counts.devices,
+    "/admin/support": counts.support,
+    "/admin/production": counts.shop + counts.proofs,
+    "/admin/commissions": counts.payoutGroups.length,
+    "/admin/payments": counts.failed
+  };
+}
+
+/** Sidebar badge. Counts only, so the shell does not load a queue. */
+export async function adminInboxBadge() {
+  const counts = await adminShellCounts();
+  return counts.inbox;
+}
+
+export async function loadAdminInbox(search: URLSearchParams) {
+  const segment = search.get("segment") || "agents";
+  const allowed = ["agents", "devices", "proofs", "payouts", "refunds", "shop", "support", "failed"];
+  if (!allowed.includes(segment)) return fail(400, "Unknown inbox segment");
+  const page = readPage(search);
+  if (isPageError(page)) return fail(400, page.error);
+  const stale = new Date(Date.now() - 30 * 60 * 1000);
+  const { agents, devices, proofs, payoutGroups, refunds, shop, support, failed } = await inboxCountRows();
 
   let items: Array<{ id: string; title: string; subtitle: string; status: string; createdAt: string }> = [];
   let nextCursor: string | null = null;

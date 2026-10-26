@@ -149,6 +149,8 @@ model User {
 
   @@index([agencyId])
   @@index([email])
+  @@index([role, deletedAt])
+  @@index([createdAt])
 }
 
 model Account {
@@ -823,6 +825,7 @@ model Payment {
   @@index([status, expiresAt])
   @@index([provider, status])
   @@index([planId])
+  @@index([status, createdAt])
 }
 
 // One row per Indian financial year. Locked with SELECT … FOR UPDATE while issuing invoice numbers.
@@ -1320,6 +1323,8 @@ model AuditLog {
   @@index([userId])
   @@index([entity, entityId])
   @@index([deviceId])
+  @@index([createdAt])
+  @@index([action])
 }
 
 // Per-business stock of pre-written positive reviews. After a happy
@@ -1929,6 +1934,7 @@ model Subscription {
 
   @@index([userId, status])
   @@index([planId])
+  @@index([status, endsAt])
 }
 
 model AgentProfile {

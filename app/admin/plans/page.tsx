@@ -1,64 +1,39 @@
-import { planDescriptionOrDefault } from "@/lib/brand-defaults";
-import { prisma } from "@/lib/db";
-import { parseBullets } from "@/lib/plans/bullets";
-import { DURATIONS, parseLimits } from "@/lib/plans/catalog";
-import { limitsForTier } from "@/lib/plans/legacy";
-import { PlansBoard, type AdminPlan } from "./plans-board";
+import Link from "next/link";
+import { PageHeader } from "@/components/admin/ui/primitives";
+import { loadPlanBoardRows } from "@/lib/admin/plan-rows";
+import { getPricingConfig } from "@/lib/settings";
+import { PlansBoard } from "./plans-board";
+import { PricingForm } from "../pricing/pricing-form";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminPlansPage() {
-  const plans = await prisma.plan.findMany({
-    orderBy: { sortOrder: "asc" },
-    include: { prices: true }
-  });
-  const rows: AdminPlan[] = await Promise.all(plans.map(async (plan) => {
-    const limits = parseLimits(plan.limits, await limitsForTier(plan.legacyTier));
-    return {
-      id: plan.id,
-      nameEn: plan.nameEn,
-      nameHi: plan.nameHi,
-      slug: plan.slug,
-      descriptionEn: planDescriptionOrDefault(plan.descriptionEn),
-      descriptionHi: planDescriptionOrDefault(plan.descriptionHi),
-      modules: plan.modules,
-      limits: {
-        businesses: limits.businesses,
-        qrCodes: limits.qrCodes,
-        products: limits.products,
-        staff: limits.staff,
-        locations: limits.locations,
-        aiCalls: limits.aiCalls
-      },
-      bullets: parseBullets(plan.bullets),
-      badge: plan.badge,
-      category: plan.category,
-      imageUrl: plan.imageUrl,
-      active: plan.active,
-      visibleOnPricingPage: plan.visibleOnPricingPage,
-      legacyTier: plan.legacyTier,
-      prices: DURATIONS.map((duration) => {
-        const price = plan.prices.find((row) => row.duration === duration);
-        return {
-          duration,
-          pricePaise: price?.pricePaise ?? 0,
-          mrpPaise: price?.mrpPaise ?? null,
-          active: price?.active ?? false
-        };
-      })
-    };
-  }));
-
+export default async function AdminPlansPage({ searchParams }: { searchParams?: { tab?: string } }) {
+  const copy = searchParams?.tab === "copy";
+  const plans = copy ? [] : await loadPlanBoardRows();
+  const pricing = copy ? await getPricingConfig() : null;
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="font-display text-2xl font-bold sm:text-3xl">Module plans</h1>
-        <p className="text-sm text-muted-foreground">
-          Build a plan or a combo by ticking modules. Archived plans stay on the accounts that already bought them.
-          Drag a row to change the pricing-page order.
-        </p>
-      </div>
-      <PlansBoard plans={rows} />
+      <PageHeader
+        title="Plans & pricing"
+        subtitle="Module plans, prices, and the public pricing page."
+        actions={
+          <div className="flex gap-2 text-sm">
+            <Link className={copy ? "text-zinc-500" : "font-medium"} href="/admin/plans">Plans</Link>
+            <Link className={copy ? "font-medium" : "text-zinc-500"} href="/admin/plans?tab=copy">Pricing copy</Link>
+          </div>
+        }
+      />
+      {copy && pricing ? (
+        <PricingForm initial={pricing} />
+      ) : (
+        <>
+          <p className="text-sm text-zinc-500">
+            Build a plan or a combo by ticking modules. Archived plans stay on the accounts that already bought them.
+            Drag a row to change the pricing-page order.
+          </p>
+          <PlansBoard plans={plans} />
+        </>
+      )}
     </div>
   );
 }
