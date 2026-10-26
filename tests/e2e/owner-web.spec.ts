@@ -264,6 +264,7 @@ test("owner signs in, follows setup, filters lists, opens an order, sees plan lo
     await page.getByLabel("Password").fill(password);
     await page.getByRole("button", { name: "Sign in" }).click();
     await page.waitForURL("**/dashboard**");
+    await page.setViewportSize({ width: 1440, height: 1000 });
     await expect(page.getByRole("link", { name: "Agent home" })).toBeVisible();
     const agentScreens: Array<[string, string]> = [
       ["home", "/dashboard/agent"],
