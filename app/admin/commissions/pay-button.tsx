@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { formatINR } from "@/lib/utils";
 
 export function PayButton({ agentId, disabled }: { agentId: string; disabled: boolean }) {
   const router = useRouter();
@@ -28,7 +29,10 @@ export function PayButton({ agentId, disabled }: { agentId: string; disabled: bo
       toast.error(json.error || "Could not record the payout");
       return;
     }
-    toast.success("Payout recorded");
+    const gross = typeof json.grossPaise === "number" ? json.grossPaise : json.amountPaise;
+    const tds = typeof json.tdsPaise === "number" ? json.tdsPaise : 0;
+    const net = typeof json.netPaise === "number" ? json.netPaise : json.amountPaise;
+    toast.success(`Payout recorded. Gross ${formatINR(gross || 0)}, TDS ${formatINR(tds)}, net ${formatINR(net || 0)}.`);
     setOpen(false);
     router.refresh();
   }
