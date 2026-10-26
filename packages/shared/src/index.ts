@@ -6,3 +6,4 @@ export * from "./shop";
 export * from "./mobile";
 export * from "./onboarding";
 export * from "./agent-team";
+export * from "./admin-app";

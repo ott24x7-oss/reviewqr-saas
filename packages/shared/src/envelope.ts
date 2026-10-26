@@ -8,7 +8,10 @@ export const errorCodes = [
   "RATE_LIMIT",
   "PLAN_LIMIT",
   "CONFLICT",
-  "INTERNAL"
+  "INTERNAL",
+  "DEVICE_PENDING",
+  "DEVICE_REVOKED",
+  "STEP_UP_REQUIRED"
 ] as const;
 
 export type ApiErrorCode = (typeof errorCodes)[number];

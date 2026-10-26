@@ -84,8 +84,20 @@ export type AuditAction =
   | "plan.update"
   | "agent.update"
   | "commission.pay"
+  | "commission.approve"
   | "commission.legacy"
-  | "referral.update";
+  | "referral.update"
+  | "user.note"
+  | "business.note"
+  | "admin.device"
+  | "admin.signout"
+  | "payment.reconcile"
+  | "payment.invoice"
+  | "settings.admin"
+  | "user.reveal"
+  | "business.reveal"
+  | "shop.order.track"
+  | "inbox.action";
 
 export async function logAudit(opts: {
   userId?: string;
@@ -95,6 +107,10 @@ export async function logAudit(opts: {
   metadata?: Record<string, unknown>;
   ip?: string;
   userAgent?: string;
+  deviceId?: string | null;
+  reason?: string | null;
+  before?: unknown;
+  after?: unknown;
 }) {
   try {
     await prisma.auditLog.create({
@@ -105,7 +121,11 @@ export async function logAudit(opts: {
         entityId: opts.entityId,
         metadata: opts.metadata as any,
         ip: opts.ip,
-        userAgent: opts.userAgent
+        userAgent: opts.userAgent,
+        deviceId: opts.deviceId || null,
+        reason: opts.reason?.trim() || null,
+        before: opts.before === undefined ? undefined : (opts.before as any),
+        after: opts.after === undefined ? undefined : (opts.after as any)
       }
     });
   } catch (e) {

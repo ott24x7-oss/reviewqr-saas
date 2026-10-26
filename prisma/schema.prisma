@@ -139,6 +139,10 @@ model User {
   referralCredit ReferralCredit?
   agentOnboardings AgentOnboarding[]
   commissionLeaderSnapshots ShopCommission[] @relation("CommissionLeaderSnapshot")
+  suspendedAt DateTime?
+  adminDevices AdminDevice[] @relation("AdminDeviceOwner")
+  adminDevicesApproved AdminDevice[] @relation("AdminDeviceApprover")
+  adminNotifyPref AdminNotifyPref?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -186,11 +190,54 @@ model RefreshSession {
   expiresAt  DateTime
   deviceName String?
   userAgent  String?
+  audience   String    @default("app")
+  adminDeviceId String?
+  adminDevice AdminDevice? @relation(fields: [adminDeviceId], references: [id], onDelete: SetNull)
   createdAt  DateTime  @default(now())
   lastUsedAt DateTime?
 
   @@index([userId])
   @@index([familyId])
+  @@index([adminDeviceId])
+}
+
+enum AdminDeviceStatus {
+  PENDING
+  ACTIVE
+  REVOKED
+}
+
+// A phone that signed into the admin app. A new phone stays PENDING until the web approves it.
+model AdminDevice {
+  id           String            @id @default(cuid())
+  userId       String
+  user         User              @relation("AdminDeviceOwner", fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  platform     String
+  pushToken    String?
+  status       AdminDeviceStatus @default(PENDING)
+  lastSeenAt   DateTime?
+  approvedById String?
+  approvedBy   User?             @relation("AdminDeviceApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  sessions     RefreshSession[]
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@index([userId, status])
+  @@index([status, createdAt])
+}
+
+model AdminNotifyPref {
+  userId        String  @id
+  user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  paidPayment   Boolean @default(true)
+  failedPayment Boolean @default(true)
+  signup        Boolean @default(true)
+  agentPending  Boolean @default(true)
+  printProof    Boolean @default(true)
+  payoutDue     Boolean @default(true)
+  supportTicket Boolean @default(true)
+  whatsappDown  Boolean @default(true)
 }
 
 // Expo push tokens. This is not an NFC Device.
@@ -1253,11 +1300,16 @@ model AuditLog {
   metadata  Json?
   ip        String?
   userAgent String?  @db.Text
+  deviceId  String?
+  reason    String?  @db.Text
+  before    Json?
+  after     Json?
 
   createdAt DateTime @default(now())
 
   @@index([userId])
   @@index([entity, entityId])
+  @@index([deviceId])
 }
 
 // Per-business stock of pre-written positive reviews. After a happy
