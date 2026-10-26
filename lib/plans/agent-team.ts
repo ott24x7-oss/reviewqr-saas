@@ -79,11 +79,11 @@ export async function loadContractHome(agentId: string) {
   if (!profile.ok) return profile;
   const day = indiaDayStart();
   const month = indiaMonthStart();
-  const [commissions, businesses, members] = await Promise.all([
-    prisma.shopCommission.findMany({
-      where: { agentId, status: { not: "REVERSED" } },
-      select: { amountPaise: true, status: true, createdAt: true }
-    }),
+  const live = { agentId, status: { not: "REVERSED" as const } };
+  const [todaySum, monthSum, byStatus, businesses, members] = await Promise.all([
+    prisma.shopCommission.aggregate({ where: { ...live, createdAt: { gte: day } }, _sum: { amountPaise: true } }),
+    prisma.shopCommission.aggregate({ where: { ...live, createdAt: { gte: month } }, _sum: { amountPaise: true } }),
+    prisma.shopCommission.groupBy({ by: ["status"], where: live, _sum: { amountPaise: true } }),
     prisma.business.count({ where: { agentId, archived: false } }),
     prisma.agentProfile.findMany({ where: { leaderId: profile.data.id }, select: { userId: true } })
   ]);
@@ -99,13 +99,13 @@ export async function loadContractHome(agentId: string) {
         _sum: { amountPaise: true }
       })
     : { _sum: { amountPaise: 0 } };
-  const earnings = { todayPaise: 0, monthPaise: 0, pendingPaise: 0, paidPaise: 0 };
-  for (const row of commissions) {
-    if (row.createdAt >= day) earnings.todayPaise += row.amountPaise;
-    if (row.createdAt >= month) earnings.monthPaise += row.amountPaise;
-    if (row.status === "PENDING") earnings.pendingPaise += row.amountPaise;
-    if (row.status === "PAID") earnings.paidPaise += row.amountPaise;
-  }
+  const statusSum = (status: string) => byStatus.find((row) => row.status === status)?._sum.amountPaise || 0;
+  const earnings = {
+    todayPaise: todaySum._sum.amountPaise || 0,
+    monthPaise: monthSum._sum.amountPaise || 0,
+    pendingPaise: statusSum("PENDING"),
+    paidPaise: statusSum("PAID")
+  };
   return ok({
     earnings,
     businesses,
@@ -258,6 +258,22 @@ export async function loadAgentCommissions(agentId: string, cursorId: string | n
     }),
     nextCursor: rows.length > limit ? encodeCursor(page[page.length - 1].id) : null
   });
+}
+
+/** Lifetime totals over every row, not one page. A reversed commission is not earned. */
+export async function loadAgentEarningsTotals(agentId: string) {
+  const rows = await prisma.shopCommission.groupBy({
+    by: ["kind"],
+    where: { agentId, status: { not: "REVERSED" } },
+    _sum: { amountPaise: true }
+  });
+  let ownPaise = 0;
+  let teamPaise = 0;
+  for (const row of rows) {
+    if (row.kind === "TEAM_OVERRIDE") teamPaise += row._sum.amountPaise || 0;
+    else ownPaise += row._sum.amountPaise || 0;
+  }
+  return { ownPaise, teamPaise };
 }
 
 export async function loadAgentPayouts(agentId: string) {

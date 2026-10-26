@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
-import { loadAgentCommissions } from "@/lib/plans/agent-team";
+import { loadAgentCommissions, loadAgentEarningsTotals } from "@/lib/plans/agent-team";
 import { formatDate, formatINR } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -8,22 +8,21 @@ export const dynamic = "force-dynamic";
 export default async function AgentEarningsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  const ledger = await loadAgentCommissions(user.id, null, 100);
+  const [ledger, totals] = await Promise.all([loadAgentCommissions(user.id, null, 100), loadAgentEarningsTotals(user.id)]);
   const items = ledger.ok ? ledger.data.items : [];
   const own = items.filter((item) => item.kind !== "TEAM_OVERRIDE");
   const team = items.filter((item) => item.kind === "TEAM_OVERRIDE");
-  const total = (rows: typeof items) => rows.reduce((sum, row) => sum + row.amountPaise, 0);
   return (
     <div className="space-y-6">
       <h1 className="font-display text-2xl font-bold sm:text-3xl">Earnings</h1>
       <section className="grid gap-3 sm:grid-cols-2">
         <article className="rounded-xl border p-4">
           <p className="text-xs text-muted-foreground">My sales</p>
-          <p className="text-2xl font-bold">{formatINR(total(own))}</p>
+          <p className="text-2xl font-bold">{formatINR(totals.ownPaise)}</p>
         </article>
         <article className="rounded-xl border p-4">
           <p className="text-xs text-muted-foreground">Team override</p>
-          <p className="text-2xl font-bold">{formatINR(total(team))}</p>
+          <p className="text-2xl font-bold">{formatINR(totals.teamPaise)}</p>
         </article>
       </section>
       <CommissionList title="My sales" rows={own} />
