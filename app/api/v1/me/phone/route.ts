@@ -39,7 +39,7 @@ async function putHandler(req: NextRequest) {
   if (!auth.ok) return auth.response;
   const parsed = await parseJson(req, otpVerifySchema);
   if (!parsed.ok) return parsed.response;
-  const result = await confirmPhoneChange(auth.user.id, parsed.data.phone, parsed.data.code);
+  const result = await confirmPhoneChange(auth.user.id, parsed.data.phone, parsed.data.code, auth.user.sessionId);
   if (!result.ok) return v1Error(400, "VALIDATION", result.error);
   return v1Data({ phone: result.phone });
 }

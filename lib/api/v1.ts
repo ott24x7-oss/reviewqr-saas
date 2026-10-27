@@ -13,6 +13,8 @@ export type V1User = {
   phone: string | null;
   role: string;
   pushEnabled: boolean;
+  /** Refresh session id from the access token, when this request has one. */
+  sessionId: string | null;
 };
 
 export function v1Error(status: number, code: string, message: string) {
@@ -66,7 +68,8 @@ export async function resolveV1User(req: NextRequest): Promise<V1User | null | "
       name: user.name,
       phone: user.phone,
       role: user.role,
-      pushEnabled: user.pushEnabled
+      pushEnabled: user.pushEnabled,
+      sessionId: claims.sid || null
     };
   }
 
@@ -78,7 +81,8 @@ export async function resolveV1User(req: NextRequest): Promise<V1User | null | "
     name: sessionUser.name,
     phone: sessionUser.phone,
     role: sessionUser.role,
-    pushEnabled: sessionUser.pushEnabled
+    pushEnabled: sessionUser.pushEnabled,
+    sessionId: null
   };
 }
 

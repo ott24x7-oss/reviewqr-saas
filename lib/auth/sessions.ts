@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import type { TokenPair } from "@reviewqr/shared";
 import { prisma } from "../db";
 import { hashToken, randomToken } from "../tokens";
@@ -14,19 +15,24 @@ function clip(value: string | null | undefined, max: number) {
   return value.slice(0, max);
 }
 
-function pairFor(user: { id: string; role: string }, refreshToken: string): TokenPair {
+function pairFor(user: { id: string; role: string }, refreshToken: string, sessionId: string): TokenPair {
   return {
-    accessToken: signAccessToken({ sub: user.id, role: user.role }),
+    accessToken: signAccessToken({ sub: user.id, role: user.role, sid: sessionId }),
     refreshToken,
     expiresIn: ACCESS_TTL_SEC,
     tokenType: "Bearer"
   };
 }
 
-export function adminTokenPair(user: { id: string; role: string }, refreshToken: string, deviceId: string): TokenPair {
+export function adminTokenPair(
+  user: { id: string; role: string },
+  refreshToken: string,
+  deviceId: string,
+  sessionId: string
+): TokenPair {
   return {
     accessToken: signAccessToken(
-      { sub: user.id, role: user.role, aud: "admin", deviceId },
+      { sub: user.id, role: user.role, aud: "admin", deviceId, sid: sessionId },
       undefined,
       undefined,
       ADMIN_ACCESS_TTL_SEC
@@ -44,7 +50,7 @@ export function tokenConfigError() {
 export async function issueTokenPair(user: { id: string; role: string }, meta: DeviceMeta = {}) {
   const refreshToken = randomToken();
   const expiresAt = new Date(Date.now() + REFRESH_TTL_MS);
-  await prisma.refreshSession.create({
+  const row = await prisma.refreshSession.create({
     data: {
       userId: user.id,
       familyId: randomToken(),
@@ -55,7 +61,7 @@ export async function issueTokenPair(user: { id: string; role: string }, meta: D
       audience: "app"
     }
   });
-  return pairFor(user, refreshToken);
+  return pairFor(user, refreshToken, row.id);
 }
 
 export async function issueAdminTokenPair(
@@ -65,7 +71,7 @@ export async function issueAdminTokenPair(
 ) {
   const refreshToken = randomToken();
   const expiresAt = new Date(Date.now() + ADMIN_REFRESH_TTL_MS);
-  await prisma.refreshSession.create({
+  const row = await prisma.refreshSession.create({
     data: {
       userId: user.id,
       familyId: randomToken(),
@@ -77,7 +83,7 @@ export async function issueAdminTokenPair(
       adminDeviceId: deviceId
     }
   });
-  return adminTokenPair(user, refreshToken, deviceId);
+  return adminTokenPair(user, refreshToken, deviceId, row.id);
 }
 
 export type RotateResult =
@@ -143,7 +149,7 @@ export async function rotateRefreshToken(raw: string, meta: DeviceMeta = {}): Pr
     }
 
     const refreshToken = randomToken();
-    await tx.refreshSession.create({
+    const created = await tx.refreshSession.create({
       data: {
         userId: user.id,
         familyId: decision.familyId,
@@ -157,7 +163,10 @@ export async function rotateRefreshToken(raw: string, meta: DeviceMeta = {}): Pr
     });
     return {
       ok: true as const,
-      tokens: admin && row.adminDeviceId ? adminTokenPair(user, refreshToken, row.adminDeviceId) : pairFor(user, refreshToken)
+      tokens:
+        admin && row.adminDeviceId
+          ? adminTokenPair(user, refreshToken, row.adminDeviceId, created.id)
+          : pairFor(user, refreshToken, created.id)
     };
   });
 }
@@ -229,6 +238,34 @@ export async function revokeSession(userId: string, sessionId: string) {
 export async function revokeAllSessions(userId: string) {
   await prisma.refreshSession.updateMany({
     where: { userId, revokedAt: null },
+    data: { revokedAt: new Date() }
+  });
+}
+
+type SessionDb = Prisma.TransactionClient | typeof prisma;
+
+/**
+ * Ends every live refresh session for this user except the one making the request.
+ * The whole refresh family stays, so a token that was already rotated on this device
+ * can still be used. A session id that is not this user's revokes every session.
+ */
+export async function revokeOtherRefreshSessions(
+  userId: string,
+  exceptSessionId?: string | null,
+  db: SessionDb = prisma
+) {
+  const except = exceptSessionId
+    ? await db.refreshSession.findFirst({
+        where: { id: exceptSessionId, userId },
+        select: { familyId: true }
+      })
+    : null;
+  await db.refreshSession.updateMany({
+    where: {
+      userId,
+      revokedAt: null,
+      ...(except ? { familyId: { not: except.familyId } } : {})
+    },
     data: { revokedAt: new Date() }
   });
 }
