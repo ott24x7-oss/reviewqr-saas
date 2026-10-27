@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { PhoneFrame } from "./phone-frame";
+import { Reveal } from "./reveal";
 import { Shot } from "./shot";
 
 const STEPS = [
@@ -78,7 +79,9 @@ export function HomeFlow() {
   return (
     <section id="home-flow" className="hv3-section" aria-labelledby="home-flow-title">
       <div className="hv3-wrap">
-        <h2 id="home-flow-title">How it works in 3 taps</h2>
+        <Reveal>
+          <h2 id="home-flow-title">How it works in 3 taps</h2>
+        </Reveal>
         <div
           ref={scroller}
           className="hv3-flow-row"
@@ -88,14 +91,16 @@ export function HomeFlow() {
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
         >
-          {STEPS.map((step) => (
-            <article key={step.id} className="hv3-flow-card hv3-rise" data-flow-card={step.id}>
-              <PhoneFrame>
-                <Shot name={step.shot} kind="ui" alt={step.alt} sizes="180px" width={390} height={844} />
-              </PhoneFrame>
-              <h3 style={{ margin: "0 0 4px", fontSize: 16, lineHeight: "24px" }}>{step.title}</h3>
-              <p>{step.text}</p>
-            </article>
+          {STEPS.map((step, index) => (
+            <Reveal key={step.id} className="hv3-flow-snap" delay={index * 0.08}>
+              <article className="hv3-flow-card hv3-rise" data-flow-card={step.id}>
+                <PhoneFrame>
+                  <Shot name={step.shot} kind="ui" alt={step.alt} sizes="180px" width={390} height={844} />
+                </PhoneFrame>
+                <h3 style={{ margin: "0 0 4px", fontSize: 16, lineHeight: "24px" }}>{step.title}</h3>
+                <p>{step.text}</p>
+              </article>
+            </Reveal>
           ))}
         </div>
         <div className="hv3-dots" role="group" aria-label="Steps">
