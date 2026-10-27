@@ -16,6 +16,7 @@ import { HomeFaq } from "./faq";
 import { HomeFinalCta } from "./final-cta";
 import { HomeFooter } from "./footer";
 import { HomeSticky } from "./sticky";
+import { Reveal } from "./reveal";
 import "./home.css";
 
 export function HomeV3({
@@ -46,12 +47,24 @@ export function HomeV3({
         <HomeHero trust={trust} startHref={startHref} />
         <HomeFlow />
         <CustomerView />
-        <HomeProof stories={stories} />
-        <HomePlans plans={plans} />
-        <HomeComparison />
-        <HomeStands hardware={hardware} />
-        <HomeFaq />
-        <HomeFinalCta startHref={startHref} whatsapp={whatsapp} />
+        <Reveal>
+          <HomeProof stories={stories} />
+        </Reveal>
+        <Reveal>
+          <HomePlans plans={plans} />
+        </Reveal>
+        <Reveal>
+          <HomeComparison />
+        </Reveal>
+        <Reveal>
+          <HomeStands hardware={hardware} />
+        </Reveal>
+        <Reveal>
+          <HomeFaq />
+        </Reveal>
+        <Reveal>
+          <HomeFinalCta startHref={startHref} whatsapp={whatsapp} />
+        </Reveal>
       </main>
       <HomeFooter name={name} email={email} credits={credits} />
       <HomeSticky startHref={startHref} whatsapp={whatsapp} />

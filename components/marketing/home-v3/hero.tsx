@@ -1,7 +1,36 @@
+"use client";
+
+import * as React from "react";
 import Link from "next/link";
 import { Star } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
 import type { LandingTrust } from "@/lib/landing/proof";
+import { Reveal } from "./reveal";
 import { Shot } from "./shot";
+
+const WORDS = "Turn every scan into a review, an order, or a booking.".split(" ");
+
+function Headline() {
+  const reduce = useReducedMotion() === true;
+  const [ready, setReady] = React.useState(false);
+  React.useEffect(() => setReady(true), []);
+  if (!ready || reduce) return <h1>Turn every scan into a review, an order, or a booking.</h1>;
+  return (
+    <h1>
+      {WORDS.map((word, index) => (
+        <motion.span
+          key={`${word}-${index}`}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: index * 0.035, ease: [0.22, 1, 0.36, 1] }}
+          style={{ display: "inline-block", marginRight: "0.28em" }}
+        >
+          {word}
+        </motion.span>
+      ))}
+    </h1>
+  );
+}
 
 function trustParts(trust: LandingTrust) {
   const parts: string[] = [];
@@ -42,9 +71,9 @@ export function HomeHero({ trust, startHref }: { trust: LandingTrust; startHref:
   return (
     <section id="home-hero" className="hv3-section">
       <div className="hv3-wrap hv3-hero-grid">
-        <div className="hv3-stack">
+        <Reveal className="hv3-stack" y={12}>
           <p className="hv3-eyebrow">Scan. Tap. Grow.</p>
-          <h1>Turn every scan into a review, an order, or a booking.</h1>
+          <Headline />
           <p className="hv3-lead">
             Customers scan your QR and leave a Google review, send a WhatsApp order, or book a service. No app, for
             cafés, salons, clinics, and shops.
@@ -59,8 +88,8 @@ export function HomeHero({ trust, startHref }: { trust: LandingTrust; startHref:
             {trust.rating != null ? <Star size={20} strokeWidth={1.75} aria-hidden="true" /> : null}
             <span>{parts.join(" · ")}</span>
           </p>
-        </div>
-        <div className="hv3-hero-stage">
+        </Reveal>
+        <Reveal className="hv3-hero-stage" y={12} delay={0.08}>
           {CARDS.map((card) => (
             <figure key={card.name} className={`hv3-hero-card ${card.className}`}>
               <Shot
@@ -75,7 +104,7 @@ export function HomeHero({ trust, startHref }: { trust: LandingTrust; startHref:
               <figcaption>{card.label}</figcaption>
             </figure>
           ))}
-        </div>
+        </Reveal>
       </div>
     </section>
   );

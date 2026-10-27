@@ -442,9 +442,13 @@
   touch-action: pan-y;
 }
 
-.hv3-flow-card {
+.hv3-flow-snap {
   flex: 0 0 78%;
   scroll-snap-align: start;
+  min-width: 0;
+}
+
+.hv3-flow-card {
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 20px;
@@ -923,7 +927,7 @@
     overflow: visible;
   }
 
-  .hv3-flow-card {
+  .hv3-flow-snap {
     flex-basis: auto;
   }
 
@@ -965,31 +969,20 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .hv3-rise {
-    animation: hv3-rise 240ms ease-out both;
+  .home-v3 .hv3-btn {
+    transition: transform 180ms ease;
   }
 
-  .hv3-flow-card:nth-child(2) {
-    animation-delay: 40ms;
+  .home-v3 .hv3-btn:hover {
+    transform: translateY(-1px);
   }
 
-  .hv3-flow-card:nth-child(3) {
-    animation-delay: 80ms;
+  .home-v3 .hv3-btn:active {
+    transform: scale(0.98);
   }
 
   .hv3-stage .hv3-panel {
     transition: opacity 200ms ease-out;
-  }
-}
-
-@keyframes hv3-rise {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
   }
 }
 
