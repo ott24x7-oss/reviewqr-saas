@@ -26,7 +26,7 @@ export function AdminBusinessForm({
   const [nextName, setNextName] = React.useState(name);
   const [active, setActive] = React.useState(isActive);
   const [gating, setGating] = React.useState(reviewGating);
-  const [threshold, setThreshold] = React.useState(ratingThreshold);
+  const [threshold, setThreshold] = React.useState(Math.max(4, ratingThreshold));
   const [busy, setBusy] = React.useState(false);
 
   async function save(e: React.FormEvent) {
@@ -80,14 +80,13 @@ export function AdminBusinessForm({
             for a public review.
           </p>
           <div className="space-y-1.5">
-            <Label htmlFor="threshold">Hide the public link below</Label>
+            <Label htmlFor="threshold">Only show public links at</Label>
             <select
               id="threshold"
               className="h-10 w-full rounded-lg border bg-white px-3 text-sm"
               value={threshold}
               onChange={(e) => setThreshold(Number(e.target.value))}
             >
-              <option value={3}>3 stars</option>
               <option value={4}>4 stars</option>
               <option value={5}>5 stars</option>
             </select>

@@ -105,6 +105,9 @@ export async function createBusiness(user: { id: string; role: string }, raw: un
       reviewPlatform: data.reviewPlatform || "google",
       ratingThreshold: data.ratingThreshold,
       reviewGating: data.reviewGating,
+      reviewQaSpecialty: data.reviewQaSpecialty || null,
+      reviewQaBestKnown: data.reviewQaBestKnown || null,
+      reviewQaAtmosphere: data.reviewQaAtmosphere || null,
       primaryColor: data.primaryColor,
       logo: data.logo || null,
       coverImage: data.coverImage || null

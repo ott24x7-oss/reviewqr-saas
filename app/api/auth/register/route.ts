@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { DEFAULT_REVIEW_GATING } from "@/lib/review-policy";
 import { hashPassword } from "@/lib/auth";
 import { registerSchema } from "@/lib/validations";
 import { slugify } from "@/lib/utils";
@@ -85,7 +86,7 @@ export async function POST(req: NextRequest) {
         name: data.businessName,
         slug,
         ratingThreshold: 4,
-        reviewGating: false,
+        reviewGating: DEFAULT_REVIEW_GATING,
         primaryColor: "#1a73e8",
         whatsappNumber: data.phone || null,
         email

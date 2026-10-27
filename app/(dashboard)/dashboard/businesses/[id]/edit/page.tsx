@@ -42,8 +42,11 @@ export default async function EditBusinessPage({ params }: { params: { id: strin
           reviewPlatform:
             business.reviewPlatform === "trustpilot" ? "trustpilot" : "google",
           trustpilotUrl: business.trustpilotUrl || "",
-          ratingThreshold: business.ratingThreshold,
+          ratingThreshold: Math.max(4, business.ratingThreshold),
           reviewGating: business.reviewGating,
+          reviewQaSpecialty: business.reviewQaSpecialty || "",
+          reviewQaBestKnown: business.reviewQaBestKnown || "",
+          reviewQaAtmosphere: business.reviewQaAtmosphere || "",
           primaryColor: business.primaryColor,
           customThankYou: business.customThankYou || "",
           catalogMode: business.catalogMode || "MENU"

@@ -28,6 +28,8 @@ function serverEnv(url: string, portNumber: number, revealOtp: boolean) {
     env.OTP_DEV_REVEAL = "1";
     env.SHOP_PAYMENT_STUB = "1";
     env.NEXT_DIST_DIR = ".next-e2e-dev";
+    env.AI_ENABLED = "true";
+    env.AI_API_KEY = "e2e-review-ai-key";
   } else {
     delete env.OTP_DEV_REVEAL;
     delete env.SHOP_PAYMENT_STUB;

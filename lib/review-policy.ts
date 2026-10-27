@@ -1,5 +1,38 @@
 export type ReviewPlatform = "google" | "trustpilot";
 
+export const DEFAULT_REVIEW_GATING = true;
+export const REVIEW_GATING_OFF_MIGRATION_AT = new Date("2026-10-21T12:00:00.000Z");
+
+/** Ratings below four always stay in the private feedback path when gating is on. */
+export function publicReviewThreshold(ratingThreshold: number): number {
+  return Math.max(4, ratingThreshold);
+}
+
+/**
+ * Mirrors the one-time backfill predicate. A row edited after the forced-off
+ * migration is left alone because that edit may have been an owner's choice.
+ */
+export function shouldRestoreReviewGatingDefault(input: {
+  reviewGating: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}): boolean {
+  if (input.reviewGating) return false;
+  const cutoff = REVIEW_GATING_OFF_MIGRATION_AT.getTime();
+  const createdAt = input.createdAt.getTime();
+  const updatedAt = input.updatedAt.getTime();
+  return updatedAt <= cutoff || (createdAt > cutoff && updatedAt === createdAt);
+}
+
+export function shouldOfferAiReviewDrafts(input: {
+  reviewGating: boolean;
+  aiEnabled: boolean;
+  rating: number;
+  ratingThreshold: number;
+}): boolean {
+  return input.reviewGating && input.aiEnabled && input.rating >= publicReviewThreshold(input.ratingThreshold);
+}
+
 export type PublicReviewTarget = {
   platform: ReviewPlatform;
   href: string;
@@ -47,7 +80,7 @@ export function showPublicReviewLinks(input: {
 }): boolean {
   if (!input.hasPublicUrl) return false;
   if (!input.reviewGating) return true;
-  return input.rating >= input.ratingThreshold;
+  return input.rating >= publicReviewThreshold(input.ratingThreshold);
 }
 
 /**
@@ -73,5 +106,5 @@ export function reviewWasRedirected(input: {
   openedPublicReview: boolean;
 }): boolean {
   if (!input.reviewGating) return input.openedPublicReview;
-  return input.rating >= input.ratingThreshold && !input.hasFeedback;
+  return input.rating >= publicReviewThreshold(input.ratingThreshold) && !input.hasFeedback;
 }

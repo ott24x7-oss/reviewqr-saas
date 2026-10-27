@@ -26,7 +26,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
   if (typeof body.isActive === "boolean") data.isActive = body.isActive;
   if (typeof body.reviewGating === "boolean") data.reviewGating = body.reviewGating;
-  if (typeof body.ratingThreshold === "number" && body.ratingThreshold >= 1 && body.ratingThreshold <= 5) {
+  if (typeof body.ratingThreshold === "number" && body.ratingThreshold >= 4 && body.ratingThreshold <= 5) {
     data.ratingThreshold = Math.trunc(body.ratingThreshold);
   }
   if (!Object.keys(data).length) {
