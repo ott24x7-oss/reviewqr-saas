@@ -127,12 +127,12 @@ export default async function DashboardOverview({
     printed: !!printedMark || scannedQr > 0
   });
   const setupSteps: SetupStep[] = [
-    { id: "details", title: <AppText en="Business details" hi="कारोबार की जानकारी" />, detail: <AppText en="Add your phone number and address so customers can recognise and contact your business." hi="अपना फ़ोन नंबर और पता जोड़ें, ताकि ग्राहक आपके कारोबार को पहचानें और संपर्क कर सकें।" />, done: setup[0].done, href: `/dashboard/businesses/${activeBusiness.id}/edit` },
-    { id: "link", title: <AppText en="Page link" hi="पेज लिंक" />, detail: <AppText en="Your page link gives customers one simple place to find your business online." hi="आपका पेज लिंक ग्राहकों को ऑनलाइन आपका कारोबार आसानी से ढूँढ़ने देता है।" />, done: setup[1].done, href: `/dashboard/page?businessId=${activeBusiness.id}&tab=link` },
-    { id: "menu", title: <AppText en="Menu & products" hi="मेन्यू और उत्पाद" />, detail: <AppText en="Add the items or services customers can browse and order from your page." hi="वे आइटम या सेवाएँ जोड़ें जिन्हें ग्राहक आपके पेज पर देखकर ऑर्डर कर सकते हैं।" />, done: setup[2].done, href: `/dashboard/sell/menu?businessId=${activeBusiness.id}` },
-    { id: "buttons", title: <AppText en="Page buttons" hi="पेज बटन" />, detail: <AppText en="Choose the actions customers can take, such as calling, messaging or viewing your menu." hi="चुनें कि ग्राहक क्या कर सकें, जैसे कॉल करना, संदेश भेजना या मेन्यू देखना।" />, done: setup[3].done, href: `/dashboard/page?businessId=${activeBusiness.id}&tab=buttons` },
-    { id: "store", title: <AppText en="Store hours & UPI" hi="दुकान का समय और UPI" />, detail: <AppText en="Show when you are open and how customers can pay when they place an order." hi="दुकान खुलने का समय और ऑर्डर पर भुगतान का तरीका दिखाएँ।" />, done: setup[4].done, href: `/dashboard/account/settings?businessId=${activeBusiness.id}&section=store` },
-    { id: "print", title: <AppText en="Print your QR" hi="अपना QR प्रिंट करें" />, detail: <AppText en="Put your QR where customers can scan it to open your page and leave a review." hi="अपना QR ऐसी जगह लगाएँ जहाँ ग्राहक पेज खोलने और रिव्यू देने के लिए स्कैन कर सकें।" />, done: setup[5].done, href: `/dashboard/page/print?businessId=${activeBusiness.id}` }
+    { id: "details", title: <AppText en="Business details" hi="कारोबार की जानकारी" />, detail: <AppText en="Opens a form for your phone and address. After you save, customers see them on your page." hi="फ़ोन और पते का फ़ॉर्म खुलता है। सेव करने के बाद ग्राहक इन्हें आपके पेज पर देखते हैं।" />, done: setup[0].done, href: `/dashboard/businesses/${activeBusiness.id}/edit` },
+    { id: "link", title: <AppText en="Page link" hi="पेज लिंक" />, detail: <AppText en="Opens the link customers type or scan. Copy it and share it. The page itself does not change." hi="वह लिंक खुलता है जिसे ग्राहक टाइप या स्कैन करते हैं। उसे कॉपी करके भेजें। पेज नहीं बदलता।" />, done: setup[1].done, href: `/dashboard/page?businessId=${activeBusiness.id}&tab=link` },
+    { id: "menu", title: <AppText en="Menu & products" hi="मेन्यू और उत्पाद" />, detail: <AppText en="Opens the list of what you sell. After you add an item and save, customers can order it from your page." hi="जो आप बेचते हैं उसकी सूची खुलती है। आइटम जोड़कर सेव करने के बाद ग्राहक पेज से ऑर्डर कर सकते हैं।" />, done: setup[2].done, href: `/dashboard/sell/menu?businessId=${activeBusiness.id}` },
+    { id: "buttons", title: <AppText en="Page buttons" hi="पेज बटन" />, detail: <AppText en="Opens the actions on your page, such as call, WhatsApp, or menu. After you save, those buttons show to customers." hi="पेज के बटन खुलते हैं, जैसे कॉल, WhatsApp या मेन्यू। सेव करने के बाद ग्राहक इन्हें देखते हैं।" />, done: setup[3].done, href: `/dashboard/page?businessId=${activeBusiness.id}&tab=buttons` },
+    { id: "store", title: <AppText en="Store hours & UPI" hi="दुकान का समय और UPI" />, detail: <AppText en="Opens opening hours and the UPI ID for payment. After you save, customers see when you are open and how to pay." hi="खुलने का समय और भुगतान का UPI खुलता है। सेव करने के बाद ग्राहक समय और भुगतान का तरीका देखते हैं।" />, done: setup[4].done, href: `/dashboard/account/settings?businessId=${activeBusiness.id}&section=store` },
+    { id: "print", title: <AppText en="Print your QR" hi="अपना QR प्रिंट करें" />, detail: <AppText en="Opens a printable QR. Put it where customers can scan it. A scan opens your page so they can review, order, or book." hi="प्रिंट करने योग्य QR खुलता है। उसे वहाँ लगाएँ जहाँ ग्राहक स्कैन कर सकें। स्कैन से पेज खुलता है।" />, done: setup[5].done, href: `/dashboard/page/print?businessId=${activeBusiness.id}` }
   ];
 
   const activity: ActivityRow[] = [
@@ -153,7 +153,7 @@ export default async function DashboardOverview({
     <div className="space-y-5 sm:space-y-6">
       <PageHeader
         title={<AppText en={`Good ${new Date().getHours() < 12 ? "morning" : new Date().getHours() < 17 ? "afternoon" : "evening"}, ${user.name?.split(" ")[0] || "there"}`} hi={`नमस्ते, ${user.name?.split(" ")[0] || "जी"}`} />}
-        description={<><span className="font-medium text-foreground">{activeBusiness.name}</span><span className="mx-2">·</span><AppText en={`${businesses.length} ${businesses.length === 1 ? "business" : "businesses"}`} hi={`${businesses.length} कारोबार`} /></>}
+        description={<><span className="font-medium text-foreground">{activeBusiness.name}</span><span className="mx-2">·</span><AppText en={`${businesses.length} ${businesses.length === 1 ? "business" : "businesses"}`} hi={`${businesses.length} कारोबार`} /><span className="mt-1 block"><AppText en="Today's visits, orders, and reviews. Add business opens a form for another shop and leaves this one unchanged." hi="आज की विज़िट, ऑर्डर और रिव्यू। कारोबार जोड़ें दूसरी दुकान का फ़ॉर्म खोलता है, इस दुकान को नहीं बदलता।" /></span></>}
         actions={<Link href="/dashboard/businesses/new" className="inline-flex min-h-10 items-center gap-2 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted"><Building2 className="h-4 w-4" /><AppText en="Add business" hi="कारोबार जोड़ें" /></Link>}
       />
 
@@ -165,19 +165,22 @@ export default async function DashboardOverview({
         <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
           <div>
             <h2 className="text-sm font-semibold"><AppText en="Today" hi="आज" /></h2>
-            <p className="mt-0.5 text-xs text-muted-foreground"><AppText en="A quick look at your business" hi="आपके कारोबार की एक झलक" /></p>
+            <p className="mt-0.5 text-xs text-muted-foreground"><AppText en="Counts for today. The small line on each card is the last 7 days." hi="आज की गिनती। हर कार्ड की छोटी रेखा पिछले 7 दिन है।" /></p>
           </div>
-          <Link href="/dashboard/insights" className="app-ui-focus inline-flex min-h-9 items-center gap-1 text-sm font-medium text-primary"><AppText en="View analytics" hi="एनालिटिक्स देखें" /><ArrowUpRight className="h-4 w-4" /></Link>
+          <Link href="/dashboard/insights" className="app-ui-focus inline-flex min-h-9 items-center gap-1 text-sm font-medium text-primary"><AppText en="See the last 7 days" hi="पिछले 7 दिन देखें" /><ArrowUpRight className="h-4 w-4" /></Link>
         </div>
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-          <KpiCard label={<AppText en="Scans" hi="स्कैन" />} value={todayScans} delta={<AppText en="QR and NFC visits" hi="QR और NFC विज़िट" />} data={valueArray(weeklyDays, "scans", 7)} />
-          <KpiCard label={<AppText en="Orders" hi="ऑर्डर" />} value={todayOrders} delta={<AppText en="Today" hi="आज" />} data={valueArray(weeklyDays, "orderCount", 7)} />
-          <KpiCard label={<AppText en="Reviews" hi="रिव्यू" />} value={todayReviews} delta={<AppText en="New today" hi="आज के नए" />} data={valueArray(weeklyDays, "ratingCount", 7)} />
-          <KpiCard label={<AppText en="Sales" hi="बिक्री" />} value={Number(todaySales._sum.totalPaise || 0) / 100} format="inr" delta={<AppText en="Paid and open orders" hi="भुगतान और खुले ऑर्डर" />} data={valueArray(weeklyDays, "orderPaise", 7).map((value) => value / 100)} />
+          <KpiCard label={<AppText en="Scans" hi="स्कैन" />} value={todayScans} delta={<AppText en="People who opened your page from a QR or NFC tag today." hi="आज QR या NFC से आपका पेज खोलने वाले लोग।" />} data={valueArray(weeklyDays, "scans", 7)} />
+          <KpiCard label={<AppText en="Orders" hi="ऑर्डर" />} value={todayOrders} delta={<AppText en="WhatsApp orders placed today. Cancelled orders are left out." hi="आज के WhatsApp ऑर्डर। रद्द ऑर्डर शामिल नहीं हैं।" />} data={valueArray(weeklyDays, "orderCount", 7)} />
+          <KpiCard label={<AppText en="Reviews" hi="रिव्यू" />} value={todayReviews} delta={<AppText en="Star ratings customers left today." hi="आज ग्राहकों की दी हुई स्टार रेटिंग।" />} data={valueArray(weeklyDays, "ratingCount", 7)} />
+          <KpiCard label={<AppText en="Sales" hi="बिक्री" />} value={Number(todaySales._sum.totalPaise || 0) / 100} format="inr" delta={<AppText en="Rupee value of today's orders, including ones not paid yet." hi="आज के ऑर्डर की राशि, जिनमें अभी भुगतान नहीं हुआ।" />} data={valueArray(weeklyDays, "orderPaise", 7).map((value) => value / 100)} />
         </div>
         <Link href="/dashboard/sell/bookings" className="mt-3 block rounded-xl border bg-card p-4 hover:bg-muted/40">
           <div className="flex items-center justify-between gap-3">
-            <h3 className="text-sm font-semibold"><AppText en="Bookings today" hi="आज की बुकिंग" /></h3>
+            <div>
+              <h3 className="text-sm font-semibold"><AppText en="Bookings today" hi="आज की बुकिंग" /></h3>
+              <p className="mt-0.5 text-xs text-muted-foreground"><AppText en="Appointments asked for today. Open this to confirm or cancel them." hi="आज माँगी गई अपॉइंटमेंट। पुष्टि या रद्द करने के लिए इसे खोलें।" /></p>
+            </div>
             <span className="text-sm font-semibold tabular-nums">{todayBookingCount}</span>
           </div>
           {todayBookingRows.length ? (
@@ -236,7 +239,7 @@ export default async function DashboardOverview({
       </section>
 
       <section className="grid gap-3 sm:grid-cols-3">
-        <BusinessShortcut href="/dashboard/sell/menu" icon={<Package className="h-4 w-4" />} title={<AppText en="Menu & products" hi="मेन्यू और उत्पाद" />} description={<AppText en={`${activeBusiness._count.menuItems} items in your menu`} hi={`मेन्यू में ${activeBusiness._count.menuItems} आइटम`} />} />
+        <BusinessShortcut href="/dashboard/sell/menu" icon={<Package className="h-4 w-4" />} title={<AppText en="Menu & products" hi="मेन्यू और उत्पाद" />} description={<AppText en={`${activeBusiness._count.menuItems} items. Open this to add what customers can order.`} hi={`${activeBusiness._count.menuItems} आइटम। ग्राहक जो ऑर्डर कर सकें, उसे जोड़ने के लिए खोलें।`} />} />
         <BusinessShortcut href="/dashboard/account/settings" icon={<Users className="h-4 w-4" />} title={<AppText en="Your business" hi="आपका कारोबार" />} description={<AppText en="Details, team and store hours" hi="जानकारी, टीम और खुलने का समय" />} />
         <BusinessShortcut href="/dashboard/account/help" icon={<CircleHelp className="h-4 w-4" />} title={<AppText en="Need a hand?" hi="मदद चाहिए?" />} description={<AppText en="Find answers or contact support" hi="जवाब पाएँ या सहायता से संपर्क करें" />} />
       </section>
