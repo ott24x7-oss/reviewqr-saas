@@ -36,6 +36,8 @@ import { issueTokenPair } from "../../lib/auth/sessions";
 import { runClaimedJob } from "../../lib/jobs/dispatch";
 import { prisma } from "../../lib/db";
 import { runMenuAction } from "../../lib/store/menu-action";
+import { publicCatalogue } from "../../lib/store/public-catalogue";
+import { publicServicesView } from "../../lib/tap/services-gate";
 import { backfillServiceKinds } from "../../lib/store/service-backfill";
 
 const userIds: string[] = [];
@@ -395,6 +397,51 @@ describe("service booking", () => {
     expect(limited.status).toBe(429);
   }, 20000);
 
+  it("rate-limits one business even when every request uses a new IP and phone", async () => {
+    const stamp = Date.now().toString(36);
+    const owner = await prisma.user.create({ data: { email: `svc-biz-${stamp}@example.test`, role: "USER" } });
+    userIds.push(owner.id);
+    const business = await prisma.business.create({
+      data: { ownerId: owner.id, name: "Busy", slug: `svc-biz-${stamp}`, whatsappNumber: "9876543210" }
+    });
+    businessIds.push(business.id);
+    const code = `SB${stamp}`.slice(0, 12).toUpperCase();
+    await prisma.qRCode.create({ data: { businessId: business.id, label: "Desk", shortCode: code } });
+    const item = await prisma.menuItem.create({
+      data: { businessId: business.id, name: "Trim", pricePaise: 20000, kind: "SERVICE", durationMinutes: 20 }
+    });
+    const today = istDayKey(new Date());
+    for (let n = 1; n <= 20; n += 1) {
+      const ip = `198.51.101.${n}`;
+      ips.push(ip);
+      const saved = await publicBook(
+        bookReq(ip, {
+          code,
+          itemId: item.id,
+          preferredDate: today,
+          customerPhone: `8${String(n).padStart(9, "0")}`,
+          customerName: `Guest ${n}`
+        })
+      );
+      expect(saved.status, `attempt ${n}`).toBe(200);
+      bookingIds.push((await saved.json()).id);
+    }
+    const ip = "198.51.101.21";
+    ips.push(ip);
+    const limited = await publicBook(
+      bookReq(ip, {
+        code,
+        itemId: item.id,
+        preferredDate: today,
+        customerPhone: "8111111111",
+        customerName: "Guest 21"
+      })
+    );
+    expect(limited.status).toBe(429);
+    expect(await limited.json()).toEqual({ error: "Too many requests" });
+    expect(await prisma.bookingRequest.count({ where: { businessId: business.id } })).toBe(20);
+  }, 40000);
+
   it("locks booking when the catalogue plan omits Menu", async () => {
     const stamp = Date.now().toString(36);
     const ip = `198.51.100.${(stamp.length % 50) + 20}`;
@@ -451,6 +498,61 @@ describe("service booking", () => {
     const listed = await v1List(bearer(`/api/v1/bookings?businessId=${business.id}`, pair.accessToken));
     expect(listed.status).toBe(403);
     expect((await listed.json()).feature).toBe("services-booking");
+  });
+
+  it("keeps the product catalogue when Store is on and booking is locked", async () => {
+    const stamp = Date.now().toString(36);
+    const owner = await prisma.user.create({
+      data: {
+        email: `svc-store-${stamp}@example.test`,
+        role: "USER",
+        subscriptionTier: "STARTER",
+        subscriptionStatus: "ACTIVE",
+        subscriptionEndsAt: new Date("2027-08-01T00:00:00.000Z")
+      }
+    });
+    userIds.push(owner.id);
+    const plan = await prisma.plan.create({
+      data: {
+        nameEn: "Store only",
+        nameHi: "Store only",
+        slug: `svc-store-${stamp}`,
+        modules: ["STORE"],
+        limits: { businesses: 5, qrCodes: 10, products: 50, staff: 5, aiCalls: 10, storeProducts: 50, storeOrders: 50 },
+        legacyTier: "STARTER",
+        visibleOnPricingPage: false
+      }
+    });
+    planIds.push(plan.id);
+    await prisma.subscription.create({
+      data: {
+        userId: owner.id,
+        planId: plan.id,
+        modules: ["STORE"],
+        limits: { businesses: 5 },
+        tier: "STARTER",
+        status: "ACTIVE",
+        endsAt: owner.subscriptionEndsAt
+      }
+    });
+    const business = await prisma.business.create({
+      data: {
+        ownerId: owner.id,
+        name: "Store only",
+        slug: `svc-store-${stamp}`,
+        catalogMode: "SERVICES"
+      }
+    });
+    businessIds.push(business.id);
+    const catalogue = await publicCatalogue(owner.id);
+    expect(catalogue).toEqual({ showCatalogue: true, canOrder: true, canBookServices: false });
+    const mode = await prisma.business.findUnique({ where: { id: business.id } });
+    expect(mode?.catalogMode).toBe("SERVICES");
+    expect(publicServicesView({ catalogMode: "SERVICES", canBookServices: catalogue.canBookServices })).toBe("message");
+    expect(publicServicesView({ catalogMode: "BOTH", canBookServices: false })).toBe("menu");
+    expect(publicServicesView({ catalogMode: "MENU", view: "services", canBookServices: false })).toBe("menu");
+    expect(publicServicesView({ catalogMode: "MENU", canBookServices: true })).toBe("menu");
+    expect(publicServicesView({ catalogMode: "SERVICES", canBookServices: true })).toBe("board");
   });
 });
 

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { tapText, type TapLang } from "@/lib/tap/i18n";
 import { formatRupees } from "@/lib/tap/order-message";
 import { safeImageSrc } from "@/lib/tap/links";
+import { publicServicesView } from "@/lib/tap/services-gate";
 import { enabledOrderTypes, quoteOrder, type OrderType, type StoreRules } from "@/lib/store/pricing";
 import { lineUnitPaise, matchVariant, resolveChoice, uniqueLabels, usesSizeColour } from "@/lib/store/variants";
 import { couponDiscount, type CouponFail, type CouponRule } from "@/lib/store/coupons";
@@ -136,6 +137,7 @@ export function StoreMenu({
   homeHref,
   askBase,
   canOrder = true,
+  canBookServices = false,
   catalogMode = "MENU",
   initialView = "menu"
 }: {
@@ -157,6 +159,8 @@ export function StoreMenu({
   homeHref?: string;
   askBase?: string;
   canOrder?: boolean;
+  /** False when services-booking is locked. The product board does not use this. */
+  canBookServices?: boolean;
   catalogMode?: "MENU" | "SERVICES" | "BOTH";
   initialView?: "menu" | "services";
 }) {
@@ -368,9 +372,10 @@ export function StoreMenu({
     document.getElementById(`sec-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
-  const servicesOnly = catalogMode === "SERVICES" || (catalogMode === "MENU" && initialView === "services");
-  const showTabs = catalogMode === "BOTH";
-  const showingServices = servicesOnly || (showTabs && pane === "services");
+  const servicesView = publicServicesView({ catalogMode, view: initialView, canBookServices });
+  const showTabs = canBookServices && catalogMode === "BOTH";
+  const showingServices = servicesView === "board" && (catalogMode !== "BOTH" || pane === "services");
+  const servicesLocked = servicesView === "message";
   const serviceTabs = showTabs ? (
     <div className="svc-tabs" role="tablist">
       <button type="button" role="tab" aria-selected={pane === "menu"} onClick={() => setPane("menu")}>
@@ -385,7 +390,7 @@ export function StoreMenu({
   const DesignShell = design === "MINIMAL" ? MinimalStore : design === "BOLD" ? BoldStore : PremiumStore;
   const pageStyle = designed && themeStyle ? { ...themeStyle, background: undefined } : themeStyle;
 
-  if (showingServices) {
+  if (servicesLocked || showingServices) {
     return (
       <div className="store-page" data-design={design} data-catalog={catalogMode} style={pageStyle}>
         <div className="store-wrap">
@@ -402,14 +407,18 @@ export function StoreMenu({
             <h1>{businessName}</h1>
           </header>
           {serviceTabs}
-          <ServicesBoard
-            code={code}
-            channel={channel}
-            businessName={businessName}
-            items={items}
-            categories={categories}
-            lang={lang}
-          />
+          {servicesLocked ? (
+            <p className="store-empty" data-testid="services-unavailable">{text("servicesUnavailable")}</p>
+          ) : (
+            <ServicesBoard
+              code={code}
+              channel={channel}
+              businessName={businessName}
+              items={items}
+              categories={categories}
+              lang={lang}
+            />
+          )}
         </div>
       </div>
     );

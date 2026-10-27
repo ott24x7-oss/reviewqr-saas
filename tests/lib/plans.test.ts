@@ -439,7 +439,7 @@ describe("entitlements per module", () => {
     expect(saved.ok).toBe(true);
 
     const catalogue = await publicCatalogue(user.id);
-    expect(catalogue).toEqual({ showCatalogue: true, canOrder: true });
+    expect(catalogue).toEqual({ showCatalogue: true, canOrder: true, canBookServices: true });
     const published = await prisma.menuItem.findMany({ where: { businessId: business.id, available: true } });
     expect(published.map((row) => row.name)).toEqual(["Tea"]);
 

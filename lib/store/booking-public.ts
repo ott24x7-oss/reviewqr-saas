@@ -11,7 +11,7 @@ import { featureBlock } from "../plans/feature-gate";
 import { rateLimitDb } from "../rate-limit";
 import { whatsAppNumberUrl } from "../tap/links";
 import { fail, ok, type ServiceResult } from "../api/result";
-import { BOOKING_LIMIT, bookingRateKeys } from "./limits";
+import { BOOKING_BUSINESS_LIMIT, BOOKING_LIMIT, bookingBusinessRateKey, bookingRateKeys } from "./limits";
 import { notifyNewBooking } from "./order-alert";
 import { consentedPhone } from "./order-status";
 
@@ -59,6 +59,11 @@ export async function createPublicBooking(input: {
   if (!qr?.business || qr.status !== "ACTIVE" || !qr.business.isActive || qr.business.archived) {
     return fail(404, "This page is not available");
   }
+  const businessLimit = await rateLimitDb({
+    key: bookingBusinessRateKey(qr.business.id),
+    ...BOOKING_BUSINESS_LIMIT
+  });
+  if (!businessLimit.ok) return fail(429, "Too many requests");
   const locked = await featureBlock(qr.business.ownerId, "services-booking");
   if (locked) return locked;
 
