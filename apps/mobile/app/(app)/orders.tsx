@@ -29,6 +29,7 @@ import { Card, Chip, EmptyState, LoadErrorCard, Skeleton } from "../../src/ui/bi
 import { Field, PillButton } from "../../src/ui/controls";
 import { tapStrong } from "../../src/ui/haptics";
 import { LockedModuleCard } from "../../src/ui/locked-module";
+import { PhotoSourceButtons } from "../../src/ui/photo-source-buttons";
 import { useTheme } from "../../src/ui/theme";
 
 type Tab = "products" | "orders" | "feedback";
@@ -396,8 +397,7 @@ function OrdersScreenContent() {
           <Field label={t.name} tone="paper" value={name} onChangeText={setName} />
           <Field label={t.price} tone="paper" value={price} onChangeText={setPrice} keyboardType="decimal-pad" />
           <PillButton label={t.quickAdd} onPress={addProduct} disabled={!name.trim() || !price.trim()} hint={t.hintNamePrice} tone="dark" />
-          <PillButton label={t.photo} onPress={() => fromPhoto("camera")} tone="outline" />
-          <PillButton label={t.gallery} onPress={() => fromPhoto("library")} tone="outline" />
+          <PhotoSourceButtons lang={lang} palette={palette} onCamera={() => fromPhoto("camera")} onGallery={() => fromPhoto("library")} />
         </KeyboardAwareScrollView>
       ) : null}
       {showSkeleton ? (

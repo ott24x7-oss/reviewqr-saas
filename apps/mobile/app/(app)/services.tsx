@@ -17,6 +17,7 @@ import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
 import { BottomSheet, Card, EmptyState, LoadErrorCard, Skeleton } from "../../src/ui/bits";
 import { Field, PillButton } from "../../src/ui/controls";
+import { PhotoSourceButtons } from "../../src/ui/photo-source-buttons";
 import { useTheme } from "../../src/ui/theme";
 
 type PriceKind = PriceType;
@@ -87,8 +88,17 @@ function ServicesScreenContent() {
     setOpen(true);
   }
 
-  async function pickPhoto() {
-    const shot = await ImagePicker.launchImageLibraryAsync({ base64: true, quality: 0.4, mediaTypes: ["images"] });
+  async function pickPhoto(source: "camera" | "library") {
+    if (source === "camera") {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        setError(t.cameraOff);
+        return;
+      }
+    }
+    const shot = source === "camera"
+      ? await ImagePicker.launchCameraAsync({ base64: true, quality: 0.4, mediaTypes: ["images"] })
+      : await ImagePicker.launchImageLibraryAsync({ base64: true, quality: 0.4, mediaTypes: ["images"] });
     const encoded = shot.assets?.[0]?.base64;
     if (shot.canceled || !encoded) return;
     const dataUrl = `data:image/jpeg;base64,${encoded}`;
@@ -199,9 +209,7 @@ function ServicesScreenContent() {
       </Pressable>
       <BottomSheet visible={open} title={editing ? t.editService : t.addService} onClose={() => setOpen(false)}>
         <View style={styles.stack}>
-          <Pressable accessibilityRole="button" accessibilityLabel={t.servicePhotos} onPress={pickPhoto} style={[styles.photoBtn, { borderColor: palette.line }]}>
-            <Text style={[styles.meta, { color: palette.ink }, hindi && styles.hindi]}>{t.servicePhotos}</Text>
-          </Pressable>
+          <PhotoSourceButtons lang={lang} palette={palette} onCamera={() => pickPhoto("camera")} onGallery={() => pickPhoto("library")} disabled={busy} />
           {photoUri(photo) ? <Image source={{ uri: photoUri(photo) || "" }} style={styles.preview} contentFit="cover" /> : null}
           <Field label={t.name} value={name} onChangeText={setName} />
           <Field label={t.price} value={price} onChangeText={setPrice} keyboardType="decimal-pad" />
@@ -286,7 +294,6 @@ const styles = StyleSheet.create({
   meta: { fontFamily: fonts.body, fontSize: 14 },
   thumb: { width: 56, height: 56, borderRadius: 12 },
   preview: { height: 120, borderRadius: 14 },
-  photoBtn: { minHeight: 48, borderWidth: 1, borderRadius: 14, alignItems: "center", justifyContent: "center" },
   stack: { gap: 12 },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: { minHeight: 40, borderRadius: 999, borderWidth: 1, paddingHorizontal: 12, alignItems: "center", justifyContent: "center" },
