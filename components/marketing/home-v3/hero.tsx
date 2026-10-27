@@ -32,12 +32,16 @@ function Headline() {
   );
 }
 
+function countLabel(count: number, one: string, many: string) {
+  return `${count.toLocaleString("en-IN")} ${count === 1 ? one : many}`;
+}
+
 function trustParts(trust: LandingTrust) {
   const parts: string[] = [];
-  if (trust.rating != null) parts.push(String(trust.rating));
-  if (trust.businesses != null) {
-    parts.push(`${trust.businesses} ${trust.businesses === 1 ? "business" : "businesses"}`);
-  }
+  if (trust.rating != null) parts.push(`${trust.rating} average`);
+  if (trust.businesses != null) parts.push(countLabel(trust.businesses, "business live", "businesses live"));
+  if (trust.reviewCount != null) parts.push(countLabel(trust.reviewCount, "review", "reviews"));
+  if (trust.orderCount != null) parts.push(countLabel(trust.orderCount, "WhatsApp order", "WhatsApp orders"));
   parts.push("Made in India");
   return parts;
 }
