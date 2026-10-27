@@ -1,5 +1,7 @@
 import { prisma } from "../db";
 import { findUserByPhone, phoneKey, requestSignupOtp, verifySignupOtp } from "../otp";
+import { agentOnboardLimits, enforceOtpLimits, otpLimitMessage } from "../otp-message";
+import { rateLimitDb } from "../rate-limit";
 import { slugify } from "../utils";
 import { isReservedSlug } from "../tap/reserved-slugs";
 import { attachTapDraft } from "../tap/new-business";
@@ -86,6 +88,8 @@ export async function startAgentOnboarding(agentId: string, phoneRaw: string, bu
   }
   const name = businessName.trim();
   if (name.length < 2) return { ok: false as const, error: "Enter the business name" };
+  const limited = await enforceOtpLimits(agentOnboardLimits(phone, agentId), rateLimitDb);
+  if (!limited.ok) return { ok: false as const, error: otpLimitMessage(limited.key) };
   const row = await prisma.agentOnboarding.create({
     data: { agentId, phone, businessName: name }
   });
