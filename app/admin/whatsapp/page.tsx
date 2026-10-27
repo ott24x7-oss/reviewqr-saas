@@ -1,12 +1,11 @@
-import { getWhatsAppConfig } from "@/lib/settings";
-import { maskSecret } from "@/lib/admin";
+import { loadAdminWhatsAppSettings } from "@/lib/admin/channel-settings";
 import { WhatsAppConfigForm } from "./whatsapp-form";
 import { BaileysPanel } from "./baileys-panel";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminWhatsAppPage() {
-  const cfg = await getWhatsAppConfig();
+  const cfg = await loadAdminWhatsAppSettings();
   return (
     <div className="space-y-5">
       <div>
@@ -17,7 +16,7 @@ export default async function AdminWhatsAppPage() {
           wa.me links manually.
         </p>
       </div>
-      <WhatsAppConfigForm initial={{ ...cfg, apiToken: maskSecret(cfg.apiToken) }} />
+      <WhatsAppConfigForm initial={cfg} />
       <BaileysPanel />
     </div>
   );

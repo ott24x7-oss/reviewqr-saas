@@ -3,6 +3,14 @@ import path from "node:path";
 
 const appRoot = path.join(__dirname, "..", "app");
 const businessFormPath = path.join(__dirname, "..", "src", "ui", "business-form.tsx");
+const bottomSheetPath = path.join(__dirname, "..", "src", "ui", "bits.tsx");
+
+/** Inputs that live only inside BottomSheet are already keyboard-aware: the sheet scrolls with KeyboardAwareScrollView. */
+function fieldsAreOnlyInsideBottomSheet(source: string, bottomSheetSource: string) {
+  if (!source.includes("<BottomSheet") || !bottomSheetSource.includes("KeyboardAwareScrollView")) return false;
+  const outsideSheets = source.replace(/<BottomSheet\b[\s\S]*?<\/BottomSheet>/g, "");
+  return !/<(?:TextInput|Field|FilledField|OtpCodeForm)\b/.test(outsideSheets);
+}
 
 function routeFiles(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -14,6 +22,7 @@ function routeFiles(directory: string): string[] {
 
 describe("keyboard aware input screens", () => {
   const businessForm = readFileSync(businessFormPath, "utf8");
+  const bottomSheet = readFileSync(bottomSheetPath, "utf8");
 
   it("wraps every screen containing an input in a keyboard aware scroll container", () => {
     const inputScreens = routeFiles(appRoot).filter((file) =>
@@ -23,7 +32,8 @@ describe("keyboard aware input screens", () => {
       const source = readFileSync(file, "utf8");
       const routeIsKeyboardAware = source.includes("KeyboardAwareScrollView") || /<Screen\b[^>]*\bkeyboardAware/.test(source);
       const sharedBusinessFormIsKeyboardAware = source.includes("<BusinessForm") && businessForm.includes("KeyboardAwareScrollView");
-      return !routeIsKeyboardAware && !sharedBusinessFormIsKeyboardAware;
+      const sheetIsKeyboardAware = fieldsAreOnlyInsideBottomSheet(source, bottomSheet);
+      return !routeIsKeyboardAware && !sharedBusinessFormIsKeyboardAware && !sheetIsKeyboardAware;
     });
 
     expect(missing.map((file) => path.relative(appRoot, file))).toEqual([]);

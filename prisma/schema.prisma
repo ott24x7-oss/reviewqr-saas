@@ -139,6 +139,7 @@ model User {
   referralCredit ReferralCredit?
   agentOnboardings AgentOnboarding[]
   commissionLeaderSnapshots ShopCommission[] @relation("CommissionLeaderSnapshot")
+  clawbacksDue ClawbackDue[]
   suspendedAt DateTime?
   adminDevices AdminDevice[] @relation("AdminDeviceOwner")
   adminDevicesApproved AdminDevice[] @relation("AdminDeviceApprover")
@@ -358,6 +359,8 @@ model Business {
 
   isActive  Boolean @default(true)
   archived  Boolean @default(false)
+  /// What the public page leads with. Existing businesses stay on the menu.
+  catalogMode CatalogMode @default(MENU)
 
   locations    Location[]
   staffMembers Staff[]
@@ -381,6 +384,7 @@ model Business {
   devices      Device[]
   shopOrders   ShopOrder[]
   menuViews    MenuItemView[]
+  bookings     BookingRequest[]
   analyticsDays AnalyticsDaily[]
   growthScores GrowthScore[]
   growthTips   GrowthTipDone[]
@@ -1010,6 +1014,31 @@ enum VegMark {
   NONE
 }
 
+enum CatalogMode {
+  MENU
+  SERVICES
+  BOTH
+}
+
+enum MenuItemKind {
+  PRODUCT
+  SERVICE
+}
+
+enum PriceType {
+  FIXED
+  FROM
+  ON_REQUEST
+}
+
+enum BookingStatus {
+  NEW
+  CONFIRMED
+  DONE
+  CANCELLED
+  NO_SHOW
+}
+
 model MenuCategory {
   id         String     @id @default(cuid())
   businessId String
@@ -1044,6 +1073,11 @@ model MenuItem {
   brand      String        @default("")
   /// Service length. Hidden on food and shop.
   durationMinutes Int?
+  /// Product rows stay PRODUCT. Rows that already had a length are backfilled to SERVICE.
+  kind        MenuItemKind @default(PRODUCT)
+  priceType   PriceType    @default(FIXED)
+  /// Owners can list a service without taking booking requests.
+  bookable    Boolean      @default(true)
   /// Shop barcode. Empty when the owner has not scanned or typed one.
   barcode    String        @default("")
   veg        VegMark       @default(NONE)
@@ -1052,6 +1086,7 @@ model MenuItem {
   variants   MenuVariant[]
   addOns     MenuAddOn[]
   views      MenuItemView[]
+  bookings   BookingRequest[]
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @updatedAt
 
@@ -1070,13 +1105,47 @@ model MenuVariant {
   size       String   @default("")
   colour     String   @default("")
   pricePaise Int
+  /// Optional length for this option. The service length is used when this is empty.
+  durationMinutes Int?
   inStock    Boolean  @default(true)
   sortOrder  Int      @default(0)
+  bookings   BookingRequest[]
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
   @@index([itemId])
   @@index([businessId])
+}
+
+model BookingRequest {
+  id            String        @id @default(cuid())
+  businessId    String
+  business      Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  itemId        String
+  item          MenuItem      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  variantId     String?
+  variant       MenuVariant?  @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  customerName  String
+  /// Stored only after the customer agrees.
+  customerPhone String?
+  consentAt     DateTime?
+  /// Calendar day in YYYY-MM-DD, Asia/Kolkata.
+  preferredDate String
+  /// MORNING, AFTERNOON, or EVENING. Empty when preferredTime is set.
+  preferredSlot String?
+  /// Exact HH:mm. Empty when preferredSlot is set.
+  preferredTime String?
+  note          String?       @db.Text
+  status        BookingStatus @default(NEW)
+  /// qr, nfc, or link.
+  source        String?
+  lang          String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([businessId, createdAt])
+  @@index([businessId, status])
+  @@index([itemId])
 }
 
 model MenuAddOn {
@@ -1822,6 +1891,7 @@ model ShopCommission {
   /// Leader who sits above this earner, frozen at sale time.
   leaderId    String?
   leader      User?              @relation("CommissionLeaderSnapshot", fields: [leaderId], references: [id], onDelete: SetNull)
+  clawbacks   ClawbackDue[]
   createdAt   DateTime           @default(now())
 
   @@unique([agentId, kind, sourceId])
@@ -2021,6 +2091,22 @@ model CommissionPayout {
 
   @@unique([agentId, utr])
   @@index([agentId, paidAt])
+}
+
+// Money already paid to an agent that a reversal says they owe back.
+// settledAt stays empty until it is deducted from a later payout.
+model ClawbackDue {
+  id           String    @id @default(cuid())
+  agentId      String
+  agent        User      @relation(fields: [agentId], references: [id], onDelete: Restrict)
+  commissionId String    @unique
+  commission   ShopCommission @relation(fields: [commissionId], references: [id], onDelete: Restrict)
+  amountPaise  Int
+  reason       String
+  createdAt    DateTime  @default(now())
+  settledAt    DateTime?
+
+  @@index([agentId, settledAt])
 }
 
 model OwnerReferral {

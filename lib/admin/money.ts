@@ -4,7 +4,7 @@ import { takePage } from "@/lib/api/page";
 import { fail, ok } from "@/lib/api/result";
 import { prisma } from "@/lib/db";
 import { activateManually, reconcilePayment } from "@/lib/manual-payments";
-import { approveDueCommissions, reverseCommissionsForPayment } from "@/lib/plans/ledger";
+import { approveDueCommissions, outstandingClawbackByAgent, reverseCommissionsForPayment } from "@/lib/plans/ledger";
 import { payApprovedCommissions } from "@/lib/plans/payout";
 import { reverseReferralForPayment } from "@/lib/plans/rewards";
 import { notifyUser } from "@/lib/plans/notify";
@@ -328,6 +328,7 @@ export async function pageCommissionReport(search: URLSearchParams, mode: "page"
   );
   const bucket = (agentId: string, status: string) =>
     grouped.find((row) => row.agentId === agentId && row.status === status)?._sum.amountPaise || 0;
+  const clawback = await outstandingClawbackByAgent(ids);
   return ok({
     items: agents.map((agent) => ({
       agentId: agent.userId,
@@ -341,7 +342,8 @@ export async function pageCommissionReport(search: URLSearchParams, mode: "page"
       pendingPaise: bucket(agent.userId, "PENDING"),
       approvedPaise: bucket(agent.userId, "APPROVED"),
       paidPaise: bucket(agent.userId, "PAID"),
-      legacyPaise: bucket(agent.userId, "LEGACY_UNSETTLED")
+      legacyPaise: bucket(agent.userId, "LEGACY_UNSETTLED"),
+      clawbackPaise: clawback.get(agent.userId) || 0
     })),
     total,
     page: page.data.page,

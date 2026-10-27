@@ -18,6 +18,8 @@ export type AccessClaims = {
   act?: string;
   /** Step-up only: single-use id, recorded when the token is spent. */
   jti?: string;
+  /** Refresh session that issued this access token. Phone recovery keeps this session. */
+  sid?: string;
 };
 
 function b64url(input: string) {
@@ -31,7 +33,7 @@ export function accessSecret(env: EnvLike = process.env): string | null {
 }
 
 export function signAccessToken(
-  claims: { sub: string; role: string; aud?: string; deviceId?: string; act?: string; jti?: string },
+  claims: { sub: string; role: string; aud?: string; deviceId?: string; act?: string; jti?: string; sid?: string },
   now = Math.floor(Date.now() / 1000),
   env: EnvLike = process.env,
   ttlSec = ACCESS_TTL_SEC
@@ -49,6 +51,7 @@ export function signAccessToken(
   if (claims.deviceId) body.deviceId = claims.deviceId;
   if (claims.act) body.act = claims.act;
   if (claims.jti) body.jti = claims.jti;
+  if (claims.sid) body.sid = claims.sid;
   const payload = b64url(JSON.stringify(body));
   const data = `${header}.${payload}`;
   const sig = crypto.createHmac("sha256", secret).update(data).digest("base64url");
@@ -81,6 +84,7 @@ export function verifyAccessToken(
   if (headerJson.alg !== "HS256") return null;
   if (!body?.sub || typeof body.role !== "string") return null;
   if (typeof body.exp !== "number" || body.exp <= now) return null;
+  if (body.sid != null && typeof body.sid !== "string") return null;
   return body;
 }
 

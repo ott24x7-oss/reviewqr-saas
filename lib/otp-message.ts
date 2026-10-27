@@ -39,6 +39,14 @@ export function otpIpLimits(ip: string, scope: "login" | "signup"): OtpLimit[] {
   return [first, { key: `otp-req-15:${ip}`, limit: 20, windowSeconds: 900 }];
 }
 
+/** Agent onboarding OTP. Five an hour to one phone, ten an hour from one agent. */
+export function agentOnboardLimits(phoneKey: string, agentId: string): OtpLimit[] {
+  return [
+    { key: `agent-onboard-phone:${phoneKey}`, limit: 5, windowSeconds: 3600 },
+    { key: `agent-onboard-agent:${agentId}`, limit: 10, windowSeconds: 3600 }
+  ];
+}
+
 export function otpPhoneLimits(phoneKey: string): OtpLimit[] {
   return [
     { key: `otp-phone:${phoneKey}`, limit: 5, windowSeconds: 600 },

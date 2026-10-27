@@ -112,6 +112,18 @@ describe("default tap links", () => {
     const types = view.links.map((link) => link.type);
     expect(types.slice(0, 2)).toEqual(["menu", "whatsapp_order"]);
     expect(view.links[0].href).toBe("/t/DEMO/menu");
+    expect(view.links[0].labelEn).toBe("View Menu");
+  });
+
+  it("relabels the menu button and adds Services when the catalogue says so", () => {
+    const services = presentBusiness({ ...cafe, menuCount: 2, catalogMode: "SERVICES" }, "q", "DEMO");
+    expect(services.links[0].labelEn).toBe("Services");
+    expect(services.links[0].labelHi).toBe("सेवाएँ");
+    const both = presentBusiness({ ...cafe, menuCount: 2, catalogMode: "BOTH" }, "q", "DEMO");
+    expect(both.links[0].labelEn).toBe("Menu & services");
+    const extra = synthesizeLinks({ ...cafe, channel: "q", code: "DEMO", menuCount: 2, serviceCount: 1 });
+    expect(extra.find((link) => link.type === "services")?.href).toBe("/q/DEMO/menu?view=services");
+    expect(extra[0].labelEn).toBe("View Menu");
   });
 
   it("uses a published snapshot instead of the synthesized buttons", () => {

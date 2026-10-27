@@ -6,6 +6,7 @@ import Link from "next/link";
 import { tapText, type TapLang } from "@/lib/tap/i18n";
 import { formatRupees } from "@/lib/tap/order-message";
 import { safeImageSrc } from "@/lib/tap/links";
+import { publicServicesView } from "@/lib/tap/services-gate";
 import { enabledOrderTypes, quoteOrder, type OrderType, type StoreRules } from "@/lib/store/pricing";
 import { lineUnitPaise, matchVariant, resolveChoice, uniqueLabels, usesSizeColour } from "@/lib/store/variants";
 import { couponDiscount, type CouponFail, type CouponRule } from "@/lib/store/coupons";
@@ -14,6 +15,7 @@ import type { DesignCoupon, StoreDesign } from "@/lib/store/design";
 import dynamic from "next/dynamic";
 import { ShopCatalog } from "./store-shop";
 import { ServicesCatalog } from "./store-services";
+import { ServicesBoard } from "./services-board";
 
 const PremiumStore = dynamic(() => import("./store-premium").then((mod) => mod.PremiumStore));
 const MinimalStore = dynamic(() => import("./store-premium").then((mod) => mod.MinimalStore));
@@ -27,6 +29,7 @@ export type StoreVariant = {
   colour: string;
   pricePaise: number;
   inStock: boolean;
+  durationMinutes?: number | null;
 };
 
 export type StoreAddOn = {
@@ -50,6 +53,9 @@ export type StoreItem = {
   photos: string[];
   brand: string;
   durationMinutes: number | null;
+  kind?: "PRODUCT" | "SERVICE";
+  priceType?: "FIXED" | "FROM" | "ON_REQUEST";
+  bookable?: boolean;
   createdAt: string;
   veg: "VEG" | "NON_VEG" | "EGG" | "NONE";
   variants: StoreVariant[];
@@ -130,7 +136,10 @@ export function StoreMenu({
   coupons = [],
   homeHref,
   askBase,
-  canOrder = true
+  canOrder = true,
+  canBookServices = false,
+  catalogMode = "MENU",
+  initialView = "menu"
 }: {
   code: string;
   channel: "q" | "t";
@@ -150,6 +159,10 @@ export function StoreMenu({
   homeHref?: string;
   askBase?: string;
   canOrder?: boolean;
+  /** False when services-booking is locked. The product board does not use this. */
+  canBookServices?: boolean;
+  catalogMode?: "MENU" | "SERVICES" | "BOTH";
+  initialView?: "menu" | "services";
 }) {
   const [lang, setLang] = React.useState<TapLang>("en");
   const [query, setQuery] = React.useState("");
@@ -175,6 +188,9 @@ export function StoreMenu({
   const [coupon, setCoupon] = React.useState<CouponRule & { code: string } | null>(null);
   const [couponError, setCouponError] = React.useState("");
   const [couponBusy, setCouponBusy] = React.useState(false);
+  const [pane, setPane] = React.useState<"menu" | "services">(
+    catalogMode === "SERVICES" || initialView === "services" ? "services" : "menu"
+  );
   const storageKey = `rq-cart:${code}`;
 
   React.useEffect(() => {
@@ -356,12 +372,61 @@ export function StoreMenu({
     document.getElementById(`sec-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
+  const servicesView = publicServicesView({ catalogMode, view: initialView, canBookServices });
+  const showTabs = canBookServices && catalogMode === "BOTH";
+  const showingServices = servicesView === "board" && (catalogMode !== "BOTH" || pane === "services");
+  const servicesLocked = servicesView === "message";
+  const serviceTabs = showTabs ? (
+    <div className="svc-tabs" role="tablist">
+      <button type="button" role="tab" aria-selected={pane === "menu"} onClick={() => setPane("menu")}>
+        {text("menuTab")}
+      </button>
+      <button type="button" role="tab" aria-selected={pane === "services"} onClick={() => setPane("services")}>
+        {text("servicesTab")}
+      </button>
+    </div>
+  ) : null;
   const designed = design === "PREMIUM" || design === "MINIMAL" || design === "BOLD";
   const DesignShell = design === "MINIMAL" ? MinimalStore : design === "BOLD" ? BoldStore : PremiumStore;
   const pageStyle = designed && themeStyle ? { ...themeStyle, background: undefined } : themeStyle;
 
+  if (servicesLocked || showingServices) {
+    return (
+      <div className="store-page" data-design={design} data-catalog={catalogMode} style={pageStyle}>
+        <div className="store-wrap">
+          <header className="store-head">
+            <div className="store-head-row">
+              <Link className="store-back" href={homeHref || `/${channel}/${code}`} aria-label={businessName}>
+                <ChevronLeft aria-hidden="true" />
+              </Link>
+              <div className="tap-lang store-lang" role="group" aria-label="Language">
+                <button type="button" aria-pressed={lang === "en"} onClick={() => setLang("en")}>EN</button>
+                <button type="button" aria-pressed={lang === "hi"} onClick={() => setLang("hi")} lang="hi">हिं</button>
+              </div>
+            </div>
+            <h1>{businessName}</h1>
+          </header>
+          {serviceTabs}
+          {servicesLocked ? (
+            <p className="store-empty" data-testid="services-unavailable">{text("servicesUnavailable")}</p>
+          ) : (
+            <ServicesBoard
+              code={code}
+              channel={channel}
+              businessName={businessName}
+              items={items}
+              categories={categories}
+              lang={lang}
+            />
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="store-page" data-design={design} style={pageStyle}>
+    <div className="store-page" data-design={design} data-catalog={catalogMode} style={pageStyle}>
+      {serviceTabs}
       {designed ? (
         <DesignShell
           code={code}

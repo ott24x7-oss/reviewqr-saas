@@ -171,11 +171,11 @@ const themePalettes: Record<AppThemeName, { light: Palette; dark: Palette; alway
   },
   cinematic: {
     light: createPalette({
-      primary: "#D4AF37", primaryDeep: "#9C7A16", deep: "#D4AF37", onPrimary: "#050507", accentSoft: "rgba(212,175,55,0.2)", bg: "#050507", surface: "rgba(255,255,255,0.06)", surface2: "rgba(255,255,255,0.1)", line: "rgba(255,255,255,0.1)", text: "#FFFFFF", muted: "#C7C7CC",
+      primary: "#D4AF37", primaryDeep: "#9C7A16", deep: "#D4AF37", onPrimary: "#050507", accentSoft: "rgba(212,175,55,0.2)", bg: "#050507", surface: "#141416", surface2: "#1E1E20", line: "rgba(255,255,255,0.1)", text: "#FFFFFF", muted: "#C7C7CC",
       success: "#70E6A1", warning: "#F5D06F", danger: "#FF8E91", onDanger: "#050507", buttonGradient: ["#D4AF37", "#F0D477"], cinematic: true, header: "#050507", headerInk: "#FFFFFF"
     }),
     dark: createPalette({
-      primary: "#D4AF37", primaryDeep: "#9C7A16", deep: "#D4AF37", onPrimary: "#050507", accentSoft: "rgba(212,175,55,0.2)", bg: "#050507", surface: "rgba(255,255,255,0.06)", surface2: "rgba(255,255,255,0.1)", line: "rgba(255,255,255,0.1)", text: "#FFFFFF", muted: "#C7C7CC",
+      primary: "#D4AF37", primaryDeep: "#9C7A16", deep: "#D4AF37", onPrimary: "#050507", accentSoft: "rgba(212,175,55,0.2)", bg: "#050507", surface: "#141416", surface2: "#1E1E20", line: "rgba(255,255,255,0.1)", text: "#FFFFFF", muted: "#C7C7CC",
       success: "#70E6A1", warning: "#F5D06F", danger: "#FF8E91", onDanger: "#050507", buttonGradient: ["#D4AF37", "#F0D477"], cinematic: true, header: "#050507", headerInk: "#FFFFFF"
     }),
     alwaysDark: true

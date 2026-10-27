@@ -8,7 +8,13 @@ import { prisma } from "../../lib/db";
 import { checkPayoutDate, payApprovedCommissions } from "../../lib/plans/payout";
 import { saveTeamProgramSettings } from "../../lib/plans/team-settings";
 
-async function agentWithKyc(label: string) {
+let panSerial = 2000;
+function nextPan() {
+  panSerial += 1;
+  return `AAAAA${String(panSerial).padStart(4, "0")}A`;
+}
+
+async function agentWithKyc(label: string, pan = nextPan()) {
   const stamp = `${label}-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`;
   const agent = await prisma.user.create({ data: { email: `${stamp}@example.test`, role: "AGENT" } });
   await prisma.agentProfile.create({
@@ -16,7 +22,7 @@ async function agentWithKyc(label: string) {
       userId: agent.id,
       code: stamp.replace(/[^a-z0-9]/gi, "").slice(0, 16).toUpperCase(),
       upiId: "agent@upi",
-      pan: encryptSecret("ABCDE1234F")
+      pan: encryptSecret(pan)
     }
   });
   return agent;
@@ -206,5 +212,74 @@ describe("commission payout", () => {
     }
     expect(await prisma.commissionPayout.count({ where: { agentId: agent.id } })).toBe(0);
     expect((await prisma.shopCommission.findFirst({ where: { agentId: agent.id } }))?.status).toBe("APPROVED");
+  });
+
+  it("applies the TDS threshold across every agent account that shares a PAN", async () => {
+    const previous = await prisma.appSetting.findUnique({ where: { key: "plans.team" } });
+    await saveTeamProgramSettings({
+      maxTeamDepth: 2,
+      minSharePercent: 50,
+      maxSharePercent: 90,
+      autoApproveSubAgents: false,
+      tdsPercent: 10,
+      tdsYearlyThresholdPaise: 10000
+    });
+    try {
+      const pan = nextPan();
+      const spaced = `${pan.slice(0, 5)} ${pan.slice(5, 9)} ${pan.slice(9)}`.toLowerCase();
+      const first = await agentWithKyc("pan-a", pan);
+      const second = await agentWithKyc("pan-b", spaced);
+      const other = await agentWithKyc("pan-c");
+      users.push(first.id, second.id, other.id);
+
+      await prisma.shopCommission.create({
+        data: { agentId: first.id, kind: "SALE", sourceId: `pan-a-${first.id}`, amountPaise: 8000, percent: 0, status: "APPROVED" }
+      });
+      const under = await payApprovedCommissions({
+        agentId: first.id,
+        utr: "PANUNDER1",
+        paidAt: new Date("2026-06-01T00:00:00+05:30"),
+        now: NOW
+      });
+      expect(under.ok && under.tdsPaise).toBe(0);
+
+      await prisma.commissionPayout.create({
+        data: {
+          agentId: second.id,
+          amountPaise: 50000,
+          grossPaise: 50000,
+          tdsPaise: 0,
+          netPaise: 50000,
+          utr: "PANOLDYEAR",
+          paidAt: new Date("2026-03-15T10:00:00+05:30")
+        }
+      });
+      await prisma.shopCommission.create({
+        data: { agentId: second.id, kind: "SALE", sourceId: `pan-b-${second.id}`, amountPaise: 5000, percent: 0, status: "APPROVED" }
+      });
+      const shared = await payApprovedCommissions({
+        agentId: second.id,
+        utr: "PANSHARED1",
+        paidAt: new Date("2026-08-01T00:00:00+05:30"),
+        now: NOW
+      });
+      expect(shared.ok && shared.grossPaise).toBe(5000);
+      expect(shared.ok && shared.tdsPaise).toBe(300);
+      expect(shared.ok && shared.netPaise).toBe(4700);
+
+      await prisma.shopCommission.create({
+        data: { agentId: other.id, kind: "SALE", sourceId: `pan-c-${other.id}`, amountPaise: 5000, percent: 0, status: "APPROVED" }
+      });
+      const alone = await payApprovedCommissions({
+        agentId: other.id,
+        utr: "PANALONE01",
+        paidAt: new Date("2026-09-01T00:00:00+05:30"),
+        now: NOW
+      });
+      expect(alone.ok && alone.tdsPaise).toBe(0);
+    } finally {
+      if (previous) await prisma.appSetting.update({ where: { key: "plans.team" }, data: { value: previous.value } });
+      else await prisma.appSetting.deleteMany({ where: { key: "plans.team" } });
+    }
   });
 });

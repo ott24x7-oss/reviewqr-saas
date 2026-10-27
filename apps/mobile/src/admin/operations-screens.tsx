@@ -4,7 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useQueryClient } from "@tanstack/react-query";
 import { ActivityIndicator, Image, Modal, Pressable, StyleSheet, Switch, Text, View } from "react-native";
 import { Check, MessageCircle, Package, Send, Shield, Smartphone, X } from "lucide-react-native";
-import { adminApi, useAdminAudit, useAdminDevices, useAdminSettings, useAdminShopOrders, useAdminTicket, useAdminTickets, useAdminWhatsApp } from "./api";
+import { adminApi, useAdminAudit, useAdminDevices, useAdminSettings, useAdminShopOrder, useAdminShopOrders, useAdminTicket, useAdminTickets, useAdminWhatsApp } from "./api";
 import type { AdminNotifyPrefs, AdminSettings, AdminSettingsPatch, AdminShopOrder, AdminShopOrderStatus, AdminTicket } from "./types";
 import { useAdminCopy } from "./copy";
 import { AdminCard, AdminRow } from "./components";
@@ -27,6 +27,7 @@ export function AdminShopScreen() {
   const [tracking, setTracking] = useState<Record<string, string>>({});
   const [working, setWorking] = useState<string | null>(null);
   const [error, setError] = useState(false);
+  const [openId, setOpenId] = useState<string | null>(params.id ?? null);
   const orders = useMemo(() => [...(query.data?.items ?? [])].sort((a, b) => Number(b.id === params.id) - Number(a.id === params.id)), [params.id, query.data]);
   const stageLabel: Partial<Record<AdminShopOrderStatus, string>> = { PAID: t.paidStage, PROOF_SENT: t.proofStage, APPROVED: t.approved, PRINTING: t.printing, PACKED: t.packed, SHIPPED: t.shipped, DELIVERED: t.delivered };
   async function run(order: AdminShopOrder, work: () => Promise<unknown>) {
@@ -51,9 +52,11 @@ export function AdminShopScreen() {
           const busy = working === order.id;
           const canTrack = order.status === "PACKED" || order.status === "PICKUP_SCHEDULED" || order.status === "SHIPPED";
           const done = order.status === "DELIVERED" || order.status === "CANCELLED";
+          const open = openId === order.id;
           return <AdminCard key={order.id} style={styles.orderCard}>
-            <View style={styles.orderHead}><View style={{ flex: 1 }}><Text style={[styles.orderTitle, { color: palette.ink }]}>{order.business ?? order.name ?? "—"}</Text><Text style={[styles.orderSubtitle, { color: palette.muted }]}>{[order.name, order.phone, formatAdminMoney(order.totalPaise, lang)].filter(Boolean).join(" · ")}</Text></View><AdminStatus label={stageLabel[order.status] ?? order.status} /></View>
+            <Pressable accessibilityRole="button" onPress={() => setOpenId(open ? null : order.id)}><View style={styles.orderHead}><View style={{ flex: 1 }}><Text style={[styles.orderTitle, { color: palette.ink }]}>{order.business ?? order.name ?? "—"}</Text><Text style={[styles.orderSubtitle, { color: palette.muted }]}>{[order.name, order.phone, formatAdminMoney(order.totalPaise, lang)].filter(Boolean).join(" · ")}</Text></View><AdminStatus label={stageLabel[order.status] ?? order.status} /></View></Pressable>
             <View style={styles.orderMeta}><Text style={[styles.meta, { color: palette.muted }]}>{order.invoiceNumber ?? order.id} · {formatAdminDate(order.createdAt, lang)}</Text></View>
+            {open ? <ShopOrderFacts orderId={order.id} /> : null}
             {order.status === "PROOF_SENT" ? <View style={[styles.proof, { backgroundColor: palette.paper }]}><Package color={palette.primary} size={24} /><Text style={[styles.meta, { color: palette.muted }]}>{t.proof} · {t.proofReady}</Text></View> : null}
             {canTrack ? <Field label={t.tracking} value={tracking[order.id] ?? ""} onChangeText={(value) => setTracking((current) => ({ ...current, [order.id]: value }))} autoCapitalize="characters" returnKeyType="done" /> : null}
             {canTrack ? <AdminAction label={busy ? t.loading : t.tracking} tone="outline" onPress={() => saveTracking(order).catch(() => undefined)} disabled={busy || (tracking[order.id] ?? "").trim().length < 4} /> : null}
@@ -64,6 +67,32 @@ export function AdminShopScreen() {
         })}
       </AdminLoadState>
     </AdminFrame>
+  );
+}
+
+function ShopOrderFacts({ orderId }: { orderId: string }) {
+  const t = useAdminCopy();
+  const { lang } = useI18n();
+  const { palette } = useTheme();
+  const detail = useAdminShopOrder(orderId);
+  if (detail.isLoading) return <ActivityIndicator color={palette.primary} />;
+  const order = detail.data;
+  if (!order) return null;
+  const shipment = order.shipment;
+  const trackingBits = shipment ? [shipment.awb, shipment.courierName, shipment.provider, shipment.shipmentId].filter(Boolean) : [];
+  return (
+    <View style={styles.facts}>
+      {order.lines.map((line) => <View key={line.id} style={[styles.lineRow, { borderColor: palette.line }]}>
+        <Text style={[styles.lineName, { color: palette.ink }]}>{line.name}</Text>
+        <Text style={[styles.meta, { color: palette.muted }]}>{t.quantity} {line.qty} · {formatAdminMoney(line.pricePaise, lang)}</Text>
+        {line.proofUrl ? <View style={styles.proofBlock}>
+          <Text style={[styles.lineName, { color: palette.ink }]}>{t.proof}</Text>
+          <Text selectable style={[styles.proofLink, { color: palette.primary }]}>{line.proofUrl}</Text>
+          {line.proofContentType?.startsWith("image/") ? <Image source={{ uri: line.proofUrl }} style={styles.proofImage} resizeMode="contain" /> : null}
+        </View> : null}
+      </View>)}
+      {trackingBits.length ? <Text style={[styles.meta, { color: palette.muted }]}>{t.tracking} · {trackingBits.join(" · ")}</Text> : null}
+    </View>
   );
 }
 
@@ -145,6 +174,15 @@ export function AdminWhatsAppScreen() {
         {info ? <>
           <AdminCard style={styles.whatsappHero}><View style={[styles.whatsappIcon, { backgroundColor: connected ? `${palette.success}18` : `${palette.warning}18` }]}><MessageCircle color={connected ? palette.success : palette.warning} size={23} /></View><View style={{ flex: 1 }}><Text style={[styles.whatsappTitle, { color: palette.ink }]}>{t.sender}</Text><Text style={[styles.whatsappPhone, { color: palette.muted }]}>{maskPhone(info.phoneNumber) || "—"}{info.connectedAt ? ` · ${formatAdminDate(info.connectedAt, lang)}` : ""}</Text>{info.error ? <Text style={[styles.whatsappPhone, { color: palette.danger }]}>{info.error}</Text> : null}</View><AdminStatus label={info.status} /></AdminCard>
           <AdminAction label={busy ? t.loading : t.reconnect} onPress={() => reconnect().catch(() => undefined)} disabled={busy} icon={busy ? <ActivityIndicator color={palette.onPrimary} /> : <Shield color={palette.onPrimary} size={16} />} />
+          <AdminCard style={styles.templateCard}>
+            <Text style={[styles.sectionTitle, { color: palette.ink }]}>{t.templateStatus}</Text>
+            {info.cloud?.configured ? info.cloud.templates.map((template) => (
+              <AdminRow key={`${template.name}:${template.language}`} title={template.name} subtitle={template.language || undefined} trailing={<AdminStatus label={template.status || "—"} />} />
+            )) : <>
+              <Text style={[styles.lineName, { color: palette.ink }]}>{t.cloudNotConfigured}</Text>
+              <Text style={[styles.meta, { color: palette.muted }]}>{t.cloudNotConfiguredHelp}</Text>
+            </>}
+          </AdminCard>
           <AdminCard style={styles.templateCard}><Text style={[styles.sectionTitle, { color: palette.ink }]}>{t.healthWhatsapp} · {t.today}</Text>
             <AdminRow title="WhatsApp" trailing={<Text style={[styles.ownTitle, { color: palette.ink }]}>{info.delivery.counts.whatsapp}</Text>} />
             <AdminRow title="Email" trailing={<Text style={[styles.ownTitle, { color: palette.ink }]}>{info.delivery.counts.email}</Text>} />
@@ -277,7 +315,7 @@ export function AdminAuditScreen() {
 }
 
 const styles = StyleSheet.create({
-  pipeline: { flexDirection: "row", justifyContent: "space-between", gap: 2 }, pipelineStep: { flex: 1, alignItems: "center", gap: 5 }, stepDot: { width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center" }, stepIndex: { fontFamily: fonts.bodyStrong, fontSize: 10 }, stepLabel: { fontFamily: fonts.body, fontSize: 8, textAlign: "center" }, stockCard: { flexDirection: "row", alignItems: "center", gap: 10 }, stockIcon: { width: 38, height: 38, borderRadius: 13, alignItems: "center", justifyContent: "center" }, stockTitle: { fontFamily: fonts.bodyStrong, fontSize: 13 }, stockCaption: { fontFamily: fonts.body, fontSize: 11, marginTop: 3 }, stages: { flexDirection: "row", gap: 6, flexWrap: "wrap" }, stageChip: { minHeight: 34, borderRadius: 999, paddingHorizontal: 10, justifyContent: "center", borderWidth: 1 }, stageText: { fontFamily: fonts.bodyStrong, fontSize: 10 }, orderCard: { gap: 12 }, orderHead: { flexDirection: "row", alignItems: "center", gap: 10 }, orderTitle: { fontFamily: fonts.bodyStrong, fontSize: 15 }, orderSubtitle: { fontFamily: fonts.body, fontSize: 12, marginTop: 3 }, orderMeta: { flexDirection: "row", justifyContent: "space-between", gap: 8 }, meta: { fontFamily: fonts.body, fontSize: 10 }, proof: { minHeight: 56, borderRadius: 14, flexDirection: "row", alignItems: "center", gap: 8, padding: 8 }, error: { fontFamily: fonts.bodyStrong, fontSize: 13 },
+  pipeline: { flexDirection: "row", justifyContent: "space-between", gap: 2 }, pipelineStep: { flex: 1, alignItems: "center", gap: 5 }, stepDot: { width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center" }, stepIndex: { fontFamily: fonts.bodyStrong, fontSize: 10 }, stepLabel: { fontFamily: fonts.body, fontSize: 8, textAlign: "center" }, stockCard: { flexDirection: "row", alignItems: "center", gap: 10 }, stockIcon: { width: 38, height: 38, borderRadius: 13, alignItems: "center", justifyContent: "center" }, stockTitle: { fontFamily: fonts.bodyStrong, fontSize: 13 }, stockCaption: { fontFamily: fonts.body, fontSize: 11, marginTop: 3 }, stages: { flexDirection: "row", gap: 6, flexWrap: "wrap" }, stageChip: { minHeight: 34, borderRadius: 999, paddingHorizontal: 10, justifyContent: "center", borderWidth: 1 }, stageText: { fontFamily: fonts.bodyStrong, fontSize: 10 }, orderCard: { gap: 12 }, orderHead: { flexDirection: "row", alignItems: "center", gap: 10 }, orderTitle: { fontFamily: fonts.bodyStrong, fontSize: 15 }, orderSubtitle: { fontFamily: fonts.body, fontSize: 12, marginTop: 3 }, orderMeta: { flexDirection: "row", justifyContent: "space-between", gap: 8 }, meta: { fontFamily: fonts.body, fontSize: 10 }, facts: { gap: 8 }, lineRow: { gap: 4, borderWidth: StyleSheet.hairlineWidth, borderRadius: 12, padding: 10 }, lineName: { fontFamily: fonts.bodyStrong, fontSize: 13 }, proofBlock: { gap: 4, marginTop: 4 }, proofLink: { fontFamily: fonts.body, fontSize: 11 }, proofImage: { width: "100%", height: 140, borderRadius: 10, marginTop: 4 }, proof: { minHeight: 56, borderRadius: 14, flexDirection: "row", alignItems: "center", gap: 8, padding: 8 }, error: { fontFamily: fonts.bodyStrong, fontSize: 13 },
   ticketCard: { gap: 10, borderWidth: 1 }, thread: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 10, gap: 8 }, messageBubble: { borderRadius: 14, padding: 12, gap: 5 }, messageFrom: { fontFamily: fonts.bodyStrong, fontSize: 10 }, messageText: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18 }, actionRow: { flexDirection: "row", gap: 8 },
   whatsappHero: { minHeight: 84, flexDirection: "row", alignItems: "center", gap: 10 }, whatsappIcon: { width: 44, height: 44, borderRadius: 15, alignItems: "center", justifyContent: "center" }, whatsappTitle: { fontFamily: fonts.bodyStrong, fontSize: 15 }, whatsappPhone: { fontFamily: fonts.body, fontSize: 12, marginTop: 3 }, templateCard: { gap: 7 }, sectionTitle: { fontFamily: fonts.bodyStrong, fontSize: 16 }, ownPhone: { flexDirection: "row", alignItems: "center", gap: 10 }, ownIcon: { width: 38, height: 38, borderRadius: 13, alignItems: "center", justifyContent: "center" }, ownTitle: { fontFamily: fonts.bodyStrong, fontSize: 13 }, ownHint: { fontFamily: fonts.body, fontSize: 11, marginTop: 3 }, success: { fontFamily: fonts.bodyStrong, fontSize: 13 }, pairPage: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24, gap: 15 }, closePair: { position: "absolute", top: 54, right: 20, width: 42, height: 42, borderRadius: 15, alignItems: "center", justifyContent: "center" }, qrFrame: { padding: 20, borderRadius: 24, minWidth: 274, minHeight: 274, alignItems: "center", justifyContent: "center" }, qrImage: { width: 234, height: 234 }, pairTitle: { fontFamily: fonts.title, fontSize: 23 }, pairText: { fontFamily: fonts.body, fontSize: 15, textAlign: "center", maxWidth: 300, lineHeight: 21 },
   formCard: { gap: 14 }, switchRow: { minHeight: 58, flexDirection: "row", alignItems: "center", gap: 10 }, settingTitle: { fontFamily: fonts.bodyStrong, fontSize: 13 }, settingHint: { fontFamily: fonts.body, fontSize: 11, marginTop: 3 }, twoFields: { flexDirection: "row", gap: 10 }, flagTitle: { fontFamily: fonts.bodyStrong, fontSize: 14 }, deviceList: { gap: 8 }, deviceRow: { minHeight: 70, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: "row", alignItems: "center", gap: 8 }, deviceIcon: { width: 34, height: 34, borderRadius: 12, alignItems: "center", justifyContent: "center" }, auditCard: { gap: 9 }, auditTop: { flexDirection: "row", alignItems: "flex-start", gap: 8 }, auditAction: { fontFamily: fonts.bodyStrong, fontSize: 14 }, auditTarget: { fontFamily: fonts.body, fontSize: 12, marginTop: 3 }, auditTime: { fontFamily: fonts.body, fontSize: 10 }, auditAdmin: { fontFamily: fonts.bodyStrong, fontSize: 11 }, jsonBox: { borderRadius: 12, padding: 11, gap: 4 }, jsonLabel: { fontFamily: fonts.bodyStrong, fontSize: 10, marginTop: 4 }, jsonText: { fontFamily: "monospace", fontSize: 10, lineHeight: 15 }

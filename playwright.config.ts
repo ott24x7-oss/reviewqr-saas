@@ -100,6 +100,11 @@ export default defineConfig({
       name: "admin-web",
       testMatch: /admin-web\.spec\.ts/,
       use: { ...devices["Desktop Chrome"], baseURL: devURL }
+    },
+    {
+      name: "services",
+      testMatch: /services-booking\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"], baseURL: devURL }
     }
   ],
   webServer: [

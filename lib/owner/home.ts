@@ -1,5 +1,6 @@
 import { prisma } from "../db";
 import { fail, ok } from "../api/result";
+import { countBookingsToday } from "../store/bookings";
 import { readableBusinessWhere, requireBusinessRole } from "../tenant";
 
 function startOfToday() {
@@ -33,20 +34,33 @@ export async function ownerHome(userId: string, businessId: string | null) {
       });
   const ids = businesses.map((row) => row.id);
   const start = startOfToday();
-  const [ordersToday, feedbackToday, scansToday] = ids.length
-    ? await Promise.all([
-        prisma.menuOrder.count({ where: { businessId: { in: ids }, createdAt: { gte: start } } }),
-        prisma.feedback.count({ where: { businessId: { in: ids }, createdAt: { gte: start } } }),
-        prisma.qrScan.count({
+  const [ordersToday, feedbackToday, scansToday, bookings] = await Promise.all([
+    ids.length
+      ? prisma.menuOrder.count({ where: { businessId: { in: ids }, createdAt: { gte: start } } })
+      : Promise.resolve(0),
+    ids.length
+      ? prisma.feedback.count({ where: { businessId: { in: ids }, createdAt: { gte: start } } })
+      : Promise.resolve(0),
+    ids.length
+      ? prisma.qrScan.count({
           where: { createdAt: { gte: start }, qrCode: { businessId: { in: ids } } }
         })
-      ])
-    : [0, 0, 0];
+      : Promise.resolve(0),
+    countBookingsToday(ids)
+  ]);
 
   return ok({
     ordersToday,
     feedbackToday,
     scansToday,
+    bookingsToday: bookings.count,
+    todayBookings: bookings.items.map((item) => ({
+      id: item.id,
+      customerName: item.customerName,
+      serviceName: item.serviceName,
+      timeLabel: item.timeLabel,
+      status: item.status
+    })),
     businessId,
     plan: {
       tier: user.subscriptionTier,

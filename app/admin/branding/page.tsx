@@ -1,34 +1,13 @@
-import { prisma } from "@/lib/db";
 import { requireAdminPage } from "@/lib/admin";
 import { BrandingForm } from "./branding-form";
+import { loadAdminPlatformBranding } from "@/lib/admin/site-admin";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminBrandingPage() {
   await requireAdminPage();
 
-  let initial = {
-    logoDataUrl: "",
-    brandName: "",
-    tagline: "",
-    footerText: "",
-    primaryColor: ""
-  };
-  try {
-    const row = await prisma.platformBranding.findUnique({ where: { id: "singleton" } });
-    if (row) {
-      initial = {
-        logoDataUrl: row.logoDataUrl,
-        brandName: row.brandName,
-        tagline: row.tagline,
-        footerText: row.footerText,
-        primaryColor: row.primaryColor
-      };
-    }
-  } catch {
-    // Migration not yet applied — render the form with empty defaults so
-    // the admin can still see the UI; saving will fail until migrate runs.
-  }
+  const initial = await loadAdminPlatformBranding();
 
   return (
     <div className="space-y-5">

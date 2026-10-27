@@ -5,15 +5,23 @@ import {
   adminCommissionActionSchema,
   adminDeviceActionSchema,
   adminInboxActionSchema,
+  adminMeSchema,
+  adminMoneySummarySchema,
+  adminMyDevicesSchema,
   adminOtpVerifySchema,
   adminPaymentActionSchema,
+  adminPayoutsPageSchema,
+  adminRangeSchema,
   adminSessionSchema,
   adminSettingsPatchSchema,
   adminShopActionSchema,
+  adminShopOrderDetailSchema,
   adminStepUpSchema,
   adminSupportActionSchema,
   adminTeamActionSchema,
+  adminTeamResponseSchema,
   adminUserActionSchema,
+  adminWhatsAppCloudSchema,
   adminWhatsAppTestSchema,
   dataSchema
 } from "@reviewqr/shared";
@@ -79,10 +87,24 @@ export function registerAdminPaths(registry: OpenAPIRegistry, errorRef: JsonSche
   });
   registry.registerPath({
     method: "get",
+    path: "/api/v1/admin/me",
+    summary: "The signed-in admin: name, masked phone, and the current device.",
+    security: bearer,
+    responses: { 200: jsonResponse("Profile", dataSchema(adminMeSchema)), ...denied }
+  });
+  registry.registerPath({
+    method: "get",
     path: "/api/v1/admin/devices",
     summary: "Phones that have signed in to the admin app.",
     security: bearer,
     responses: ok
+  });
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/admin/devices/mine",
+    summary: "Phones that belong to the signed-in admin. Revoke with POST /devices/{id}.",
+    security: bearer,
+    responses: { 200: jsonResponse("Own devices", dataSchema(adminMyDevicesSchema)), ...denied }
   });
   registry.registerPath({
     method: "post",
@@ -221,10 +243,26 @@ export function registerAdminPaths(registry: OpenAPIRegistry, errorRef: JsonSche
   });
   registry.registerPath({
     method: "get",
-    path: "/api/v1/admin/agents/team",
-    summary: "Agent team. Phones are masked.",
+    path: "/api/v1/admin/money/summary",
+    summary: "Collected, refunds, commission balances, and this financial year's payouts.",
     security: bearer,
-    responses: ok
+    request: { query: z.object({ range: adminRangeSchema.optional(), from: z.string().optional(), to: z.string().optional() }) },
+    responses: { 200: jsonResponse("Summary", dataSchema(adminMoneySummarySchema)), ...denied }
+  });
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/admin/payouts",
+    summary: "Commission payout history. Cursor pages of gross, TDS, net, UTR, and paidAt.",
+    security: bearer,
+    request: { query: page },
+    responses: { 200: jsonResponse("Payouts", dataSchema(adminPayoutsPageSchema)), ...denied }
+  });
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/admin/agents/team",
+    summary: "Agent team, monthly leaderboard, and business counts. Phones are masked.",
+    security: bearer,
+    responses: { 200: jsonResponse("Team", dataSchema(adminTeamResponseSchema)), ...denied }
   });
   registry.registerPath({
     method: "post",
@@ -245,10 +283,10 @@ export function registerAdminPaths(registry: OpenAPIRegistry, errorRef: JsonSche
   registry.registerPath({
     method: "get",
     path: "/api/v1/admin/shop/orders/{id}",
-    summary: "One shop order, lines, and tracking.",
+    summary: "One shop order, item lines, a short-lived proof URL, and tracking.",
     security: bearer,
     request: { params: idParams },
-    responses: ok
+    responses: { 200: jsonResponse("Order", dataSchema(adminShopOrderDetailSchema)), ...denied }
   });
   registry.registerPath({
     method: "post",
@@ -285,9 +323,9 @@ export function registerAdminPaths(registry: OpenAPIRegistry, errorRef: JsonSche
   registry.registerPath({
     method: "get",
     path: "/api/v1/admin/whatsapp",
-    summary: "WhatsApp sender status and the pairing QR when one is waiting.",
+    summary: "WhatsApp sender status. Cloud template name, language, and status when Cloud is configured.",
     security: bearer,
-    responses: ok
+    responses: { 200: jsonResponse("Status", dataSchema(z.object({ status: z.string(), cloud: adminWhatsAppCloudSchema }).passthrough())), ...denied }
   });
   registry.registerPath({
     method: "post",

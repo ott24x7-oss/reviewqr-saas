@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/admin/ui/primitives";
 import { loadPlanBoardRows } from "@/lib/admin/plan-rows";
+import { getPricingCopy } from "@/lib/plans/pricing-copy";
 import { getPricingConfig } from "@/lib/settings";
 import { PlansBoard } from "./plans-board";
+import { PricingCopyForm } from "../pricing/pricing-copy-form";
 import { PricingForm } from "../pricing/pricing-form";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +12,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminPlansPage({ searchParams }: { searchParams?: { tab?: string } }) {
   const copy = searchParams?.tab === "copy";
   const plans = copy ? [] : await loadPlanBoardRows();
-  const pricing = copy ? await getPricingConfig() : null;
+  const [pricing, pricingCopy] = copy ? await Promise.all([getPricingConfig(), getPricingCopy()]) : [null, null];
   return (
     <div className="space-y-5">
       <PageHeader
@@ -23,8 +25,11 @@ export default async function AdminPlansPage({ searchParams }: { searchParams?: 
           </div>
         }
       />
-      {copy && pricing ? (
-        <PricingForm initial={pricing} />
+      {copy && pricing && pricingCopy ? (
+        <div className="space-y-5">
+          <PricingForm initial={pricing} />
+          <PricingCopyForm initial={pricingCopy} />
+        </div>
       ) : (
         <>
           <p className="text-sm text-zinc-500">

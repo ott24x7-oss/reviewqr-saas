@@ -1,11 +1,11 @@
 "use client";
 import * as React from "react";
 import { toast } from "sonner";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/admin/ui/controls";
+import { Button } from "@/components/admin/ui/controls";
+import { Input } from "@/components/admin/ui/controls";
+import { Label } from "@/components/admin/ui/controls";
+import { Textarea } from "@/components/admin/ui/controls";
 import { Loader2, Save, Sparkles } from "lucide-react";
 import type { PricingConfig } from "@/lib/settings";
 import type { SubscriptionTier } from "@prisma/client";

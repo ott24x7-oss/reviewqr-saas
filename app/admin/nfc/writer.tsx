@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/admin/ui/controls";
 import { HelpLink } from "@/components/help/help-link";
 import { codeFromScan } from "@/lib/tap/qr-stock";
 import { decodeNdefUrl, nfcLinkMatches, nfcUrl, normalizeChipUid } from "@/lib/tap/nfc";

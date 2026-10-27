@@ -9,7 +9,7 @@ import { PrimaryButton, SecondaryButton, TextButton } from "./buttons";
 import { usePalette, useTheme } from "./theme";
 import { withOpacity } from "./tokens";
 
-export function Field({ label, tone = "paper", ...props }: TextInputProps & { label: string; tone?: "dark" | "paper" }) {
+export function Field({ label, tone = "paper", style, ...props }: TextInputProps & { label: string; tone?: "dark" | "paper" }) {
   const { lang } = useI18n();
   const palette = usePalette();
   const paper = tone !== "dark";
@@ -17,17 +17,19 @@ export function Field({ label, tone = "paper", ...props }: TextInputProps & { la
     <View style={styles.field}>
       <Text style={[styles.label, { color: paper ? palette.muted : palette.headerInk }, lang === "hi" && styles.hindi]}>{label}</Text>
       <TextInput
-        placeholderTextColor={palette.muted}
         accessibilityLabel={label}
+        {...props}
+        placeholderTextColor={palette.muted}
         style={[
           styles.input,
           {
             borderColor: palette.line,
-            backgroundColor: paper ? palette.card : withOpacity(palette.headerInk, 0.06),
-            color: paper ? palette.ink : palette.headerInk
-          }
+            backgroundColor: paper ? palette.card : withOpacity(palette.headerInk, 0.06)
+          },
+          style,
+          // Caller layout styles never replace the theme text color.
+          { color: paper ? palette.text : palette.headerInk }
         ]}
-        {...props}
       />
     </View>
   );
@@ -71,7 +73,7 @@ export function FilledField({ label, value, onFocus, onBlur, style, ...props }: 
           setFocused(false);
           onBlur?.(event);
         }}
-        style={[styles.filledInput, { color: palette.ink }, lang === "hi" && styles.hindi, style]}
+        style={[styles.filledInput, lang === "hi" && styles.hindi, style, { color: palette.text }]}
       />
     </View>
   );

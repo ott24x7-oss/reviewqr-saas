@@ -76,6 +76,12 @@ function AgentHomeContent() {
                     <Text style={[styles.heroStatLabel, { color: palette.onPrimary }, lang === "hi" && styles.hindi]}>{t.agentPaid}</Text>
                     <AgentAmount paise={home.data.earnings.paidPaise} animate style={[styles.heroStatValue, { color: palette.onPrimary }]} />
                   </View>
+                  {home.data.earnings.clawbackPaise > 0 ? (
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.heroStatLabel, { color: palette.onPrimary }, lang === "hi" && styles.hindi]}>{t.agentClawback}</Text>
+                      <AgentAmount paise={home.data.earnings.clawbackPaise} animate style={[styles.heroStatValue, { color: palette.onPrimary }]} />
+                    </View>
+                  ) : null}
                 </View>
               </LinearGradient>
 

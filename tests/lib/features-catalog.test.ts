@@ -4,6 +4,7 @@ import { MODULES } from "../../lib/plans/catalog";
 
 const OWNER_FEATURES = [
   "menu",
+  "services-booking",
   "orders",
   "whatsapp-orders",
   "store",

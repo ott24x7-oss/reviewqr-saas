@@ -330,6 +330,7 @@ function ShopScreenContent() {
           {billing.isLoading ? <><Skeleton height={84} /><Skeleton height={84} /></> : null}
           {billing.isError ? <LoadErrorCard onRetry={() => billing.refetch().catch(() => undefined)} /> : null}
           <Text style={[styles.note, lang === "hi" && styles.hindi]}>{sellPlans ? t.plansFlag : t.planHistory}</Text>
+          <Text style={[styles.note, lang === "hi" && styles.hindi]}>{t.plansWeb}</Text>
           <View style={styles.card}>
             <Text style={styles.title}>{plan?.tier || "…"}</Text>
             <Text style={styles.note}>{plan?.status}</Text>

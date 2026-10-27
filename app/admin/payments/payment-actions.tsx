@@ -3,8 +3,8 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { StepUpDialog } from "@/components/admin/ui/dialogs";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/components/admin/ui/controls";
+import { Input } from "@/components/admin/ui/controls";
 
 export function PaymentActions({
   id,

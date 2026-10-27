@@ -2,6 +2,7 @@ import { requireAdminPage } from "@/lib/admin";
 import { adminShellCounts } from "@/lib/admin/inbox";
 import { AdminShell } from "@/components/admin/ui/shell";
 import { getBrand } from "@/lib/brand";
+import "@/components/admin/ui/theme.css";
 
 export const dynamic = "force-dynamic";
 

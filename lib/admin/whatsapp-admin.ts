@@ -1,6 +1,8 @@
 import { fail, ok } from "@/lib/api/result";
 import { prisma } from "@/lib/db";
 import { otpDeliveryStats } from "@/lib/otp";
+import { getWhatsAppConfig } from "@/lib/settings";
+import { cloudTemplateStatus } from "./cloud-templates";
 import { maskPhone } from "./mask";
 
 async function baileysInfo() {
@@ -20,8 +22,9 @@ async function baileysInfo() {
 }
 
 export async function adminWhatsAppStatus() {
-  const [info, delivery] = await Promise.all([baileysInfo(), otpDeliveryStats()]);
-  return ok({ ...info, delivery });
+  const [info, delivery, cfg] = await Promise.all([baileysInfo(), otpDeliveryStats(), getWhatsAppConfig()]);
+  const cloud = await cloudTemplateStatus(cfg);
+  return ok({ ...info, delivery, cloud });
 }
 
 export async function reconnectAdminWhatsApp() {

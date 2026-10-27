@@ -6,6 +6,7 @@ import { adminMockTransport } from "./mock";
 import type {
   AdminAuditEvent, AdminAuditFilters, AdminBusiness, AdminBusinessActionBody, AdminCommission, AdminCommissionActionBody,
   AdminCommissionStatus, AdminDashboard, AdminDevice, AdminDeviceRow, AdminInbox, AdminInboxActionBody, AdminInboxSegment,
+  AdminMe, AdminMoneySummary, AdminMyDevice, AdminPayout,
   AdminOtpSent, AdminOtpVerifyBody, AdminPage, AdminPayment, AdminPaymentActionBody, AdminPaymentDetail, AdminPaymentFilters,
   AdminPlan, AdminPlanPatch, AdminRange, AdminRefreshed, AdminRevealed, AdminSearch, AdminSession, AdminSettings,
   AdminSettingsPatch, AdminShopActionBody, AdminShopOrderDetail, AdminShopOrders, AdminShopOrderStatus, AdminStepUpAction,
@@ -285,6 +286,11 @@ export const adminApi = {
   /** Price or module changes need a change_plan_price or change_plan_modules step-up. */
   patchPlan: (planId: string, body: AdminPlanPatch, stepUp?: string | null) => adminRequest<unknown>(`/plans/${id(planId)}`, { method: "PATCH", body, stepUp }),
 
+  me: () => adminRequest<AdminMe>("/me"),
+  moneySummary: (range: AdminRange, from?: string, to?: string) =>
+    adminRequest<AdminMoneySummary>(`/money/summary${query({ range, from: range === "custom" ? from : undefined, to: range === "custom" ? to : undefined })}`),
+  payouts: (cursor?: string | null) => adminRequest<AdminPage<AdminPayout>>(`/payouts${query({ cursor })}`),
+
   team: () => adminRequest<AdminTeam>("/agents/team"),
   teamAction: (body: AdminTeamActionBody) => adminRequest<unknown>("/agents/team", { method: "POST", body }),
 
@@ -306,6 +312,7 @@ export const adminApi = {
   patchSettings: (body: AdminSettingsPatch, stepUp?: string | null) => adminRequest<unknown>("/settings", { method: "PUT", body, stepUp }),
 
   devices: () => adminRequest<{ devices: AdminDeviceRow[] }>("/devices"),
+  myDevices: () => adminRequest<{ devices: AdminMyDevice[] }>("/devices/mine"),
   /** approve needs an approve_device step-up. */
   deviceAction: (deviceId: string, action: "approve" | "revoke", stepUp?: string | null) =>
     adminRequest<{ devices: AdminDeviceRow[] }>(`/devices/${id(deviceId)}`, { method: "POST", body: { action }, stepUp }),
@@ -372,6 +379,26 @@ export function useAdminSettings() {
 }
 export function useAdminDevices() {
   return useQuery({ queryKey: key("devices"), queryFn: async () => (await adminApi.devices()).devices });
+}
+export function useAdminMe() {
+  return useQuery({ queryKey: key("me"), queryFn: () => adminApi.me() });
+}
+export function useAdminMyDevices() {
+  return useQuery({ queryKey: key("devices", "mine"), queryFn: async () => (await adminApi.myDevices()).devices });
+}
+export function useAdminMoneySummary(range: AdminRange) {
+  return useQuery({ queryKey: key("money", "summary", range), queryFn: () => adminApi.moneySummary(range) });
+}
+export function useAdminPayouts() {
+  return useInfiniteQuery({
+    queryKey: key("payouts"),
+    initialPageParam: null as string | null,
+    queryFn: ({ pageParam }) => adminApi.payouts(pageParam),
+    getNextPageParam: (page) => page.nextCursor ?? undefined
+  });
+}
+export function useAdminShopOrder(orderId: string | null) {
+  return useQuery({ queryKey: key("shop", "order", orderId), enabled: !!orderId, queryFn: () => adminApi.shopOrder(orderId!) });
 }
 export function useAdminAudit(filters: AdminAuditFilters = {}) {
   return useInfiniteQuery({

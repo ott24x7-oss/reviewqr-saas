@@ -17,6 +17,14 @@ export const FEATURES = [
     doesHi: ["पेज पर व्यंजन और सेवाएँ दिखाएँ", "उन्हें श्रेणियों में रखें", "मेनू की फोटो से आइटम पढ़ें"]
   },
   {
+    id: "services-booking",
+    module: "MENU",
+    labelEn: "Service booking",
+    labelHi: "सेवा बुकिंग",
+    doesEn: ["List services with a duration", "Take a booking on WhatsApp", "See today's booking requests"],
+    doesHi: ["अवधि के साथ सेवाएँ दिखाएँ", "WhatsApp पर बुकिंग लें", "आज की बुकिंग देखें"]
+  },
+  {
     id: "orders",
     module: "STORE",
     labelEn: "Orders",

@@ -73,3 +73,13 @@ describe("owner app theme text contrast", () => {
     readableAgainstSurfaces(theme, mode, getThemePalette(theme, mode, accent));
   });
 });
+
+describe("owner app card surfaces", () => {
+  // Android draws the elevation shadow through a translucent card, which shows as a grey frame around a dark box.
+  it.each(APP_THEMES.flatMap((theme) => (["light", "dark"] as const).map((mode) => ({ theme, mode }))))("$theme $mode cards are opaque", ({ theme, mode }) => {
+    const palette = getThemePalette(theme, mode);
+    for (const color of [palette.surface, palette.surface2, palette.card, palette.chip]) {
+      expect(parseColor(color).alpha).toBe(1);
+    }
+  });
+});

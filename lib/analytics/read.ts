@@ -2,6 +2,7 @@ import { rateLimitDb } from "../rate-limit";
 import { featureBlock } from "../plans/feature-gate";
 import { hasModule } from "../plans/entitlements";
 import { requireBusinessRole } from "../tenant";
+import { bookingAnalytics } from "./bookings";
 import { ensureRollups } from "./build";
 import { compareSummaries, foldRange } from "./fold";
 import { FutureRangeError, resolveRange } from "./range";
@@ -28,11 +29,12 @@ export async function readBusinessAnalytics(
   }
   const limit = await rateLimitDb({ key: `analytics-read:${userId}`, limit: 60, windowSeconds: 60 });
   if (!limit.ok) return { ok: false as const, status: 429, error: "Too many requests" };
-  const [menu, store, currentDays, previousDays] = await Promise.all([
+  const [menu, store, currentDays, previousDays, bookings] = await Promise.all([
     hasModule(access.ownerId, "MENU"),
     hasModule(access.ownerId, "STORE"),
     ensureRollups(businessId, range.from, range.to),
-    ensureRollups(businessId, range.previousFrom, range.previousTo)
+    ensureRollups(businessId, range.previousFrom, range.previousTo),
+    bookingAnalytics(businessId, range.from, range.to)
   ]);
   const current = foldRange(currentDays);
   const previous = foldRange(previousDays);
@@ -73,7 +75,8 @@ export async function readBusinessAnalytics(
       byQr: current.byQr,
       byDevice: current.byDevice,
       byTable: current.byTable,
-      byStaff: current.byStaff
+      byStaff: current.byStaff,
+      bookings: menu ? bookings : null
     }
   };
 }

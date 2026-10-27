@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
+import { revokeOtherRefreshSessions } from "@/lib/auth/sessions";
 import { findUserByPhone, phoneKey, requestPurposeOtp, verifyPurposeOtp } from "@/lib/otp";
 import { enforceOtpLimits, otpLimitMessage, otpPhoneLimits, OTP_RESEND_AFTER_SEC } from "@/lib/otp-message";
 import { prisma } from "@/lib/db";
@@ -66,5 +67,6 @@ export async function POST(req: NextRequest) {
   const checked = await verifyPurposeOtp(`${user.id}:${key}`, "phone-change", parsed.data.code);
   if (!checked.ok) return NextResponse.json({ error: checked.error }, { status: 400 });
   await prisma.user.update({ where: { id: user.id }, data: { phone: key } });
+  await revokeOtherRefreshSessions(user.id);
   return NextResponse.json({ ok: true, phone: key });
 }

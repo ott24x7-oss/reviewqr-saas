@@ -18,7 +18,7 @@ export function FadeIn({ children, className, delay = 0 }: { children: React.Rea
       // is delayed or a browser blocks the motion bundle.
       initial={false}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.15, delay }}
+      transition={{ duration: 0.18, delay }}
     >
       {children}
     </motion.div>
@@ -33,10 +33,10 @@ export function Stagger({ children, className }: { children: React.ReactNode; cl
       className={className}
       initial="hidden"
       animate="show"
-      variants={{ hidden: {}, show: { transition: { staggerChildren: 0.02 } } }}
+      variants={{ hidden: {}, show: { transition: { staggerChildren: 0.04 } } }}
     >
       {React.Children.map(children, (child, index) => (
-        <motion.div key={index} variants={{ hidden: { opacity: 0, y: 4 }, show: { opacity: 1, y: 0 } }} transition={{ duration: 0.15 }}>
+        <motion.div key={index} variants={{ hidden: { opacity: 0, y: 7 }, show: { opacity: 1, y: 0 } }} transition={{ duration: 0.18 }}>
           {child}
         </motion.div>
       ))}

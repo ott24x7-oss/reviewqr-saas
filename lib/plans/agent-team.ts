@@ -9,6 +9,7 @@ import { sendWhatsApp } from "../whatsapp";
 import { encodeCursor } from "../api/cursor";
 import { fail, ok, type ServiceResult } from "../api/result";
 import { freshAgentCode } from "./agents";
+import { outstandingClawbackByAgent } from "./ledger";
 import { makeCode, normalizeCode } from "./codes";
 import { indiaDayStart, indiaMonthStart } from "./india";
 import { getTeamProgramSettings } from "./team-settings";
@@ -80,12 +81,13 @@ export async function loadContractHome(agentId: string) {
   const day = indiaDayStart();
   const month = indiaMonthStart();
   const live = { agentId, status: { not: "REVERSED" as const } };
-  const [todaySum, monthSum, byStatus, businesses, members] = await Promise.all([
+  const [todaySum, monthSum, byStatus, businesses, members, clawback] = await Promise.all([
     prisma.shopCommission.aggregate({ where: { ...live, createdAt: { gte: day } }, _sum: { amountPaise: true } }),
     prisma.shopCommission.aggregate({ where: { ...live, createdAt: { gte: month } }, _sum: { amountPaise: true } }),
     prisma.shopCommission.groupBy({ by: ["status"], where: live, _sum: { amountPaise: true } }),
     prisma.business.count({ where: { agentId, archived: false } }),
-    prisma.agentProfile.findMany({ where: { leaderId: profile.data.id }, select: { userId: true } })
+    prisma.agentProfile.findMany({ where: { leaderId: profile.data.id }, select: { userId: true } }),
+    outstandingClawbackByAgent([agentId])
   ]);
   const memberIds = members.map((member) => member.userId);
   const monthSales = memberIds.length
@@ -104,7 +106,8 @@ export async function loadContractHome(agentId: string) {
     todayPaise: todaySum._sum.amountPaise || 0,
     monthPaise: monthSum._sum.amountPaise || 0,
     pendingPaise: statusSum("PENDING"),
-    paidPaise: statusSum("PAID")
+    paidPaise: statusSum("PAID"),
+    clawbackPaise: clawback.get(agentId) || 0
   };
   return ok({
     earnings,

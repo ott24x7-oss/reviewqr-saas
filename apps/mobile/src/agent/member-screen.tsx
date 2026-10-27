@@ -44,7 +44,7 @@ function MemberSlider({ value, min, max, onChange }: { value: number; min: numbe
         style={[styles.sliderTrack, { backgroundColor: palette.line }]}
       >
         <View style={[styles.sliderFill, { backgroundColor: palette.primary, width: `${pct * 100}%` }]} />
-        <View style={[styles.sliderThumb, { backgroundColor: palette.paper, borderColor: palette.primary, left: `${pct * 100}%` }]} />
+        <View style={[styles.sliderThumb, { backgroundColor: palette.cinematic ? palette.bg : palette.paper, borderColor: palette.primary, left: `${pct * 100}%` }]} />
       </View>
       <View style={styles.sliderButtons}>
         <Pressable accessibilityRole="button" accessibilityLabel={t.agentShareDecrease} onPress={() => step(-1)} style={[styles.stepButton, { borderColor: palette.line }]}><Text style={{ color: palette.ink }}>−</Text></Pressable>
