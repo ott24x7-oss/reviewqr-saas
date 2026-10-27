@@ -1,5 +1,6 @@
 import { otpSignupSchema } from "@reviewqr/shared";
 import { prisma } from "../db";
+import { DEFAULT_REVIEW_GATING } from "../review-policy";
 import {
   consumeSignupProof,
   createOtpSession,
@@ -77,7 +78,7 @@ async function createPhoneOwner(opts: {
         name: opts.businessName.trim(),
         slug,
         ratingThreshold: 4,
-        reviewGating: false,
+        reviewGating: DEFAULT_REVIEW_GATING,
         primaryColor: "#1a73e8",
         whatsappNumber: opts.phone,
         email: email || null

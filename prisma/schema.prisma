@@ -339,7 +339,7 @@ model Business {
   trustpilotUrl     String?  @db.Text
   reviewPlatform    String   @default("google") // google | trustpilot — preferred public link order
   ratingThreshold   Int      @default(4) // used only when reviewGating is on
-  reviewGating      Boolean  @default(false) // true hides the public link below ratingThreshold
+  reviewGating      Boolean  @default(true) // true routes below-threshold ratings to private feedback
   // TAP_PAGE keeps today's page. DIRECT opens one published button. Existing rows stay TAP_PAGE.
   directMode        String   @default("TAP_PAGE")
   directTarget      String   @default("")

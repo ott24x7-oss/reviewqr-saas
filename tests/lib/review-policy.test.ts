@@ -1,14 +1,57 @@
 import { describe, expect, it } from "vitest";
 import {
+  DEFAULT_REVIEW_GATING,
   orderedReviewTargets,
   reviewWasRedirected,
-  showPublicReviewLinks
+  showPublicReviewLinks,
+  shouldRestoreReviewGatingDefault,
+  REVIEW_GATING_OFF_MIGRATION_AT
 } from "../../lib/review-policy";
+import { businessSchema } from "../../lib/validations";
 
 const urls = {
   googleReviewUrl: "https://search.google.com/local/writereview?placeid=abc",
   trustpilotUrl: "https://www.trustpilot.com/evaluate/example.com"
 };
+
+describe("review gating defaults", () => {
+  it("defaults new business API payloads and Prisma-created rows to enabled", () => {
+    expect(DEFAULT_REVIEW_GATING).toBe(true);
+    expect(businessSchema.parse({ name: "New business" }).reviewGating).toBe(true);
+  });
+
+  it("backfills only false rows that still match the forced-off default", () => {
+    const cutoff = REVIEW_GATING_OFF_MIGRATION_AT;
+    expect(
+      shouldRestoreReviewGatingDefault({
+        reviewGating: false,
+        createdAt: new Date("2026-01-01T00:00:00.000Z"),
+        updatedAt: cutoff
+      })
+    ).toBe(true);
+    expect(
+      shouldRestoreReviewGatingDefault({
+        reviewGating: false,
+        createdAt: new Date("2026-10-22T00:00:00.000Z"),
+        updatedAt: new Date("2026-10-22T00:00:00.000Z")
+      })
+    ).toBe(true);
+    expect(
+      shouldRestoreReviewGatingDefault({
+        reviewGating: false,
+        createdAt: new Date("2026-01-01T00:00:00.000Z"),
+        updatedAt: new Date("2026-10-22T00:00:00.000Z")
+      })
+    ).toBe(false);
+    expect(
+      shouldRestoreReviewGatingDefault({
+        reviewGating: true,
+        createdAt: new Date("2026-01-01T00:00:00.000Z"),
+        updatedAt: new Date("2026-01-01T00:00:00.000Z")
+      })
+    ).toBe(false);
+  });
+});
 
 describe("public review links", () => {
   it("keeps Google and Trustpilot in a stable order for every rating", () => {

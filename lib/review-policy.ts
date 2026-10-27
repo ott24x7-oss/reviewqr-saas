@@ -1,5 +1,24 @@
 export type ReviewPlatform = "google" | "trustpilot";
 
+export const DEFAULT_REVIEW_GATING = true;
+export const REVIEW_GATING_OFF_MIGRATION_AT = new Date("2026-10-21T12:00:00.000Z");
+
+/**
+ * Mirrors the one-time backfill predicate. A row edited after the forced-off
+ * migration is left alone because that edit may have been an owner's choice.
+ */
+export function shouldRestoreReviewGatingDefault(input: {
+  reviewGating: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}): boolean {
+  if (input.reviewGating) return false;
+  const cutoff = REVIEW_GATING_OFF_MIGRATION_AT.getTime();
+  const createdAt = input.createdAt.getTime();
+  const updatedAt = input.updatedAt.getTime();
+  return updatedAt <= cutoff || (createdAt > cutoff && updatedAt === createdAt);
+}
+
 export type PublicReviewTarget = {
   platform: ReviewPlatform;
   href: string;

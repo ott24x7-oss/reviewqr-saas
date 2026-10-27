@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DEFAULT_REVIEW_GATING } from "./review-policy";
 import { storageConfigured, storedImageAllowed } from "./images";
 
 export const emailSchema = z.string().email("Enter a valid email").max(200).toLowerCase();
@@ -73,7 +74,7 @@ export const businessSchema = z.object({
   trustpilotUrl: httpUrl.optional().or(z.literal("")),
   reviewPlatform: z.enum(["google", "trustpilot"]).optional(),
   ratingThreshold: z.number().int().min(1).max(5).default(4),
-  reviewGating: z.boolean().default(false),
+  reviewGating: z.boolean().default(DEFAULT_REVIEW_GATING),
   primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#1a73e8"),
   customThankYou: z.string().max(500).optional().or(z.literal("")),
   aiReviewsEnabled: z.boolean().optional(),

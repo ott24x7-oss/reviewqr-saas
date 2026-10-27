@@ -27,7 +27,7 @@ export default function NewBusinessPage() {
     pincode: "",
     primaryColor: "#1a73e8",
     ratingThreshold: 4,
-    reviewGating: false
+    reviewGating: true
   });
 
   function update<K extends keyof typeof form>(key: K, val: (typeof form)[K]) {
@@ -173,17 +173,16 @@ export default function NewBusinessPage() {
                 onChange={(e) => update("reviewGating", e.target.checked)}
               />
               <span>
-                <span className="font-medium">Hide the public review link below a rating</span>
+                <span className="font-medium">Route low ratings to private feedback</span>
                 <span className="block text-xs text-muted-foreground">
-                  Leave this off. Every customer then sees the public link and the private form.
+                  Customers below the threshold see the private feedback form. Turn this off to show public review links for every rating.
                 </span>
               </span>
             </label>
             {form.reviewGating && (
               <>
                 <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950" role="alert">
-                  Review gating is on. Customers below this rating will not see the public review link.
-                  Google’s review policy does not allow asking only some customers for a public review.
+                  Customers below this rating will be invited to share feedback privately. Customers at or above it can continue to a public review link.
                 </p>
                 <div className="space-y-1.5">
                   <Label htmlFor="ratingThreshold">Hide the public link below</Label>
