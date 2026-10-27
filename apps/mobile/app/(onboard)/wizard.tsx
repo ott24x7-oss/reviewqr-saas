@@ -17,7 +17,7 @@ import * as ImagePicker from "expo-image-picker";
 import * as Sharing from "expo-sharing";
 import { router } from "expo-router";
 import LottieView from "lottie-react-native";
-import { Camera, Download, Image as ImageIcon, Share2, ShoppingBag, Store, Utensils } from "lucide-react-native";
+import { Download, Image as ImageIcon, Share2, ShoppingBag, Store, Utensils } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
 import { Image, Linking, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
@@ -32,6 +32,7 @@ import { fonts } from "../../src/theme";
 import { OptionTile, ProgressSteps } from "../../src/ui/bits";
 import { PrimaryButton, TextButton } from "../../src/ui/buttons";
 import { Field, PillButton } from "../../src/ui/controls";
+import { PhotoSourceButtons } from "../../src/ui/photo-source-buttons";
 import { tapSuccess } from "../../src/ui/haptics";
 import { useTheme } from "../../src/ui/theme";
 import type { Palette } from "../../src/ui/tokens";
@@ -192,8 +193,17 @@ export default function WizardScreen() {
     }
   }
 
-  async function importPhoto() {
-    const shot = await ImagePicker.launchImageLibraryAsync({ base64: true, quality: 0.4, mediaTypes: ["images"] });
+  async function importPhoto(source: "camera" | "library") {
+    if (source === "camera") {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        setError(t.cameraOff);
+        return;
+      }
+    }
+    const shot = source === "camera"
+      ? await ImagePicker.launchCameraAsync({ base64: true, quality: 0.4, mediaTypes: ["images"] })
+      : await ImagePicker.launchImageLibraryAsync({ base64: true, quality: 0.4, mediaTypes: ["images"] });
     if (shot.canceled || !shot.assets[0]?.base64) return;
     setPhoto(`data:image/jpeg;base64,${shot.assets[0].base64}`);
   }
@@ -412,11 +422,9 @@ export default function WizardScreen() {
         ) : null}
         {step === 2 ? (
           <View style={styles.stack}>
-            <View style={styles.tiles}>
-              <OptionTile icon={Camera} title={t.camera} onPress={() => upload("logo", "camera")} />
-              <OptionTile icon={ImageIcon} title={t.gallery} onPress={() => upload("logo", "library")} />
-            </View>
-            <PillButton label={t.coverPhoto} tone="outline" onPress={() => upload("cover", "library")} />
+            <PhotoSourceButtons lang={lang} palette={palette} onCamera={() => upload("logo", "camera")} onGallery={() => upload("logo", "library")} disabled={busy} />
+            <Text style={styles.label}>{t.coverPhoto}</Text>
+            <PhotoSourceButtons lang={lang} palette={palette} onCamera={() => upload("cover", "camera")} onGallery={() => upload("cover", "library")} disabled={busy} />
             <Animated.View style={[styles.preview, { backgroundColor: theme.bg }, previewAnim]}>
               <Text style={[styles.previewName, { color: theme.ink }]}>{draft.name || t.businessName}</Text>
               <View style={[styles.previewButton, { backgroundColor: theme.button }]}>
@@ -517,7 +525,8 @@ export default function WizardScreen() {
             {draft.items.length < 3 ? (
               <PillButton label={t.addItem} tone="outline" onPress={() => patch({ items: [...draft.items, { name: "", price: "" }] })} />
             ) : null}
-            <PillButton label={photo ? t.photo : t.importMenu} tone="outline" onPress={importPhoto} />
+            <Text style={styles.label}>{photo ? t.photo : t.importMenu}</Text>
+            <PhotoSourceButtons lang={lang} palette={palette} onCamera={() => importPhoto("camera")} onGallery={() => importPhoto("library")} disabled={busy} />
           </View>
         ) : null}
         </Animated.View>

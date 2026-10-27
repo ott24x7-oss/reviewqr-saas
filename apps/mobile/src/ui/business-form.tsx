@@ -19,6 +19,7 @@ import { usePalette } from "./theme";
 import type { Palette } from "./tokens";
 import { FilledField, PillButton, StickyAction } from "./controls";
 import { SectionHeader } from "./rows";
+import { PhotoSourceButtons } from "./photo-source-buttons";
 
 type Draft = {
   name: string;
@@ -196,10 +197,7 @@ export function BusinessForm({ initial, businessId }: { initial?: BusinessCard |
         <SectionHeader label={t.photo} />
         <View style={styles.card}>
           {draft.logo ? <Image source={{ uri: draft.logo }} style={styles.photoPreview} contentFit="cover" accessibilityLabel={t.photo} /> : null}
-          <View style={styles.photoActions}>
-            <PillButton label={t.camera} onPress={() => chooseLogo("camera")} disabled={busy} tone="outline" />
-            <PillButton label={t.gallery} onPress={() => chooseLogo("library")} disabled={busy} tone="outline" />
-          </View>
+          <PhotoSourceButtons lang={lang} palette={palette} onCamera={() => chooseLogo("camera")} onGallery={() => chooseLogo("library")} disabled={busy} />
         </View>
         <SectionHeader label={t.reviewUrl} />
         <View style={styles.card}>
@@ -238,7 +236,6 @@ function makeStyles(colors: Palette) {
   hit: { minHeight: 48, justifyContent: "center", backgroundColor: colors.paper, borderRadius: 14, paddingHorizontal: 14 },
   hitText: { fontFamily: fonts.body, color: colors.ink },
   photoPreview: { height: 150, borderRadius: 16, backgroundColor: colors.paper },
-  photoActions: { flexDirection: "row", gap: 8 },
   note: { fontFamily: fonts.body, color: colors.inkSoft, lineHeight: 22 },
   error: { color: colors.danger, fontFamily: fonts.body },
   hindi: { fontFamily: fonts.hindi }

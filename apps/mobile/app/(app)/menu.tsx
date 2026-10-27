@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams } from "expo-router";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
-import { Camera, Plus, UtensilsCrossed } from "lucide-react-native";
+import { Plus, UtensilsCrossed } from "lucide-react-native";
 import { useRef, useState } from "react";
 import { Pressable, StyleSheet, Switch, Text, View } from "react-native";
 import type { ElementRef } from "react";
@@ -26,6 +26,7 @@ import { fonts } from "../../src/theme";
 import { BottomSheet, Card, Chip, EmptyState, LoadErrorCard, Skeleton } from "../../src/ui/bits";
 import { PrimaryButton } from "../../src/ui/buttons";
 import { Field, PillButton } from "../../src/ui/controls";
+import { PhotoSourceButtons } from "../../src/ui/photo-source-buttons";
 import { LockedModuleCard } from "../../src/ui/locked-module";
 import { useTheme } from "../../src/ui/theme";
 import type { Palette } from "../../src/ui/tokens";
@@ -260,13 +261,7 @@ function MenuTabContent() {
         ]} />}
       >
         <View style={styles.stack}>
-          <Pressable accessibilityRole="button" accessibilityLabel={t.photo} onPress={() => fromPhoto("camera")} style={[styles.camera, { borderColor: palette.line, backgroundColor: palette.paper }]}>
-            <Camera color={palette.deep} size={28} strokeWidth={1.75} />
-            <Text style={[styles.note, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.photo}</Text>
-          </Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel={t.gallery} onPress={() => fromPhoto("library")} style={styles.hit}>
-            <Text style={[styles.note, { color: palette.deep }]}>{t.gallery}</Text>
-          </Pressable>
+          <PhotoSourceButtons lang={lang} palette={palette} onCamera={() => fromPhoto("camera")} onGallery={() => fromPhoto("library")} />
           {suggesting ? <Skeleton height={18} /> : null}
           <View ref={itemNameTarget} collapsable={false}><Field label={t.name} tone="paper" value={name} onChangeText={setName} /></View>
           <View ref={itemPriceTarget} collapsable={false}><Field label={t.price} tone="paper" value={price} onChangeText={setPrice} keyboardType="decimal-pad" /></View>
@@ -504,8 +499,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center"
   },
-  camera: { minHeight: 96, borderRadius: 16, borderWidth: 1, alignItems: "center", justifyContent: "center", gap: 6 },
-  hit: { minHeight: 48, justifyContent: "center" }
 });
 
 export default function MenuTab() {
