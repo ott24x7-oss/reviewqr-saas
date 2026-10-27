@@ -165,6 +165,25 @@ describe("OTP limits and verify errors", () => {
     ]);
   });
 
+  it("raises the IP limit with OTP_IP_LIMIT, same pattern as REGISTER_IP_LIMIT", async () => {
+    const original = process.env.OTP_IP_LIMIT;
+    process.env.OTP_IP_LIMIT = "200";
+    try {
+      expect(otpIpLimits("1.2.3.4", "login")).toEqual([
+        { key: "otp-req:1.2.3.4", limit: 200, windowSeconds: 600 },
+        { key: "otp-req-15:1.2.3.4", limit: 200, windowSeconds: 900 }
+      ]);
+      expect(otpIpLimits("1.2.3.4", "signup")[0]).toEqual({
+        key: "otp-signup:1.2.3.4",
+        limit: 200,
+        windowSeconds: 600
+      });
+    } finally {
+      if (original === undefined) delete process.env.OTP_IP_LIMIT;
+      else process.env.OTP_IP_LIMIT = original;
+    }
+  });
+
   it("stops when a limit is used up", async () => {
     const calls: string[] = [];
     const result = await enforceOtpLimits(otpPhoneLimits("9811111111"), async (limit) => {

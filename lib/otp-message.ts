@@ -30,13 +30,20 @@ export function otpWrongCodeError(nextAttempts: number, maxAttempts: number) {
 
 export type OtpLimit = { key: string; limit: number; windowSeconds: number };
 
+/** 8 per IP in production. Browser tests raise it with OTP_IP_LIMIT (same pattern as REGISTER_IP_LIMIT). */
+function otpIpLimit() {
+  const value = Number(process.env.OTP_IP_LIMIT);
+  return Number.isInteger(value) && value > 0 ? value : 8;
+}
+
 /** Existing windows stay. The 15-minute and 30-second keys are extra. */
 export function otpIpLimits(ip: string, scope: "login" | "signup"): OtpLimit[] {
+  const limit = otpIpLimit();
   const first =
     scope === "signup"
-      ? { key: `otp-signup:${ip}`, limit: 8, windowSeconds: 600 }
-      : { key: `otp-req:${ip}`, limit: 8, windowSeconds: 600 };
-  return [first, { key: `otp-req-15:${ip}`, limit: 20, windowSeconds: 900 }];
+      ? { key: `otp-signup:${ip}`, limit, windowSeconds: 600 }
+      : { key: `otp-req:${ip}`, limit, windowSeconds: 600 };
+  return [first, { key: `otp-req-15:${ip}`, limit: Math.max(limit, 20), windowSeconds: 900 }];
 }
 
 /** Agent onboarding OTP. Five an hour to one phone, ten an hour from one agent. */
