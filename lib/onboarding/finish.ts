@@ -6,6 +6,7 @@ import { ownerLimitError, type LimitUser } from "../entitlements";
 import { generateQrDataUrl } from "../qr";
 import { attachTapDraft } from "../tap/new-business";
 import { createAssignedCode } from "../tap/qr-mutate";
+import { categoryStoreDefaults } from "../store/category-defaults";
 import { canonicalThemeId } from "../tap/themes";
 import { absoluteUrl } from "../utils";
 import { checkSlug } from "./slug";
@@ -78,6 +79,7 @@ export async function finishOnboarding(user: LimitUser & { email?: string | null
   const count = await prisma.business.count({ where: { ownerId: user.id, archived: false } });
   const limitError = await ownerLimitError(user, "businesses", count);
   if (limitError) return fail(402, limitError);
+  const categoryDefaults = categoryStoreDefaults(draft.category);
 
   let business;
   try {
@@ -87,6 +89,7 @@ export async function finishOnboarding(user: LimitUser & { email?: string | null
         name: draft.name.trim(),
         slug: slug.slug,
         industry: draft.category,
+        catalogMode: categoryDefaults.catalogMode,
         city: draft.city.trim(),
         phone: draft.whatsapp,
         whatsappNumber: draft.whatsapp,
@@ -105,6 +108,15 @@ export async function finishOnboarding(user: LimitUser & { email?: string | null
     }
     throw error;
   }
+
+  await prisma.storeSettings.create({
+    data: {
+      businessId: business.id,
+      dineIn: categoryDefaults.dineIn,
+      takeaway: categoryDefaults.takeaway,
+      delivery: categoryDefaults.delivery
+    }
+  });
 
   await attachTapDraft(business.id, draft.category, {
     phone: draft.whatsapp,

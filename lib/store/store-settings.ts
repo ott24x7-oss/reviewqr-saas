@@ -5,6 +5,7 @@ import { WEEK_DAYS, type WeekHours } from "../tap/hours";
 import { normalizeUpiId } from "./upi";
 import { requireBusinessRole } from "../tenant";
 import { featureBlock } from "../plans/feature-gate";
+import { categoryStoreDefaults } from "./category-defaults";
 
 function paise(rupees: number) {
   return Math.max(0, Math.round(rupees * 100));
@@ -40,7 +41,15 @@ export async function readStoreSettings(userId: string, businessId: string) {
   const locked = await featureBlock(business.ownerId, "store");
   if (locked) return locked;
   const row = await prisma.storeSettings.findUnique({ where: { businessId: business.id } });
-  if (!row) return ok(defaults);
+  if (!row) {
+    const categoryDefaults = categoryStoreDefaults(business.industry);
+    return ok({
+      ...defaults,
+      dineIn: categoryDefaults.dineIn,
+      takeaway: categoryDefaults.takeaway,
+      delivery: categoryDefaults.delivery
+    });
+  }
   const hours = row.hours && typeof row.hours === "object" && !Array.isArray(row.hours) ? (row.hours as WeekHours) : {};
   return ok({
     holiday: row.holiday,
@@ -73,7 +82,7 @@ export async function saveStoreSettings(userId: string, businessId: string, raw:
     return fail(400, parsed.error.issues[0]?.message || "Invalid store settings");
   }
   const data = parsed.data;
-  if (!data.dineIn && !data.takeaway && !data.delivery) {
+  if (business.catalogMode !== "SERVICES" && !data.dineIn && !data.takeaway && !data.delivery) {
     return fail(400, "Turn on at least one order type");
   }
   const hours: WeekHours = {};

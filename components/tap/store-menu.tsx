@@ -7,7 +7,7 @@ import { tapText, type TapLang } from "@/lib/tap/i18n";
 import { formatRupees } from "@/lib/tap/order-message";
 import { safeImageSrc } from "@/lib/tap/links";
 import { publicServicesView } from "@/lib/tap/services-gate";
-import { enabledOrderTypes, quoteOrder, type OrderType, type StoreRules } from "@/lib/store/pricing";
+import { orderTypesForCatalog, quoteOrder, type OrderType, type StoreRules } from "@/lib/store/pricing";
 import { lineUnitPaise, matchVariant, resolveChoice, uniqueLabels, usesSizeColour } from "@/lib/store/variants";
 import { couponDiscount, type CouponFail, type CouponRule } from "@/lib/store/coupons";
 import type { StoreView } from "@/lib/store/layout";
@@ -171,7 +171,7 @@ export function StoreMenu({
   const [cart, setCart] = React.useState<Line[]>([]);
   const [ready, setReady] = React.useState(false);
   const [open, setOpen] = React.useState(false);
-  const orderTypes = enabledOrderTypes(rules);
+  const orderTypes = orderTypesForCatalog(rules, catalogMode);
   const [orderType, setOrderType] = React.useState<OrderType>(orderTypes[0] || "DINE_IN");
   const [payment, setPayment] = React.useState<"CASH" | "UPI">("CASH");
   const [name, setName] = React.useState("");

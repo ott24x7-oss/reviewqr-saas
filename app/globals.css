@@ -2228,3 +2228,277 @@ input[type="radio"] {
   height: 1.25rem;
   accent-color: #16a34a;
 }
+
+/* Public scan landing. Scoped so owner previews (.tap-preview) keep the compact card. */
+.tap-landing .tap-stage {
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  padding: 0 0 48px;
+}
+.tap-landing-hero {
+  display: block;
+}
+.tap-landing-media {
+  position: relative;
+  height: 46vh;
+  min-height: 280px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--tap-accent-solid, var(--tap-accent)) 16%, var(--marketing-bg));
+}
+.tap-landing-media > img,
+.tap-landing-carousel,
+.tap-landing-placeholder {
+  position: absolute;
+  inset: 0;
+}
+.tap-landing-media > img,
+.tap-landing-carousel img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.tap-landing-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--tap-button-ink, #fff);
+}
+.tap-landing-placeholder svg {
+  width: 76px;
+  height: 76px;
+}
+.tap-landing-placeholder[data-family="cafe"] {
+  background:
+    radial-gradient(80% 70% at 12% 8%, color-mix(in srgb, var(--tap-accent-solid, var(--tap-accent)) 78%, white), transparent 58%),
+    linear-gradient(155deg, color-mix(in srgb, var(--tap-accent-solid, var(--tap-accent)) 86%, var(--marketing-bg)), color-mix(in srgb, var(--marketing-bg) 55%, var(--tap-accent-solid, var(--tap-accent))));
+}
+.tap-landing-placeholder[data-family="salon"] {
+  background:
+    radial-gradient(70% 80% at 88% 0%, color-mix(in srgb, white 55%, var(--tap-accent-solid, var(--tap-accent))), transparent 52%),
+    linear-gradient(200deg, color-mix(in srgb, var(--tap-accent-solid, var(--tap-accent)) 72%, #1c1b18), color-mix(in srgb, var(--marketing-bg) 40%, var(--tap-accent-solid, var(--tap-accent))));
+}
+.tap-landing-placeholder[data-family="shop"] {
+  background:
+    radial-gradient(90% 80% at 50% 100%, color-mix(in srgb, var(--tap-accent-solid, var(--tap-accent)) 55%, transparent), transparent 60%),
+    linear-gradient(135deg, color-mix(in srgb, var(--tap-accent-solid, var(--tap-accent)) 70%, var(--marketing-bg)), color-mix(in srgb, var(--marketing-ink) 18%, var(--marketing-bg)));
+}
+.tap-landing .tap-lang {
+  z-index: 2;
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  right: 12px;
+}
+.tap-landing-nav {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  display: inline-flex;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, white 88%, transparent);
+  color: #1c1b18;
+  cursor: pointer;
+}
+.tap-landing-nav svg { width: 20px; height: 20px; }
+.tap-landing-nav-prev { left: 12px; }
+.tap-landing-nav-next { right: 12px; }
+.tap-landing-dots {
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  right: 0;
+  bottom: 56px;
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+.tap-landing-dots button {
+  width: 7px;
+  height: 7px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0;
+  background: color-mix(in srgb, white 62%, transparent);
+  cursor: pointer;
+}
+.tap-landing-dots button[aria-current="true"] {
+  width: 18px;
+  background: white;
+}
+.tap-landing-sheet {
+  position: relative;
+  z-index: 1;
+  margin-top: -40px;
+  border-radius: 28px 28px 0 0;
+  background: var(--marketing-bg);
+  padding: 22px 20px 4px;
+}
+.tap-landing-id {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  text-align: left;
+}
+.tap-landing .tap-logo {
+  width: 64px;
+  height: 64px;
+  flex: none;
+  margin: 0;
+  border-width: 3px;
+}
+.tap-landing .tap-initials { font-size: 1.35rem; }
+.tap-landing h1 {
+  margin: 0;
+  text-align: left;
+  font-size: clamp(1.85rem, 7vw, 2.4rem);
+  letter-spacing: -0.03em;
+}
+.tap-landing .tap-hours {
+  margin: 8px 0 0;
+  background: color-mix(in srgb, #1f7a45 16%, var(--marketing-bg));
+  color: color-mix(in srgb, #14663a 55%, var(--marketing-ink));
+}
+.tap-landing .tap-hours[data-open="false"] {
+  background: color-mix(in srgb, #9b2c2c 16%, var(--marketing-bg));
+  color: color-mix(in srgb, #9b2c2c 50%, var(--marketing-ink));
+}
+.tap-landing-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin: 14px 0 0;
+  font-weight: 650;
+}
+.tap-landing-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.tap-landing-star {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+  color: var(--tap-accent-solid, var(--tap-accent));
+}
+.tap-landing .tap-bio {
+  margin: 12px 0 0;
+  max-width: 46ch;
+  text-align: left;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.tap-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+.tap-landing .tap-hero-cta.tap-primary {
+  flex: 1 1 180px;
+  justify-content: center;
+  min-height: 52px;
+  width: auto;
+  padding: 0 22px;
+  text-align: center;
+  border-radius: 999px;
+}
+.tap-landing .tap-hero-cta .tap-btn-label { flex: none; }
+.tap-landing .tap-hero-cta.tap-primary[data-tone="quiet"] {
+  background: transparent;
+  color: var(--tap-ink);
+  border: 1.5px solid var(--tap-line);
+  box-shadow: none;
+}
+.tap-landing-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.tap-landing-chips li {
+  border: 1px solid var(--tap-line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--marketing-ink) 6%, transparent);
+  padding: 4px 10px;
+  color: var(--tap-muted);
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+.tap-landing-body { padding: 4px 20px 0; }
+.tap-landing-reviews h2,
+.tap-landing-menu h2 {
+  margin: 28px 0 12px;
+  font-family: var(--tap-font), var(--font-display), sans-serif;
+  font-size: 1.25rem;
+  letter-spacing: -0.02em;
+}
+.tap-landing .tap-feedback-open {
+  width: 100%;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+.tap-landing-menu ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.tap-landing-menu li {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--tap-line);
+  font-weight: 600;
+}
+.tap-landing .tap-footer {
+  margin-top: 36px;
+  letter-spacing: 0.01em;
+}
+@keyframes tap-arrive {
+  from { transform: translateY(12px); }
+  to { transform: none; }
+}
+.tap-landing[data-motion="on"] .tap-stage {
+  animation: tap-arrive 520ms ease-out both;
+}
+@media (min-width: 900px) {
+  .tap-landing .tap-stage {
+    width: min(1120px, calc(100% - 48px));
+    padding-top: 28px;
+    padding-bottom: 72px;
+  }
+  .tap-landing-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.85fr);
+    gap: 36px;
+    align-items: center;
+  }
+  .tap-landing-media {
+    height: min(62vh, 560px);
+    min-height: 420px;
+    border-radius: 28px;
+  }
+  .tap-landing-sheet {
+    margin-top: 0;
+    border-radius: 0;
+    background: transparent;
+    padding: 8px 4px 8px 0;
+  }
+  .tap-landing h1 { font-size: clamp(2.4rem, 4vw, 3.4rem); }
+  .tap-landing-dots { bottom: 16px; }
+  .tap-landing-body { padding: 8px 0 0; }
+  .tap-landing[data-family="salon"] .tap-hero-actions { justify-content: flex-start; }
+  .tap-landing[data-family="salon"] .tap-hero-cta.tap-primary { flex: 0 1 auto; min-width: 220px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tap-landing[data-motion="on"] .tap-stage {
+    animation: none;
+  }
+}

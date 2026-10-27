@@ -145,7 +145,12 @@ const STRINGS = {
     moreDetails: "Details",
     hideDetails: "Hide",
     serviceOption: "Choose an option",
-    bookingFailed: "Could not save the booking"
+    bookingFailed: "Could not save the booking",
+    pickup: "Pickup",
+    deliveryChip: "Delivery",
+    reviewsHeading: "Reviews",
+    previousPhoto: "Previous photo",
+    nextPhoto: "Next photo"
   },
   hi: {
     viewMenu: "मेनू देखें",
@@ -291,7 +296,12 @@ const STRINGS = {
     moreDetails: "विवरण",
     hideDetails: "छिपाएँ",
     serviceOption: "एक विकल्प चुनें",
-    bookingFailed: "बुकिंग सेव नहीं हो सकी"
+    bookingFailed: "बुकिंग सेव नहीं हो सकी",
+    pickup: "पिकअप",
+    deliveryChip: "डिलीवरी",
+    reviewsHeading: "रिव्यू",
+    previousPhoto: "पिछली फ़ोटो",
+    nextPhoto: "अगली फ़ोटो"
   }
 } as const;
 

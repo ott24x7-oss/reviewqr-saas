@@ -7,15 +7,18 @@ import { generateQrDataUrl } from "@/lib/qr";
 import { getAiConfig, getTurnstileConfig } from "@/lib/settings";
 import { recordQrScan } from "@/lib/scans";
 import { remindExpiredOwner } from "@/lib/tap/expiry-notice";
+import { closeTimeAt } from "@/lib/tap/hours";
 import { tapText } from "@/lib/tap/i18n";
 import { isLookupCode } from "@/lib/tap/ids";
-import { presentBusiness, whatsAppNumberUrl, type PublicLink } from "@/lib/tap/links";
+import { landingChips, landingFamily } from "@/lib/tap/landing";
+import { hoursFromPublished, presentBusiness, whatsAppNumberUrl, type PublicLink } from "@/lib/tap/links";
 import { loadEntitlement } from "@/lib/plans/entitlements";
 import { orderedReviewTargets } from "@/lib/review-policy";
 import { loadPublicTap, type TapRecord } from "@/lib/tap/resolve";
 import { scanSource } from "@/lib/tap/source";
 import { readAdminThemes } from "@/lib/tap/theme-store";
 import { resolveTheme, tokensToStyle } from "@/lib/tap/themes";
+import { LandingPlaceholder } from "./landing-placeholder";
 import { StatusCard } from "./status-card";
 import { TapExperience } from "./tap-experience";
 
@@ -80,33 +83,55 @@ export async function PublicTap({
     await remindExpiredOwner(record.ownerId, view.name).catch(() => {});
     const review = orderedReviewTargets(record.business)[0];
     const chat = whatsAppNumberUrl(record.business.whatsappNumber);
+    const family = landingFamily(view.industry);
     return (
-      <div className={`tap-page ${tapFontClass}`} style={themeProps.themeStyle} data-buttons={themeProps.buttons} data-testid="public-basic">
-        <div className="tap-card">
-          <h1>{view.name}</h1>
-          {view.open === null ? null : <p className="tap-hours">{view.open ? "Open now" : "Closed now"}</p>}
-          <div className="tap-actions">
-            {view.call ? (
-              <a className="tap-primary" href={view.call}>
-                Call
-              </a>
-            ) : null}
-            {chat ? (
-              <a className="tap-primary" href={chat} rel="noreferrer">
-                WhatsApp
-              </a>
-            ) : null}
-            {review ? (
-              <a className="tap-primary" href={review.href} rel="noreferrer">
-                {review.labelEn}
-              </a>
-            ) : null}
-            {view.directions ? (
-              <a className="tap-primary" href={view.directions} rel="noreferrer">
-                Map
-              </a>
-            ) : null}
+      <div
+        className={`tap-page tap-landing ${tapFontClass}`}
+        style={themeProps.themeStyle}
+        data-buttons={themeProps.buttons}
+        data-family={family}
+        data-testid="public-basic"
+      >
+        <div className="tap-stage">
+          <div className="tap-landing-hero">
+            <div className="tap-landing-media">
+              {view.cover ? <img src={view.cover} alt="" /> : <LandingPlaceholder family={family} />}
+            </div>
+            <div className="tap-landing-sheet">
+              <h1>{view.name}</h1>
+              {view.open === null ? null : (
+                <p className="tap-hours" data-open={view.open ? "true" : "false"}>
+                  <span aria-hidden="true" />
+                  {view.open ? "Open now" : "Closed now"}
+                </p>
+              )}
+              <div className="tap-actions">
+                {view.call ? (
+                  <a className="tap-primary" href={view.call}>
+                    Call
+                  </a>
+                ) : null}
+                {chat ? (
+                  <a className="tap-primary" href={chat} rel="noreferrer">
+                    WhatsApp
+                  </a>
+                ) : null}
+                {review ? (
+                  <a className="tap-primary" href={review.href} rel="noreferrer">
+                    {review.labelEn}
+                  </a>
+                ) : null}
+                {view.directions ? (
+                  <a className="tap-primary" href={view.directions} rel="noreferrer">
+                    Map
+                  </a>
+                ) : null}
+              </div>
+            </div>
           </div>
+          <p className="tap-footer">
+            Powered by <a href="/">QR24x7</a>
+          </p>
         </div>
       </div>
     );
@@ -121,19 +146,36 @@ export async function PublicTap({
     if (!showStore && item.type === "whatsapp_order") return false;
     return true;
   });
-  const menuItems = showMenu
-    ? await prisma.menuItem.findMany({
-        where: { businessId: record.businessId, available: true },
-        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-        take: 12,
-        select: { id: true, name: true, pricePaise: true }
-      })
-    : [];
-
-  const [turnstile, aiCfg] = await Promise.all([
+  const family = landingFamily(view.industry);
+  const closesAt = view.open ? closeTimeAt(hoursFromPublished(record.business.published)) : null;
+  const [turnstile, aiCfg, reviewStats, store, serviceTotal, productTotal, menuItems] = await Promise.all([
     getTurnstileConfig().catch(() => ({ siteKey: "" })),
-    getAiConfig().catch(() => ({ enabled: false, apiKey: "" }))
+    getAiConfig().catch(() => ({ enabled: false, apiKey: "" })),
+    prisma.review.aggregate({
+      where: { businessId: record.businessId },
+      _avg: { rating: true },
+      _count: { _all: true }
+    }),
+    prisma.storeSettings.findUnique({
+      where: { businessId: record.businessId },
+      select: { dineIn: true, takeaway: true, delivery: true }
+    }),
+    prisma.menuItem.count({ where: { businessId: record.businessId, available: true, kind: "SERVICE" } }),
+    prisma.menuItem.count({ where: { businessId: record.businessId, available: true, kind: "PRODUCT" } }),
+    showMenu
+      ? prisma.menuItem.findMany({
+          where: { businessId: record.businessId, available: true },
+          orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+          take: 12,
+          select: { id: true, name: true, pricePaise: true }
+        })
+      : Promise.resolve([])
   ]);
+  const reviewCount = reviewStats._count._all;
+  const rating =
+    reviewCount > 0 && typeof reviewStats._avg.rating === "number"
+      ? { average: reviewStats._avg.rating, count: reviewCount }
+      : null;
   const turnstileSiteKey = turnstile.siteKey || "";
   const upiQr = await upiImages(view.links).catch(() => ({}));
   return (
@@ -159,22 +201,19 @@ export async function PublicTap({
         reviewGating={record.business.reviewGating === true}
         ratingThreshold={record.business.ratingThreshold || 4}
         aiEnabled={aiCfg.enabled === true && !!aiCfg.apiKey && record.business.aiReviewsEnabled === true}
+        family={family}
+        closesAt={closesAt}
+        rating={rating}
+        serviceCount={showMenu ? serviceTotal : 0}
+        productCount={showMenu ? productTotal : 0}
+        chips={landingChips(family, {
+          dineIn: store?.dineIn ?? true,
+          takeaway: store?.takeaway ?? true,
+          delivery: store?.delivery ?? false
+        })}
+        highlights={menuItems}
         {...themeProps}
       />
-      {menuItems.length ? (
-        <section className="tap-page" data-testid="public-menu">
-          <div className="tap-card">
-            <h2>Menu</h2>
-            <ul>
-              {menuItems.map((item) => (
-                <li key={item.id}>
-                  {item.name} · ₹{Math.round(item.pricePaise / 100)}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
-      ) : null}
     </div>
   );
 }

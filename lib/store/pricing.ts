@@ -76,6 +76,10 @@ export function enabledOrderTypes(rules: StoreRules): OrderType[] {
   return types;
 }
 
+export function orderTypesForCatalog(rules: StoreRules, catalogMode: "MENU" | "SERVICES" | "BOTH"): OrderType[] {
+  return catalogMode === "SERVICES" ? [] : enabledOrderTypes(rules);
+}
+
 /** Holiday, or hours that say closed. Missing hours are not treated as closed. */
 export function isOrderForLater(rules: Pick<StoreRules, "holiday" | "hours">, now = new Date()) {
   if (rules.holiday) return true;
