@@ -220,6 +220,31 @@ test("reduced motion still shows the home", async ({ page }) => {
   expect(animated).toBe("none");
 });
 
+test("landing v3 hero and customer view", async ({ page }) => {
+  for (const width of [390, 1440]) {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
+    await page.goto("/");
+    const hero = page.locator("#home-hero");
+    await expect(hero.getByRole("link", { name: "Start free" })).toBeVisible();
+    await expect(hero.getByText("Scan. Tap. Grow.")).toBeVisible();
+    await expect.poll(() => hero.locator("h1 span").last().evaluate((el) => getComputedStyle(el).opacity)).toBe("1");
+    await expect(hero.locator(".hv3-stack")).toHaveCSS("opacity", "1");
+    await hero.screenshot({ path: `docs/landing-v3/hero-${width}.png` });
+
+    await hero.getByRole("link", { name: "See how it works" }).click();
+    await expect(page.locator("#home-flow")).toBeInViewport();
+
+    const customers = page.locator("#customer-view");
+    await customers.scrollIntoViewIfNeeded();
+    await page.getByRole("tab", { name: "Booking" }).click();
+    await expect(customers.locator("img[data-active='true']")).toHaveAttribute("data-shot", "booking");
+    await expect.poll(() =>
+      customers.locator("h2").evaluate((el) => getComputedStyle(el.parentElement as HTMLElement).opacity)
+    ).toBe("1");
+    await customers.screenshot({ path: `docs/landing-v3/customers-${width}.png` });
+  }
+});
+
 test("a plan page keeps the buy bar on a phone", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/");
