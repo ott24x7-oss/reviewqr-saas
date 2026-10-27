@@ -257,7 +257,8 @@ test("owner signs in, follows setup, filters lists, opens an order, sees plan lo
     const agentCode = `OW${Date.now().toString(36).toUpperCase()}`;
     await prisma.agentProfile.create({ data: { userId, code: agentCode } });
     await prisma.user.update({ where: { id: userId }, data: { role: "AGENT" } });
-    await page.getByRole("button", { name: "Sign out" }).click();
+    await page.getByRole("button", { name: "Account menu" }).click();
+    await page.getByRole("menuitem", { name: "Sign out" }).click();
     await page.waitForURL((url) => url.pathname === "/");
     await page.goto("/login", { waitUntil: "domcontentloaded" });
     await page.getByLabel("Email").fill(email);
