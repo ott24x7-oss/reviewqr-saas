@@ -754,6 +754,12 @@
   flex: 1;
 }
 
+@media (min-width: 768px) {
+  .hv3-sticky {
+    display: none !important;
+  }
+}
+
 .hv3-proof {
   display: grid;
   gap: 12px;

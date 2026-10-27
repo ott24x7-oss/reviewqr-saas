@@ -172,6 +172,18 @@ test("customer tabs swap the phone screenshot", async ({ page }) => {
   await expect(shot).toHaveAttribute("data-shot", "order");
 });
 
+test("the sticky bar stays hidden on a desktop width", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  const bar = page.locator("#sticky-cta");
+  await expect(bar).toBeHidden();
+  await page.locator("#home-flow").evaluate((element) => {
+    const top = element.getBoundingClientRect().top + window.scrollY;
+    window.scrollTo(0, top + 8);
+  });
+  await expect(bar).toBeHidden();
+});
+
 test("the sticky bar appears after the hero and does not cover the footer", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("/");
