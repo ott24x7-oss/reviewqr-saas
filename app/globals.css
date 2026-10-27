@@ -2357,7 +2357,15 @@ input[type="radio"] {
   font-size: clamp(1.85rem, 7vw, 2.4rem);
   letter-spacing: -0.03em;
 }
-.tap-landing .tap-hours { margin: 8px 0 0; }
+.tap-landing .tap-hours {
+  margin: 8px 0 0;
+  background: color-mix(in srgb, #1f7a45 16%, var(--marketing-bg));
+  color: color-mix(in srgb, #14663a 55%, var(--marketing-ink));
+}
+.tap-landing .tap-hours[data-open="false"] {
+  background: color-mix(in srgb, #9b2c2c 16%, var(--marketing-bg));
+  color: color-mix(in srgb, #9b2c2c 50%, var(--marketing-ink));
+}
 .tap-landing-facts {
   display: flex;
   flex-wrap: wrap;
