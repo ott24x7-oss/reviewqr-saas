@@ -1,15 +1,19 @@
 "use client";
 
 import * as React from "react";
-import { Check, ChevronRight, Copy, Star } from "lucide-react";
+import { Check, ChevronRight, Copy, ShoppingBag, Star } from "lucide-react";
 import { tapLang, tapText, type TapLang } from "@/lib/tap/i18n";
-import { splitLinks, type PublicLink } from "@/lib/tap/links";
+import { arrangeLanding, catalogueKey, heroPhotos, linkHiddenOnLanding, type LandingChipId, type LandingFamily } from "@/lib/tap/landing";
+import { type PublicLink } from "@/lib/tap/links";
 import { appendHint, showPublicReviewLinks, type PublicReviewTarget } from "@/lib/review-policy";
 import { PolishDraft } from "@/components/review/polish-draft";
 import { scanSource, type ScanSource } from "@/lib/tap/source";
+import { LandingHero } from "./landing-hero";
 import { TapIcon } from "./tap-icons";
 import { HintChips } from "@/components/review/hint-chips";
 import { NpsPicker } from "@/components/review/nps-picker";
+
+const SOCIAL = new Set(["instagram", "facebook", "youtube", "website", "whatsapp_chat"]);
 
 export type TapExperienceProps = {
   code: string;
@@ -37,6 +41,13 @@ export type TapExperienceProps = {
   avatar?: string;
   entrance?: string;
   video?: string | null;
+  family?: LandingFamily;
+  closesAt?: string | null;
+  rating?: { average: number; count: number } | null;
+  serviceCount?: number;
+  productCount?: number;
+  chips?: LandingChipId[];
+  highlights?: { id: string; name: string; pricePaise: number }[];
 };
 
 export function TapExperience(props: TapExperienceProps) {
@@ -44,7 +55,13 @@ export function TapExperience(props: TapExperienceProps) {
   const [lang, setLang] = React.useState<TapLang>("en");
   const [feedbackOpen, setFeedbackOpen] = React.useState(false);
   const [motionOk, setMotionOk] = React.useState(false);
-  const groups = splitLinks(props.links);
+  const family = props.family || "shop";
+  const arranged = arrangeLanding(family, props.links);
+  const feedback = props.links.find((item) => item.type === "feedback" && !linkHiddenOnLanding(family, item));
+  const offers = arranged.rest.filter((item) => item.type === "offer");
+  const social = arranged.rest.filter((item) => SOCIAL.has(item.type));
+  const rows = arranged.rest.filter((item) => item.type !== "offer" && !SOCIAL.has(item.type));
+  const photos = heroPhotos(props.cover, props.gallery);
 
   React.useEffect(() => {
     const stored = window.localStorage.getItem("rq-lang");
@@ -89,50 +106,41 @@ export function TapExperience(props: TapExperienceProps) {
     .slice(0, 2)
     .map((word) => word[0]?.toUpperCase() || "")
     .join("");
-  const offers = groups.secondary.filter((item) => item.type === "offer");
-  const rows = groups.secondary.filter((item) => item.type !== "offer");
+  const highlights = props.highlights || [];
 
   return (
     <div
-      className="tap-page"
+      className="tap-page tap-landing"
       style={props.themeStyle}
       data-buttons={props.buttons}
       data-avatar={props.avatar}
       data-entrance={props.entrance}
+      data-family={family}
+      data-motion={motionOk ? "on" : "off"}
     >
       {props.video && motionOk ? <video className="tap-video" src={props.video} muted playsInline loop autoPlay /> : null}
-      <div className="tap-card">
-        <header className="tap-hero">
-          <div className="tap-banner">
-            {props.cover ? <img className="tap-cover" src={props.cover} alt="" /> : null}
-            <div className="tap-lang" role="group" aria-label="Language">
-              <button type="button" aria-pressed={lang === "en"} onClick={() => choose("en")}>
-                EN
-              </button>
-              <button type="button" aria-pressed={lang === "hi"} onClick={() => choose("hi")} lang="hi">
-                हिं
-              </button>
-            </div>
-          </div>
-          <div className="tap-id">
-            {props.logo ? (
-              <img className="tap-logo" src={props.logo} alt="" />
-            ) : (
-              <span className="tap-logo tap-initials" aria-hidden="true">
-                {initials}
-              </span>
-            )}
-            <h1>{props.name}</h1>
-            {props.open === null ? null : (
-              <p className="tap-hours" data-open={props.open ? "true" : "false"}>
-                <span aria-hidden="true" />
-                {tapText(lang, props.open ? "openNow" : "closedNow")}
-              </p>
-            )}
-            {bio ? <p className="tap-bio">{bio}</p> : null}
-          </div>
-        </header>
+      <div className="tap-stage">
+        <LandingHero
+          family={family}
+          name={props.name}
+          logo={props.logo}
+          initials={initials}
+          bio={bio}
+          open={props.open}
+          closesAt={props.closesAt || null}
+          rating={props.rating || null}
+          serviceCount={props.serviceCount || 0}
+          productCount={props.productCount || 0}
+          chips={props.chips || []}
+          cover={props.cover}
+          gallery={props.gallery}
+          heroLinks={arranged.hero}
+          lang={lang}
+          onLang={choose}
+          onTrack={track}
+        />
 
+        <div className="tap-landing-body">
         {offers.map((item) => (
           <div key={item.key} className="tap-offer">
             <TapIcon type="offer" className="tap-offer-icon" />
@@ -143,56 +151,54 @@ export function TapExperience(props: TapExperienceProps) {
           </div>
         ))}
 
-        <div className="tap-actions">
-          {groups.primary.map((item) => {
-            const inner = (
-              <>
-                <span className="tap-btn-icon">
-                  <TapIcon type={item.type} />
-                </span>
-                <span className="tap-btn-label">{label(item)}</span>
-                <ChevronRight className="tap-btn-chev" aria-hidden="true" />
-              </>
-            );
-            return item.type === "feedback" ? (
+        {feedback || arranged.reviews.length > 0 ? (
+          <section className="tap-landing-reviews" aria-label={tapText(lang, "reviewsHeading")}>
+            <h2>{tapText(lang, "reviewsHeading")}</h2>
+            {feedback ? (
               <button
-                key={item.key}
                 type="button"
-                className="tap-primary"
-                data-featured={item.featured ? "true" : "false"}
+                className="tap-row tap-feedback-open"
                 aria-expanded={feedbackOpen}
                 onClick={() => setFeedbackOpen((open) => !open)}
               >
-                {inner}
+                <span className="tap-row-icon">
+                  <TapIcon type="feedback" />
+                </span>
+                <span className="tap-row-label">{label(feedback)}</span>
+                <ChevronRight className="tap-row-chev" aria-hidden="true" />
               </button>
-            ) : (
-              <a
-                key={item.key}
-                className="tap-primary"
-                data-featured={item.featured ? "true" : "false"}
-                href={item.href || "#"}
-                onClick={() => track(item.key)}
-              >
-                {inner}
-              </a>
-            );
-          })}
-        </div>
-
-        {feedbackOpen ? (
-          <FeedbackForm
-            lang={lang}
-            code={props.code}
-            source={source}
-            slug={props.slug}
-            locationSlug={props.locationSlug}
-            staffSlug={props.staffSlug}
-            turnstileSiteKey={props.turnstileSiteKey}
-            reviewLinks={props.reviewLinks || []}
-            reviewGating={props.reviewGating === true}
-            ratingThreshold={props.ratingThreshold || 4}
-            aiEnabled={props.aiEnabled === true}
-          />
+            ) : null}
+            {feedbackOpen ? (
+              <FeedbackForm
+                lang={lang}
+                code={props.code}
+                source={source}
+                slug={props.slug}
+                locationSlug={props.locationSlug}
+                staffSlug={props.staffSlug}
+                turnstileSiteKey={props.turnstileSiteKey}
+                reviewLinks={props.reviewLinks || []}
+                reviewGating={props.reviewGating === true}
+                ratingThreshold={props.ratingThreshold || 4}
+                aiEnabled={props.aiEnabled === true}
+              />
+            ) : null}
+            {arranged.reviews.length > 0 ? (
+              <ul className="tap-secondary">
+                {arranged.reviews.map((item) => (
+                  <li key={item.key}>
+                    <a className="tap-row" href={item.href || "#"} onClick={() => track(item.key)} rel="noreferrer">
+                      <span className="tap-row-icon" data-type={item.type}>
+                        <TapIcon type={item.type} />
+                      </span>
+                      <span className="tap-row-label">{label(item)}</span>
+                      <ChevronRight className="tap-row-chev" aria-hidden="true" />
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </section>
         ) : null}
 
         {rows.length > 0 ? (
@@ -235,7 +241,7 @@ export function TapExperience(props: TapExperienceProps) {
                 <li key={item.key}>
                   <a className="tap-row" href={item.href || "#"} onClick={() => track(item.key)} rel="noreferrer">
                     <span className="tap-row-icon" data-type={item.type}>
-                      <TapIcon type={item.type} />
+                      {family === "shop" && item.type === "menu" ? <ShoppingBag aria-hidden="true" /> : <TapIcon type={item.type} />}
                     </span>
                     <span className="tap-row-label">{label(item)}</span>
                     <ChevronRight className="tap-row-chev" aria-hidden="true" />
@@ -246,9 +252,9 @@ export function TapExperience(props: TapExperienceProps) {
           </ul>
         ) : null}
 
-        {groups.social.some((item) => item.type === "youtube" && item.thumb) ? (
+        {social.some((item) => item.type === "youtube" && item.thumb) ? (
           <div className="tap-youtube">
-            {groups.social
+            {social
               .filter((item) => item.type === "youtube" && item.thumb && item.href)
               .map((item) => (
                 <a key={item.key} href={item.href || "#"} onClick={() => track(item.key)} rel="noreferrer">
@@ -261,7 +267,7 @@ export function TapExperience(props: TapExperienceProps) {
           </div>
         ) : null}
 
-        {props.gallery.length > 0 ? (
+        {photos.length === 0 && props.gallery.length > 0 ? (
           <div className="tap-gallery">
             {props.gallery.map((src) => (
               <img key={src} src={src} alt="" loading="lazy" />
@@ -269,9 +275,9 @@ export function TapExperience(props: TapExperienceProps) {
           </div>
         ) : null}
 
-        {groups.social.some((item) => item.type !== "youtube") ? (
+        {social.some((item) => item.type !== "youtube") ? (
           <div className="tap-social">
-            {groups.social
+            {social
               .filter((item) => item.type !== "youtube")
               .map((item) => (
                 <a
@@ -288,9 +294,23 @@ export function TapExperience(props: TapExperienceProps) {
           </div>
         ) : null}
 
+        {highlights.length > 0 ? (
+          <section className="tap-landing-menu" data-testid="public-menu">
+            <h2>{tapText(lang, catalogueKey(family))}</h2>
+            <ul>
+              {highlights.map((item) => (
+                <li key={item.id}>
+                  {item.name} · ₹{Math.round(item.pricePaise / 100)}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
         <p className="tap-footer">
           Powered by <a href="/">QR24x7</a>
         </p>
+        </div>
       </div>
     </div>
   );

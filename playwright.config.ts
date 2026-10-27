@@ -78,7 +78,7 @@ export default defineConfig({
     },
     {
       name: "public-page",
-      testMatch: /public-page\.spec\.ts/,
+      testMatch: /public-page.*\.spec\.ts/,
       use: { ...devices["Desktop Chrome"], baseURL: devURL }
     },
     {

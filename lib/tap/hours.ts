@@ -62,3 +62,14 @@ export function isOpenAt(hours: WeekHours | null | undefined, now = new Date()):
   if (covers(hours[previousDay(clock.day)], clock.minutes, true)) return true;
   return false;
 }
+
+/** HH:MM when today's window (or yesterday's overnight spill) is still open. Null when closed or unknown. */
+export function closeTimeAt(hours: WeekHours | null | undefined, now = new Date()): string | null {
+  if (!hours || Object.keys(hours).length === 0) return null;
+  const clock = kolkataClock(now);
+  const today = hours[clock.day];
+  if (today && covers(today, clock.minutes, false)) return today.close;
+  const yesterday = hours[previousDay(clock.day)];
+  if (yesterday && covers(yesterday, clock.minutes, true)) return yesterday.close;
+  return null;
+}
