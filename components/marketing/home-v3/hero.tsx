@@ -75,7 +75,7 @@ export function HomeHero({ trust, startHref }: { trust: LandingTrust; startHref:
   return (
     <section id="home-hero" className="hv3-section">
       <div className="hv3-wrap hv3-hero-grid">
-        <Reveal className="hv3-stack" y={12}>
+        <div className="hv3-stack">
           <p className="hv3-eyebrow">Scan. Tap. Grow.</p>
           <Headline />
           <p className="hv3-lead">
@@ -92,7 +92,7 @@ export function HomeHero({ trust, startHref }: { trust: LandingTrust; startHref:
             {trust.rating != null ? <Star size={20} strokeWidth={1.75} aria-hidden="true" /> : null}
             <span>{parts.join(" · ")}</span>
           </p>
-        </Reveal>
+        </div>
         <Reveal className="hv3-hero-stage" y={12} delay={0.08}>
           {CARDS.map((card) => (
             <figure key={card.name} className={`hv3-hero-card ${card.className}`}>

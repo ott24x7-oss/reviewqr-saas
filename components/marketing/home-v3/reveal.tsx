@@ -10,12 +10,15 @@ export function Reveal({
   children,
   className,
   y = 16,
-  delay = 0
+  delay = 0,
+  fade = true
 }: {
   children: React.ReactNode;
   className?: string;
   y?: number;
   delay?: number;
+  /** Keep opacity at 1 when a control inside must stay measurable during the rise. */
+  fade?: boolean;
 }) {
   const reduce = useReducedMotion() === true;
   const [ready, setReady] = React.useState(false);
@@ -25,8 +28,8 @@ export function Reveal({
   return (
     <motion.div
       className={className}
-      initial={{ opacity: 0, y }}
-      whileInView={{ opacity: 1, y: 0 }}
+      initial={fade ? { opacity: 0, y } : { y }}
+      whileInView={fade ? { opacity: 1, y: 0 } : { y: 0 }}
       viewport={{ once: true, amount: 0.12 }}
       transition={{ duration: 0.52, delay, ease: EASE }}
     >

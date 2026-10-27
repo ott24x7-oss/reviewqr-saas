@@ -253,6 +253,7 @@
 
 .hv3-eyebrow {
   display: inline-flex;
+  align-self: flex-start;
   align-items: center;
   min-height: 32px;
   padding: 0 12px;
@@ -517,6 +518,14 @@
   background: var(--brand-ink);
   border-color: var(--brand-ink);
   color: #fff;
+}
+
+@media (max-width: 767px) {
+  .hv3-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    overflow: visible;
+  }
 }
 
 .hv3-stage {
