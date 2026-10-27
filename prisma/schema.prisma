@@ -139,6 +139,7 @@ model User {
   referralCredit ReferralCredit?
   agentOnboardings AgentOnboarding[]
   commissionLeaderSnapshots ShopCommission[] @relation("CommissionLeaderSnapshot")
+  clawbacksDue ClawbackDue[]
   suspendedAt DateTime?
   adminDevices AdminDevice[] @relation("AdminDeviceOwner")
   adminDevicesApproved AdminDevice[] @relation("AdminDeviceApprover")
@@ -1822,6 +1823,7 @@ model ShopCommission {
   /// Leader who sits above this earner, frozen at sale time.
   leaderId    String?
   leader      User?              @relation("CommissionLeaderSnapshot", fields: [leaderId], references: [id], onDelete: SetNull)
+  clawbacks   ClawbackDue[]
   createdAt   DateTime           @default(now())
 
   @@unique([agentId, kind, sourceId])
@@ -2021,6 +2023,22 @@ model CommissionPayout {
 
   @@unique([agentId, utr])
   @@index([agentId, paidAt])
+}
+
+// Money already paid to an agent that a reversal says they owe back.
+// settledAt stays empty until it is deducted from a later payout.
+model ClawbackDue {
+  id           String    @id @default(cuid())
+  agentId      String
+  agent        User      @relation(fields: [agentId], references: [id], onDelete: Restrict)
+  commissionId String    @unique
+  commission   ShopCommission @relation(fields: [commissionId], references: [id], onDelete: Restrict)
+  amountPaise  Int
+  reason       String
+  createdAt    DateTime  @default(now())
+  settledAt    DateTime?
+
+  @@index([agentId, settledAt])
 }
 
 model OwnerReferral {

@@ -40,6 +40,6 @@ describe("agent earnings totals", () => {
     const home = await loadContractHome(agent.id);
     expect(home.ok).toBe(true);
     if (!home.ok) return;
-    expect(home.data.earnings).toEqual({ todayPaise: 11_200, monthPaise: 11_200, pendingPaise: 5_300, paidPaise: 5_200 });
+    expect(home.data.earnings).toEqual({ todayPaise: 11_200, monthPaise: 11_200, pendingPaise: 5_300, paidPaise: 5_200, clawbackPaise: 0 });
   });
 });

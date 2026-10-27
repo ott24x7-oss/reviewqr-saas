@@ -20,7 +20,7 @@ export default async function AdminCommissionsPage({ searchParams }: { searchPar
     <div className="space-y-5">
       <PageHeader
         title="Commissions & payouts"
-        subtitle="Sales and commission due. Marking a payout paid asks for a WhatsApp code."
+        subtitle="Sales and commission due. Clawback due is money already paid out that should come off the next payout. Marking a payout paid asks for a WhatsApp code."
         actions={
           <Link href="/api/admin/commissions/export" className="text-sm font-medium underline">
             Download CSV

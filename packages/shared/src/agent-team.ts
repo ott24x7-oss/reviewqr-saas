@@ -8,7 +8,9 @@ export const agentHomeSchema = z.object({
     todayPaise: z.number().int(),
     monthPaise: z.number().int(),
     pendingPaise: z.number().int(),
-    paidPaise: z.number().int()
+    paidPaise: z.number().int(),
+    /** Unsettled money already paid out that should come off the next payout. */
+    clawbackPaise: z.number().int()
   }),
   businesses: z.number().int(),
   team: z.object({

@@ -4,6 +4,7 @@ import { decryptSecret } from "../crypto";
 import { notifyUser } from "./notify";
 import { formatINR } from "../utils";
 import { getTeamProgramSettings } from "./team-settings";
+import { outstandingClawbackByAgent } from "./ledger";
 import { financialYearBounds, tdsForPayout } from "./tds";
 
 /**
@@ -176,6 +177,7 @@ export async function commissionReportRows() {
     include: { user: { select: { id: true, name: true, phone: true, email: true } } },
     orderBy: { createdAt: "desc" }
   });
+  const clawback = await outstandingClawbackByAgent(agents.map((agent) => agent.userId));
   const rows = [];
   for (const agent of agents) {
     const [commissions, sales] = await Promise.all([
@@ -205,7 +207,8 @@ export async function commissionReportRows() {
       pendingPaise: bucket("PENDING"),
       approvedPaise: bucket("APPROVED"),
       paidPaise: bucket("PAID"),
-      legacyPaise: bucket("LEGACY_UNSETTLED")
+      legacyPaise: bucket("LEGACY_UNSETTLED"),
+      clawbackPaise: clawback.get(agent.userId) || 0
     });
   }
   return rows;

@@ -14,7 +14,7 @@ import type {
 } from "./types";
 
 const seededHome: AgentHome = {
-  earnings: { todayPaise: 18000, monthPaise: 486000, pendingPaise: 92000, paidPaise: 394000 },
+  earnings: { todayPaise: 18000, monthPaise: 486000, pendingPaise: 92000, paidPaise: 394000, clawbackPaise: 0 },
   businesses: 12,
   team: { members: 3, monthSalesPaise: 2450000 },
   status: "ACTIVE"

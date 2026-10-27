@@ -19,6 +19,7 @@ export type CommissionRow = {
   approvedPaise: number;
   paidPaise: number;
   legacyPaise: number;
+  clawbackPaise: number;
 };
 
 const columns: ColumnDef<CommissionRow, unknown>[] = [
@@ -36,6 +37,7 @@ const columns: ColumnDef<CommissionRow, unknown>[] = [
   { accessorKey: "pendingPaise", header: "Pending", cell: ({ getValue }) => <Money paise={Number(getValue())} /> },
   { accessorKey: "approvedPaise", header: "Approved", cell: ({ getValue }) => <Money paise={Number(getValue())} /> },
   { accessorKey: "paidPaise", header: "Paid", cell: ({ getValue }) => <Money paise={Number(getValue())} /> },
+  { accessorKey: "clawbackPaise", header: "Clawback due", cell: ({ getValue }) => <Money paise={Number(getValue())} /> },
   { accessorKey: "legacyPaise", header: "Unsettled history", cell: ({ getValue }) => <Money paise={Number(getValue())} /> },
   { id: "payout", header: "Payout", cell: ({ row }) => <PayButton agentId={row.original.agentId} disabled={row.original.approvedPaise <= 0} /> }
 ];
