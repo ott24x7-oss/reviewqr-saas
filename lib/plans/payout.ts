@@ -64,13 +64,10 @@ export async function payApprovedCommissions(input: {
       if (!pan || (!(profile?.upiId || "").trim() && !bank)) return { kind: "kyc" as const };
       const settings = await getTeamProgramSettings();
       const year = financialYearBounds(now);
-      const prior = await tx.commissionPayout.aggregate({
-        where: { agentId: input.agentId, paidAt: { gte: year.start, lt: year.end } },
-        _sum: { grossPaise: true }
-      });
+      const alreadyGrossPaise = await grossPaiseForPan(tx, canonicalPan(profile?.pan), input.agentId, year);
       const tax = tdsForPayout({
         grossPaise: amountPaise,
-        alreadyGrossPaise: prior._sum.grossPaise || 0,
+        alreadyGrossPaise,
         tdsPercent: settings.tdsPercent,
         thresholdPaise: settings.tdsYearlyThresholdPaise
       });
@@ -129,6 +126,43 @@ function paidResult(
     netPaise,
     count
   };
+}
+
+const PAN_SHAPE = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
+
+/** Decrypted PAN, or empty when the stored value is missing or not a PAN. */
+export function canonicalPan(stored: string | null | undefined) {
+  if (!stored) return "";
+  const value = decryptSecret(stored).replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+  return PAN_SHAPE.test(value) ? value : "";
+}
+
+/**
+ * TDS threshold is per person, not per agent login. Every profile whose decrypted
+ * PAN matches is summed for this financial year. A PAN we cannot read falls back
+ * to this agent only, so blank decrypts are not treated as one person.
+ */
+async function grossPaiseForPan(
+  tx: Prisma.TransactionClient,
+  pan: string,
+  agentId: string,
+  year: { start: Date; end: Date }
+) {
+  const paidAt = { gte: year.start, lt: year.end };
+  let agentIds = [agentId];
+  if (pan) {
+    const profiles = await tx.agentProfile.findMany({
+      where: { pan: { not: null } },
+      select: { userId: true, pan: true }
+    });
+    const matched = profiles.filter((row) => canonicalPan(row.pan) === pan).map((row) => row.userId);
+    if (matched.length) agentIds = matched;
+  }
+  const prior = await tx.commissionPayout.aggregate({
+    where: { agentId: { in: agentIds }, paidAt },
+    _sum: { grossPaise: true }
+  });
+  return prior._sum.grossPaise || 0;
 }
 
 async function findPayout(
