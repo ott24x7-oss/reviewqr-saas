@@ -88,6 +88,7 @@ async function queryTap(code: string): Promise<TapRecord> {
     menuCount,
     catalogMode: qr.business.catalogMode,
     serviceCount,
+    industry: qr.business.industry,
     published: tapPage?.published ?? null
   };
   const owner = qr.business.owner;
@@ -181,6 +182,7 @@ async function queryBusinessPage(businessId: string): Promise<TapRecord> {
     menuCount,
     catalogMode: business.catalogMode,
     serviceCount,
+    industry: business.industry,
     published: tapPage?.published ?? null
   };
   const access = tapAccess(business.owner);

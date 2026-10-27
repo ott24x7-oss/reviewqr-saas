@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { QR_ALPHABET, QR_ID_LENGTH, isGeneratedQrId, isLookupCode, makeQrPublicId } from "../../lib/tap/ids";
 import { safeTapUrl } from "../../lib/tap/urls";
 import { contrastRatio, meetsTextContrast, readableOn } from "../../lib/tap/contrast";
-import { isOpenAt } from "../../lib/tap/hours";
+import { closeTimeAt, isOpenAt } from "../../lib/tap/hours";
 import { buildOrderText, fitWhatsAppOrder, formatRupees } from "../../lib/tap/order-message";
 import { tapLang, tapText } from "../../lib/tap/i18n";
 
@@ -71,6 +71,13 @@ describe("opening hours", () => {
     expect(isOpenAt(hours, new Date("2026-10-23T17:30:00Z"))).toBe(true);
     // Saturday 01:00 IST
     expect(isOpenAt(hours, new Date("2026-10-23T19:30:00Z"))).toBe(true);
+  });
+
+  it("reports the closing time of the window that is open now", () => {
+    expect(closeTimeAt(null)).toBeNull();
+    expect(closeTimeAt(hours, new Date("2026-10-20T04:30:00Z"))).toBe("18:00");
+    expect(closeTimeAt(hours, new Date("2026-10-20T14:00:00Z"))).toBeNull();
+    expect(closeTimeAt(hours, new Date("2026-10-23T19:30:00Z"))).toBe("02:00");
   });
 });
 

@@ -38,6 +38,8 @@ export type TapBusinessFields = {
   menuCount: number;
   catalogMode?: "MENU" | "SERVICES" | "BOTH";
   serviceCount?: number;
+  /** Onboarding category, stored on Business.industry. */
+  industry?: string | null;
   published: unknown;
 };
 
@@ -271,6 +273,7 @@ export type PresentedTap = {
   gallery: string[];
   call: string | null;
   directions: string | null;
+  industry: string | null;
 };
 
 /** Keep a click key only when that button is on the page. Anything else is stored as no key. */
@@ -331,7 +334,8 @@ export function presentBusiness(fields: TapBusinessFields, channel: "q" | "t", c
     ),
     gallery: galleryFromPublished(published),
     call: telUrl(fields.phone),
-    directions: directionsUrl([fields.address, fields.city, fields.state, fields.pincode])
+    directions: directionsUrl([fields.address, fields.city, fields.state, fields.pincode]),
+    industry: fields.industry ?? null
   };
 }
 
