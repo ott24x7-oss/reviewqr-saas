@@ -12,11 +12,11 @@ export async function GET() {
   const guard = await requireAdminApi();
   if ("error" in guard) return guard.error;
   const rows = await commissionReportRows();
-  const header = ["name", "phone", "email", "code", "salesPaise", "salesCount", "pendingPaise", "approvedPaise", "paidPaise"];
+  const header = ["name", "phone", "email", "code", "salesPaise", "salesCount", "pendingPaise", "approvedPaise", "paidPaise", "clawbackPaise"];
   const lines = [
     header.join(","),
     ...rows.map((row) =>
-      [row.name, row.phone, row.email, row.code, row.salesPaise, row.salesCount, row.pendingPaise, row.approvedPaise, row.paidPaise]
+      [row.name, row.phone, row.email, row.code, row.salesPaise, row.salesCount, row.pendingPaise, row.approvedPaise, row.paidPaise, row.clawbackPaise]
         .map(cell)
         .join(",")
     )

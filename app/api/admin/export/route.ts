@@ -84,8 +84,8 @@ async function build(entity: string, search: URLSearchParams) {
     const listed = await pageCommissionReport(search, "export");
     if (!listed.ok) return listed;
     return sheet(
-      ["agent", "email", "phone", "code", "pendingPaise", "approvedPaise", "paidPaise"],
-      listed.data.items.map((row) => [row.name, row.email, row.phone, row.code, row.pendingPaise, row.approvedPaise, row.paidPaise]),
+      ["agent", "email", "phone", "code", "pendingPaise", "approvedPaise", "paidPaise", "clawbackPaise"],
+      listed.data.items.map((row) => [row.name, row.email, row.phone, row.code, row.pendingPaise, row.approvedPaise, row.paidPaise, row.clawbackPaise]),
       listed.data.truncated
     );
   }

@@ -200,7 +200,7 @@ const commission = { id: "c-1", kind: "SALE", amountPaise: 12000, sharePercent: 
 const member = { id: "user-2", name: "Amit Verma", phoneMasked: "•••• 4218", status: "ACTIVE", sharePercent: null, monthSalesPaise: 1800000, monthOverridePaise: 54000, businesses: 6 };
 
 const agentCases: AgentCase[] = [
-  { fn: "home", route: "GET /home", url: "/api/v1/agent/home", response: agentHomeSchema, sample: { earnings: { todayPaise: 1, monthPaise: 2, pendingPaise: 3, paidPaise: 4 }, businesses: 2, team: { members: 1, monthSalesPaise: 5 }, status: "ACTIVE" }, call: () => agentRequests.home() },
+  { fn: "home", route: "GET /home", url: "/api/v1/agent/home", response: agentHomeSchema, sample: { earnings: { todayPaise: 1, monthPaise: 2, pendingPaise: 3, paidPaise: 4, clawbackPaise: 0 }, businesses: 2, team: { members: 1, monthSalesPaise: 5 }, status: "ACTIVE" }, call: () => agentRequests.home() },
   { fn: "businesses", route: "GET /businesses", url: "/api/v1/agent/businesses", response: agentBusinessesSchema, sample: { items: [{ id: "b-1", name: "Madhav Sweets", planName: "Growth", status: "ACTIVE", endsAt: null, lastPaymentAt: null }] }, call: () => agentRequests.businesses() },
   { fn: "commissions", route: "GET /commissions", url: "/api/v1/agent/commissions?cursor=abc", response: agentCommissionsSchema, sample: { items: [commission], nextCursor: null }, call: () => agentRequests.commissions("abc") },
   { fn: "payouts", route: "GET /payouts", url: "/api/v1/agent/payouts", response: agentPayoutsSchema, sample: { items: [{ id: "p-1", grossPaise: 100, tdsPaise: 5, netPaise: 95, utr: "UTR1", paidAt: "2026-10-10T00:00:00.000Z" }] }, call: () => agentRequests.payouts() },

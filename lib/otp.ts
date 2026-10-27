@@ -4,6 +4,7 @@
  * WhatsApp Cloud when a token and phone id are saved, then email, then a
  * non-production log. A failed send falls through and never throws.
  */
+import { revokeOtherRefreshSessions } from "./auth/sessions";
 import { prisma } from "./db";
 import { sendEmail } from "./email";
 import { getWhatsAppConfig } from "./settings";
@@ -236,8 +237,17 @@ export async function requestPhoneChange(userId: string, rawPhone: string) {
   return { ok: true as const, issuedCode: code, channel };
 }
 
-/** Confirms the code and stores the new number. Login OTP is a different purpose. */
-export async function confirmPhoneChange(userId: string, rawPhone: string, code: string) {
+/**
+ * Confirms the code and stores the new number. Login OTP is a different purpose.
+ * Other refresh sessions are revoked so a stolen session on the old number dies.
+ * exceptSessionId is the refresh session making this request; its family stays signed in.
+ */
+export async function confirmPhoneChange(
+  userId: string,
+  rawPhone: string,
+  code: string,
+  exceptSessionId?: string | null
+) {
   const key = phoneKey(rawPhone);
   if (!key || !/^\d{6}$/.test(code.trim())) return { ok: false as const, error: "Invalid code" };
   const identifier = phoneChangeId(userId, key);
@@ -251,8 +261,11 @@ export async function confirmPhoneChange(userId: string, rawPhone: string, code:
   if (row.tokenHash !== hashToken(code.trim())) return noteWrongCode(row);
   const taken = await findUserByPhone(rawPhone);
   if (taken && taken.id !== userId) return { ok: false as const, error: "That number is already used" };
-  await prisma.emailOtp.deleteMany({ where: { identifier, purpose: "phone-change" } });
-  await prisma.user.update({ where: { id: userId }, data: { phone: key } });
+  await prisma.$transaction(async (tx) => {
+    await tx.emailOtp.deleteMany({ where: { identifier, purpose: "phone-change" } });
+    await tx.user.update({ where: { id: userId }, data: { phone: key } });
+    await revokeOtherRefreshSessions(userId, exceptSessionId, tx);
+  });
   return { ok: true as const, phone: key };
 }
 

@@ -67,20 +67,56 @@ export async function recordCommission(input: LedgerInput, db: LedgerDb = prisma
   }
 }
 
-export async function reverseCommissionsForOrder(orderId: string, now = new Date()) {
-  const result = await prisma.shopCommission.updateMany({
-    where: { orderId, status: { in: ["PENDING", "APPROVED", "PAID"] } },
-    data: { status: "REVERSED", reversedAt: now }
+const REVERSIBLE = ["PENDING", "APPROVED", "PAID"] as const;
+
+/**
+ * A commission that was already paid out (payoutId set) becomes money the agent owes back.
+ * Pending and approved rows were never paid, so reversing them creates no clawback.
+ */
+async function reverseMatching(where: Prisma.ShopCommissionWhereInput, reason: string, now: Date) {
+  return prisma.$transaction(async (tx) => {
+    const paid = await tx.shopCommission.findMany({
+      where: { ...where, status: "PAID", payoutId: { not: null } },
+      select: { id: true, agentId: true, amountPaise: true }
+    });
+    if (paid.length) {
+      await tx.clawbackDue.createMany({
+        data: paid.map((row) => ({
+          agentId: row.agentId,
+          commissionId: row.id,
+          amountPaise: row.amountPaise,
+          reason
+        })),
+        skipDuplicates: true
+      });
+    }
+    const result = await tx.shopCommission.updateMany({
+      where: { ...where, status: { in: [...REVERSIBLE] } },
+      data: { status: "REVERSED", reversedAt: now }
+    });
+    return result.count;
   });
-  return result.count;
+}
+
+export async function reverseCommissionsForOrder(orderId: string, now = new Date()) {
+  return reverseMatching({ orderId }, `Reversed paid commission on order ${orderId}`, now);
 }
 
 export async function reverseCommissionsForPayment(paymentId: string, now = new Date()) {
-  const result = await prisma.shopCommission.updateMany({
-    where: { paymentId, status: { in: ["PENDING", "APPROVED", "PAID"] } },
-    data: { status: "REVERSED", reversedAt: now }
+  return reverseMatching({ paymentId }, `Reversed paid commission on payment ${paymentId}`, now);
+}
+
+/** Unsettled clawback still to come off a later payout. */
+export async function outstandingClawbackByAgent(agentIds: string[]) {
+  const totals = new Map<string, number>();
+  if (!agentIds.length) return totals;
+  const rows = await prisma.clawbackDue.groupBy({
+    by: ["agentId"],
+    where: { agentId: { in: agentIds }, settledAt: null },
+    _sum: { amountPaise: true }
   });
-  return result.count;
+  for (const row of rows) totals.set(row.agentId, row._sum.amountPaise || 0);
+  return totals;
 }
 
 export async function approveDueCommissions(now = new Date(), agentId?: string) {

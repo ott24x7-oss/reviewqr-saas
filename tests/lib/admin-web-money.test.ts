@@ -8,6 +8,7 @@ vi.mock("../../lib/plans/notify", () => ({ notifyUser }));
 
 import { POST as paymentPost } from "../../app/api/admin/payments/[id]/route";
 import { POST as payoutPost } from "../../app/api/admin/commissions/route";
+import { POST as legacyCommissionPost } from "../../app/api/admin/commissions/legacy/route";
 import { PATCH as userPatch } from "../../app/api/admin/users/[id]/route";
 import { WEB_STEP_COOKIE, WEB_STEP_DEVICE } from "../../lib/admin/web-step";
 import { signAccessToken, STEP_UP_TTL_SEC } from "../../lib/auth/access-token";
@@ -128,6 +129,38 @@ describe("web admin money routes", () => {
     expect(row?.reason).toBe("Weekly");
     expect(row?.before).toMatchObject({ approvedPaise: 4000, approvedCount: 1 });
     expect(row?.after).toMatchObject({ payoutId: payout.id, grossPaise: 4000 });
+  });
+
+  it("requires a reason for legacy commissions and audits their before and after status", async () => {
+    const commission = await prisma.shopCommission.create({
+      data: {
+        agentId,
+        kind: "SALE",
+        sourceId: `legacy-${agentId}`,
+        amountPaise: 1200,
+        percent: 10,
+        status: "LEGACY_UNSETTLED"
+      }
+    });
+    const path = "/api/admin/commissions/legacy";
+    const missingReason = must(await legacyCommissionPost(post(path, { id: commission.id, action: "approve" })));
+    expect(missingReason.status).toBe(400);
+    expect((await prisma.shopCommission.findUnique({ where: { id: commission.id } }))?.status).toBe("LEGACY_UNSETTLED");
+
+    const approved = must(await legacyCommissionPost(post(path, {
+      id: commission.id,
+      action: "approve",
+      reason: "Verified historical statement"
+    })));
+    expect(approved.status).toBe(200);
+    const audit = await prisma.auditLog.findFirst({
+      where: { userId: adminId, action: "commission.legacy", entityId: commission.id }
+    });
+    expect(audit).toMatchObject({
+      reason: "Verified historical statement",
+      before: { status: "LEGACY_UNSETTLED" },
+      after: { status: "APPROVED" }
+    });
   });
 
   it("needs a reason to change a role on the web user editor and audits before and after", async () => {
