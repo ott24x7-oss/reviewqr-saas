@@ -69,9 +69,9 @@ test("owner registers, collects a private review, and sees UPI checkout", async 
   await page.goto(`/q/${code}`);
   await expect(page.getByRole("heading", { name: "Smoke Cafe" })).toBeVisible();
   await page.getByRole("button", { name: "Give Feedback" }).click();
-  await expect(page.getByRole("link", { name: "Review on Google" }).first()).toBeVisible();
+  // Review gating is on by default: below the star threshold, no public review
+  // link shows at all, and the private feedback form appears directly.
   await page.getByRole("button", { name: "2 stars" }).click();
-  await expect(page.getByRole("link", { name: "Review on Google" }).first()).toBeVisible();
   await page.getByLabel("What could we have done better?").fill(message);
   await page.getByRole("button", { name: "Send feedback" }).click();
   await expect(page.getByText("Thank you for your feedback")).toBeVisible();
