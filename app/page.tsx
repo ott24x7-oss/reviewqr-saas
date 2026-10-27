@@ -40,7 +40,7 @@ export default async function HomePage() {
   const startHref = free ? buyHref(free.slug, free.duration) : "/register";
   return (
     <>
-      <link rel="preload" as="image" href="/landing/photos/stand-hero-640.avif" type="image/avif" fetchPriority="high" />
+      <link rel="preload" as="image" href="/landing/photos/kirana-640.avif" type="image/avif" fetchPriority="high" />
       <LegacyHashRedirect />
       <HomeV3
         name={brand.name}
