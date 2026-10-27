@@ -26,6 +26,13 @@ const TABS = [
     shot: "order",
     alt: "Cart ready to send on WhatsApp",
     benefits: ["The cart becomes a WhatsApp message", "The order reaches your number", "Cash or UPI, your choice"]
+  },
+  {
+    id: "booking",
+    label: "Booking",
+    shot: "booking",
+    alt: "Salon services ready to book on WhatsApp",
+    benefits: ["Services and times on the phone", "They book without an account", "The request reaches you on WhatsApp"]
   }
 ];
 
