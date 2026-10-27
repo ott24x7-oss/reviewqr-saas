@@ -25,6 +25,12 @@ export type LandingTrust = {
   orderCount: number | null;
 };
 
+/**
+ * Site-wide reviews required before the public page shows an average.
+ * A smaller sample stays a count. The score itself stays hidden.
+ */
+const PUBLIC_RATING_MIN_REVIEWS = 20;
+
 /** Real counts only. Empty database fields stay null so the page can hide them. */
 export async function landingTrust(): Promise<LandingTrust> {
   const [businesses, reviews, orders] = await Promise.all([
@@ -34,10 +40,11 @@ export async function landingTrust(): Promise<LandingTrust> {
   ]);
   const reviewCount = reviews._count._all;
   const average = reviews._avg.rating;
+  const ratingReady = reviewCount >= PUBLIC_RATING_MIN_REVIEWS && average != null;
   return {
     businesses: businesses > 0 ? businesses : null,
     reviewCount: reviewCount > 0 ? reviewCount : null,
-    rating: reviewCount > 0 && average != null ? Math.round(average * 10) / 10 : null,
+    rating: ratingReady ? Math.round(average * 10) / 10 : null,
     orderCount: orders > 0 ? orders : null
   };
 }
