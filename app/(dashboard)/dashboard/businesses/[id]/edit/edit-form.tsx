@@ -30,6 +30,9 @@ type Init = {
   trustpilotUrl: string;
   ratingThreshold: number;
   reviewGating: boolean;
+  reviewQaSpecialty: string;
+  reviewQaBestKnown: string;
+  reviewQaAtmosphere: string;
   primaryColor: string;
   customThankYou: string;
   catalogMode: "MENU" | "SERVICES" | "BOTH";
@@ -217,6 +220,47 @@ export function EditBusinessForm({ initial }: { initial: Init }) {
 
       <Card>
         <CardHeader>
+          <CardTitle>Help customers describe their experience</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            These answers help AI suggest review starters. Customers can edit every suggestion before copying it.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="reviewQaSpecialty">What makes your business special?</Label>
+            <Textarea
+              id="reviewQaSpecialty"
+              value={form.reviewQaSpecialty}
+              onChange={(e) => update("reviewQaSpecialty", e.target.value)}
+              maxLength={240}
+              placeholder="Family recipes, one-to-one consultations, handmade products…"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="reviewQaBestKnown">What dish, service, or product are you best known for?</Label>
+            <Textarea
+              id="reviewQaBestKnown"
+              value={form.reviewQaBestKnown}
+              onChange={(e) => update("reviewQaBestKnown", e.target.value)}
+              maxLength={240}
+              placeholder="Masala chai, hair spa, skin consultation, cotton kurtas…"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="reviewQaAtmosphere">How would you describe the atmosphere?</Label>
+            <Textarea
+              id="reviewQaAtmosphere"
+              value={form.reviewQaAtmosphere}
+              onChange={(e) => update("reviewQaAtmosphere", e.target.value)}
+              maxLength={240}
+              placeholder="Relaxed and welcoming, quick and convenient, calm and private…"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Review settings</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -276,14 +320,13 @@ export function EditBusinessForm({ initial }: { initial: Init }) {
                 Customers below this rating will be invited to share feedback privately. Customers at or above it can continue to a public review link.
               </p>
               <div className="space-y-1.5">
-                <Label htmlFor="threshold">Hide the public link below</Label>
+                <Label htmlFor="threshold">Only show public links at</Label>
                 <select
                   id="threshold"
                   className="w-full h-10 rounded-lg border bg-white dark:bg-slate-900 px-3 text-sm"
                   value={form.ratingThreshold}
                   onChange={(e) => update("ratingThreshold", Number(e.target.value))}
                 >
-                  <option value={3}>3 stars</option>
                   <option value={4}>4 stars</option>
                   <option value={5}>5 stars</option>
                 </select>

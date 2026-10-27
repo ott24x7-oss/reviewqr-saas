@@ -352,6 +352,9 @@ model Business {
   // AI-assisted reviews (training context + opt-in)
   aiReviewsEnabled  Boolean  @default(false)
   services          String?  @db.Text // what the business offers — trains the AI
+  reviewQaSpecialty String?  @db.Text // what makes the business special
+  reviewQaBestKnown String?  @db.Text // best-known dish, service, or product
+  reviewQaAtmosphere String? @db.Text // atmosphere or customer experience
 
   // Custom domain (white-label)
   customDomain      String?  @unique

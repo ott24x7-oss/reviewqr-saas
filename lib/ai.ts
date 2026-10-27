@@ -23,6 +23,9 @@ export type BusinessContext = {
   services?: string | null;
   city?: string | null;
   website?: string | null;
+  reviewQaSpecialty?: string | null;
+  reviewQaBestKnown?: string | null;
+  reviewQaAtmosphere?: string | null;
 };
 
 function contextBlock(ctx: BusinessContext): string {
@@ -32,9 +35,48 @@ function contextBlock(ctx: BusinessContext): string {
     ctx.city ? `City: ${ctx.city}` : "",
     ctx.description ? `About: ${ctx.description}` : "",
     ctx.services ? `Services / offerings: ${ctx.services}` : "",
+    ctx.reviewQaSpecialty ? `What makes this business special: ${ctx.reviewQaSpecialty}` : "",
+    ctx.reviewQaBestKnown ? `Best-known dish, service, or product: ${ctx.reviewQaBestKnown}` : "",
+    ctx.reviewQaAtmosphere ? `Atmosphere: ${ctx.reviewQaAtmosphere}` : "",
     ctx.website ? `Website: ${ctx.website}` : ""
   ].filter(Boolean);
   return lines.join("\n");
+}
+
+/** Six editable, honest review starters based only on owner-provided business facts. */
+export async function generateReviewDrafts(
+  cfg: AiConfig,
+  ctx: BusinessContext,
+  input: { rating: number; language: "en" | "hi" },
+  businessId: string
+): Promise<string[]> {
+  const language = input.language === "hi" ? "Hindi" : "English";
+  const system =
+    `Write exactly six ${language} review starters for a customer to personalize. Return only JSON. ` +
+    "The customer must be able to edit every suggestion before copying it. Do not invent facts, prices, staff names, " +
+    "or first-hand experiences. Use bracketed prompts for the customer's own experience, e.g. [what you enjoyed]. " +
+    "Make the six styles distinct and in this order: short and punchy; detailed; casual; tied to the best-known dish/service/product; " +
+    "about atmosphere; natural and balanced. Do not mention star ratings, rewards, coupons, or incentives.";
+  const user =
+    `${contextBlock(ctx)}\n\n` +
+    `The customer selected ${input.rating} stars. Use this only to set a positive tone; never mention the rating.\n` +
+    'Respond as JSON: {"drafts":["...","...","...","...","...","..."]}';
+  const raw = await chat(
+    cfg,
+    [
+      { role: "system", content: system },
+      { role: "user", content: user }
+    ],
+    { maxTokens: 900, temperature: 0.8, businessId }
+  );
+  const data = parseJson(raw);
+  const drafts = Array.isArray(data?.drafts)
+    ? data.drafts
+        .map((draft: unknown) => String(draft || "").trim())
+        .filter((draft: string) => draft.length >= 8 && draft.length <= 600)
+    : [];
+  if (drafts.length < 5 || drafts.length > 6) throw new Error("No usable review drafts");
+  return drafts;
 }
 
 /** Low-level call. Returns the assistant message content string. */

@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import {
   DEFAULT_REVIEW_GATING,
   orderedReviewTargets,
   reviewWasRedirected,
   showPublicReviewLinks,
+  shouldOfferAiReviewDrafts,
+  publicReviewThreshold,
   shouldRestoreReviewGatingDefault,
   REVIEW_GATING_OFF_MIGRATION_AT
 } from "../../lib/review-policy";
@@ -51,9 +55,31 @@ describe("review gating defaults", () => {
       })
     ).toBe(false);
   });
+
+  it("keeps the SQL migration backfill constrained to untouched rows", () => {
+    const migration = readFileSync(
+      path.join(process.cwd(), "prisma/migrations/20261110120000_restore_review_gating_default/migration.sql"),
+      "utf8"
+    ).replace(/\s+/g, " ");
+    expect(migration).toContain('WHERE "reviewGating" = false');
+    expect(migration).toContain('"updatedAt" <= TIMESTAMP \'2026-10-21 12:00:00\'');
+    expect(migration).toContain('"createdAt" > TIMESTAMP \'2026-10-21 12:00:00\' AND "updatedAt" = "createdAt"');
+  });
 });
 
 describe("public review links", () => {
+  it("offers AI starters only for gated high ratings with the owner AI setting enabled", () => {
+    const base = { reviewGating: true, aiEnabled: true, ratingThreshold: 4 };
+    expect(shouldOfferAiReviewDrafts({ ...base, rating: 4 })).toBe(true);
+    expect(shouldOfferAiReviewDrafts({ ...base, rating: 5 })).toBe(true);
+    expect(shouldOfferAiReviewDrafts({ ...base, rating: 3 })).toBe(false);
+    expect(shouldOfferAiReviewDrafts({ ...base, rating: 3, ratingThreshold: 3 })).toBe(false);
+    expect(publicReviewThreshold(3)).toBe(4);
+    expect(shouldOfferAiReviewDrafts({ ...base, rating: 4, ratingThreshold: 5 })).toBe(false);
+    expect(shouldOfferAiReviewDrafts({ ...base, rating: 5, reviewGating: false })).toBe(false);
+    expect(shouldOfferAiReviewDrafts({ ...base, rating: 5, aiEnabled: false })).toBe(false);
+  });
+
   it("keeps Google and Trustpilot in a stable order for every rating", () => {
     const first = orderedReviewTargets({ ...urls, reviewPlatform: "google" }).map((item) => item.platform);
     const second = orderedReviewTargets({ ...urls, reviewPlatform: "google" }).map((item) => item.platform);
@@ -85,6 +111,9 @@ describe("public review links", () => {
     expect(
       showPublicReviewLinks({ reviewGating: true, rating: 4, ratingThreshold: 4, hasPublicUrl: true })
     ).toBe(true);
+    expect(
+      showPublicReviewLinks({ reviewGating: true, rating: 3, ratingThreshold: 3, hasPublicUrl: true })
+    ).toBe(false);
     expect(
       showPublicReviewLinks({ reviewGating: false, rating: 1, ratingThreshold: 4, hasPublicUrl: false })
     ).toBe(false);
@@ -134,6 +163,15 @@ describe("redirected flag", () => {
         ratingThreshold: 4,
         hasFeedback: false,
         openedPublicReview: true
+      })
+    ).toBe(false);
+    expect(
+      reviewWasRedirected({
+        reviewGating: true,
+        rating: 3,
+        ratingThreshold: 3,
+        hasFeedback: false,
+        openedPublicReview: false
       })
     ).toBe(false);
   });

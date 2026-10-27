@@ -22,10 +22,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { appendHint, orderedReviewTargets } from "@/lib/review-policy";
+import { appendHint, orderedReviewTargets, publicReviewThreshold } from "@/lib/review-policy";
 import { HintChips } from "@/components/review/hint-chips";
 import { NpsPicker } from "@/components/review/nps-picker";
 import { PolishDraft } from "@/components/review/polish-draft";
+import { ReviewDraftPicker } from "@/components/review/review-draft-picker";
 
 type Business = {
   id: string;
@@ -86,7 +87,7 @@ const TAGS = [
   { id: "cleanliness", label: "Cleanliness" }
 ];
 
-type Step = "rate" | "feedback" | "thank-you-google" | "thank-you-private";
+type Step = "rate" | "feedback" | "ai-drafts" | "thank-you-google" | "thank-you-private";
 type Tab = "reviews" | "info";
 
 /**
@@ -251,6 +252,7 @@ export function ReviewFlow(props: Props) {
   const [consent, setConsent] = React.useState(false);
   const [turnstileToken, setTurnstileToken] = React.useState("");
   const turnstileRef = React.useRef<TurnstileHandle>(null);
+  const reservedReviewTab = React.useRef<Window | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [lang, setLang] = React.useState<"en" | "hi">("en");
   // Holds the id of a Review row already captured for this visitor (e.g. the
@@ -281,9 +283,11 @@ export function ReviewFlow(props: Props) {
     }
     setRating(n);
     if (business.reviewGating !== true) return;
-    if (n >= business.ratingThreshold && reviewTargets.length > 0) {
-      // Opt-in gating only: high ratings still leave for the public platform.
-      setTimeout(() => onHighRating(n), 250);
+    if (n >= publicReviewThreshold(business.ratingThreshold) && reviewTargets.length > 0) {
+      // Reserve a browser context while the star tap still counts as a user gesture.
+      const reserved = reserveExternalTab();
+      reservedReviewTab.current = reserved;
+      setTimeout(() => onHighRating(n, reserved), 250);
     } else {
       // Low rating: capture it immediately (fire-and-forget) so it isn't lost
       // if the customer abandons before submitting written feedback. The later
@@ -300,13 +304,16 @@ export function ReviewFlow(props: Props) {
     }
   }
 
-  async function onHighRating(stars: number) {
-    const reserved = reserveExternalTab();
+  async function onHighRating(stars: number, reserved?: Window | null) {
+    if (props.aiEnabled) {
+      setStep("ai-drafts");
+      return;
+    }
     goToGoogleReview(stars, reserved);
   }
 
   async function goToGoogleReview(stars: number, reserved?: Window | null) {
-    const tab = reserved ?? reserveExternalTab();
+    const tab = reserved ?? reservedReviewTab.current ?? reserveExternalTab();
     setLoading(true);
     try {
       await submitReview({ rating: stars, feedback: "", openedPublicReview: true });
@@ -314,10 +321,26 @@ export function ReviewFlow(props: Props) {
     const href = reviewTargets[0]?.href;
     if (href) {
       navigateExternal(href, tab);
+      reservedReviewTab.current = null;
     } else {
       tab?.close();
+      reservedReviewTab.current = null;
       setStep("thank-you-google");
     }
+  }
+
+  async function continueAfterDraft(reserved: Window | null) {
+    setLoading(true);
+    try {
+      await submitReview({ rating, feedback: "", openedPublicReview: true, preserveToken: true });
+    } catch {}
+    const href = reviewTargets[0]?.href;
+    if (href) navigateExternal(href, reserved ?? reservedReviewTab.current);
+    else {
+      reserved?.close();
+      setStep("thank-you-google");
+    }
+    reservedReviewTab.current = null;
   }
 
 
@@ -402,6 +425,7 @@ export function ReviewFlow(props: Props) {
   // mid-step screens (post-rating). We hide the tab UI on these.
   const inSubFlow =
     step === "feedback" ||
+    step === "ai-drafts" ||
     step === "thank-you-google" ||
     step === "thank-you-private";
 
@@ -435,6 +459,10 @@ export function ReviewFlow(props: Props) {
           <button
             type="button"
             onClick={() => {
+              if (step === "ai-drafts") {
+                reservedReviewTab.current?.close();
+                reservedReviewTab.current = null;
+              }
               setStep("rate");
               setTab("reviews");
             }}
@@ -730,6 +758,20 @@ export function ReviewFlow(props: Props) {
             aiEnabled={props.aiEnabled === true}
           />
         )}
+        {step === "ai-drafts" && reviewTargets[0] ? (
+          <div className="container max-w-2xl px-4 py-5">
+            <ReviewDraftPicker
+              slug={business.slug}
+              rating={rating}
+              language={lang}
+              onLanguageChange={chooseLang}
+              destination={reviewTargets[0].platform === "trustpilot" ? "Trustpilot" : "Google"}
+              onPrepareContinue={() => reservedReviewTab.current ?? (reservedReviewTab.current = reserveExternalTab())}
+              onContinue={(reserved) => void continueAfterDraft(reserved)}
+              onUnavailable={() => void goToGoogleReview(rating, reservedReviewTab.current)}
+            />
+          </div>
+        ) : null}
         {step === "thank-you-google" && <ThankYouGoogle business={business} />}
         {step === "thank-you-private" && (
           <ThankYouPrivate business={business} customerName={name} />

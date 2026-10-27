@@ -64,7 +64,7 @@ async function onboardBusiness(
   const code = scanUrl.pathname.split("/").pop();
   expect(code).toBeTruthy();
 
-  return { headers, businessId: body.data.businessId as string, name, code: code as string };
+  return { headers, businessId: body.data.businessId as string, name, slug, code: code as string };
 }
 
 test("cafe public store keeps dine-in and takeaway options", async ({ page, request }) => {
@@ -121,4 +121,95 @@ test("salon public page hides ordering types and shop offers delivery only", asy
   await expect(page.getByText("Dine-in", { exact: true })).toHaveCount(0);
   await expect(page.getByText("Takeaway", { exact: true })).toHaveCount(0);
   await expect(page.getByText(/book.*service/i)).toHaveCount(0);
+});
+
+test("gated 4–5-star visits can pick, edit, copy, and continue on /r and /q", async ({ page, request }) => {
+  const business = await onboardBusiness(request, "cafe");
+  const configured = await request.patch(`/api/v1/businesses/${business.businessId}`, {
+    headers: business.headers,
+    data: {
+      reviewGating: true,
+      aiReviewsEnabled: true,
+      reviewQaSpecialty: "Family recipes made fresh each morning",
+      reviewQaBestKnown: "Mango lassi",
+      reviewQaAtmosphere: "Relaxed courtyard seating"
+    }
+  });
+  expect(configured.ok()).toBeTruthy();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  let copiedText = "";
+  await page.exposeFunction("captureReviewText", (text: string) => { copiedText = text; });
+  await page.addInitScript(() => {
+    const scope = window as typeof window & { captureReviewText: (text: string) => Promise<void> };
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: (text: string) => scope.captureReviewText(text) }
+    });
+  });
+  await page.context().route("https://search.google.com/**", (route) =>
+    route.fulfill({ status: 200, contentType: "text/html", body: "Review destination" })
+  );
+  await page.route("**/api/public/ai/review-drafts", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        drafts: [
+          "A lovely visit at Mango House—[what you enjoyed].",
+          "I came to Mango House for [reason] and especially liked [detail].",
+          "Mango House has a relaxed feel; [your own thought].",
+          "The mango lassi was a highlight—[what stood out to you].",
+          "The courtyard seating made my visit feel [your description].",
+          "A nice neighbourhood spot for [what you enjoyed]."
+        ]
+      })
+    })
+  );
+
+  await page.goto(`/r/${business.slug}`);
+  await page.getByRole("button", { name: "5 stars" }).click();
+  await expect(page.getByRole("heading", { name: "Choose a starting point" })).toBeVisible();
+  await page.screenshot({ path: "docs/review-ai/rating-to-ai-picker-390.png", fullPage: true });
+  await page.getByRole("button", { name: /Short & punchy/ }).click();
+  await page.getByLabel("Edit your review").fill("I loved the mango lassi and courtyard seating.");
+  await page.screenshot({ path: "docs/review-ai/rating-ai-draft-editor-390.png", fullPage: true });
+  await page.getByRole("button", { name: "Copy & continue to Google" }).click();
+  await expect(page).toHaveURL(/search\.google\.com/);
+  expect(copiedText).toBe("I loved the mango lassi and courtyard seating.");
+
+  await page.goto(`/q/${business.code}`);
+  await page.getByRole("button", { name: /Give Feedback/ }).click();
+  await page.getByRole("button", { name: "4 stars" }).click();
+  await expect(page.getByRole("heading", { name: "Choose a starting point" })).toBeVisible();
+  await page.screenshot({ path: "docs/review-ai/tap-rating-ai-picker-390.png", fullPage: true });
+  await page.getByRole("button", { name: "Write my own instead" }).click();
+  await page.getByLabel("Edit your review").fill("I enjoyed the relaxed courtyard.");
+  const popupPromise = page.waitForEvent("popup");
+  await page.getByRole("button", { name: "Copy & continue to Google" }).click();
+  const popup = await popupPromise;
+  await expect(popup).toHaveURL(/search\.google\.com/);
+  expect(copiedText).toBe("I enjoyed the relaxed courtyard.");
+});
+
+test("1–3-star ratings still reach private feedback on /r and /q", async ({ page, request }) => {
+  const business = await onboardBusiness(request, "cafe");
+  const configured = await request.patch(`/api/v1/businesses/${business.businessId}`, {
+    headers: business.headers,
+    data: { reviewGating: true, aiReviewsEnabled: true }
+  });
+  expect(configured.ok()).toBeTruthy();
+
+  await page.goto(`/r/${business.slug}`);
+  await page.getByRole("button", { name: "2 stars" }).click();
+  await expect(page.getByRole("heading", { name: "We'd love to hear more" })).toBeVisible();
+  await expect(page.getByLabel(/What could we have done better/)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Choose a starting point" })).toHaveCount(0);
+
+  await page.goto(`/q/${business.code}`);
+  await page.getByRole("button", { name: /Give Feedback/ }).click();
+  await page.getByRole("button", { name: "3 stars" }).click();
+  await expect(page.getByLabel("What could we have done better?")).toBeVisible();
+  await expect(page.getByText("Review on Google", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Choose a starting point" })).toHaveCount(0);
 });
