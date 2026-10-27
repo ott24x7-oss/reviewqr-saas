@@ -11,6 +11,7 @@ import { formatRupees } from "@/lib/tap/order-message";
 import type { StoreView } from "@/lib/store/layout";
 import type { EntryRow } from "@/lib/store/entry";
 import { MenuEntry, rowFromDraft, type MenuSave } from "./menu-entry";
+import { AppText } from "@/components/app-ui/i18n";
 
 type Option = {
   id: string;
@@ -412,11 +413,20 @@ export function MenuEditor({
       <div>
         <h1 className="text-xl sm:text-2xl font-bold font-display">Menu</h1>
         <p className="text-sm text-muted-foreground">{businessName}</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          <AppText
+            en={serviceMode ? "Add a service with its price and how long it takes. After you save, customers can request a time from your page." : "Add an item with its name and price. After you save, customers see it on your page and can send the order on WhatsApp."}
+            hi={serviceMode ? "सेवा की कीमत और समय जोड़ें। सेव करने के बाद ग्राहक आपके पेज से समय माँग सकते हैं।" : "आइटम का नाम और कीमत जोड़ें। सेव करने के बाद ग्राहक इसे पेज पर देखकर WhatsApp पर ऑर्डर भेज सकते हैं।"}
+          />
+        </p>
       </div>
       {canEdit ? (
         <div className="sticky top-0 z-20 grid grid-cols-[1fr_7rem] gap-2 bg-background py-2">
           <Input aria-label="Quick add name" value={quickName} placeholder="Quick add name" className="h-11 min-h-11" onChange={(event) => setQuickName(event.target.value)} onKeyDown={onQuickKey} />
           <Input aria-label="Quick add price" value={quickPrice} inputMode="decimal" placeholder="₹" className="h-11 min-h-11" onChange={(event) => setQuickPrice(event.target.value)} onKeyDown={onQuickKey} />
+          <p className="col-span-2 text-xs text-muted-foreground">
+            <AppText en="Type a name and price, then press Enter. The item is saved immediately and shows on your page." hi="नाम और कीमत लिखकर Enter दबाएँ। आइटम तुरंत सेव होकर आपके पेज पर दिखता है।" />
+          </p>
         </div>
       ) : null}
       {canEdit && (
@@ -547,6 +557,9 @@ export function MenuEditor({
                 })}>
               {serviceMode ? "Add service" : "Add item"}
             </Button>
+            <p className="text-xs text-muted-foreground">
+              <AppText en={serviceMode ? "Add service saves this form. Customers can then request it from your page." : "Add item saves this form. Customers can then order it from your page."} hi={serviceMode ? "सेवा जोड़ें इस फ़ॉर्म को सेव करता है। उसके बाद ग्राहक पेज से इसे माँग सकते हैं।" : "आइटम जोड़ें इस फ़ॉर्म को सेव करता है। उसके बाद ग्राहक पेज से ऑर्डर कर सकते हैं।"} />
+            </p>
             <Input aria-label="Category name" value={categoryName} placeholder="New category" onChange={(event) => setCategoryName(event.target.value)} />
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button type="button" variant="outline" className="h-11 min-h-11" disabled={busy} onClick={() => send({ action: "category", name: categoryName })}>
@@ -570,6 +583,11 @@ export function MenuEditor({
                 Read a menu photo
               </Button>
             </div>
+            <ul className="space-y-1 text-xs text-muted-foreground">
+              <li><AppText en="Add category creates a heading, such as Drinks or Hair, so items stay grouped. It does not add a price." hi="श्रेणी जोड़ें एक शीर्षक बनाता है, जैसे ड्रिंक्स या हेयर, ताकि चीज़ें समूह में रहें। इससे कीमत नहीं जुड़ती।" /></li>
+              <li><AppText en="Snap a product takes a photo and fills the name when it can. You still set the price, then save." hi="उत्पाद का फ़ोटो लें नाम भरने की कोशिश करता है। कीमत आपको लिखनी है, फिर सेव करें।" /></li>
+              <li><AppText en="Read a menu photo turns a printed menu into rows you can check. Nothing is published until you save those rows." hi="मेन्यू का फ़ोटो पढ़ें छपे मेन्यू को पंक्तियों में बदलता है। उन पंक्तियों को सेव करने से पहले कुछ पेज पर नहीं जाता।" /></li>
+            </ul>
             <input
               ref={fileRef}
               type="file"

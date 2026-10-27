@@ -55,7 +55,7 @@ export function GrowthCard({ businessId }: { businessId: string }) {
   }
 
   if (loading) {
-    return <section className="app-ui-panel space-y-4 p-5" aria-label={text("Loading growth score", "ग्रोथ स्कोर लोड हो रहा है")}>
+    return <section className="app-ui-panel space-y-4 p-5" aria-label={text("Loading page score", "पेज स्कोर लोड हो रहा है")}>
       <Skeleton className="h-5 w-36" />
       <Skeleton className="h-20 w-full" />
       <Skeleton className="h-12 w-full" />
@@ -63,7 +63,7 @@ export function GrowthCard({ businessId }: { businessId: string }) {
   }
   if (failed || !data) {
     return <section className="app-ui-panel p-5" data-testid="growth-card">
-      <InlineError title={text("Your growth tips could not load.", "ग्रोथ के सुझाव लोड नहीं हो सके।")} onRetry={() => void load()} />
+      <InlineError title={text("Suggestions for your page could not load.", "पेज के सुझाव लोड नहीं हो सके।")} onRetry={() => void load()} />
     </section>;
   }
 
@@ -75,21 +75,21 @@ export function GrowthCard({ businessId }: { businessId: string }) {
       <div className="flex items-start gap-3">
         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-primary/10 text-primary"><Sparkles className="h-4 w-4" /></span>
         <div className="min-w-0">
-          <h2 className="font-semibold"><AppText en="Your growth" hi="आपकी ग्रोथ" /></h2>
+          <h2 className="font-semibold"><AppText en="How your page is doing" hi="आपका पेज कैसा चल रहा है" /></h2>
           <p className="mt-0.5 text-sm text-muted-foreground">
             {score === null
-              ? text("The score starts after 7 days. Keep your page up to date meanwhile.", "7 दिन बाद स्कोर दिखेगा। तब तक अपना पेज अपडेट रखें।")
-              : text("Small improvements help more customers find you.", "छोटे सुधारों से ज़्यादा ग्राहक आपको ढूँढ़ पाएँगे।")}
+              ? text("This is not your sales. The number starts after 7 days. Until then, finish the steps on this page.", "यह बिक्री नहीं है। संख्या 7 दिन बाद शुरू होती है। तब तक इस पेज के कदम पूरे करें।")
+              : text("This number is how complete and active your page is. It is not your sales.", "यह संख्या बताती है कि पेज कितना भरा और सक्रिय है। यह बिक्री नहीं है।")}
           </p>
         </div>
       </div>
 
       {score !== null ? (
         <div className="mt-5 flex flex-wrap items-center gap-4 rounded-md bg-muted/50 p-4">
-          <ProgressRing value={score} label={text("Growth score", "ग्रोथ स्कोर")} size={78} />
+          <ProgressRing value={score} label={text("Page score", "पेज स्कोर")} size={78} />
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium"><AppText en="This week" hi="इस हफ़्ते" /></p>
-            <p className="mt-1 text-sm text-muted-foreground"><AppText en="Try these 3 simple actions" hi="ये 3 आसान काम करके देखें" /></p>
+            <p className="mt-1 text-sm text-muted-foreground"><AppText en="Each line opens that page. Done only hides the line. Your page stays the same." hi="हर पंक्ति वह पेज खोलती है। हो गया सिर्फ़ पंक्ति छिपाता है। पेज नहीं बदलता।" /></p>
           </div>
         </div>
       ) : null}
@@ -102,7 +102,7 @@ export function GrowthCard({ businessId }: { businessId: string }) {
               <Link href={tip.href} className="app-ui-focus min-h-10 min-w-0 flex-1 py-2 text-sm font-medium hover:text-primary">
                 {language === "hi" ? tip.titleHi : tip.titleEn}
               </Link>
-              <button type="button" className="app-ui-focus inline-flex min-h-9 shrink-0 items-center gap-1 rounded-md px-2 text-xs font-medium text-primary hover:bg-primary/10" onClick={() => void markDone(tip.key)}>
+              <button type="button" className="app-ui-focus inline-flex min-h-9 shrink-0 items-center gap-1 rounded-md px-2 text-xs font-medium text-primary hover:bg-primary/10" title={text("Hide this suggestion. Your page stays the same.", "यह सुझाव छिपाएँ। पेज नहीं बदलता।")} onClick={() => void markDone(tip.key)}>
                 <RefreshCw className="h-3.5 w-3.5" /><AppText en="Done" hi="हो गया" />
               </button>
             </li>
@@ -110,7 +110,7 @@ export function GrowthCard({ businessId }: { businessId: string }) {
         </ul>
       ) : (
         <Link href="/dashboard/insights" className="app-ui-focus mt-4 inline-flex min-h-10 items-center gap-2 rounded-md border px-3 text-sm font-medium hover:bg-muted">
-          <AppText en="View your insights" hi="अपनी जानकारी देखें" /><ArrowUpRight className="h-4 w-4" />
+          <AppText en="See the last 7 days" hi="पिछले 7 दिन देखें" /><ArrowUpRight className="h-4 w-4" />
         </Link>
       )}
     </section>
