@@ -172,6 +172,18 @@ test("customer tabs swap the phone screenshot", async ({ page }) => {
   await expect(shot).toHaveAttribute("data-shot", "order");
 });
 
+test("the sticky bar stays hidden on a desktop width", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  const bar = page.locator("#sticky-cta");
+  await expect(bar).toBeHidden();
+  await page.locator("#home-flow").evaluate((element) => {
+    const top = element.getBoundingClientRect().top + window.scrollY;
+    window.scrollTo(0, top + 8);
+  });
+  await expect(bar).toBeHidden();
+});
+
 test("the sticky bar appears after the hero and does not cover the footer", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("/");
@@ -218,6 +230,31 @@ test("reduced motion still shows the home", async ({ page }) => {
   await expect(card).toBeVisible();
   const animated = await card.evaluate((element) => getComputedStyle(element).animationName);
   expect(animated).toBe("none");
+});
+
+test("landing v3 hero and customer view", async ({ page }) => {
+  for (const width of [390, 1440]) {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
+    await page.goto("/");
+    const hero = page.locator("#home-hero");
+    await expect(hero.getByRole("link", { name: "Start free" })).toBeVisible();
+    await expect(hero.getByText("Scan. Tap. Grow.")).toBeVisible();
+    await expect.poll(() => hero.locator("h1 span").last().evaluate((el) => getComputedStyle(el).opacity)).toBe("1");
+    await expect(hero.locator(".hv3-stack")).toHaveCSS("opacity", "1");
+    await hero.screenshot({ path: `docs/landing-v3/hero-${width}.png` });
+
+    await hero.getByRole("link", { name: "See how it works" }).click();
+    await expect(page.locator("#home-flow")).toBeInViewport();
+
+    const customers = page.locator("#customer-view");
+    await customers.scrollIntoViewIfNeeded();
+    await page.getByRole("tab", { name: "Booking" }).click();
+    await expect(customers.locator("img[data-active='true']")).toHaveAttribute("data-shot", "booking");
+    await expect.poll(() =>
+      customers.locator("h2").evaluate((el) => getComputedStyle(el.parentElement as HTMLElement).opacity)
+    ).toBe("1");
+    await customers.screenshot({ path: `docs/landing-v3/customers-${width}.png` });
+  }
 });
 
 test("a plan page keeps the buy bar on a phone", async ({ page }) => {

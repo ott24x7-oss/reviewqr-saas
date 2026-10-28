@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Check } from "lucide-react";
 import { PhoneFrame } from "./phone-frame";
+import { PhoneTilt, Reveal } from "./reveal";
 import { Shot } from "./shot";
 
 const TABS = [
@@ -26,6 +27,13 @@ const TABS = [
     shot: "order",
     alt: "Cart ready to send on WhatsApp",
     benefits: ["The cart becomes a WhatsApp message", "The order reaches your number", "Cash or UPI, your choice"]
+  },
+  {
+    id: "booking",
+    label: "Booking",
+    shot: "booking",
+    alt: "Salon services ready to book on WhatsApp",
+    benefits: ["Services and times on the phone", "They book without an account", "The request reaches you on WhatsApp"]
   }
 ];
 
@@ -45,7 +53,9 @@ export function CustomerView() {
   return (
     <section id="customer-view" className="hv3-section" aria-labelledby="customer-view-title">
       <div className="hv3-wrap">
-        <h2 id="customer-view-title">What your customers see</h2>
+        <Reveal>
+          <h2 id="customer-view-title">What your customers see</h2>
+        </Reveal>
         <div className="hv3-tabs" role="tablist" aria-label="Customer views" onKeyDown={onKey} style={{ marginTop: 16 }}>
           {TABS.map((tab, index) => (
             <button
@@ -65,7 +75,8 @@ export function CustomerView() {
             </button>
           ))}
         </div>
-        <div className="hv3-stage">
+        <PhoneTilt>
+          <div className="hv3-stage">
           {TABS.map((tab, index) => (
             <div
               key={tab.id}
@@ -98,7 +109,8 @@ export function CustomerView() {
               </ul>
             </div>
           ))}
-        </div>
+          </div>
+        </PhoneTilt>
       </div>
     </section>
   );

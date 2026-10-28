@@ -8,13 +8,21 @@ import { ThemeProvider, useTheme } from "next-themes";
 import { MotionConfig, motion } from "framer-motion";
 import {
   Activity, BarChart3, Bell, Building2, Check, ChevronDown, CircleHelp,
-  CalendarDays, CreditCard, Gift, LayoutDashboard, LifeBuoy, LockKeyhole, Menu, MessageSquare,
-  Moon, Package, QrCode, Search, Settings, ShoppingBag, Sparkles, Star, Sun,
+  CalendarDays, CreditCard, Gift, LayoutDashboard, LifeBuoy, LockKeyhole, LogOut, Menu, MessageSquare,
+  Moon, Package, QrCode, Search, Settings, ShieldCheck, ShoppingBag, Sparkles, Star, Sun,
   Users, X, type LucideIcon
 } from "lucide-react";
 import { Toaster } from "sonner";
 import type { SubscriptionTier, UserRole } from "@prisma/client";
 import { getInitials, cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 import { AnnouncementBanner } from "@/components/dashboard/announcement-banner";
 import { AppLanguageProvider, useAppLanguage } from "./i18n";
 import { FinishAccountCard } from "./finish-account-card";
@@ -346,11 +354,40 @@ function AppShellContent({
           </div>
           <ThemeAndLanguageControls />
           <div className="hidden h-8 w-px bg-border sm:block" />
-          <button type="button" className="app-ui-focus inline-flex h-10 items-center gap-2 rounded-md px-2 hover:bg-muted" onClick={() => signOut({ callbackUrl: "/" })} aria-label={text("Sign out", "साइन आउट")}>
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary text-xs font-semibold">{getInitials(user.name || user.email)}</span>
-            <span className="hidden max-w-32 truncate text-left text-sm sm:block">{user.name || user.email.split("@")[0]}</span>
-            <ChevronDown className="hidden h-3.5 w-3.5 text-muted-foreground sm:block" />
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button type="button" className="app-ui-focus inline-flex h-10 items-center gap-2 rounded-md px-2 hover:bg-muted" aria-label={text("Account menu", "खाता मेनू")}>
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary text-xs font-semibold">{getInitials(user.name || user.email)}</span>
+                <span className="hidden max-w-32 truncate text-left text-sm sm:block">{user.name || user.email.split("@")[0]}</span>
+                <ChevronDown className="hidden h-3.5 w-3.5 text-muted-foreground sm:block" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>
+                <div className="text-xs font-normal text-muted-foreground">{text("Signed in as", "साइन इन है")}</div>
+                <div className="truncate font-medium text-foreground">{user.email}</div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {user.role === "ADMIN" ? (
+                <>
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin"><ShieldCheck className="mr-2 h-4 w-4" />{text("Admin panel", "एडमिन पैनल")}</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              ) : null}
+              <DropdownMenuItem asChild>
+                <Link href="/dashboard/account/settings"><Settings className="mr-2 h-4 w-4" />{text("Settings", "सेटिंग")}</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/dashboard/account/plan"><CreditCard className="mr-2 h-4 w-4" />{text("Billing", "बिलिंग")}</Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/" })} className="text-destructive focus:text-destructive">
+                <LogOut className="mr-2 h-4 w-4" />{text("Sign out", "साइन आउट")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </header>
 

@@ -20,11 +20,16 @@ export default async function MenuAndProductsPage({ searchParams }: { searchPara
   const servicesHref = `${productsHref}&tab=services`;
   return (
     <div className="space-y-5">
-      <PageHeader title={<AppText en="Menu & products" hi="मेन्यू और उत्पाद" />} description={selected.name} actions={<BusinessSelect businesses={businesses} selected={selected.id} tab={tab} />} />
+      <PageHeader
+        title={<AppText en="Menu & products" hi="मेन्यू और उत्पाद" />}
+        description={<><span className="font-medium text-foreground">{selected.name}</span><span className="mt-1 block"><AppText en={tab === "services" ? "Services are bookable appointments, such as a haircut. Saving one shows it on your page so customers can request a time." : "Products are things customers can order, such as a dish or a shop item. Saving one shows it on your page and they can send the order on WhatsApp."} hi={tab === "services" ? "सेवाएँ बुक होने वाली अपॉइंटमेंट हैं, जैसे हेयरकट। सेव करने पर यह पेज पर दिखती है और ग्राहक समय माँग सकते हैं।" : "उत्पाद वे चीज़ें हैं जिन्हें ग्राहक ऑर्डर कर सकते हैं, जैसे कोई डिश या दुकान का सामान। सेव करने पर यह पेज पर दिखता है और वे WhatsApp पर ऑर्डर भेज सकते हैं।"} /></span></>}
+        actions={<BusinessSelect businesses={businesses} selected={selected.id} tab={tab} />}
+      />
       <nav className="flex gap-2" aria-label="Catalogue">
         <Link href={productsHref} aria-current={tab === "products" ? "page" : undefined} className={`inline-flex min-h-9 items-center rounded-full border px-3 text-sm ${tab === "products" ? "border-primary bg-primary/10 font-medium" : "bg-card"}`}><AppText en="Products" hi="उत्पाद" /></Link>
         <Link href={servicesHref} aria-current={tab === "services" ? "page" : undefined} className={`inline-flex min-h-9 items-center rounded-full border px-3 text-sm ${tab === "services" ? "border-primary bg-primary/10 font-medium" : "bg-card"}`}><AppText en="Services" hi="सेवाएँ" /></Link>
       </nav>
+      <p className="text-sm text-muted-foreground"><AppText en="Products are for orders. Services are for bookings. Switching tabs only changes this list. It does not delete anything." hi="उत्पाद ऑर्डर के लिए हैं। सेवाएँ बुकिंग के लिए हैं। टैब बदलने से सिर्फ़ यह सूची बदलती है। कुछ डिलीट नहीं होता।" /></p>
       <MenuPage params={{ id: selected.id }} searchParams={{ tab }} />
     </div>
   );

@@ -5,8 +5,9 @@ import { Check, ChevronRight, Copy, ShoppingBag, Star } from "lucide-react";
 import { tapLang, tapText, type TapLang } from "@/lib/tap/i18n";
 import { arrangeLanding, catalogueKey, heroPhotos, linkHiddenOnLanding, type LandingChipId, type LandingFamily } from "@/lib/tap/landing";
 import { type PublicLink } from "@/lib/tap/links";
-import { appendHint, showPublicReviewLinks, type PublicReviewTarget } from "@/lib/review-policy";
+import { appendHint, showPublicReviewLinks, shouldOfferAiReviewDrafts, type PublicReviewTarget } from "@/lib/review-policy";
 import { PolishDraft } from "@/components/review/polish-draft";
+import { ReviewDraftPicker } from "@/components/review/review-draft-picker";
 import { scanSource, type ScanSource } from "@/lib/tap/source";
 import { LandingHero } from "./landing-hero";
 import { TapIcon } from "./tap-icons";
@@ -181,6 +182,10 @@ export function TapExperience(props: TapExperienceProps) {
                 reviewGating={props.reviewGating === true}
                 ratingThreshold={props.ratingThreshold || 4}
                 aiEnabled={props.aiEnabled === true}
+                onLanguageChange={(next) => {
+                  setLang(next);
+                  window.localStorage.setItem("rq-lang", next);
+                }}
               />
             ) : null}
             {arranged.reviews.length > 0 ? (
@@ -350,7 +355,8 @@ function FeedbackForm({
   reviewLinks,
   reviewGating,
   ratingThreshold,
-  aiEnabled
+  aiEnabled,
+  onLanguageChange
 }: {
   lang: TapLang;
   code: string;
@@ -363,6 +369,7 @@ function FeedbackForm({
   reviewGating: boolean;
   ratingThreshold: number;
   aiEnabled: boolean;
+  onLanguageChange: (lang: TapLang) => void;
 }) {
   const [rating, setRating] = React.useState(0);
   const [message, setMessage] = React.useState("");
@@ -374,6 +381,48 @@ function FeedbackForm({
   const [error, setError] = React.useState("");
   const [done, setDone] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
+  const [aiUnavailableFor, setAiUnavailableFor] = React.useState<number | null>(null);
+
+  const offerAiDrafts =
+    aiUnavailableFor !== rating &&
+    shouldOfferAiReviewDrafts({ reviewGating, aiEnabled, rating, ratingThreshold });
+
+  function prepareReviewTab() {
+    try {
+      return window.open("about:blank", "_blank");
+    } catch {
+      return null;
+    }
+  }
+
+  function continueToPublicReview(reserved: Window | null) {
+    const href = reviewLinks[0]?.href;
+    if (!href) {
+      reserved?.close();
+      return;
+    }
+    void fetch("/api/public/reviews", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        businessSlug: slug,
+        rating,
+        feedback: "",
+        source,
+        qrCode: code,
+        locationSlug,
+        staffSlug,
+        turnstileToken: token,
+        openedPublicReview: true
+      })
+    }).catch(() => {});
+    if (reserved && !reserved.closed) {
+      reserved.opener = null;
+      reserved.location.href = href;
+    } else {
+      window.location.assign(href);
+    }
+  }
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -431,7 +480,10 @@ function FeedbackForm({
             type="button"
             aria-label={n === 1 ? "1 star" : `${n} stars`}
             aria-pressed={rating === n}
-            onClick={() => setRating(n)}
+            onClick={() => {
+              setAiUnavailableFor(null);
+              setRating(n);
+            }}
           >
             <Star aria-hidden="true" data-on={n <= rating ? "true" : "false"} />
           </button>
@@ -445,7 +497,18 @@ function FeedbackForm({
       }) ? (
         <div className="tap-choice">
           <p className="tap-choice-title">{tapText(lang, "publicReview")}</p>
-          {reviewLinks.map((item) => (
+          {offerAiDrafts && reviewLinks[0] ? (
+            <ReviewDraftPicker
+              slug={slug}
+              rating={rating}
+              language={lang}
+              onLanguageChange={onLanguageChange}
+              destination={reviewLinks[0].platform === "trustpilot" ? "Trustpilot" : "Google"}
+              onPrepareContinue={prepareReviewTab}
+              onContinue={continueToPublicReview}
+              onUnavailable={() => setAiUnavailableFor(rating)}
+            />
+          ) : reviewLinks.map((item) => (
             <a
               key={item.href}
               className="tap-primary"
