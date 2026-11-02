@@ -30,6 +30,11 @@ function planCheckoutPath() {
   return `/dashboard/billing?${next.toString()}`;
 }
 
+function referralCodeFromUrl() {
+  if (typeof window === "undefined") return undefined;
+  return new URLSearchParams(window.location.search).get("ref")?.trim() || undefined;
+}
+
 export default function RegisterPage() {
   const router = useRouter();
   const { lang, choose, t } = useAuthLang();
@@ -69,7 +74,7 @@ export default function RegisterPage() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(form)
+        body: JSON.stringify({ ...form, referralCode: referralCodeFromUrl() })
       });
       const json = await res.json();
       if (!res.ok) {
@@ -152,7 +157,8 @@ export default function RegisterPage() {
           phone,
           signupToken,
           name: ownerName,
-          businessName
+            businessName,
+            referralCode: referralCodeFromUrl()
         })
       });
       const json = await res.json().catch(() => ({}));

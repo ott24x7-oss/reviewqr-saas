@@ -13,6 +13,7 @@ import {
 import { getPlanProgramSettings } from "./settings";
 import { notifyUser } from "./notify";
 import { grantPlanAccess } from "./snapshot";
+import { sendPushToUsers } from "../push";
 
 async function addCredit(userId: string, months: number, days: number) {
   if (months <= 0 && days <= 0) return;
@@ -109,9 +110,9 @@ export async function queueReferralReward(paymentId: string) {
   }
 }
 
-export async function applyDueReferralRewards(now = new Date()) {
+export async function applyDueReferralRewards(now = new Date(), referrerUserId?: string) {
   const due = await prisma.referralReward.findMany({
-    where: { status: "PENDING", holdUntil: { lte: now } }
+    where: { status: "PENDING", holdUntil: { lte: now }, ...(referrerUserId ? { referrerUserId } : {}) }
   });
   const settings = await getPlanProgramSettings();
   let applied = 0;
@@ -165,12 +166,28 @@ export async function applyDueReferralRewards(now = new Date()) {
       await addCredit(reward.referredUserId, 0, reward.bonusDays);
     }
     if (months > 0) {
+      const message = extend
+        ? `Your plan is now ${months} month${months === 1 ? "" : "s"} longer. Thank you for the referral.`
+        : `${months} free month${months === 1 ? "" : "s"} are saved as credit for your next plan.`;
+      await prisma.notification.create({
+        data: {
+          userId: reward.referrerUserId,
+          type: "referral_reward",
+          title: "Referral reward added",
+          message,
+          link: "/dashboard/refer",
+          metadata: { rewardId: reward.id, months, asCredit: !extend }
+        }
+      });
+      await sendPushToUsers([reward.referrerUserId], {
+        title: "Referral reward added",
+        body: message,
+        data: { type: "referral_reward", url: "/dashboard/refer" }
+      });
       await notifyUser(
         reward.referrerUserId,
         "Referral reward added",
-        extend
-          ? `Your plan is now ${months} month${months === 1 ? "" : "s"} longer. Thank you for the referral.`
-          : `${months} free month${months === 1 ? "" : "s"} are saved as credit for your next plan.`
+        message
       );
     }
     applied += 1;

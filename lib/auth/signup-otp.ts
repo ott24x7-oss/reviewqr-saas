@@ -15,7 +15,7 @@ import { isReservedSlug } from "../tap/reserved-slugs";
 import { slugify } from "../utils";
 import { sendVerificationEmail } from "../verify-email";
 import { cookies } from "next/headers";
-import { JOIN_COOKIE, applySignupAttribution } from "../plans/attribution";
+import { JOIN_COOKIE, applyManualReferralCode, applySignupAttribution } from "../plans/attribution";
 import { queueAdminPush } from "../admin/push";
 
 export type SignupOtpResult =
@@ -29,6 +29,7 @@ async function createPhoneOwner(opts: {
   name: string;
   email: string;
   businessName?: string;
+  referralCode?: string;
 }) {
   const existing = await findUserByPhone(opts.phone);
   if (existing) {
@@ -98,6 +99,9 @@ async function createPhoneOwner(opts: {
     phone: opts.phone,
     email: storedEmail
   });
+  if (opts.referralCode) {
+    await applyManualReferralCode({ userId: user.id, code: opts.referralCode, phone: opts.phone, email: storedEmail, businessId });
+  }
 
   await markOnboarding(user.id, "start");
   if (email) sendVerificationEmail({ id: user.id, email, name: user.name }).catch(() => {});
@@ -137,7 +141,8 @@ export async function runSignupOtp(body: unknown): Promise<SignupOtpResult> {
       phone,
       name: data.name,
       email: data.email || "",
-      businessName: data.businessName
+      businessName: data.businessName,
+      referralCode: data.referralCode
     });
     if (!created.ok) return { ok: false, status: created.status, error: created.error };
     return { ok: true, kind: "session", otpToken: created.otpToken, deviceName: data.deviceName };
@@ -148,7 +153,8 @@ export async function runSignupOtp(body: unknown): Promise<SignupOtpResult> {
   const created = await createPhoneOwner({
     phone: checked.phone,
     name: data.name,
-    email: data.email || ""
+      email: data.email || "",
+      referralCode: data.referralCode
   });
   if (!created.ok) return { ok: false, status: created.status, error: created.error };
   return { ok: true, kind: "session", otpToken: created.otpToken, deviceName: data.deviceName };

@@ -37,6 +37,7 @@ export default function BusinessNameScreen() {
   if (!challenge?.signupToken) return null;
   const phone = challenge.phone;
   const signupToken = challenge.signupToken;
+  const referralCode = challenge.referralCode;
 
   async function finish() {
     setBusy(true);
@@ -49,6 +50,7 @@ export default function BusinessNameScreen() {
           phone,
           signupToken,
           name,
+            referralCode,
           deviceName: "Android"
         })
       });

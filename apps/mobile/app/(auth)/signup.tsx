@@ -1,5 +1,5 @@
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -17,6 +17,7 @@ import { usePalette } from "../../src/ui/theme";
 type Sent = { sent: true; channel?: string; resendAfterSec?: number; devCode?: string };
 
 export default function SignupScreen() {
+  const params = useLocalSearchParams<{ ref?: string | string[] }>();
   const palette = usePalette();
   const { t, lang } = useI18n();
   const [phone, setPhone] = useState("");
@@ -37,7 +38,8 @@ export default function SignupScreen() {
         channel: sent.channel,
         resendAfterSec: sent.resendAfterSec || 30,
         devCode: devCodeFrom(sent),
-        sentAt: Date.now()
+        sentAt: Date.now(),
+        referralCode: (Array.isArray(params.ref) ? params.ref[0] : params.ref)?.trim().slice(0, 40)
       });
       router.push("/(auth)/code");
     } catch (err) {

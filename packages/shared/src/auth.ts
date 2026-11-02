@@ -50,6 +50,7 @@ export const otpSignupSchema = z.discriminatedUnion("action", [
     code: z.string().regex(/^\d{6}$/, "Invalid code"),
     name: z.string().min(2).max(80),
     email: z.string().email().optional().or(z.literal("")),
+      referralCode: z.string().max(40).optional(),
     deviceName: z.string().max(80).optional()
   }),
   z.object({
@@ -59,6 +60,7 @@ export const otpSignupSchema = z.discriminatedUnion("action", [
     name: z.string().min(2).max(80),
     businessName: z.union([z.string().min(2).max(80), z.literal("")]).optional(),
     email: z.string().email().optional().or(z.literal("")),
+      referralCode: z.string().max(40).optional(),
     deviceName: z.string().max(80).optional()
   })
 ]);
