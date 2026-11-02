@@ -13,7 +13,10 @@ async function getHandler(req: NextRequest) {
     where: { userId: auth.user.id },
     orderBy: { createdAt: "desc" },
     take: 50,
-    include: { lines: { select: { sku: true, name: true, qty: true } } }
+    include: {
+      lines: { take: 1, select: { sku: true, name: true, qty: true, variant: { select: { imageUrl: true } } } },
+      shipment: { select: { provider: true, courierName: true, awb: true } }
+    }
   });
   return v1Data({
     items: orders.map((order) => ({
@@ -26,7 +29,8 @@ async function getHandler(req: NextRequest) {
       balancePaise: order.balancePaise,
       invoiceNumber: order.invoiceNumber,
       createdAt: order.createdAt,
-      lines: order.lines
+      lines: order.lines.map((line) => ({ sku: line.sku, name: line.name, qty: line.qty, imageUrl: line.variant?.imageUrl ?? null })),
+      shipment: order.shipment ? { provider: order.shipment.provider, courierName: order.shipment.courierName, awb: order.shipment.awb, etaDays: null } : null
     }))
   });
 }

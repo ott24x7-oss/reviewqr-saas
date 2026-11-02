@@ -368,7 +368,11 @@ export async function notifyShopStatus(orderId: string, status: string, ndr?: st
   }
   const userIds = [order.user.id];
   if (order.business?.ownerId && order.business.ownerId !== order.user.id) userIds.push(order.business.ownerId);
-  await sendPushToUsers(userIds, { title: notice.subject, body: notice.text, data: { url: trackingUrl } });
+  await sendPushToUsers(userIds, {
+    title: notice.subject,
+    body: notice.text,
+    data: { type: "shop_order_status", order: order.id, url: trackingUrl }
+  });
   return { ok: true };
 }
 

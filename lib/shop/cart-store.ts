@@ -13,6 +13,7 @@ import { addressError, sameSupplyState } from "./address";
 import { quoteShop, type DiscountOffer } from "./quote";
 import { isPhysicalShopProduct } from "./physical";
 import { providerForEstimates } from "./shipping-resolve";
+import { absoluteUrl } from "@/lib/utils";
 
 type ShopAudience = "web" | "app";
 
@@ -135,7 +136,7 @@ async function businessesFor(userId: string) {
   });
 }
 
-export async function shopCartView(userId: string, audience: ShopAudience = "web") {
+export async function shopCartView(userId: string, audience: ShopAudience = "web", previewBusinessId?: string | null) {
   const cart = await cartFor(userId);
   const [addresses, businesses, payments] = await Promise.all([
     prisma.shippingAddress.findMany({ where: { userId }, orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }] }),
@@ -174,6 +175,7 @@ export async function shopCartView(userId: string, audience: ShopAudience = "web
       minQty: variant?.minQty ?? 1,
       ships: variant?.ships ?? true,
       weightGrams: variant?.weightGrams ?? 0,
+      imageUrl: variant?.imageUrl ?? null,
       needsDesign: variant?.product.needsDesign ?? false,
       needsNfc: variant?.product.needsNfc ?? false,
       includedLifetime: variant?.includedLifetime ?? false,
@@ -186,7 +188,7 @@ export async function shopCartView(userId: string, audience: ShopAudience = "web
   });
   const quotable = lines.filter((line) => line.sku && line.active);
   const emptyQuote = { ok: true as const, lines: [], subtotalPaise: 0, couponPaise: 0, referralPaise: 0, couponRejected: false, referralRejected: false, discountPaise: 0, totalPaise: 0, taxablePaise: 0, cgstPaise: 0, sgstPaise: 0, igstPaise: 0 };
-  const quote = quotable.length
+  const quoteWithoutShipping = quotable.length
     ? quoteShop({
         lines: quotable.map((line) => ({
           sku: line.sku,
@@ -203,18 +205,21 @@ export async function shopCartView(userId: string, audience: ShopAudience = "web
         sameState: sameSupplyState(address?.state, payments.sellerState)
       })
     : emptyQuote;
-  const qrCodes = cart.businessId
-    ? await prisma.qRCode.findMany({ where: { businessId: cart.businessId }, select: { shortCode: true, label: true }, orderBy: { label: "asc" } })
+  const quote = quoteWithoutShipping.ok ? { ...quoteWithoutShipping, shippingPaise: 0 } : quoteWithoutShipping;
+  const qrBusinessId = cart.businessId || (businesses.some((item) => item.id === previewBusinessId) ? previewBusinessId : null);
+  const qrCodes = qrBusinessId
+    ? await prisma.qRCode.findMany({ where: { businessId: qrBusinessId }, select: { shortCode: true, label: true }, orderBy: { label: "asc" } })
     : [];
-  const devices = cart.businessId
+  const devices = qrBusinessId
     ? await prisma.device.findMany({
-        where: { businessId: cart.businessId, status: { in: ["ASSIGNED", "ACTIVE", "IN_STOCK"] } },
+        where: { businessId: qrBusinessId, status: { in: ["ASSIGNED", "ACTIVE", "IN_STOCK"] } },
         select: { id: true, kind: true, chipUid: true },
         orderBy: { createdAt: "asc" }
       })
     : [];
   return {
     businessId: cart.businessId,
+    qrBusinessId,
     couponCode: cart.couponCode,
     referralCode: cart.referralCode,
     buyerGstin: cart.buyerGstin,
@@ -224,7 +229,7 @@ export async function shopCartView(userId: string, audience: ShopAudience = "web
     quote,
     addresses,
     businesses,
-    qrCodes,
+    qrCodes: qrCodes.map((qr) => ({ ...qr, url: absoluteUrl(`/q/${qr.shortCode}?src=qr`) })),
     devices,
     templates: PRINT_TEMPLATES.map((template) => ({ id: template.id, name: template.name }))
   };

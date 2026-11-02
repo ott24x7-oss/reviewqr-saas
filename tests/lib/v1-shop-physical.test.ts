@@ -10,6 +10,7 @@ import { prisma } from "../../lib/db";
 import { shopCatalog } from "../../lib/shop/cart-store";
 import { FOUNDER_SKU } from "../../lib/shop/catalog-seed";
 import { shopCategory } from "../../lib/shop/physical";
+import { shopCartViewSchema, shopCatalogResponseSchema } from "@reviewqr/shared";
 
 describe("shop categories", () => {
   it("keeps hardware physical and the lifetime plan digital", () => {
@@ -49,7 +50,9 @@ describe("app shop sells physical products only", () => {
 
     const catalog = await catalogGet(new NextRequest("http://127.0.0.1/api/v1/shop/catalog", { headers }));
     expect(catalog.status).toBe(200);
-    const items = (await catalog.json()).data.items as { slug: string; category: string; variants: { sku: string; salePaise: number }[] }[];
+    const catalogData = (await catalog.json()).data;
+    const items = catalogData.items as { slug: string; category: string; variants: { sku: string; salePaise: number }[] }[];
+    expect(shopCatalogResponseSchema.safeParse(catalogData).success).toBe(true);
     const bySlug = Object.fromEntries(items.map((item) => [item.slug, item.category]));
     expect(bySlug["qr-stand"]).toBe("stand");
     expect(bySlug["nfc-qr-combo"]).toBe("stand");
@@ -99,7 +102,9 @@ describe("app shop sells physical products only", () => {
     await prisma.shopCartLine.create({ data: { cartId: cart.id, variantId: variant!.id, qty: 1 } });
     const viewed = await cartGet(new NextRequest("http://127.0.0.1/api/v1/shop/cart", { headers }));
     expect(viewed.status).toBe(200);
-    const cartBody = JSON.stringify((await viewed.json()).data.lines);
+    const viewedData = (await viewed.json()).data;
+    const cartBody = JSON.stringify(viewedData.lines);
+    expect(shopCartViewSchema.safeParse(viewedData).success).toBe(true);
     expect(cartBody).not.toContain(FOUNDER_SKU);
 
     const checkout = await checkoutPost(new NextRequest("http://127.0.0.1/api/v1/shop/checkout", { method: "POST", headers }));
