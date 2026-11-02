@@ -17,6 +17,8 @@ import { fonts } from "../../src/theme";
 import { Card, EmptyState, LoadErrorCard, Skeleton } from "../../src/ui/bits";
 import { Field, PillButton } from "../../src/ui/controls";
 import { useTheme } from "../../src/ui/theme";
+import { ownerShowQrTarget } from "../../src/nav/owner-tabs";
+import { reviewRatingSummary } from "../../src/reviews/rating-summary";
 
 type Review = { id: string; rating: number; customerName: string | null; staff: string; location: string; createdAt: string; redirected: boolean };
 type Testimonial = { id: string; authorName: string; rating: number; message: string; isPublic: boolean };
@@ -82,6 +84,7 @@ function ReviewsScreenContent() {
       ? reviews.data!.items.reduce((sum, row) => sum + row.rating, 0) / reviews.data!.items.length
       : null
   );
+  const ratingDisplay = reviewRatingSummary(average, ratings);
   const scans = analytics.data?.summary.scans ?? 0;
   const conversion = scans > 0 ? Math.round((ratings / scans) * 100) : 0;
   const reviewLink = business?.googleReviewUrl || (tap.data?.publicPath && apiBaseUrl() ? apiBaseUrl() + tap.data.publicPath : "");
@@ -134,8 +137,8 @@ function ReviewsScreenContent() {
       <View style={[styles.summary, { backgroundColor: palette.card, borderColor: palette.line }]}>
         <View style={styles.ratingHead}>
           <Star color={palette.star} fill={palette.star} size={23} />
-          <Text style={[styles.rating, { color: palette.ink }]}>{average == null ? "—" : average.toFixed(1)}</Text>
-          <Text style={[styles.muted, { color: palette.muted }]}>{ratings} {t.reviews.toLowerCase()}</Text>
+          <Text style={[styles.rating, { color: palette.ink }]}>{ratingDisplay.average}</Text>
+          <Text style={[styles.muted, { color: palette.muted }, lang === "hi" && styles.hindi]}>{ratingDisplay.empty ? t.noRatingsYet : `${ratings} ${t.reviews.toLowerCase()}`}</Text>
         </View>
         <Text style={[styles.muted, { color: palette.muted }, lang === "hi" && styles.hindi]}>{t.scansToReviews} · {scans} → {ratings} · {conversion}%</Text>
         <View style={styles.rangeRow}>
@@ -154,7 +157,7 @@ function ReviewsScreenContent() {
       <View style={[styles.askCard, { backgroundColor: palette.card, borderColor: palette.line }]}>
         <Text style={[styles.section, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.askForReviews}</Text>
         <PillButton label={t.askForReviews} onPress={() => { void askOnWhatsApp(); }} tone="dark" />
-        <PillButton label={t.showQr} onPress={() => router.push({ pathname: "/(app)/tap", params: { section: "qr" } })} tone="outline" />
+        <PillButton label={t.showQr} onPress={() => router.push(ownerShowQrTarget())} tone="outline" />
       </View>
 
       <View style={styles.sectionHead}>
@@ -166,7 +169,7 @@ function ReviewsScreenContent() {
       {feedback.isLoading ? <><Skeleton height={90} /><Skeleton height={90} /></> : null}
       {feedback.isError ? <LoadErrorCard onRetry={() => feedback.refetch().catch(() => undefined)} /> : null}
       {!feedback.isLoading && !feedback.isError && waiting.length === 0 ? (
-        <EmptyState icon={QrCode} title={t.emptyFeedbackTitle} body={t.emptyFeedbackBody} action={t.showQr} onAction={() => router.push({ pathname: "/(app)/tap", params: { section: "qr" } })} />
+        <EmptyState icon={QrCode} title={t.emptyFeedbackTitle} body={t.emptyFeedbackBody} action={t.showQr} onAction={() => router.push(ownerShowQrTarget())} />
       ) : null}
       {waiting.slice(0, 6).map((row) => (
         <Card key={row.id} style={styles.card}>
@@ -203,7 +206,7 @@ function ReviewsScreenContent() {
         </Card>
       ))}
       {!testimonials.isLoading && !testimonials.isError && (testimonials.data?.items ?? []).length === 0 ? (
-        <EmptyState icon={MessageSquareQuote} title={t.emptyTestimonialsTitle} body={t.emptyTestimonialsBody} action={t.showQr} onAction={() => router.push({ pathname: "/(app)/tap", params: { section: "qr" } })} />
+        <EmptyState icon={MessageSquareQuote} title={t.emptyTestimonialsTitle} body={t.emptyTestimonialsBody} action={t.showQr} onAction={() => router.push(ownerShowQrTarget())} />
       ) : null}
 
       <Text style={[styles.section, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.topicHints}</Text>

@@ -3,7 +3,7 @@ import type { FeatureId } from "@reviewqr/shared";
 import { router, type Href } from "expo-router";
 import {
   Bell, CalendarDays, Check, CircleHelp, CreditCard, Languages, LogOut, Megaphone, Nfc,
-  Palette, QrCode, Scissors, Share2, ShoppingBag, Store, Trash2, Users
+  MessageSquareQuote, Palette, QrCode, Scissors, Share2, ShoppingBag, Store, Trash2, Users
 } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
@@ -41,6 +41,12 @@ function MeScreenContent() {
     queryFn: () => apiData<StoreSettings>("/api/v1/businesses/" + id + "/store", {}, { planSheet: false }),
     staleTime: 60_000
   });
+  const feedback = useQuery({
+    queryKey: accountKey(user?.id ?? "", "feedback", id),
+    enabled: !!user && !!id,
+    queryFn: () => apiData<{ items: { status: string }[] }>("/api/v1/feedback?limit=30&businessId=" + id, {}, { planSheet: false })
+  });
+  const unreadFeedbackCount = (feedback.data?.items ?? []).filter((row) => row.status === "NEW").length;
   const themes: SchemeChoice[] = ["system", "light", "dark"];
   const planName = lang === "hi" ? plan.data?.plan?.nameHi || plan.data?.plan?.nameEn : plan.data?.plan?.nameEn;
   const expiry = plan.data?.endsAt || plan.data?.trialEndsAt || "";
@@ -111,6 +117,7 @@ function MeScreenContent() {
 
       <SectionHeader label={t.myPage} />
       <Group>
+        <GroupRow icon={MessageSquareQuote} tint="amber" title={t.reviewsFeedback} hint={unreadFeedbackCount > 0 ? t.unreadCount.replace("{count}", String(unreadFeedbackCount)) : t.reviews} onPress={() => go("/(app)/reviews")} />
         <GroupRow icon={Store} tint="green" title={t.businessDetails} hint={t.hintBusinessRow} onPress={() => go("/(app)/business-edit")} />
         <GroupRow icon={QrCode} tint="ink" title={t.pageAndQr} hint={t.shareQr} onPress={() => go("/(app)/tap")} />
         <View style={[styles.brandingRow, { backgroundColor: palette.card, borderColor: palette.line }]}>

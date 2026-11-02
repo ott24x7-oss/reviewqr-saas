@@ -4,7 +4,7 @@ import Svg, { Circle, Path, Rect } from "react-native-svg";
 /** Stroke icons drawn with react-native-svg. Release builds keep these glyphs when icon fonts are missing. */
 function Icon({ children }: { children: ReactNode }) {
   return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
       {children}
     </Svg>
   );

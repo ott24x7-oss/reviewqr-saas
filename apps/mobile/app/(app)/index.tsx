@@ -2,12 +2,12 @@ import { Screen } from "../../src/ui/screen";
 import type { Dashboard, TapPage } from "@reviewqr/shared";
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
-import { StatusBar } from "expo-status-bar";
 import { Bell, Check, ChevronDown, ChevronRight, ClipboardList, Package, Printer, QrCode, Share2, ShoppingBag, Star, Store, UserRound } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, Share, StyleSheet, Text, View } from "react-native";
+import { Linking, Pressable, RefreshControl, ScrollView, Share, StyleSheet, Text, View } from "react-native";
 import { apiBaseUrl } from "../../src/api/instance";
 import { apiData } from "../../src/api/data";
+import { ApiError } from "../../src/api/http";
 import { homeChecklist, homePromoIndex, type HomeChecklistKey } from "../../src/home/checklist";
 import { useI18n } from "../../src/i18n";
 import { accountKey } from "../../src/query/keys";
@@ -16,9 +16,11 @@ import { useSession } from "../../src/state/session";
 import { useAgentMode } from "../../src/agent/mode-context";
 import { fonts } from "../../src/theme";
 import { BottomSheet, LoadErrorCard, Sparkline } from "../../src/ui/bits";
+import { PillButton } from "../../src/ui/controls";
 import { useTheme } from "../../src/ui/theme";
 import { widgetPaletteFromPalette } from "../../src/widgets/format";
 import { writeWidgetSnapshot } from "../../src/widgets/cache";
+import { ownerShowQrTarget } from "../../src/nav/owner-tabs";
 
 type Analytics = {
   summary: { scans: number; orders: number | null; orderPaise: number | null; feedback: number };
@@ -26,7 +28,7 @@ type Analytics = {
   modules: { store: boolean };
 };
 type OrderCard = { id: string; number: string; status: string; customerName: string; totalPaise: number };
-type FeedbackRow = { id: string; message: string; status: string; review: { rating: number; customerName: string | null } };
+type FeedbackRow = { id: string; message: string; status: string; review: { rating: number; customerName: string | null; customerPhone?: string | null } };
 type BookingCard = { id: string; customerName: string; serviceName: string; timeLabel: string; status: string };
 type Product = { id: string; kind?: string };
 type StoreSettings = { layout?: string };
@@ -44,6 +46,7 @@ function HomeScreenContent() {
   const { businesses, business, choose } = useBusiness();
   const { setMode } = useAgentMode();
   const [picker, setPicker] = useState(false);
+  const [replyError, setReplyError] = useState<string | null>(null);
   const [promoDay, setPromoDay] = useState<Date | null>(null);
   const [hour, setHour] = useState<number | null>(null);
   const userId = user?.id ?? "";
@@ -129,7 +132,8 @@ function HomeScreenContent() {
   const points = useMemo(() => (analytics.data?.trend ?? []).map((row) => row.scans), [analytics.data?.trend]);
   const todayPoint = analytics.data?.trend.at(-1);
   const salesToday = analytics.data?.modules.store === false ? null : todayPoint?.orderPaise ?? null;
-  const feedbackToReply = (feedback.data?.items ?? []).filter((row) => row.status === "NEW" || row.status === "IN_PROGRESS").slice(0, 3);
+  const unreadFeedbackCount = (feedback.data?.items ?? []).filter((row) => row.status === "NEW").length;
+  const feedbackToReply = (feedback.data?.items ?? []).filter((row) => row.status === "NEW").slice(0, 3);
   const recentOrders = (orders.data?.items ?? []).slice(0, 3);
   const recentBookings = (bookings.data?.items ?? []).slice(0, 3);
   const checklist = homeChecklist({
@@ -156,7 +160,19 @@ function HomeScreenContent() {
     if (key === "logo") router.push("/(app)/business-edit");
     else if (key === "items") router.push(serviceBusiness ? "/(app)/services" : "/(app)/menu");
     else if (key === "stand") router.push("/(app)/shop");
-    else router.push({ pathname: "/(app)/tap", params: { section: "qr" } });
+    else router.push(ownerShowQrTarget());
+  }
+
+  async function replyToReview(row: FeedbackRow) {
+    setReplyError(null);
+    try {
+      const draft = await apiData<{ whatsappReply: string }>("/api/v1/feedback/" + row.id + "/reply-draft", { method: "POST" });
+      const phone = (row.review.customerPhone || "").replace(/\D/g, "");
+      if (phone.length >= 8) await Linking.openURL("https://wa.me/" + phone + "?text=" + encodeURIComponent(draft.whatsappReply));
+      else await Share.share({ message: draft.whatsappReply });
+    } catch (err) {
+      setReplyError(err instanceof ApiError ? err.message : t.replyDraftError);
+    }
   }
 
   async function sharePage() {
@@ -180,7 +196,6 @@ function HomeScreenContent() {
 
   return (
     <View style={{ flex: 1, backgroundColor: palette.paper }}>
-      <StatusBar style="light" />
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={home.isRefetching} onRefresh={refresh} />}
@@ -249,9 +264,9 @@ function HomeScreenContent() {
           ) : null}
 
           <View style={styles.actionRow}>
-            <HomeAction label={t.showQr} icon={QrCode} onPress={() => router.push({ pathname: "/(app)/tap", params: { section: "qr" } })} palette={palette} />
+            <HomeAction label={t.showQr} icon={QrCode} onPress={() => router.push(ownerShowQrTarget())} palette={palette} />
             <HomeAction label={t.sharePage} icon={Share2} onPress={() => { void sharePage(); }} palette={palette} />
-            <HomeAction label={t.orderStand} icon={ShoppingBag} onPress={() => router.push("/(app)/shop")} palette={palette} />
+            <HomeAction label={t.orderStandShort} icon={ShoppingBag} onPress={() => router.push("/(app)/shop")} palette={palette} />
           </View>
 
           <View style={styles.sectionHeader}>
@@ -287,21 +302,29 @@ function HomeScreenContent() {
 
           <View style={[styles.sectionCard, { backgroundColor: palette.card, borderColor: palette.line }]}>
             <View style={styles.listHeading}>
-              <Text style={[styles.listTitle, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.reviewsToReply}</Text>
-              <Pressable accessibilityRole="button" accessibilityLabel={t.seeAll} onPress={() => router.push("/(app)/reviews")} style={styles.seeAll}>
-                <Text style={[styles.linkText, { color: palette.deep }, lang === "hi" && styles.hindi]}>{t.seeAll}</Text>
+              <View style={styles.reviewTitleWrap}>
+                <Text style={[styles.listTitle, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.reviewsToReply}</Text>
+                {unreadFeedbackCount > 0 ? (
+                  <View accessibilityLabel={t.unreadCount.replace("{count}", String(unreadFeedbackCount))} style={[styles.unreadBadge, { backgroundColor: palette.danger }]}>
+                    <Text style={[styles.unreadBadgeText, { color: palette.onDanger }]}>{unreadFeedbackCount > 99 ? "99+" : unreadFeedbackCount}</Text>
+                  </View>
+                ) : null}
+              </View>
+              <Pressable accessibilityRole="button" accessibilityLabel={t.seeAllReviews} onPress={() => router.push("/(app)/reviews")} style={styles.seeAll}>
+                <Text style={[styles.linkText, { color: palette.deep }, lang === "hi" && styles.hindi]} numberOfLines={1}>{t.seeAllReviews}</Text>
               </Pressable>
             </View>
             {feedbackToReply.length ? feedbackToReply.map((row) => (
-              <Pressable key={row.id} accessibilityRole="button" accessibilityLabel={row.review.rating + " " + row.message} onPress={() => router.push("/(app)/reviews")} style={styles.liveRow}>
+              <View key={row.id} style={styles.liveRow}>
                 <View style={[styles.avatar, { backgroundColor: palette.accentSoft }]}><Star color={palette.deep} size={18} /></View>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.rowTitle, { color: palette.ink }]}>{row.review.customerName || t.reviews} · {row.review.rating}/5</Text>
                   <Text style={[styles.note, { color: palette.muted }]} numberOfLines={2}>{row.message}</Text>
                 </View>
-                <ChevronRight color={palette.muted} size={18} />
-              </Pressable>
+                <PillButton label={t.reply} tone="outline" onPress={() => { void replyToReview(row); }} />
+              </View>
             )) : <Text style={[styles.note, { color: palette.muted }]}>{t.emptyFeedbackBody}</Text>}
+            {replyError ? <Text style={[styles.note, { color: palette.danger }]}>{replyError}</Text> : null}
           </View>
 
           <Pressable accessibilityRole="button" accessibilityLabel={promo === "unbranded" ? t.promoUnbrandedStand : promo === "refer" ? t.promoReferFreeMonths : t.promoBecomeReseller} onPress={openPromo} style={[styles.promo, { backgroundColor: palette.header }]}>
@@ -348,7 +371,7 @@ function HomeAction({ label, icon: Icon, onPress, palette }: { label: string; ic
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={[styles.action, { backgroundColor: palette.card, borderColor: palette.line }]}>
       <Icon color={palette.deep} size={20} />
-      <Text style={[styles.actionText, { color: palette.ink }, lang === "hi" && styles.hindi]} numberOfLines={2}>{label}</Text>
+      <Text style={[styles.actionText, { color: palette.ink }, lang === "hi" && styles.hindi]} numberOfLines={1}>{label}</Text>
     </Pressable>
   );
 }
@@ -377,10 +400,13 @@ const styles = StyleSheet.create({
   rowTitle: { flex: 1, fontFamily: fonts.bodyStrong, fontSize: 14 },
   actionRow: { flexDirection: "row", gap: 8 },
   action: { flex: 1, minHeight: 68, borderWidth: 1, borderRadius: 16, alignItems: "center", justifyContent: "center", gap: 6, paddingHorizontal: 4 },
-  actionText: { fontFamily: fonts.bodyStrong, fontSize: 12, textAlign: "center" },
+  actionText: { fontFamily: fonts.bodyStrong, fontSize: 12, textAlign: "center", maxWidth: "100%" },
   sectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   listHeading: { minHeight: 34, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   listTitle: { fontFamily: fonts.bodyStrong, fontSize: 16 },
+  reviewTitleWrap: { flexDirection: "row", flex: 1, alignItems: "center", gap: 7 },
+  unreadBadge: { minWidth: 20, height: 20, paddingHorizontal: 5, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  unreadBadgeText: { fontFamily: fonts.bodyStrong, fontSize: 11 },
   seeAll: { minWidth: 48, minHeight: 44, alignItems: "flex-end", justifyContent: "center" },
   linkText: { fontFamily: fonts.bodyStrong, fontSize: 13 },
   liveRow: { minHeight: 56, flexDirection: "row", alignItems: "center", gap: 10 },

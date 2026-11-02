@@ -89,6 +89,7 @@ function OwnerTabs() {
     >
       <Tabs.Screen name="index" options={{ title: t.home }} />
       <Tabs.Screen name="orders" options={{ title: t.orders }} />
+      {/* The custom bar filters Reviews out, while the route stays programmatically reachable. */}
       <Tabs.Screen name="reviews" options={{ title: t.reviews }} />
       <Tabs.Screen name="shop" options={{ title: t.shop }} />
       <Tabs.Screen name="more" options={{ title: t.meTab }} />
@@ -100,7 +101,8 @@ function OwnerTabs() {
       <Tabs.Screen name="feedback" options={{ title: t.feedbackTab, href: null }} />
       <Tabs.Screen name="business-new" options={{ title: t.addBusiness, href: null }} />
       <Tabs.Screen name="business-edit" options={{ title: t.businessDetails, href: null }} />
-      <Tabs.Screen name="tap" options={{ title: t.preview, href: null }} />
+      {/* Keep tap navigable from in-app actions; the custom tab bar filters it out. */}
+      <Tabs.Screen name="tap" options={{ title: t.preview }} />
       <Tabs.Screen name="nfc" options={{ title: t.nfc, href: null }} />
       <Tabs.Screen name="delete-account" options={{ title: t.deleteAccount, href: null }} />
       <Tabs.Screen name="help" options={{ title: t.help, href: null }} />

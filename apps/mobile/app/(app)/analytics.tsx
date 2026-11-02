@@ -20,6 +20,7 @@ import { PillButton } from "../../src/ui/controls";
 import { usePalette } from "../../src/ui/theme";
 import type { Palette } from "../../src/ui/tokens";
 import { withOpacity } from "../../src/ui/tokens";
+import { ownerShowQrTarget } from "../../src/nav/owner-tabs";
 
 type Analytics = {
   summary: {
@@ -103,7 +104,7 @@ function AnalyticsScreenContent() {
           title={t.firstScans}
           body={t.firstScansBody}
           action={t.showMyQr}
-          onAction={() => router.push("/(app)/tap")}
+          onAction={() => router.push(ownerShowQrTarget())}
         />
       ) : !query.isLoading && !query.isError ? (
       <>
