@@ -76,7 +76,7 @@ export default async function DashboardOverview({
       icon={<Building2 className="h-5 w-5" />}
       title={<AppText en="Welcome to QR24x7" hi="QR24x7 में आपका स्वागत है" />}
       description={<AppText en="Add a business to get your page, QR codes and customer reviews in one place." hi="अपना पेज, QR कोड और ग्राहक रिव्यू एक जगह पाने के लिए कारोबार जोड़ें।" />}
-      action={<Link href="/dashboard/businesses/new" className="inline-flex min-h-10 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"><Building2 className="h-4 w-4" /><AppText en="Add your business" hi="अपना कारोबार जोड़ें" /></Link>}
+      action={<div className="flex flex-wrap gap-2"><Link href="/dashboard/businesses/new" className="inline-flex min-h-10 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"><Building2 className="h-4 w-4" /><AppText en="Add your business" hi="अपना कारोबार जोड़ें" /></Link><Link href="/dashboard/agent-apply" className="inline-flex min-h-10 items-center rounded-md border bg-card px-4 text-sm font-medium hover:bg-muted"><AppText en="Become a reseller" hi="रीसेलर बनें" /></Link></div>}
     />;
   }
 
@@ -154,7 +154,12 @@ export default async function DashboardOverview({
       <PageHeader
         title={<AppText en={`Good ${new Date().getHours() < 12 ? "morning" : new Date().getHours() < 17 ? "afternoon" : "evening"}, ${user.name?.split(" ")[0] || "there"}`} hi={`नमस्ते, ${user.name?.split(" ")[0] || "जी"}`} />}
         description={<><span className="font-medium text-foreground">{activeBusiness.name}</span><span className="mx-2">·</span><AppText en={`${businesses.length} ${businesses.length === 1 ? "business" : "businesses"}`} hi={`${businesses.length} कारोबार`} /><span className="mt-1 block"><AppText en="Today's visits, orders, and reviews. Add business opens a form for another shop and leaves this one unchanged." hi="आज की विज़िट, ऑर्डर और रिव्यू। कारोबार जोड़ें दूसरी दुकान का फ़ॉर्म खोलता है, इस दुकान को नहीं बदलता।" /></span></>}
-        actions={<Link href="/dashboard/businesses/new" className="inline-flex min-h-10 items-center gap-2 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted"><Building2 className="h-4 w-4" /><AppText en="Add business" hi="कारोबार जोड़ें" /></Link>}
+        actions={<div className="flex flex-wrap gap-2">
+          {user.role === "AGENT"
+            ? <Link href="/dashboard/agent" className="inline-flex min-h-10 items-center rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted"><AppText en="Open agent dashboard" hi="एजेंट डैशबोर्ड खोलें" /></Link>
+            : <Link href="/dashboard/agent-apply" className="inline-flex min-h-10 items-center rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted"><AppText en="Become a reseller" hi="रीसेलर बनें" /></Link>}
+          <Link href="/dashboard/businesses/new" className="inline-flex min-h-10 items-center gap-2 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted"><Building2 className="h-4 w-4" /><AppText en="Add business" hi="कारोबार जोड़ें" /></Link>
+        </div>}
       />
 
       {setupSteps.some((step) => !step.done) ? (

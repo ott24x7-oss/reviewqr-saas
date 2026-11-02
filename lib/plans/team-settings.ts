@@ -7,6 +7,7 @@ export type TeamProgramSettings = {
   minSharePercent: number;
   maxSharePercent: number;
   autoApproveSubAgents: boolean;
+  applicationRejectionCooldownDays: number;
   tdsPercent: number;
   tdsYearlyThresholdPaise: number;
 };
@@ -17,6 +18,7 @@ export const DEFAULT_TEAM_SETTINGS: TeamProgramSettings = {
   minSharePercent: 50,
   maxSharePercent: 90,
   autoApproveSubAgents: false,
+  applicationRejectionCooldownDays: 30,
   tdsPercent: 5,
   tdsYearlyThresholdPaise: 1_500_000
 };
@@ -37,6 +39,7 @@ export function normalizeTeamSettings(value: unknown): TeamProgramSettings {
     minSharePercent,
     maxSharePercent,
     autoApproveSubAgents: row.autoApproveSubAgents === true,
+    applicationRejectionCooldownDays: whole(row.applicationRejectionCooldownDays, DEFAULT_TEAM_SETTINGS.applicationRejectionCooldownDays, 0, 365),
     tdsPercent: whole(row.tdsPercent, DEFAULT_TEAM_SETTINGS.tdsPercent, 0, 30),
     tdsYearlyThresholdPaise: whole(
       row.tdsYearlyThresholdPaise,

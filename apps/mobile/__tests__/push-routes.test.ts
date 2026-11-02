@@ -1,6 +1,11 @@
 import { routeForPush } from "../src/push/routes";
 
 describe("push routes", () => {
+  it("opens the agent home or application after a reseller review", () => {
+    expect(routeForPush({ type: "agent_application_approved", url: "qr24x7://agent" })).toBe("/(app)/agent-home");
+    expect(routeForPush({ type: "agent_application_rejected", url: "qr24x7://agent" })).toBe("/(app)/agent-application");
+  });
+
   it("opens feedback, orders, billing, and a shop shipment", () => {
     expect(routeForPush({ type: "negative_feedback", reviewId: "r1" })).toBe("/(app)/orders?tab=feedback");
     expect(routeForPush({ type: "store_order", orderId: "o1" })).toBe("/(app)/orders?tab=orders");

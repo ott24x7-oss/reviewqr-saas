@@ -2,7 +2,7 @@ import type { AdminInbox } from "../src/admin/types";
 import { optimisticallyResolveInbox, restoreInboxItem } from "../src/admin/inbox-state";
 
 const inbox: AdminInbox = {
-  counts: { agents: 2, devices: 0, proofs: 0, payouts: 0, refunds: 0, shop: 0, support: 0, failed: 0 },
+  counts: { applications: 0, agents: 2, devices: 0, proofs: 0, payouts: 0, refunds: 0, shop: 0, support: 0, failed: 0 },
   segment: "agents",
   nextCursor: null,
   items: [

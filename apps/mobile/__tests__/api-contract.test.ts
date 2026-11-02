@@ -30,6 +30,7 @@ import {
   adminStepUpSchema, adminStepUpTokenSchema, adminSupportActionSchema, adminTeamActionSchema, adminTeamResponseSchema,
   adminUserActionSchema, adminWhatsAppStatusSchema, adminWhatsAppTestSchema, agentBusinessesSchema, agentCommissionsSchema, agentHomeSchema, agentInviteBodySchema,
   agentInviteResultSchema, agentJoinBodySchema, agentJoinResultSchema, agentMemberDetailSchema, agentMemberPatchSchema,
+  agentApplicationSubmitSchema, agentApplicationStatusSchema, agentApplicationResultSchema, agentResellerPitchSchema,
   agentOnboardSchema, agentPayoutsSchema, agentProfilePutSchema, agentProfileSchema, agentTeamSchema, logoutSchema,
   otpRequestSchema, otpSentSchema, refreshSchema, tokenPairSchema
 } from "@reviewqr/shared";
@@ -90,7 +91,7 @@ const adminCases: AdminCase[] = [
   { fn: "verifyStepUp", route: "POST /step-up", path: "/step-up", body: adminStepUpSchema, response: adminStepUpTokenSchema, call: () => adminApi.verifyStepUp("approve_device", MOCK_OTP) },
   { fn: "dashboard", route: "GET /dashboard", path: "/dashboard?range=custom&from=2026-10-01&to=2026-10-26", call: () => adminApi.dashboard("custom", "2026-10-01", "2026-10-26") },
   { fn: "inbox", route: "GET /inbox", path: "/inbox?segment=devices", call: () => adminApi.inbox("devices") },
-  { fn: "inboxAction", route: "POST /inbox", path: "/inbox", body: adminInboxActionSchema, stepUp: "approve_device", call: (stepUp) => adminApi.inboxAction({ segment: "devices", action: "approve", id: "dev-2" }, stepUp) },
+  { fn: "inboxAction", route: "POST /inbox", path: "/inbox", body: adminInboxActionSchema, call: () => adminApi.inboxAction({ segment: "applications", action: "reject", id: "application-1", reason: "Missing sales details" }) },
   { fn: "search", route: "GET /search", path: "/search?q=Madhav", call: () => adminApi.search(" Madhav ") },
   { fn: "user", route: "GET /users/:id", path: "/users/user-1", call: () => adminApi.user("user-1") },
   { fn: "userAction", route: "POST /users/:id", path: "/users/user-1", body: adminUserActionSchema, stepUp: "grant_days_over_30", call: (stepUp) => adminApi.userAction("user-1", { action: "grant", days: 45, reason: "Festival offer" }, stepUp) },
@@ -211,7 +212,10 @@ const agentCases: AgentCase[] = [
   { fn: "updateMember", route: "PATCH /team/:id", url: "/api/v1/agent/team/user-2", body: agentMemberPatchSchema, sample: { sharePercent: 75 }, call: () => agentRequests.updateMember("user-2", { sharePercent: 75 }) },
   { fn: "invite", route: "POST /team/invite", url: "/api/v1/agent/team/invite", body: agentInviteBodySchema, response: agentInviteResultSchema, sample: { inviteLink: "https://qr24x7.in/agent/join/ABCD1234", code: "ABCD1234" }, call: () => agentRequests.invite("9876543210") },
   { fn: "join", route: "POST /join", url: "/api/v1/agent/join", body: agentJoinBodySchema, response: agentJoinResultSchema, sample: { status: "PENDING", leaderName: "Amit" }, call: () => agentRequests.join("ABCD1234") },
-  { fn: "onboardBusiness", route: "POST /onboard", url: "/api/v1/agent/onboard", body: agentOnboardSchema, sample: { id: "lead-1", sent: true, channel: "whatsapp" }, call: () => agentRequests.onboardBusiness("9876543210", "Madhav Sweets") }
+  { fn: "onboardBusiness", route: "POST /onboard", url: "/api/v1/agent/onboard", body: agentOnboardSchema, sample: { id: "lead-1", sent: true, channel: "whatsapp" }, call: () => agentRequests.onboardBusiness("9876543210", "Madhav Sweets") },
+  { fn: "applicationStatus", route: "GET /apply", url: "/api/v1/agent/apply", response: agentApplicationStatusSchema, sample: { status: "none", rejectionReason: null, appliedAt: null, reapplyAt: null, canReapply: true }, call: () => agentRequests.applicationStatus() },
+  { fn: "submitApplication", route: "POST /apply", url: "/api/v1/agent/apply", body: agentApplicationSubmitSchema, response: agentApplicationResultSchema, sample: { status: "PENDING" }, call: () => agentRequests.submitApplication({ name: "Diwakar Sharma", phone: "9876543210", city: "Jaipur", state: "Rajasthan", howSell: "SHOP_VISITS", experience: "", languages: ["Hindi"], referralOrTeamCode: "", termsAccepted: true }) },
+  { fn: "pitch", route: "GET /apply/pitch", url: "/api/v1/agent/apply/pitch", response: agentResellerPitchSchema, sample: { planCommission: { basis: "PERCENT", percent: 20, flatPaise: 0 }, shopCommission: { basis: "PERCENT", percent: 10, flatPaise: 0 }, growthPlanName: "Growth", growthPlanNameHi: "ग्रोथ", growthExampleMonthlyPaise: 499800, payoutMethod: "UPI" }, call: () => agentRequests.pitch() }
 ];
 
 describe("agent client contract", () => {
@@ -264,5 +268,8 @@ describe("agent client contract", () => {
     await parse(agentMemberDetailSchema, "/agent/team/member-1");
     await parse(agentInviteResultSchema, "/agent/team/invite", { method: "POST", body: "{}" });
     await parse(agentJoinResultSchema, "/agent/join", { method: "POST", body: JSON.stringify({ code: "ABCD1234" }) });
+    await parse(agentApplicationStatusSchema, "/agent/apply");
+    await parse(agentApplicationResultSchema, "/agent/apply", { method: "POST", body: JSON.stringify({ name: "Diwakar Sharma", phone: "9876543210", city: "Jaipur", state: "Rajasthan", howSell: "SHOP_VISITS", languages: ["Hindi"], termsAccepted: true }) });
+    await parse(agentResellerPitchSchema, "/agent/apply/pitch");
   });
 });

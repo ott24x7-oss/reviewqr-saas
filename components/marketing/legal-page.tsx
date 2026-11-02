@@ -15,9 +15,9 @@ export async function LegalPage({
   updated,
   children
 }: {
-  eyebrow?: string;
-  title: string;
-  intro?: string;
+  eyebrow?: ReactNode;
+  title: ReactNode;
+  intro?: ReactNode;
   updated?: string;
   children: ReactNode;
 }) {

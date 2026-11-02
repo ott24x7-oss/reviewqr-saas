@@ -117,8 +117,11 @@ function OwnerTabs() {
       <Tabs.Screen name="account" options={{ title: t.account, href: null }} />
       <Tabs.Screen name="theme" options={{ title: t.appLook, href: null }} />
       <Tabs.Screen name="agent" options={{ title: t.agentHome }} />
+      <Tabs.Screen name="agent-home" options={{ title: t.agentHomeTab, href: null }} />
       <Tabs.Screen name="agent-join" options={{ title: t.agentJoin }} />
       <Tabs.Screen name="agent-pending" options={{ title: t.agentWaitingTitle }} />
+      <Tabs.Screen name="agent-reseller" options={{ title: t.resellerTitle, href: null }} />
+      <Tabs.Screen name="agent-application" options={{ title: t.resellerApplicationTitle, href: null }} />
     </Tabs>
   );
 }
@@ -173,6 +176,8 @@ function AgentTabs() {
       <Tabs.Screen name="agent-how" options={{ title: t.agentHowTitle }} />
       <Tabs.Screen name="agent-join" options={{ title: t.agentJoin }} />
       <Tabs.Screen name="agent-pending" options={{ title: t.agentWaitingTitle }} />
+      <Tabs.Screen name="agent-reseller" options={{ title: t.resellerTitle, href: null }} />
+      <Tabs.Screen name="agent-application" options={{ title: t.resellerApplicationTitle, href: null }} />
       <Tabs.Screen name="agent" options={{ title: t.agentHome }} />
     </Tabs>
   );
@@ -214,11 +219,11 @@ export default function AppLayout() {
   if (ready && !user) return <Redirect href="/(auth)/login" />;
   return (
     <BusinessProvider>
-    <PushBridge />
     <PlanLockHost />
     <PendingAgentJoinRedirect />
     <PanelGate>
       <AgentModeProvider>
+        <PushBridge />
         <ModeTabs />
       </AgentModeProvider>
     </PanelGate>

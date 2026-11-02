@@ -57,6 +57,7 @@ function seed(): State {
     stepUps: new Map(),
     pendingRefreshes: 2,
     inbox: {
+      applications: [{ ...card("application-1", "Asha Kumar", "Pune · Maharashtra · 0 businesses", "PENDING", 1_800_000), subtitleHi: "Pune · Maharashtra · 0 कारोबार", details: "Selling: shop visits · Experience: Local retail · Languages: Hindi, Marathi · Code: None · Signed up: 2026-10-24", detailsHi: "बिक्री: दुकानों पर जाकर · अनुभव: स्थानीय खुदरा · भाषाएँ: हिंदी, मराठी · कोड: नहीं · साइन अप: 2026-10-24" }],
       agents: [card("ap-2", "Neha Singh", "Depth 2", "PENDING", 2_400_000), card("ap-4", "Ravi Kumar", "Depth 1", "PENDING", 5_000_000)],
       devices: [card("dev-2", "Pixel 9", "Kavita Sharma", "PENDING", 3_600_000)],
       proofs: [card("order-1", "INV-2026-0141", "360000 paise", "PROOF_SENT", 7_200_000)],
@@ -361,7 +362,7 @@ export async function adminMockTransport(path: string, request: AdminTransportRe
     const ids = [...new Set([...(Array.isArray(input.ids) ? input.ids.map(String) : []), ...(typeof input.id === "string" ? [input.id] : [])])];
     if (!ids.length) return validation("Choose at least one item");
     if (segment === "payouts") return validation("Mark a payout paid from Money");
-    const allowed: Record<AdminInboxSegment, string[]> = { agents: ["approve", "reject"], devices: ["approve", "revoke"], proofs: ["approve"], payouts: [], refunds: ["close"], shop: ["advance"], support: ["close"], failed: ["reject"] };
+    const allowed: Record<AdminInboxSegment, string[]> = { applications: ["approve", "reject"], agents: ["approve", "reject"], devices: ["approve", "revoke"], proofs: ["approve"], payouts: [], refunds: ["close"], shop: ["advance"], support: ["close"], failed: ["reject"] };
     const changed = allowed[segment].includes(String(input.action)) ? state.inbox[segment].filter((row) => ids.includes(row.id)).length : 0;
     if (!changed) return validation("Nothing could be updated");
     removeFromInbox(segment, ids);

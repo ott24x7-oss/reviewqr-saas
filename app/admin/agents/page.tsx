@@ -5,11 +5,12 @@ import { formatINR } from "@/lib/utils";
 import { AgentsBoard } from "./agents-board";
 import { TeamDesk } from "./team-desk";
 import { TeamSettingsForm } from "./team-settings-form";
+import { ApplicationsBoard } from "./applications-board";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminAgentsPage({ searchParams }: { searchParams?: { month?: string } }) {
-  const [agents, rules, plans, team, board] = await Promise.all([
+export default async function AdminAgentsPage({ searchParams }: { searchParams?: { month?: string; tab?: string } }) {
+  const [agents, rules, plans, team, board, applications] = await Promise.all([
     prisma.agentProfile.findMany({
       orderBy: { createdAt: "desc" },
       include: { user: { select: { name: true, phone: true, email: true } } }
@@ -17,8 +18,15 @@ export default async function AdminAgentsPage({ searchParams }: { searchParams?:
     prisma.commissionRule.findMany({ orderBy: { createdAt: "desc" } }),
     prisma.plan.findMany({ where: { active: true }, orderBy: { sortOrder: "asc" }, select: { id: true, nameEn: true } }),
     loadTeamAdmin(),
-    agentLeaderboard(searchParams?.month || null)
+    agentLeaderboard(searchParams?.month || null),
+    prisma.agentApplication.findMany({
+      where: { status: "PENDING" },
+      orderBy: { appliedAt: "asc" },
+      include: { user: { select: { createdAt: true, _count: { select: { businesses: true } } } } }
+    })
   ]);
+
+  const applicationTab = searchParams?.tab === "applications";
 
   return (
     <div className="space-y-5">
@@ -28,6 +36,32 @@ export default async function AdminAgentsPage({ searchParams }: { searchParams?:
           An agent signs in with WhatsApp OTP. Their link is /join/code. The first attribution wins unless you reassign it here.
         </p>
       </div>
+      <div className="flex flex-wrap gap-2 border-b pb-3 text-sm">
+        <Link href="/admin/agents" aria-current={!applicationTab ? "page" : undefined} className={`rounded-full border px-3 py-2 ${!applicationTab ? "border-primary bg-primary/10 font-semibold" : "hover:border-emerald-600"}`}>Agents & teams</Link>
+        <Link href="/admin/agents?tab=applications" aria-current={applicationTab ? "page" : undefined} className={`rounded-full border px-3 py-2 ${applicationTab ? "border-primary bg-primary/10 font-semibold" : "hover:border-emerald-600"}`}>Applications · {applications.length}</Link>
+      </div>
+      {applicationTab ? <ApplicationsBoard
+        applications={applications.map((row) => ({
+          id: row.id,
+          userId: row.userId,
+          applicantName: row.applicantName,
+          phone: row.phone,
+          city: row.city,
+          state: row.state,
+          howSell: row.howSell,
+          experience: row.experience,
+          languages: row.languages,
+          referralOrTeamCode: row.referralOrTeamCode,
+          termsVersion: row.termsVersion,
+          termsAcceptedAt: row.termsAcceptedAt.toISOString(),
+          appliedAt: row.appliedAt.toISOString(),
+          signupAt: row.user.createdAt.toISOString(),
+          businessesOwned: row.user._count.businesses
+        }))}
+        minSharePercent={team.settings.minSharePercent}
+        maxSharePercent={team.settings.maxSharePercent}
+        leaders={agents.filter((agent) => agent.status === "ACTIVE" && agent.active).map((agent) => ({ id: agent.id, name: agent.user.name || "Agent", city: agent.city, depth: agent.depth }))}
+      /> : <>
       <ul className="flex flex-wrap gap-2 text-sm">
         {agents.map((agent) => (
           <li key={agent.id}>
@@ -88,6 +122,7 @@ export default async function AdminAgentsPage({ searchParams }: { searchParams?:
           ))}
         </ol>
       </section>
+      </>}
     </div>
   );
 }
