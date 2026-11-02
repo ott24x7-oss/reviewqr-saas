@@ -293,7 +293,7 @@ export type AdminShopOrderDetail = {
   phone: string;
   createdAt: string;
   shipment: { awb: string | null; courierName: string | null; provider: string; shipmentId: string | null } | null;
-  lines: { id: string; sku: string; name: string; qty: number; unitPaise: number; pricePaise: number; needsNfc: boolean; proofUrl: string | null; proofContentType: string | null }[];
+  lines: { id: string; sku: string; name: string; qty: number; unitPaise: number; pricePaise: number; needsNfc: boolean; unbranded: boolean; proofUrl: string | null; proofContentType: string | null }[];
 };
 export type AdminShopActionBody = z.input<typeof adminShopActionSchema>;
 export type AdminShopTracked = { moved: boolean; awb: string; status: string };

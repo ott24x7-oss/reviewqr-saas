@@ -170,7 +170,7 @@ function HomeScreenContent() {
   }
 
   function openPromo() {
-    if (promo === "unbranded") router.push("/(app)/shop");
+    if (promo === "unbranded") router.push({ pathname: "/(app)/shop", params: { unbranded: "1" } });
     else if (promo === "refer") router.push("/(app)/refer");
     else if (user?.role === "AGENT") {
       setMode("agent");

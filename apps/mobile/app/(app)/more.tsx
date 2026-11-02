@@ -6,7 +6,7 @@ import {
   Palette, QrCode, Scissors, Share2, ShoppingBag, Store, Trash2, Users
 } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { apiData } from "../../src/api/data";
 import { ApiError } from "../../src/api/http";
 import { useI18n } from "../../src/i18n";
@@ -19,7 +19,7 @@ import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
 import { Group, GroupRow, SectionHeader } from "../../src/ui/rows";
 import { useTheme, type SchemeChoice } from "../../src/ui/theme";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 type StoreSettings = { layout?: string };
 
@@ -27,10 +27,11 @@ function MeScreenContent() {
   const { t, lang, choose } = useI18n();
   const { palette, choice, setChoice } = useTheme();
   const { user, logout, refreshUser } = useSession();
-  const { business } = useBusiness();
+  const { business, reload } = useBusiness();
   const { setMode } = useAgentMode();
   const plan = useEntitlement();
   const { locked } = useFeatures();
+  const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [daysLeft, setDaysLeft] = useState<number | null>(null);
   const id = business?.id ?? "";
@@ -77,6 +78,21 @@ function MeScreenContent() {
   }
 
   const serviceBusiness = settings.data?.layout === "SERVICES";
+  const planCanHideBranding = business?.ownerId === user?.id && plan.data?.tier === "AGENCY";
+  const brandingHidden = Boolean(business?.hideBranding || (business?.hideBrandingSource == null && planCanHideBranding));
+  const canSwitchBranding = planCanHideBranding && business?.hideBrandingSource !== "ADMIN" && business?.hideBrandingSource !== "PURCHASE";
+
+  async function setBrandingHidden(value: boolean) {
+    if (!business || !canSwitchBranding) return;
+    setError(null);
+    try {
+      await apiData(`/api/v1/businesses/${business.id}/branding`, { method: "PUT", body: JSON.stringify({ hideBranding: value }) }, { planSheet: false });
+      await queryClient.invalidateQueries({ queryKey: accountKey(user?.id ?? "", "businesses") });
+      reload();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t.brandingError);
+    }
+  }
   return (
     <ScrollView style={{ flex: 1, backgroundColor: palette.paper }} contentContainerStyle={styles.content}>
       <Text style={[styles.title, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.meTab}</Text>
@@ -97,6 +113,19 @@ function MeScreenContent() {
       <Group>
         <GroupRow icon={Store} tint="green" title={t.businessDetails} hint={t.hintBusinessRow} onPress={() => go("/(app)/business-edit")} />
         <GroupRow icon={QrCode} tint="ink" title={t.pageAndQr} hint={t.shareQr} onPress={() => go("/(app)/tap")} />
+        <View style={[styles.brandingRow, { backgroundColor: palette.card, borderColor: palette.line }]}>
+          <View style={{ flex: 1, gap: 3 }}>
+            <Text style={[styles.settingTitle, { color: palette.ink }, lang === "hi" && styles.hindi]}>{brandingHidden ? t.brandingHidden : t.brandingShown}</Text>
+          </View>
+          {canSwitchBranding ? <Switch
+            accessibilityRole="switch"
+            accessibilityLabel={t.brandingPlanSwitch}
+            value={brandingHidden}
+            onValueChange={(value) => void setBrandingHidden(value)}
+            trackColor={{ false: palette.line, true: palette.primary }}
+            thumbColor={palette.card}
+          /> : null}
+        </View>
         {serviceBusiness
           ? <GroupRow icon={Scissors} tint="amber" title={t.services} hint={t.addService} onPress={() => go("/(app)/services", "services-booking")} />
           : <GroupRow icon={ShoppingBag} tint="amber" title={t.menuTab} hint={t.menuItems} onPress={() => go("/(app)/menu", "menu")} />}
@@ -164,6 +193,7 @@ const styles = StyleSheet.create({
   profileIcon: { width: 46, height: 46, borderRadius: 15, alignItems: "center", justifyContent: "center" },
   profileName: { fontFamily: fonts.title, fontSize: 18 },
   profileHint: { fontFamily: fonts.body, fontSize: 13, marginTop: 3 },
+  brandingRow: { minHeight: 56, borderWidth: 1, borderRadius: 16, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", gap: 12 },
   settingBlock: { paddingHorizontal: 14, paddingTop: 12, gap: 10 },
   settingTitle: { fontFamily: fonts.bodyStrong, fontSize: 15 },
   choiceRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },

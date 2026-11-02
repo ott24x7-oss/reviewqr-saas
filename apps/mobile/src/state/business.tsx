@@ -19,6 +19,8 @@ export type BusinessCard = {
   whatsappNumber: string | null;
   logo?: string | null;
   ownerId?: string;
+  hideBranding?: boolean;
+  hideBrandingSource?: "PURCHASE" | "PLAN" | "ADMIN" | null;
 };
 
 type BusinessValue = {

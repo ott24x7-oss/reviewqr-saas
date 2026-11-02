@@ -22,7 +22,8 @@ export type ProductionCard = {
   awb: string | null;
   lastError: string | null;
   pendingReprint: boolean;
-  lines: Array<{ id: string; name: string; hasProof: boolean }>;
+  hasUnbranded: boolean;
+  lines: Array<{ id: string; name: string; hasProof: boolean; unbranded: boolean }>;
 };
 
 const COLUMNS = SHOP_ORDER_STATUSES.filter((status) => status !== "PENDING_PAYMENT");
@@ -205,9 +206,11 @@ export function ProductionBoard({ cards, carrierState }: { cards: ProductionCard
                   </label>
                   {card.awb && <p>AWB {card.awb}</p>}
                   {card.lastError && <p className="text-amber-800">{card.lastError}</p>}
+                  {card.hasUnbranded && <p className="rounded-lg bg-amber-100 px-2 py-1 font-semibold text-amber-950">UNBRANDED: use blank stand stock; do not add a QR24x7 sticker to the box.</p>}
                   {card.lines.map((line) => (
-                    <p key={line.id}>
+                    <p key={line.id} className="flex flex-wrap items-center gap-2">
                       {line.name}
+                      {line.unbranded && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-950">UNBRANDED</span>}
                       {line.hasProof && (
                         <>
                           {" "}

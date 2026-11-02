@@ -26,5 +26,7 @@ export type ShopProduct = {
   mrpPaise: number;
   ships: boolean;
   imageUrl: string | null;
+  category: "stand" | "card" | "sticker" | "keychain" | "digital";
+  unbrandedAddonPaise: number;
   variants: ShopVariant[];
 };

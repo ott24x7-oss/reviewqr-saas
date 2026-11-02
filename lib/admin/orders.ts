@@ -3,6 +3,8 @@ import { fail, ok } from "@/lib/api/result";
 import { prisma } from "@/lib/db";
 import { isShopOrderStatus, type ShopOrderStatusName } from "@/lib/shop/order-status";
 import { maskPhone } from "./mask";
+import { loadEntitlement } from "@/lib/plans/entitlements";
+import { hideBusinessBranding } from "@/lib/branding/hide-business-branding";
 
 export type AdminOrderSort = "createdAt" | "totalPaise" | "status" | "id";
 export type AdminOrderQuery = {
@@ -79,14 +81,24 @@ export async function listAdminOrderPipeline(search: URLSearchParams) {
         invoiceNumber: true,
         createdAt: true,
         buyerLegalName: true,
-        business: { select: { name: true } },
+        business: { select: { name: true, ownerId: true, hideBranding: true, hideBrandingSource: true } },
         user: { select: { name: true, phone: true } },
-        lines: { select: { id: true, name: true, qty: true, needsNfc: true, ships: true, proofUrl: true } },
+        lines: { select: { id: true, name: true, qty: true, needsNfc: true, ships: true, proofUrl: true, unbranded: true } },
         shipment: { select: { awb: true, courierName: true, provider: true, lastError: true } },
         reprintRequests: { where: { status: "PENDING" }, select: { id: true }, take: 1 }
       }
     })
   ]);
+  const owners = [...new Set(rows.flatMap((row) => row.business?.ownerId ? [row.business.ownerId] : []))];
+  const agencyOwners = new Set((await Promise.all(owners.map(async (ownerId) => {
+    const entitlement = await loadEntitlement(ownerId).catch(() => null);
+    return entitlement?.tier === "AGENCY" ? ownerId : null;
+  }))).filter((ownerId): ownerId is string => ownerId != null));
+  const hiddenOrderIds = new Set(rows.flatMap((row) => row.business && hideBusinessBranding({
+    enabled: row.business.hideBranding,
+    source: row.business.hideBrandingSource,
+    agencyPlan: agencyOwners.has(row.business.ownerId)
+  }) ? [row.id] : []));
   return ok({
     items: rows.map((row) => ({
       id: row.id,
@@ -103,7 +115,8 @@ export async function listAdminOrderPipeline(search: URLSearchParams) {
       courierName: row.shipment?.courierName || null,
       lastError: row.shipment?.lastError || null,
       pendingReprint: row.reprintRequests.length > 0,
-      lines: row.lines.map((line) => ({ id: line.id, name: line.name, qty: line.qty, hasProof: Boolean(line.proofUrl) }))
+      hasUnbranded: row.lines.some((line) => line.unbranded || hiddenOrderIds.has(row.id)),
+      lines: row.lines.map((line) => ({ id: line.id, name: line.name, qty: line.qty, hasProof: Boolean(line.proofUrl), unbranded: line.unbranded || hiddenOrderIds.has(row.id) }))
     })),
     total,
     page: query.page,

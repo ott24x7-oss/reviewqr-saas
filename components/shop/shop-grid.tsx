@@ -14,11 +14,11 @@ import type { ShopProduct, ShopVariant } from "./types";
 type Copy = ReturnType<typeof useShopLang>["copy"];
 type AddState = "idle" | "adding" | "added";
 
-async function addToCart(sku: string, qty: number, copy: Copy) {
+async function addToCart(sku: string, qty: number, copy: Copy, unbranded = false) {
   const response = await fetch("/api/v1/shop/cart/items", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ sku, qty })
+    body: JSON.stringify({ sku, qty, unbranded })
   });
   const payload = (await response.json().catch(() => ({}))) as { data?: { lines?: Array<{ qty: number }> }; error?: { message?: string } };
   if (!response.ok) throw new Error(payload.error?.message || copy.addFailed);
@@ -30,11 +30,11 @@ function useAdd(copy: Copy, onCount: (count: number) => void) {
   const [state, setState] = React.useState<AddState>("idle");
   const timer = React.useRef<ReturnType<typeof setTimeout>>();
   React.useEffect(() => () => clearTimeout(timer.current), []);
-  async function run(sku: string, qty: number) {
+  async function run(sku: string, qty: number, unbranded = false) {
     if (state === "adding") return;
     setState("adding");
     try {
-      onCount(await addToCart(sku, qty, copy));
+      onCount(await addToCart(sku, qty, copy, unbranded));
       setState("added");
       clearTimeout(timer.current);
       timer.current = setTimeout(() => setState("idle"), 2200);
@@ -136,6 +136,7 @@ function ProductCard({
           </span>
         )}
         {tag && <span className="absolute right-2 top-2 rounded-full bg-card/90 px-2 py-0.5 text-[11px] font-semibold text-ink">{tag}</span>}
+        {product.unbrandedAddonPaise > 0 && <span className="absolute bottom-2 left-2 rounded-full bg-card/90 px-2 py-0.5 text-[10px] font-semibold text-ink">{copy.unbrandedPill}</span>}
       </Link>
       <div className="flex flex-1 flex-col gap-2 p-3 sm:p-4">
         <Link href={href} className="line-clamp-2 text-sm font-semibold leading-snug hover:underline sm:text-base">
@@ -180,6 +181,7 @@ function ChooseSheet({
 }) {
   const [sku, setSku] = React.useState("");
   const [qty, setQty] = React.useState(1);
+  const [unbranded, setUnbranded] = React.useState(false);
   const { state, run } = useAdd(copy, onCount);
   const variant = product?.variants.find((item) => item.sku === sku) ?? product?.variants[0];
 
@@ -187,6 +189,7 @@ function ChooseSheet({
     const start = product?.variants[0];
     setSku(start?.sku ?? "");
     setQty(Math.max(1, start?.minQty ?? 1));
+    setUnbranded(false);
   }, [product]);
 
   function pick(next: ShopVariant) {
@@ -256,14 +259,18 @@ function ChooseSheet({
               </div>
             </div>
             {product.needsDesign && <p className="text-xs text-muted-ink">{copy.designInCart}</p>}
+            {product.unbrandedAddonPaise > 0 && <label className="flex min-h-12 cursor-pointer items-start gap-3 rounded-2xl border border-border p-3 text-left">
+              <input className="mt-1 h-4 w-4 accent-ink" type="checkbox" checked={unbranded} onChange={(event) => setUnbranded(event.target.checked)} />
+              <span className="space-y-1"><span className="block text-sm font-semibold">{copy.unbranded} +{formatINR(product.unbrandedAddonPaise)} / {copy.qty}</span><span className="block text-xs text-muted-ink">{copy.unbrandedExplainer}</span></span>
+            </label>}
             <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
               <button
                 type="button"
                 disabled={state === "adding"}
                 className={`${CTA} ${state === "added" ? CTA_DONE : CTA_SOLID}`}
-                onClick={() => void run(variant.sku, qty)}
+                onClick={() => void run(variant.sku, qty, unbranded)}
               >
-                <CtaLabel state={state} idle={`${copy.add} · ${formatINR(variant.salePaise * qty)}`} copy={copy} />
+                <CtaLabel state={state} idle={`${copy.add} · ${formatINR((variant.salePaise + (unbranded ? product.unbrandedAddonPaise : 0)) * qty)}`} copy={copy} />
               </button>
               {state === "added" && (
                 <Link href="/dashboard/shop/cart" className={`${CTA} border border-ink px-5 text-ink hover:bg-secondary sm:w-auto`}>

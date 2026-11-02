@@ -44,6 +44,12 @@ enum SubscriptionStatus {
   EXPIRED
 }
 
+enum HideBrandingSource {
+  PURCHASE
+  PLAN
+  ADMIN
+}
+
 enum PlanDuration {
   MONTH_1
   MONTH_6
@@ -359,6 +365,8 @@ model Business {
   // Custom domain (white-label)
   customDomain      String?  @unique
   customDomainVerified Boolean @default(false)
+  hideBranding      Boolean @default(false)
+  hideBrandingSource HideBrandingSource?
 
   isActive  Boolean @default(true)
   archived  Boolean @default(false)
@@ -1638,6 +1646,7 @@ model ShopCartLine {
   variantId String
   variant   CatalogVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
   qty       Int
+  unbranded Boolean        @default(false)
   design    Json?
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
@@ -1783,6 +1792,7 @@ model ShopOrderLine {
   sku              String
   name             String
   qty              Int
+  unbranded        Boolean           @default(false)
   unitPaise        Int
   hsn              String
   gstPercent       Int

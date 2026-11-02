@@ -11,13 +11,18 @@ import { PrintInputError, type PrintDesign } from "@/lib/print/design";
 import { exportPrint } from "@/lib/print/export";
 import { queueAdminPush } from "@/lib/admin/push";
 import { moveShopOrder } from "./order-move";
+import { loadEntitlement } from "@/lib/plans/entitlements";
 
 const PRINTABLE = ["APPROVED", "PRINTING", "NFC_WRITTEN", "PACKED", "PICKUP_SCHEDULED", "SHIPPED", "DELIVERED", "REPRINT"] as const;
 
-function shopPrintDesign(templateId: string, name: string, showNfc: boolean): PrintDesign {
+function unbrandPrintText(value: string) {
+  return value.replace(/(?:QR24x7|(?:www\.)?qr24x7\.in)/gi, "").replace(/\s+/g, " ").trim();
+}
+
+function shopPrintDesign(templateId: string, name: string, showNfc: boolean, noPlatformBrand = false): PrintDesign {
   return {
     templateId,
-    name: name.trim() || "QR24x7",
+    name: (noPlatformBrand ? unbrandPrintText(name) : name.trim()) || (noPlatformBrand ? "" : "QR24x7"),
     cta: "Scan to review",
     ctaHi: "",
     backLine: "",
@@ -33,6 +38,14 @@ function shopPrintDesign(templateId: string, name: string, showNfc: boolean): Pr
   };
 }
 
+async function businessHidesBranding(business: { hideBranding: boolean; hideBrandingSource: string | null; ownerId: string } | null) {
+  if (!business) return false;
+  if (business.hideBrandingSource === "ADMIN") return business.hideBranding;
+  if (business.hideBrandingSource === "PURCHASE" || business.hideBrandingSource === "PLAN") return business.hideBranding;
+  const entitlement = await loadEntitlement(business.ownerId).catch(() => null);
+  return business.hideBranding || entitlement?.tier === "AGENCY";
+}
+
 async function renderLine(design: PrintDesign, code: string, label: string, preset: "exact" | "sheet") {
   return exportPrint({
     design,
@@ -46,7 +59,7 @@ async function renderLine(design: PrintDesign, code: string, label: string, pres
 export async function sendShopProof(orderId: string, adminId: string) {
   const order = await prisma.shopOrder.findUnique({
     where: { id: orderId },
-    include: { lines: true, business: { select: { name: true } } }
+    include: { lines: true, business: { select: { name: true, hideBranding: true, hideBrandingSource: true, ownerId: true } } }
   });
   if (!order) return fail(404, "Order not found");
   if (order.status !== "PAID" && order.status !== "CHANGES_REQUESTED") {
@@ -54,17 +67,19 @@ export async function sendShopProof(orderId: string, adminId: string) {
   }
 
   const name = order.business?.name || order.buyerLegalName || "QR24x7";
+  const businessHideBranding = await businessHidesBranding(order.business);
   try {
     for (const line of order.lines) {
       if (!line.needsDesign) continue;
+      const noPlatformBrand = line.unbranded || businessHideBranding;
       const parsed = shopDesignSchema.safeParse(line.design);
       if (!parsed.success || !parsed.data.qrShortCode || !parsed.data.templateId) {
         return fail(400, "Choose a print template and a QR code before sending the proof");
       }
       const file = await renderLine(
-        shopPrintDesign(parsed.data.templateId, parsed.data.headline || name, line.needsNfc),
+        shopPrintDesign(parsed.data.templateId, parsed.data.headline || name, line.needsNfc, noPlatformBrand),
         parsed.data.qrShortCode,
-        line.name,
+        noPlatformBrand ? unbrandPrintText(line.name) : line.name,
         "exact"
       );
       const url = ["data", "application/pdf;base64"].join(":") + "," + Buffer.from(file.body).toString("base64");
@@ -93,21 +108,24 @@ export async function imposedShopPdf(orderIds: string[]) {
   if (!ids.length) return fail(400, "Choose an order to print");
   const orders = await prisma.shopOrder.findMany({
     where: { id: { in: ids }, status: { in: [...PRINTABLE] } },
-    include: { lines: true, business: { select: { name: true } } }
+    include: { lines: true, business: { select: { name: true, hideBranding: true, hideBrandingSource: true, ownerId: true } } }
   });
   const groups = new Map<string, { design: PrintDesign; codes: Array<{ code: string; label: string }> }>();
   for (const order of orders) {
-    const name = order.business?.name || order.buyerLegalName || "QR24x7";
+    const businessHideBranding = await businessHidesBranding(order.business);
     for (const line of order.lines) {
       if (!line.needsDesign) continue;
+      const noPlatformBrand = line.unbranded || businessHideBranding;
+      const rawName = order.business?.name || order.buyerLegalName || (noPlatformBrand ? "" : "QR24x7");
+      const name = noPlatformBrand ? unbrandPrintText(rawName) : rawName;
       const parsed = shopDesignSchema.safeParse(line.design);
       if (!parsed.success || !parsed.data.qrShortCode || !parsed.data.templateId) continue;
-      const key = `${parsed.data.templateId}:${name}`;
+      const key = `${parsed.data.templateId}:${name}:${noPlatformBrand ? "unbranded" : "branded"}`;
       const group = groups.get(key) ?? {
-        design: shopPrintDesign(parsed.data.templateId, parsed.data.headline || name, line.needsNfc),
+        design: shopPrintDesign(parsed.data.templateId, parsed.data.headline || name, line.needsNfc, noPlatformBrand),
         codes: []
       };
-      group.codes.push({ code: parsed.data.qrShortCode, label: line.name });
+      group.codes.push({ code: parsed.data.qrShortCode, label: noPlatformBrand ? unbrandPrintText(line.name) : line.name });
       groups.set(key, group);
     }
   }

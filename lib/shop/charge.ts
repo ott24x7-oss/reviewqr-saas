@@ -6,21 +6,26 @@ export type ShopCheckoutConfig = {
   codAdvancePercent: number;
   /** Snapshotted onto a shop order. A renewal uses the current value. */
   commissionPercent: number;
+  /** GST inclusive per printed physical item, in paise. */
+  unbrandedAddonPaise: number;
 };
 
 export const DEFAULT_SHOP_CHECKOUT: ShopCheckoutConfig = {
   codEnabled: false,
   codAdvancePercent: 100,
-  commissionPercent: 10
+  commissionPercent: 10,
+  unbrandedAddonPaise: 9900
 };
 
 export function normalizeShopCheckout(input: Partial<ShopCheckoutConfig> | null | undefined): ShopCheckoutConfig {
   const percent = Math.floor(Number(input?.codAdvancePercent));
   const commission = Math.floor(Number(input?.commissionPercent));
+  const unbrandedAddon = Math.floor(Number(input?.unbrandedAddonPaise));
   return {
     codEnabled: input?.codEnabled === true,
     codAdvancePercent: Number.isInteger(percent) && percent >= 1 && percent <= 100 ? percent : 100,
-    commissionPercent: Number.isInteger(commission) && commission >= 0 && commission <= 100 ? commission : 10
+    commissionPercent: Number.isInteger(commission) && commission >= 0 && commission <= 100 ? commission : 10,
+    unbrandedAddonPaise: Number.isInteger(unbrandedAddon) && unbrandedAddon >= 1 && unbrandedAddon <= 10000000 ? unbrandedAddon : 9900
   };
 }
 
@@ -30,6 +35,9 @@ export function shopCheckoutError(input: ShopCheckoutConfig): string | null {
   }
   if (!Number.isInteger(input.commissionPercent) || input.commissionPercent < 0 || input.commissionPercent > 100) {
     return "Commission must be a whole percent from 0 to 100";
+  }
+  if (!Number.isInteger(input.unbrandedAddonPaise) || input.unbrandedAddonPaise < 1 || input.unbrandedAddonPaise > 10000000) {
+    return "Unbranded add-on price must be a whole number of paise from 1 to 10000000";
   }
   return null;
 }

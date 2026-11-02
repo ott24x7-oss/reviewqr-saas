@@ -103,6 +103,7 @@ export async function loadAdminShopOrder(id: string) {
       unitPaise: line.unitPaise,
       pricePaise: line.unitPaise,
       needsNfc: line.needsNfc,
+      unbranded: line.unbranded,
       ...publicShopProof(order.id, line.id, line.proofUrl)
     }))
   });

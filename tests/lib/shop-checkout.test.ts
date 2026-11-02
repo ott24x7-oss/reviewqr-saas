@@ -59,28 +59,28 @@ describe("shop payment stub", () => {
 
 describe("shop checkout amount", () => {
   it("charges the catalogue total, not a plan price, unless COD takes an advance", () => {
-    expect(chargeForOrder(149900, { codEnabled: false, codAdvancePercent: 40, commissionPercent: 10 })).toEqual({
+    expect(chargeForOrder(149900, { codEnabled: false, codAdvancePercent: 40, commissionPercent: 10, unbrandedAddonPaise: 9900 })).toEqual({
       advancePaise: 149900,
       balancePaise: 0,
       cod: false
     });
-    expect(chargeForOrder(2499900, { codEnabled: true, codAdvancePercent: 100, commissionPercent: 10 })).toEqual({
+    expect(chargeForOrder(2499900, { codEnabled: true, codAdvancePercent: 100, commissionPercent: 10, unbrandedAddonPaise: 9900 })).toEqual({
       advancePaise: 2499900,
       balancePaise: 0,
       cod: false
     });
-    expect(chargeForOrder(10001, { codEnabled: true, codAdvancePercent: 50, commissionPercent: 10 })).toEqual({
+    expect(chargeForOrder(10001, { codEnabled: true, codAdvancePercent: 50, commissionPercent: 10, unbrandedAddonPaise: 9900 })).toEqual({
       advancePaise: 5001,
       balancePaise: 5000,
       cod: true
     });
-    expect(chargeForOrder(200, { codEnabled: true, codAdvancePercent: 1, commissionPercent: 10 })).toEqual({
+    expect(chargeForOrder(200, { codEnabled: true, codAdvancePercent: 1, commissionPercent: 10, unbrandedAddonPaise: 9900 })).toEqual({
       advancePaise: 100,
       balancePaise: 100,
       cod: true
     });
-    expect(shopCheckoutError({ codEnabled: true, codAdvancePercent: 0, commissionPercent: 10 })).toMatch(/percent/i);
-    expect(shopCheckoutError({ codEnabled: false, codAdvancePercent: 100, commissionPercent: 101 })).toMatch(/commission/i);
+    expect(shopCheckoutError({ codEnabled: true, codAdvancePercent: 0, commissionPercent: 10, unbrandedAddonPaise: 9900 })).toMatch(/percent/i);
+    expect(shopCheckoutError({ codEnabled: false, codAdvancePercent: 100, commissionPercent: 101, unbrandedAddonPaise: 9900 })).toMatch(/commission/i);
     expect(normalizeShopCheckout(null).commissionPercent).toBe(10);
     expect(normalizeShopCheckout({ commissionPercent: 0 }).commissionPercent).toBe(0);
     expect(normalizeShopCheckout({ commissionPercent: 15.9 }).commissionPercent).toBe(15);

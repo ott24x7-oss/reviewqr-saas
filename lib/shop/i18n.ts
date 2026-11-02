@@ -60,7 +60,11 @@ const STRINGS = {
     artTagline: "Scan · Tap · Review",
     artLifetime: "∞ LIFETIME",
     plan: "Plan",
-    nfcBadge: "NFC"
+    nfcBadge: "NFC",
+    unbranded: "Unbranded (no QR24x7 logo)",
+    unbrandedPill: "Unbranded option",
+    unbrandedExplainer: "Your stand will show your business only, with no QR24x7 logo.",
+    unbrandedAddon: "Unbranded printing"
   },
   hi: {
     shop: "दुकान",
@@ -121,7 +125,11 @@ const STRINGS = {
     artTagline: "स्कैन · टैप · रिव्यू",
     artLifetime: "∞ लाइफटाइम",
     plan: "प्लान",
-    nfcBadge: "एनएफसी"
+    nfcBadge: "एनएफसी",
+    unbranded: "बिना ब्रांड (QR24x7 लोगो नहीं)",
+    unbrandedPill: "बिना ब्रांड विकल्प",
+    unbrandedExplainer: "स्टैंड पर सिर्फ़ आपके कारोबार का नाम होगा, QR24x7 लोगो नहीं।",
+    unbrandedAddon: "बिना ब्रांड प्रिंटिंग"
   }
 } as const;
 

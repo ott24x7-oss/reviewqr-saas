@@ -13,10 +13,12 @@ import { LandingHero } from "./landing-hero";
 import { TapIcon } from "./tap-icons";
 import { HintChips } from "@/components/review/hint-chips";
 import { NpsPicker } from "@/components/review/nps-picker";
+import { showPlatformBranding } from "@/lib/branding/hide-business-branding";
 
 const SOCIAL = new Set(["instagram", "facebook", "youtube", "website", "whatsapp_chat"]);
 
 export type TapExperienceProps = {
+  hideBranding?: boolean;
   code: string;
   channel: "q" | "t";
   src: string;
@@ -312,9 +314,9 @@ export function TapExperience(props: TapExperienceProps) {
           </section>
         ) : null}
 
-        <p className="tap-footer">
+        {showPlatformBranding(props.hideBranding === true) ? <p className="tap-footer">
           Powered by <a href="/">QR24x7</a>
-        </p>
+        </p> : null}
         </div>
       </div>
     </div>

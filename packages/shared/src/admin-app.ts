@@ -279,6 +279,7 @@ export const adminShopLineSchema = z.object({
   unitPaise: z.number().int(),
   pricePaise: z.number().int(),
   needsNfc: z.boolean(),
+  unbranded: z.boolean(),
   proofUrl: z.string().nullable(),
   proofContentType: z.string().nullable()
 });

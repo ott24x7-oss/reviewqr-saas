@@ -5,6 +5,8 @@ import { Money, PageHeader, StatusBadge } from "@/components/admin/ui/primitives
 import { loadAdminBusiness, loadAdminBusinessDesk } from "@/lib/admin/people";
 import { absoluteUrl, formatDate } from "@/lib/utils";
 import { AdminBusinessForm } from "./edit-form";
+import { loadEntitlement } from "@/lib/plans/entitlements";
+import { hideBusinessBranding } from "@/lib/branding/hide-business-branding";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +14,12 @@ export default async function AdminBusinessPage({ params }: { params: { id: stri
   const [business, desk] = await Promise.all([loadAdminBusiness(params.id), loadAdminBusinessDesk(params.id)]);
   if (!business.ok || !desk.ok) notFound();
   const row = business.data;
+  const entitlement = await loadEntitlement(row.owner.id).catch(() => null);
+  const hideBranding = hideBusinessBranding({
+    enabled: row.hideBranding,
+    source: row.hideBrandingSource,
+    agencyPlan: entitlement?.tier === "AGENCY"
+  });
   return (
     <div>
       <PageHeader
@@ -27,6 +35,7 @@ export default async function AdminBusinessPage({ params }: { params: { id: stri
               name={row.name}
               ownerEmail={row.owner.email || ""}
               isActive={row.isActive}
+              hideBranding={hideBranding}
               reviewGating={desk.data.reviewGating}
               ratingThreshold={desk.data.ratingThreshold}
             />
@@ -68,6 +77,7 @@ export default async function AdminBusinessPage({ params }: { params: { id: stri
             <div className="flex justify-between gap-3"><span className="text-zinc-500">City</span><span>{row.city || "—"}</span></div>
             <div className="flex justify-between gap-3"><span className="text-zinc-500">Phone</span><span>{row.phone || "—"}</span></div>
             <div className="flex justify-between gap-3"><span className="text-zinc-500">Status</span><StatusBadge value={row.isActive ? "ACTIVE" : "PAUSED"} /></div>
+            <div className="flex justify-between gap-3"><span className="text-zinc-500">Branding</span><span>{hideBranding ? "Hidden" : "Shown"}{row.hideBrandingSource ? ` · ${row.hideBrandingSource}` : entitlement?.tier === "AGENCY" ? " · PLAN" : ""}</span></div>
             <div className="flex justify-between gap-3"><span className="text-zinc-500">Opened</span><span>{formatDate(row.createdAt)}</span></div>
           </MetaCard>
         }

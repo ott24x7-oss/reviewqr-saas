@@ -30,7 +30,8 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
   const cards: ProductionCard[] = items.map((item) => ({
     id: item.id, status: item.status, businessName: item.businessName, anyLineNeedsNfc: item.anyLineNeedsNfc,
     ships: item.ships, awb: item.awb, lastError: item.lastError, pendingReprint: item.pendingReprint,
-    lines: item.lines.map((line) => ({ id: line.id, name: line.name, hasProof: line.hasProof }))
+    hasUnbranded: item.hasUnbranded,
+    lines: item.lines.map((line) => ({ id: line.id, name: line.name, hasProof: line.hasProof, unbranded: line.unbranded }))
   }));
   return <div className="space-y-5">
     <PageHeader title="Orders" subtitle={`${total.toLocaleString("en-IN")} paid orders · production, proofs, tracking and audit`} actions={<div className="flex gap-2"><Link href="/admin/orders?tab=reports"><AdminButton variant="outline">Reports</AdminButton></Link><Link href="/admin/orders?tab=shipping"><AdminButton variant="outline">Shipping</AdminButton></Link><Link href="/admin/orders?tab=nfc"><AdminButton variant="outline">NFC queue</AdminButton></Link></div>} />

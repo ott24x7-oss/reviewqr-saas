@@ -11,6 +11,7 @@ export const shopDesignSchema = z.object({
 export const shopCartLineSchema = z.object({
   sku: z.string().min(1).max(40),
   qty: z.number().int().min(1).max(99),
+  unbranded: z.boolean().optional(),
   design: shopDesignSchema.nullable().optional()
 });
 
@@ -27,6 +28,7 @@ export const shopCartPutSchema = z.object({
 export const shopCartItemSchema = z.object({
   sku: z.string().min(1).max(40),
   qty: z.number().int().min(1).max(99).default(1),
+  unbranded: z.boolean().optional(),
   design: shopDesignSchema.nullable().optional()
 });
 
@@ -55,14 +57,14 @@ export const shopVariantSchema = z.object({
 export const shopProductSchema = z.object({
   slug: z.string(), name: z.string(), nameHi: z.string().nullable(), description: z.string(), descriptionHi: z.string().nullable(),
   needsNfc: z.boolean(), needsDesign: z.boolean(), defaultTemplateId: z.string().nullable(), fromPaise: z.number().int(),
-  mrpPaise: z.number().int(), ships: z.boolean(), imageUrl: z.string().nullable(), category: z.enum(["stand", "card", "sticker", "keychain", "digital"]),
+  mrpPaise: z.number().int(), ships: z.boolean(), imageUrl: z.string().nullable(), category: z.enum(["stand", "card", "sticker", "keychain", "digital"]), unbrandedAddonPaise: z.number().int().nonnegative(),
   variants: z.array(shopVariantSchema)
 });
 export const shopCatalogResponseSchema = z.object({ items: z.array(shopProductSchema) });
 
 const shopQuoteLineSchema = z.object({
   sku: z.string(), qty: z.number().int(), grossPaise: z.number().int(), discountPaise: z.number().int(), netPaise: z.number().int(),
-  gstPercent: z.number().int(), taxablePaise: z.number().int(), cgstPaise: z.number().int(), sgstPaise: z.number().int(), igstPaise: z.number().int()
+  gstPercent: z.number().int(), taxablePaise: z.number().int(), cgstPaise: z.number().int(), sgstPaise: z.number().int(), igstPaise: z.number().int(), unbranded: z.boolean()
 });
 export const shopQuoteSchema = z.discriminatedUnion("ok", [
   z.object({
@@ -78,7 +80,7 @@ export const shopCartViewSchema = z.object({
   lines: z.array(z.object({
     sku: z.string(), name: z.string(), nameHi: z.string().nullable(), qty: z.number().int(), unitPaise: z.number().int(), mrpPaise: z.number().int(),
     gstPercent: z.number().int(), stock: z.number().int(), minQty: z.number().int(), ships: z.boolean(), weightGrams: z.number().int(),
-    imageUrl: z.string().nullable(), needsDesign: z.boolean(), needsNfc: z.boolean(), includedLifetime: z.boolean(), active: z.boolean(),
+    imageUrl: z.string().nullable(), needsDesign: z.boolean(), needsNfc: z.boolean(), includedLifetime: z.boolean(), active: z.boolean(), unbranded: z.boolean(), unbrandedUnitPaise: z.number().int().nonnegative(),
     design: shopDesignSchema.nullable(), designError: z.string().nullable()
   })),
   quote: shopQuoteSchema,
@@ -90,7 +92,7 @@ export const shopCartViewSchema = z.object({
 });
 export const shopOrdersResponseSchema = z.object({ items: z.array(z.object({
   id: z.string(), status: z.string(), statusLabel: z.string(), paymentStatus: z.string(), totalPaise: z.number().int(),
-  invoiceNumber: z.string().nullable(), createdAt: z.string(), lines: z.array(z.object({ sku: z.string(), name: z.string(), qty: z.number().int(), imageUrl: z.string().nullable() })),
+  invoiceNumber: z.string().nullable(), createdAt: z.string(), lines: z.array(z.object({ sku: z.string(), name: z.string(), qty: z.number().int(), imageUrl: z.string().nullable(), unbranded: z.boolean() })),
   shipment: z.object({ provider: z.string(), courierName: z.string().nullable(), awb: z.string().nullable(), etaDays: z.number().int().nullable() }).nullable()
 })) });
 

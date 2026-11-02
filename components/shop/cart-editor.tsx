@@ -23,6 +23,8 @@ type CartLine = {
   nameHi: string | null;
   qty: number;
   unitPaise: number;
+  unbranded: boolean;
+  unbrandedUnitPaise: number;
   needsDesign: boolean;
   needsNfc: boolean;
   design: Design | null;
@@ -40,6 +42,7 @@ type CartView = {
   quote: {
     ok: boolean;
     error?: string;
+    lines?: Array<{ unbranded: boolean; netPaise: number }>;
     totalPaise?: number;
     taxablePaise?: number;
     cgstPaise?: number;
@@ -102,7 +105,7 @@ export function CartEditor() {
         buyerGstin: cart.buyerGstin,
         buyerLegalName: cart.buyerLegalName,
         addressId: cart.addressId,
-        lines: cart.lines.filter((line) => line.sku).map((line) => ({ sku: line.sku, qty: line.qty, design: line.design }))
+        lines: cart.lines.filter((line) => line.sku).map((line) => ({ sku: line.sku, qty: line.qty, design: line.design, unbranded: line.unbranded }))
       })
     });
     const payload = (await response.json()) as { data?: CartView; error?: { message?: string } };
@@ -169,8 +172,12 @@ export function CartEditor() {
         <article key={`${line.sku}-${index}`} className="space-y-3 rounded-[20px] bg-white p-4 text-ink shadow-sm">
           <div className="flex items-start justify-between gap-3">
             <h2 className="font-semibold">{lang === "hi" && line.nameHi ? line.nameHi : line.name}</h2>
-            <p>{formatINR(line.unitPaise * line.qty)}</p>
+            <p>{formatINR((line.unitPaise + (line.unbranded ? line.unbrandedUnitPaise : 0)) * line.qty)}</p>
           </div>
+          {line.unbrandedUnitPaise > 0 && <label className="flex min-h-12 cursor-pointer items-start gap-3 rounded-2xl border border-border p-3 text-left">
+            <input className="mt-1 h-4 w-4 accent-ink" type="checkbox" checked={line.unbranded} onChange={(event) => { const lines = cart.lines.slice(); lines[index] = { ...line, unbranded: event.target.checked }; patch({ lines }); }} />
+            <span className="space-y-1"><span className="block text-sm font-semibold">{copy.unbranded} +{formatINR(line.unbrandedUnitPaise)} / {copy.qty}</span><span className="block text-xs text-muted-ink">{copy.unbrandedExplainer}</span></span>
+          </label>}
           <div className="space-y-2">
             <Label htmlFor={`${line.sku}-qty`}>{copy.qty}</Label>
             <Input
@@ -332,6 +339,7 @@ export function CartEditor() {
         <Button type="button" variant="outline" className="rounded-full" onClick={addAddress}>{copy.address}</Button>
         {cart.quote.ok ? (
           <div className="text-sm">
+            {cart.quote.lines?.some((line) => line.unbranded) && <p className="font-semibold">{copy.unbrandedAddon} {formatINR(cart.quote.lines.filter((line) => line.unbranded).reduce((sum, line) => sum + line.netPaise, 0))}</p>}
             <p className="text-lg font-semibold">{copy.total} {formatINR(cart.quote.totalPaise || 0)}</p>
             <p>CGST {formatINR(cart.quote.cgstPaise || 0)} · SGST {formatINR(cart.quote.sgstPaise || 0)} · IGST {formatINR(cart.quote.igstPaise || 0)}</p>
           </div>

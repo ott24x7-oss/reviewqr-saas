@@ -73,6 +73,7 @@ type Props = {
   stats: Stats;
   reviews: PublicReview[];
   brand?: { name: string; appUrl: string };
+  hideBranding?: boolean;
   aiEnabled?: boolean;
   turnstileSiteKey?: string | null;
 };
@@ -780,7 +781,7 @@ export function ReviewFlow(props: Props) {
         </div>
       </div>
 
-      <footer className="py-6 text-center text-xs rv-sub">
+      {!props.hideBranding ? <footer className="py-6 text-center text-xs rv-sub">
         <a
           href={props.brand?.appUrl || process.env.NEXT_PUBLIC_APP_URL || "/"}
           target="_blank"
@@ -789,7 +790,7 @@ export function ReviewFlow(props: Props) {
         >
           Powered by <b className="rv-body">{props.brand?.name || "QR24x7"}</b>
         </a>
-      </footer>
+      </footer> : null}
 
     </div>
   );

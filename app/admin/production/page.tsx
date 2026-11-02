@@ -4,6 +4,8 @@ import { getShippingConfig } from "@/lib/settings";
 import { isShopOrderStatus } from "@/lib/shop/order-status";
 import { adminCarrierState } from "@/lib/shop/shipping";
 import { ProductionBoard, type ProductionCard } from "@/components/admin/production-board";
+import { loadEntitlement } from "@/lib/plans/entitlements";
+import { hideBusinessBranding } from "@/lib/branding/hide-business-branding";
 
 export const dynamic = "force-dynamic";
 
@@ -18,10 +20,20 @@ export default async function ProductionPage() {
       id: true,
       status: true,
       buyerLegalName: true,
-      business: { select: { name: true } },
-      lines: { select: { id: true, name: true, needsNfc: true, ships: true } }
+      business: { select: { name: true, ownerId: true, hideBranding: true, hideBrandingSource: true } },
+      lines: { select: { id: true, name: true, needsNfc: true, ships: true, unbranded: true } }
     }
   });
+  const owners = [...new Set(orders.flatMap((order) => order.business?.ownerId ? [order.business.ownerId] : []))];
+  const agencyOwners = new Set((await Promise.all(owners.map(async (ownerId) => {
+    const entitlement = await loadEntitlement(ownerId).catch(() => null);
+    return entitlement?.tier === "AGENCY" ? ownerId : null;
+  }))).filter((ownerId): ownerId is string => ownerId != null));
+  const hiddenBusinesses = new Set(orders.flatMap((order) => order.business && hideBusinessBranding({
+    enabled: order.business.hideBranding,
+    source: order.business.hideBrandingSource,
+    agencyPlan: agencyOwners.has(order.business.ownerId)
+  }) ? [order.id] : []));
   const proved = await prisma.shopOrderLine.findMany({
     where: { orderId: { in: orders.map((order) => order.id) }, proofUrl: { not: null } },
     select: { id: true }
@@ -50,7 +62,8 @@ export default async function ProductionPage() {
       awb: shipment?.awb ?? null,
       lastError: shipment?.lastError ?? null,
       pendingReprint: pendingReprintIds.has(order.id),
-      lines: order.lines.map((line) => ({ id: line.id, name: line.name, hasProof: provedIds.has(line.id) }))
+      hasUnbranded: order.lines.some((line) => line.unbranded || hiddenBusinesses.has(order.id)),
+      lines: order.lines.map((line) => ({ id: line.id, name: line.name, hasProof: provedIds.has(line.id), unbranded: line.unbranded || hiddenBusinesses.has(order.id) }))
     });
   }
   return (

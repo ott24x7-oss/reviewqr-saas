@@ -26,7 +26,7 @@ export async function readShopOrder(userId: string, orderId: string) {
   const order = await prisma.shopOrder.findUnique({
     where: { id: orderId },
     include: {
-      lines: { select: { id: true, sku: true, name: true, qty: true, unitPaise: true, variant: { select: { imageUrl: true } }, proofUrl: true } },
+      lines: { select: { id: true, sku: true, name: true, qty: true, unitPaise: true, unbranded: true, variant: { select: { imageUrl: true } }, proofUrl: true } },
       shipment: { select: { provider: true, courierName: true, awb: true, ndrNote: true } },
       reprintRequests: { select: { id: true, reason: true, status: true, createdAt: true }, orderBy: { createdAt: "desc" } }
     }
@@ -66,6 +66,7 @@ export async function readShopOrder(userId: string, orderId: string) {
       name: line.name,
       qty: line.qty,
       unitPaise: line.unitPaise,
+      unbranded: line.unbranded,
       imageUrl: line.variant?.imageUrl ?? null,
       proof: order.status === "PROOF_SENT" ? publicShopProof(order.id, line.id, line.proofUrl) : null
     })),
