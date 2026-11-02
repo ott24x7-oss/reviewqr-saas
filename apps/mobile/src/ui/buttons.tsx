@@ -1,13 +1,10 @@
 import { LinearGradient } from "expo-linear-gradient";
 import type { LucideIcon } from "lucide-react-native";
-import { useEffect } from "react";
 import { Platform, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import Animated, {
-  Easing,
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
-  withTiming
+  withSpring
 } from "react-native-reanimated";
 import { useI18n } from "../i18n";
 import { fonts } from "../theme";
@@ -33,22 +30,10 @@ export function PrimaryButton({ label, onPress, disabled, hint, icon: Icon, test
   const off = !!disabled;
   const limitedMotion = reduceMotion || (palette.cinematic && lowRam);
   const scale = useSharedValue(1);
-  const sheen = useSharedValue(-1.2);
-
-  useEffect(() => {
-    if (limitedMotion || off) return;
-    sheen.value = -1.2;
-    sheen.value = withTiming(1.4, { duration: 900, easing: Easing.out(Easing.cubic) });
-  }, [limitedMotion, sheen, off]);
-
   const scaleStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   const glowStyle: ViewStyle = Platform.OS === "web"
     ? { boxShadow: `0 10px 24px ${withOpacity(palette.primary, 0.35)}` } as ViewStyle
     : { shadowColor: palette.primary, shadowOpacity: 0.35, shadowRadius: 16, shadowOffset: { width: 0, height: 10 }, elevation: 8 };
-  const sheenStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: sheen.value * 280 }, { rotate: "18deg" }]
-  }));
-
   const face = (
     <View style={styles.row}>
       {Icon ? <Icon color={off ? palette.muted : palette.onPrimary} size={20} strokeWidth={1.75} /> : null}
@@ -69,11 +54,11 @@ export function PrimaryButton({ label, onPress, disabled, hint, icon: Icon, test
           onPress={onPress}
           onPressIn={() => {
             if (off) return;
-            scale.value = withSpring(0.97, { damping: 15, stiffness: 320 });
+            if (!limitedMotion) scale.value = withSpring(0.97, { damping: 15, stiffness: 320 });
             tapLight();
           }}
           onPressOut={() => {
-            scale.value = withSpring(1, { damping: 15, stiffness: 320 });
+            if (!limitedMotion) scale.value = withSpring(1, { damping: 15, stiffness: 320 });
           }}
           style={styles.hit}
         >
@@ -87,8 +72,6 @@ export function PrimaryButton({ label, onPress, disabled, hint, icon: Icon, test
               end={{ x: 1, y: 1 }}
               style={styles.primary}
             >
-              <View style={[styles.highlight, { backgroundColor: withOpacity(palette.headerInk, 0.35) }]} />
-              {limitedMotion ? null : <Animated.View pointerEvents="none" style={[styles.sheen, { backgroundColor: withOpacity(palette.headerInk, 0.28) }, sheenStyle]} />}
               {face}
             </LinearGradient>
           )}
@@ -163,20 +146,6 @@ const styles = StyleSheet.create({
   },
   disabledFill: {
     opacity: 0.45
-  },
-  highlight: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 1,
-  },
-  sheen: {
-    position: "absolute",
-    top: -28,
-    left: -80,
-    width: 36,
-    height: 140,
   },
   row: { flexDirection: "row", alignItems: "center", gap: 8 },
   primaryText: { fontFamily: fonts.bodyStrong, fontSize: 16 },

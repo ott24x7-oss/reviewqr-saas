@@ -172,7 +172,7 @@ export function Sparkline({ points, width = 88, height = 28 }: { points: number[
     opacity: 0.35 + draw.value * 0.65,
     transform: [{ translateX: -((1 - draw.value) * width) / 2 }, { scaleX: Math.max(0.01, draw.value) }]
   }));
-  const values = points.length ? points : [0, 0];
+  const values = points;
   const max = Math.max(1, ...values);
   const min = Math.min(...values);
   const span = Math.max(1, max - min);
@@ -184,6 +184,7 @@ export function Sparkline({ points, width = 88, height = 28 }: { points: number[
       return `${x},${y}`;
     })
     .join(" ");
+  if (points.length < 2 || Math.max(...points) === Math.min(...points)) return null;
   return (
     <Animated.View style={anim}>
       <Svg width={width} height={height}>
@@ -279,7 +280,7 @@ export function KpiCard({
           </Text>
         ) : null}
       </View>
-      <Sparkline points={points && points.length ? points : [0, 0]} width={fill ? 120 : 88} />
+      {points?.length ? <Sparkline points={points} width={fill ? 120 : 88} /> : null}
       {trendLabel ? (
         <Text accessibilityLabel={trend} style={[styles.trend, { color: arrowColor }, lang === "hi" && styles.hindiBody]}>
           {trendLabel}

@@ -33,7 +33,7 @@ function ThemeScreenContent() {
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: palette.paper }} contentContainerStyle={styles.content}>
-      <Text style={[styles.title, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.theme}</Text>
+      <Text style={[styles.title, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.appLook}</Text>
       <Text style={[styles.intro, { color: palette.muted }, lang === "hi" && styles.hindi]}>{t.appThemeIntro}</Text>
 
       <View style={styles.grid}>

@@ -129,12 +129,17 @@ describe("analytics rollup", () => {
     expect(custom.days).toBe(11);
   });
 
-  it("re-rolls yesterday and the midnight catch-up even when a row exists", () => {
-    expect(daysNeedingRollup(["2026-10-22", "2026-10-23"], ["2026-10-22", "2026-10-23"], "2026-10-22")).toEqual([
-      "2026-10-22"
-    ]);
-    expect(daysNeedingRollup(["2026-10-21"], ["2026-10-21"], "2026-10-22")).toEqual([]);
-    expect(daysNeedingRollup(["2026-10-23"], [], "2026-10-22")).toEqual(["2026-10-23"]);
+  it("re-rolls today and yesterday when rows exist, but skips older existing days", () => {
+    expect(
+      daysNeedingRollup(
+        ["2026-10-21", "2026-10-22", "2026-10-23"],
+        ["2026-10-21", "2026-10-22", "2026-10-23"],
+        "2026-10-22",
+        "2026-10-23"
+      )
+    ).toEqual(["2026-10-22", "2026-10-23"]);
+    expect(daysNeedingRollup(["2026-10-21"], ["2026-10-21"], "2026-10-22", "2026-10-23")).toEqual([]);
+    expect(daysNeedingRollup(["2026-10-23"], [], "2026-10-22", "2026-10-23")).toEqual(["2026-10-23"]);
     expect(rollupJobDays("2026-10-23", 0)).toEqual(["2026-10-23", "2026-10-22"]);
     expect(rollupJobDays("2026-10-23", 1)).toEqual(["2026-10-23"]);
   });

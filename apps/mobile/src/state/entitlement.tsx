@@ -9,6 +9,7 @@ import { useSession } from "./session";
 export type SubscriptionView = {
   tier: string;
   status: string;
+  startsAt: string | null;
   endsAt: string | null;
   trialEndsAt: string | null;
   modules: string[];

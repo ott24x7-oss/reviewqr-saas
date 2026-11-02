@@ -241,7 +241,7 @@ export function foldRange(days: StoredDay[]) {
     ratingCount: 0,
     ratings: { "1": 0, "2": 0, "3": 0, "4": 0, "5": 0 } as Record<string, number>
   };
-  const trend: Array<{ day: string; scans: number; pageViews: number; orders: number }> = [];
+  const trend: Array<{ day: string; scans: number; pageViews: number; orders: number; orderPaise: number }> = [];
 
   for (const day of days) {
     totals.scans += day.scans;
@@ -293,7 +293,13 @@ export function foldRange(days: StoredDay[]) {
       current.orders += row.orders;
       tables.set(row.table, current);
     }
-    trend.push({ day: day.day, scans: day.scans, pageViews: day.pageViews, orders: day.orderCount });
+    trend.push({
+      day: day.day,
+      scans: day.scans,
+      pageViews: day.pageViews,
+      orders: day.orderCount,
+      orderPaise: day.orderPaise
+    });
   }
 
   return {

@@ -1,5 +1,6 @@
 import { useEffect, type ComponentType, type ReactNode } from "react";
 import { BlurView } from "expo-blur";
+import { router } from "expo-router";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -13,12 +14,14 @@ import {
   AgentTeamTabIcon,
   FeedbackTabIcon,
   HomeTabIcon,
-  MenuTabIcon,
+  MeTabIcon,
   MoreTabIcon,
-  OrdersTabIcon
+  OrdersTabIcon,
+  ShopTabIcon
 } from "./tab-icons";
 import { useTheme } from "./theme";
 import { withOpacity } from "./tokens";
+import { OWNER_TAB_SLOTS, OWNER_VISIBLE_TABS } from "../nav/owner-tabs";
 
 function TabIcon({ focused, children }: { focused: boolean; children: ReactNode }) {
   const { reduceMotion } = useTheme();
@@ -34,9 +37,9 @@ function TabIcon({ focused, children }: { focused: boolean; children: ReactNode 
 const ICONS: Record<string, ComponentType<{ color: string }>> = {
   index: HomeTabIcon,
   orders: OrdersTabIcon,
-  menu: MenuTabIcon,
-  feedback: FeedbackTabIcon,
-  more: MoreTabIcon,
+  reviews: FeedbackTabIcon,
+  more: MeTabIcon,
+  shop: ShopTabIcon,
   "agent-home": HomeTabIcon,
   "agent-businesses": AgentBusinessesTabIcon,
   "agent-team": AgentTeamTabIcon,
@@ -62,13 +65,17 @@ export function PremiumTabBar({
   canRecruit?: boolean;
 }) {
   const { palette, reduceMotion } = useTheme();
-  const { lang } = useI18n();
+  const { lang, t } = useI18n();
   const insets = useSafeAreaInsets();
-  const ownerTabs = new Set(["index", "orders", "menu", "feedback", "more"]);
+  const ownerTabs = new Set<string>(OWNER_VISIBLE_TABS);
   const agentTabs = new Set(["agent-home", "agent-businesses", "agent-earnings", "agent-more", ...(canRecruit ? ["agent-team"] : [])]);
   const visibleTabs = mode === "agent" ? agentTabs : ownerTabs;
   const routes = state.routes.filter((route) => visibleTabs.has(route.name) && route.name in ICONS);
-  const index = routes.findIndex((route) => route.key === state.routes[state.index]?.key);
+  const selectedRoute = state.routes[state.index];
+  const slots = mode === "owner" ? [...OWNER_TAB_SLOTS] : routes.map((route) => route.name);
+  const index = mode === "owner"
+    ? slots.findIndex((name) => name === selectedRoute?.name)
+    : routes.findIndex((route) => route.key === selectedRoute?.key);
   const slide = useSharedValue(index);
   const tabWidth = useSharedValue(0);
   useEffect(() => {
@@ -93,12 +100,32 @@ export function PremiumTabBar({
       <View
         style={styles.row}
         onLayout={(event) => {
-          tabWidth.value = event.nativeEvent.layout.width / Math.max(1, routes.length);
+          tabWidth.value = event.nativeEvent.layout.width / Math.max(1, slots.length);
         }}
       >
-        {routes.map((route, position) => {
-          const focused = position === index && index >= 0;
-          const Icon = ICONS[route.name as keyof typeof ICONS];
+        {slots.map((slot) => {
+          if (mode === "owner" && slot === "qr") {
+            return (
+              <Pressable
+                key="qr"
+                accessibilityRole="button"
+                accessibilityLabel={t.showQr}
+                onPress={() => {
+                  tapLight();
+                  router.push({ pathname: "/(app)/tap", params: { section: "qr" } });
+                }}
+                style={styles.qrSlot}
+              >
+                <View style={[styles.qrButton, { backgroundColor: palette.primary, borderColor: palette.card }]}>
+                  <Text style={[styles.qrText, { color: palette.onPrimary }]}>QR</Text>
+                </View>
+              </Pressable>
+            );
+          }
+          const route = routes.find((item) => item.name === slot);
+          if (!route) return <View key={slot} style={styles.tab} />;
+          const focused = route.key === selectedRoute?.key;
+          const Icon = ICONS[route.name];
           const options = descriptors[route.key]?.options;
           const label = options?.title || route.name;
           const badge = badges?.[route.name] ?? 0;
@@ -131,7 +158,7 @@ export function PremiumTabBar({
             pointerEvents="none"
             style={[
               styles.pill,
-              { backgroundColor: palette.accentSoft, width: `${100 / Math.max(1, routes.length)}%` as `${number}%` },
+              { backgroundColor: palette.accentSoft, width: `${100 / Math.max(1, slots.length)}%` as `${number}%` },
               pill
             ]}
           />
@@ -142,9 +169,12 @@ export function PremiumTabBar({
 }
 
 const styles = StyleSheet.create({
-  bar: { borderTopWidth: 1, paddingTop: 6, overflow: "hidden" },
+  bar: { borderTopWidth: 1, paddingTop: 6, overflow: "visible", zIndex: 10, elevation: 10 },
   row: { flexDirection: "row", minHeight: 56, position: "relative" },
   tab: { flex: 1, minHeight: 48, alignItems: "center", justifyContent: "center", gap: 2, zIndex: 1 },
+  qrSlot: { flex: 1, minHeight: 48, alignItems: "center", justifyContent: "center", zIndex: 2 },
+  qrButton: { width: 52, height: 52, borderRadius: 26, borderWidth: 3, alignItems: "center", justifyContent: "center", marginTop: -12, elevation: 8 },
+  qrText: { fontFamily: fonts.bodyStrong, fontSize: 14 },
   iconWrap: { width: 28, height: 28, alignItems: "center", justifyContent: "center" },
   badgeSlot: { position: "absolute", top: -6, right: -10 },
   label: { fontFamily: fonts.bodyStrong, fontSize: 12 },

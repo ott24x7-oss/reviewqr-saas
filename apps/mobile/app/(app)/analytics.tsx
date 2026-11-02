@@ -214,7 +214,7 @@ function makeStyles(colors: Palette) {
   title: { fontFamily: fonts.title, fontSize: 22, color: colors.ink },
   ranges: { flexDirection: "row", gap: 8 },
   chip: { minHeight: 48, borderRadius: 999, paddingHorizontal: 16, justifyContent: "center", backgroundColor: colors.card },
-  chipOn: { backgroundColor: colors.deep },
+  chipOn: { backgroundColor: colors.primary },
   chipText: { fontFamily: fonts.bodyStrong, color: colors.ink },
   chipTextOn: { color: colors.onPrimary },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },

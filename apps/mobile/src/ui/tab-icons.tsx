@@ -45,6 +45,24 @@ export function FeedbackTabIcon({ color }: { color: string }) {
   );
 }
 
+export function ShopTabIcon({ color }: { color: string }) {
+  return (
+    <Icon>
+      <Path d="M5 8h14l-1 12H6L5 8Z" stroke={color} strokeWidth={1.75} strokeLinejoin="round" />
+      <Path d="M9 9V6a3 3 0 0 1 6 0v3" stroke={color} strokeWidth={1.75} strokeLinecap="round" />
+    </Icon>
+  );
+}
+
+export function MeTabIcon({ color }: { color: string }) {
+  return (
+    <Icon>
+      <Circle cx="12" cy="8" r="3.25" stroke={color} strokeWidth={1.75} />
+      <Path d="M4.5 20a7.5 7.5 0 0 1 15 0" stroke={color} strokeWidth={1.75} strokeLinecap="round" />
+    </Icon>
+  );
+}
+
 export function MoreTabIcon({ color }: { color: string }) {
   return (
     <Icon>
