@@ -16,6 +16,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { prisma } from "./db";
 import * as QR from "qrcode";
+import { decideMagicLinkMessage } from "./auth/magic-link";
 import {
   BoundedMapCache,
   CoalescedWriter,
@@ -61,6 +62,7 @@ class BaileysManager {
   private _writer: CoalescedWriter | null = null;
   private _reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly sentMessages = new RetryMessageCache<any>(500, 24 * 60 * 60 * 1000);
+  private readonly handledMagicMessages = new RetryMessageCache<true>(1000, 24 * 60 * 60 * 1000);
   private _status: Status = "idle";
   private _qrText: string | null = null;
   private _qrPng: string | null = null;
@@ -357,6 +359,30 @@ class BaileysManager {
         }
       }
     });
+
+    socket.ev.on("messages.upsert", (upsert: any) => {
+      if (generation !== this._socketGeneration || this.socket !== socket || this._leaseLost) return;
+      if (upsert?.type !== "notify" || !Array.isArray(upsert.messages)) return;
+      for (const message of upsert.messages) {
+        const decision = decideMagicLinkMessage(upsert.type, message);
+        if (decision.kind === "ignore") continue;
+        const messageId = message?.key?.id;
+        const dedupeKey = typeof messageId === "string" ? `${message?.key?.remoteJid}:${messageId}` : "";
+        if (dedupeKey && this.handledMagicMessages.get(dedupeKey)) continue;
+        if (dedupeKey) this.handledMagicMessages.set(dedupeKey, true);
+
+        void (async () => {
+          const reply =
+            decision.kind === "missing-phone"
+              ? "I couldn't verify your mobile number. Please log in with your email instead."
+              : await (await import("./auth/magic-link-service")).magicLinkReplyForPhone(decision.phone);
+          if (!reply || generation !== this._socketGeneration || this.socket !== socket) return;
+          await this.sendTextToJid(decision.replyTo, reply);
+        })().catch(() => {
+          console.warn("[baileys] magic-link reply failed");
+        });
+      }
+    });
   }
 
   private async finishClosedSocket(
@@ -517,8 +543,13 @@ class BaileysManager {
 
   /** OTP path. Rejects after 10s so the caller can try the next channel. */
   async sendText(toE164: string, message: string) {
+    return this.sendTextToJid(toJid(toE164), message);
+  }
+
+  /** Send to a validated 1:1 Baileys JID through the retry-cache path. */
+  async sendTextToJid(jid: string, message: string) {
     if (!this.isConnected()) throw new Error("Baileys not connected");
-    const jid = toJid(toE164);
+    if (!/^[^@]+@(?:s\.whatsapp\.net|lid)$/.test(jid)) throw new Error("Invalid WhatsApp recipient");
     let timer: ReturnType<typeof setTimeout> | undefined;
     const timeout = new Promise<never>((_, reject) => {
       timer = setTimeout(() => reject(new Error("Baileys send timed out")), 10_000);

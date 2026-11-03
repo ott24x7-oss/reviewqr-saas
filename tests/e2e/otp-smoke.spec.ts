@@ -85,7 +85,7 @@ test("settings switch saves push through the shared client", async ({ page }) =>
   await expect(toggle).not.toBeChecked();
 });
 
-test("web WhatsApp login signs the owner in and an unknown number stays generic", async ({ page, request }) => {
+test("web login keeps email and password while the legacy OTP API stays available", async ({ page, request }) => {
   test.setTimeout(180_000);
   const phone = `9${String(Date.now()).slice(-9)}`;
   const email = `wa-${Date.now()}@example.test`;
@@ -95,19 +95,10 @@ test("web WhatsApp login signs the owner in and an unknown number stays generic"
   expect(registered.status()).toBe(200);
 
   await page.goto("/login");
-  await page.getByLabel("Mobile number").fill(phone);
-  const sent = page.waitForResponse(
-    (res) => res.url().includes("/api/auth/otp/request") && res.request().method() === "POST"
-  );
-  await page.getByRole("button", { name: "Login with WhatsApp" }).click();
-  const sentResponse = await sent;
-  expect(sentResponse.status()).toBe(200);
-  const sentBody = await sentResponse.json();
-  expect(sentBody.devCode).toMatch(/^\d{6}$/);
-  expect(sentBody.message).toBe("If this number is registered, a code was sent");
-  await expect(page.getByText("If this number is registered, a code was sent.")).toBeVisible();
-  await page.getByLabel("6-digit code").fill(sentBody.devCode);
-  await page.getByRole("button", { name: "Verify and sign in" }).click();
+  await expect(page.getByLabel("Mobile number")).toHaveCount(0);
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill("SmokeTest1");
+  await page.getByRole("button", { name: "Sign in" }).click();
   await page.waitForURL("**/dashboard**");
 
   const unknownPhone = `8${String(Date.now()).slice(-9)}`;
