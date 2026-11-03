@@ -11,6 +11,8 @@ import { sendPushToUsers, type PushPayload } from "../push";
 import { deliverNewBooking, deliverNewOrder, deliverOrderStatus } from "../store/order-alert";
 import type { OrderStatus } from "../store/order-status";
 import { runShopJob } from "../shop/ship-order";
+import { downloadImportedImage } from "../store/import-image";
+import { processItemImageJob } from "../store/item-image-jobs";
 import type { ClaimedJob } from "./store";
 
 function record(payload: Prisma.JsonValue) {
@@ -128,6 +130,14 @@ export async function handleJob(job: ClaimedJob) {
       return runShopJob(job.type, payload);
     case "print.export":
       throw new Error("Print export must run in the download request");
+    case "menu.import-image":
+      return downloadImportedImage({
+        businessId: text(payload.businessId),
+        itemId: text(payload.itemId),
+        imageUrl: text(payload.imageUrl)
+      });
+    case "item-image.generate":
+      return processItemImageJob(text(payload.itemImageJobId));
     default:
       throw new Error(`Unknown job type ${job.type}`);
   }

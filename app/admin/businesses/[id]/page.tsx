@@ -7,6 +7,7 @@ import { absoluteUrl, formatDate } from "@/lib/utils";
 import { AdminBusinessForm } from "./edit-form";
 import { loadEntitlement } from "@/lib/plans/entitlements";
 import { hideBusinessBranding } from "@/lib/branding/hide-business-branding";
+import { AiItemPhotos } from "./ai-item-photos";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +40,7 @@ export default async function AdminBusinessPage({ params }: { params: { id: stri
               reviewGating={desk.data.reviewGating}
               ratingThreshold={desk.data.ratingThreshold}
             />
+            <AiItemPhotos businessId={row.id} />
             <section>
               <h2 className="mb-2 text-sm font-semibold">QR codes</h2>
               <ul className="space-y-1 text-sm">

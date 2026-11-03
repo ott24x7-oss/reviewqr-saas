@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { denyFeatureResponse } from "@/lib/plans/feature-gate";
 import { requireBusinessRole } from "@/lib/tenant";
 import { templateCsv } from "@/lib/store/entry";
+import { csvForRows, demoRowsForBusiness, xlsxForRows } from "@/lib/store/bulk";
 
 function cellText(value: ExcelJS.CellValue): string {
   if (value == null) return "";
@@ -17,15 +18,6 @@ function cellText(value: ExcelJS.CellValue): string {
   return "";
 }
 
-async function workbookBytes() {
-  const workbook = new ExcelJS.Workbook();
-  const sheet = workbook.addWorksheet("Products");
-  sheet.addRow(["name", "price", "category", "Hindi name", "description", "veg", "brand", "MRP"]);
-  sheet.addRow(["Filter coffee", 80, "Coffee", "फ़िल्टर कॉफ़ी", "South Indian coffee", "VEG", "", ""]);
-  const file = await workbook.xlsx.writeBuffer();
-  return Buffer.from(file);
-}
-
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await requireUser().catch(() => null);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -34,20 +26,23 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   const denied = await denyFeatureResponse(business.ownerId, "menu");
   if (denied) return denied;
 
-  const format = new URL(req.url).searchParams.get("format");
+  const search = new URL(req.url).searchParams;
+  const format = search.get("format");
+  const kind = search.get("kind") === "demo" ? "demo" : "template";
+  const rows = kind === "demo" ? demoRowsForBusiness(business.industry) : [];
   if (format === "xlsx") {
-    const body = await workbookBytes();
+    const body = await xlsxForRows(rows, kind === "template");
     return new NextResponse(body, {
       headers: {
         "content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "content-disposition": 'attachment; filename="products.xlsx"'
+        "content-disposition": `attachment; filename="items-${kind}.xlsx"`
       }
     });
   }
-  return new NextResponse(templateCsv(), {
+  return new NextResponse(kind === "demo" ? csvForRows(rows) : templateCsv(), {
     headers: {
       "content-type": "text/csv; charset=utf-8",
-      "content-disposition": 'attachment; filename="products.csv"'
+      "content-disposition": `attachment; filename="items-${kind}.csv"`
     }
   });
 }

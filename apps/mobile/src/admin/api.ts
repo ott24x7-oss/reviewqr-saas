@@ -7,7 +7,7 @@ import type {
   AdminAuditEvent, AdminAuditFilters, AdminBusiness, AdminBusinessActionBody, AdminCommission, AdminCommissionActionBody,
   AdminCommissionStatus, AdminDashboard, AdminDevice, AdminDeviceRow, AdminInbox, AdminInboxActionBody, AdminInboxSegment,
   AdminMe, AdminMoneySummary, AdminMyDevice, AdminPayout,
-  AdminOtpSent, AdminOtpVerifyBody, AdminPage, AdminPayment, AdminPaymentActionBody, AdminPaymentDetail, AdminPaymentFilters,
+  AdminOtpSent, AdminOtpVerifyBody, AdminPage, AdminPayment, AdminPaymentActionBody, AdminPaymentDetail, AdminPaymentFilters, AdminItemImageJob,
   AdminPlan, AdminPlanPatch, AdminRange, AdminRefreshed, AdminRevealed, AdminSearch, AdminSession, AdminSettings,
   AdminSettingsPatch, AdminShopActionBody, AdminShopOrderDetail, AdminShopOrders, AdminShopOrderStatus, AdminStepUpAction,
   AdminStepUpToken, AdminSupportActionBody, AdminTeam, AdminTeamActionBody, AdminTicket, AdminTicketDetail, AdminUser,
@@ -306,6 +306,9 @@ export const adminApi = {
   whatsappReconnect: (stepUp: string) => adminRequest<AdminWhatsAppInfo>("/whatsapp/reconnect", { method: "POST", stepUp }),
   /** Sends only to the signed-in admin's own number. */
   whatsappTest: (message?: string) => adminRequest<AdminWhatsAppTestResult>("/whatsapp/test", { method: "POST", body: message ? { message } : {} }),
+
+  itemImageJobs: (businessId?: string) => adminRequest<{ jobs: AdminItemImageJob[] }>(`/item-image-jobs${query({ businessId })}`),
+  itemImageDecision: (body: { action: "approve" | "reject"; jobIds: string[] }) => adminRequest<{ approved?: number; rejected?: number }>("/item-image-jobs", { method: "POST", body }),
 
   settings: () => adminRequest<AdminSettings>("/settings"),
   /** Share or TDS changes need a change_settings step-up. */

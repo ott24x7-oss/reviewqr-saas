@@ -130,6 +130,7 @@ function OwnerTabs() {
       <Tabs.Screen name="more" options={{ title: t.meTab }} />
       <Tabs.Screen name="analytics" options={{ title: t.analytics }} />
       <Tabs.Screen name="menu" options={{ title: t.menuTab }} />
+      <Tabs.Screen name="menu-bulk" options={{ title: t.menuTab }} />
       <Tabs.Screen name="services" options={{ title: t.services }} />
       <Tabs.Screen name="bookings" options={{ title: t.bookings }} />
       <Tabs.Screen name="booking-detail" options={{ title: t.bookingDetail }} />

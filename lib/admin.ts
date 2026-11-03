@@ -100,7 +100,13 @@ export type AuditAction =
   | "shop.order.track"
   | "inbox.action"
   | "admin.export"
-  | "orders.export";
+  | "orders.export"
+  | "menu.bulk.import"
+  | "settings.ai.images.update"
+  | "item-image.generate"
+  | "item-image.approve"
+  | "item-image.reject"
+  | "item-image.regenerate";
 
 export async function logAudit(opts: {
   userId?: string;

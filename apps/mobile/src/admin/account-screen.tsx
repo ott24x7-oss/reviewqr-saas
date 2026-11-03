@@ -118,6 +118,7 @@ export function AdminAccountScreen() {
             {u.subscription?.modules.length ? <><Text style={[styles.moduleLabel, { color: palette.muted }]}>{t.modules}</Text><View style={styles.modules}>{u.subscription.modules.map((module) => <View key={module} style={[styles.modulePill, { backgroundColor: palette.paper }]}><Text style={[styles.moduleText, { color: palette.ink }]}>{module}</Text></View>)}</View></> : null}
           </AdminCard> : null}
           {b ? <AdminCard style={styles.list}><AdminRow icon={UserRound} title={b.owner.name || b.owner.email} subtitle={`${b.owner.phone} · ${b.owner.tier} · ${b.owner.subscriptionStatus}`} onPress={() => router.push({ pathname: "/(admin)/account", params: { kind: "user", id: b.owner.id } })} /></AdminCard> : null}
+          {b ? <AdminAction label={lang === "hi" ? "AI आइटम फ़ोटो समीक्षा" : "Review AI item photos"} tone="outline" onPress={() => router.push({ pathname: "/(admin)/item-image-review", params: { businessId: b.id } })} /> : null}
           <Text style={[styles.sectionTitle, { color: palette.ink }]}>{t.accountActions}</Text>
           <AdminCard style={styles.actionGrid}>
             {u ? <AdminAction label={t.changePlan} tone="outline" onPress={() => begin("plan")} /> : null}
