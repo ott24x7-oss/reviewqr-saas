@@ -25,6 +25,9 @@ export function OtpCodeForm({
   secondsLeft,
   resendAfterSec = 30,
   phone,
+  recipient,
+  changeLabel,
+  showCallOption = true,
   onResend,
   onChangeNumber,
   onSubmit,
@@ -40,6 +43,9 @@ export function OtpCodeForm({
   secondsLeft: number;
   resendAfterSec?: number;
   phone?: string;
+  recipient?: string;
+  changeLabel?: string;
+  showCallOption?: boolean;
   onResend: () => void;
   onChangeNumber: () => void;
   onSubmit: () => void;
@@ -92,6 +98,9 @@ export function OtpCodeForm({
       <Text style={[styles.sent, { color: palette.ink }, lang === "hi" && styles.hindi]}>{channelLabel(channel, lang)}</Text>
       {phone ? (
         <Text style={[styles.phone, { color: palette.ink }, lang === "hi" && styles.hindi]}>{maskPhone(phone)}</Text>
+      ) : null}
+      {recipient ? (
+        <Text style={[styles.phone, { color: palette.ink }, lang === "hi" && styles.hindi]}>{recipient}</Text>
       ) : null}
       <Pressable accessible={false} onPress={() => input.current?.focus()}>
         <Animated.View style={[styles.boxes, shakeStyle]}>
@@ -148,10 +157,14 @@ export function OtpCodeForm({
           </Text>
         </Pressable>
       </View>
-      <Pressable accessibilityRole="button" accessibilityLabel={t.otpCall} onPress={() => setCallNote(true)} style={styles.linkHit}>
-        <Text style={[styles.link, { color: palette.deep }, lang === "hi" && styles.hindi]}>{t.otpCall}</Text>
-      </Pressable>
-      {callNote ? <Text style={[styles.note, { color: palette.muted }]}>{t.otpCallUnavailable}</Text> : null}
+      {showCallOption ? (
+        <>
+          <Pressable accessibilityRole="button" accessibilityLabel={t.otpCall} onPress={() => setCallNote(true)} style={styles.linkHit}>
+            <Text style={[styles.link, { color: palette.deep }, lang === "hi" && styles.hindi]}>{t.otpCall}</Text>
+          </Pressable>
+          {callNote ? <Text style={[styles.note, { color: palette.muted }]}>{t.otpCallUnavailable}</Text> : null}
+        </>
+      ) : null}
       {showSubmit ? (
         <PrimaryButton
           label={t.verify}
@@ -160,8 +173,8 @@ export function OtpCodeForm({
           hint={code.length !== 6 ? t.hintCode : t.hintWait}
         />
       ) : null}
-      <Pressable accessibilityRole="button" accessibilityLabel={t.changeNumber} onPress={onChangeNumber} style={styles.linkHit}>
-        <Text style={[styles.link, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.changeNumber}</Text>
+      <Pressable accessibilityRole="button" accessibilityLabel={changeLabel || t.changeNumber} onPress={onChangeNumber} style={styles.linkHit}>
+        <Text style={[styles.link, { color: palette.ink }, lang === "hi" && styles.hindi]}>{changeLabel || t.changeNumber}</Text>
       </Pressable>
     </View>
   );

@@ -143,6 +143,16 @@ export async function sendEmail(payload: EmailPayload) {
   return sendDirect(payload, cfg);
 }
 
+/** True when a real SMTP or relay transport is configured (console fallback excluded). */
+export async function emailIsConfigured() {
+  try {
+    const cfg = await getEmailConfig();
+    return Boolean(cfg.relayUrl || (cfg.smtpHost && cfg.smtpUser));
+  } catch {
+    return false;
+  }
+}
+
 function stripHtml(s: string) {
   return String(s || "")
     .replace(/<style[\s\S]*?<\/style>/g, "")

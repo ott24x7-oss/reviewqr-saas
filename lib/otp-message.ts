@@ -74,7 +74,9 @@ export async function enforceOtpLimits(
 }
 
 export function otpLimitMessage(key: string) {
-  if (key.startsWith("otp-cooldown:")) return "Please wait 30 seconds before requesting another code.";
+  if (key.startsWith("otp-cooldown:") || key.startsWith("email-otp-cooldown:")) {
+    return "Please wait 30 seconds before requesting another code.";
+  }
   return "Too many attempts";
 }
 
