@@ -12,7 +12,7 @@ export default ({ config }: ConfigContext): ExpoConfig => applyAppVariant(({
   owner: "ott24x7",
   scheme: ["qr24x7", "reviewqr"],
   primaryColor: "#16A34A",
-  version: "1.0.0",
+  version: "1.0.1",
   orientation: "portrait",
   icon: "./assets/icon.png",
   userInterfaceStyle: "automatic",
@@ -23,7 +23,7 @@ export default ({ config }: ConfigContext): ExpoConfig => applyAppVariant(({
   },
   android: {
     package: packageName,
-    versionCode: 6,
+    versionCode: 7,
     intentFilters: [
       {
         action: "VIEW",
