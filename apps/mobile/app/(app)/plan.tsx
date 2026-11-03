@@ -15,7 +15,7 @@ import { Group, GroupRow, SectionHeader } from "../../src/ui/rows";
 import { EmptyState, LoadErrorCard, Skeleton } from "../../src/ui/bits";
 import { usePalette } from "../../src/ui/theme";
 import type { Palette } from "../../src/ui/tokens";
-import { normalizeReferralHome } from "../../src/referral/presentation";
+import { buildReferralHeroText, normalizeReferralHome } from "../../src/referral/presentation";
 import { isModuleList } from "../../src/state/plan-lock-logic";
 
 function rupees(paise: number) {
@@ -128,9 +128,11 @@ function PlanScreenContent() {
           title={referrals.data?.hasYearlyCap
             ? t.referralPlanBonus.replace("{months}", String(referrals.data.monthsEarnedThisYear))
             : t.referEarn}
-          hint={referrals.data?.hasRewardDetails
-            ? t.referralHero.replace("{days}", String(referrals.data.bonusDaysForFriend)).replace("{months}", String(referrals.data.monthsPerReferral))
-            : t.referralHeroFallback}
+          hint={buildReferralHeroText(referrals.data?.bonusDaysForFriend, referrals.data?.monthsPerReferral, lang, {
+            fallback: t.referralHeroFallback,
+            withFriendBonus: t.referralHero,
+            withoutFriendBonus: t.referralHeroNoFriendBonus
+          })}
           onPress={() => router.push("/(app)/refer")}
         />
       </Group>

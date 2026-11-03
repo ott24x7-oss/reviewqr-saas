@@ -34,6 +34,8 @@ export default async function ReferPage() {
     const reward = row.user.referralRewardReceived;
     return sum + (reward?.status === "APPLIED" ? reward.months : 0);
   }, 0);
+  const creditMonths = credit?.months ?? 0;
+  const creditDays = credit?.days ?? 0;
   const share = `https://wa.me/?text=${encodeURIComponent(`Get QR24x7 with my link: ${link}`)}`;
 
   return (
@@ -55,8 +57,8 @@ export default async function ReferPage() {
             Share on WhatsApp
           </a>
           <p className="text-sm">
-            Months earned: {earned}. Credit waiting: {credit?.months || 0} months
-            {credit?.days ? ` and ${credit.days} days` : ""}.
+            Months earned: {earned} {earned === 1 ? "month" : "months"}. Credit waiting: {creditMonths} {creditMonths === 1 ? "month" : "months"}
+            {creditDays > 0 ? ` and ${creditDays} ${creditDays === 1 ? "day" : "days"}` : ""}.
           </p>
         </div>
       </section>
@@ -71,7 +73,7 @@ export default async function ReferPage() {
                 <span className="font-medium">{row.user.name || "New business"}</span>
                 {" · "}
                 {statusLabel(reward?.status || null)}
-                {reward?.status === "APPLIED" ? ` · ${reward.months} months` : ""}
+                {reward?.status === "APPLIED" ? ` · ${reward.months} ${reward.months === 1 ? "month" : "months"}` : ""}
                 {" · "}
                 {formatDate(row.createdAt)}
               </li>
