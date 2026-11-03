@@ -24,7 +24,7 @@ export function PlanComparison({ plans }: { plans: PublicPlan[] }) {
                 <th scope="row">{row.en}</th>
                 {plans.map((plan) => {
                   const included = plan.bullets.some((bullet) => bullet.compare && bullet.en === row.en);
-                  return <td key={plan.slug}>{included ? <Check size={17} aria-label="Included" /> : <span aria-label="Not included">—</span>}</td>;
+                  return <td key={plan.slug}>{included ? <Check size={17} aria-label="Included" /> : <span className="qr-compare-excluded" role="img" aria-label="Not included">—</span>}</td>;
                 })}
               </tr>)}
             </tbody>
