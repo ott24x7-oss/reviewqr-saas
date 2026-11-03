@@ -2,11 +2,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ProofReply } from "@/components/shop/proof-reply";
 import { ReprintRequest } from "@/components/shop/reprint-request";
+import { ShopOrderActions } from "@/components/shop/order-actions";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { shopCopy } from "@/lib/shop/i18n";
 import { canManageShopOrder } from "@/lib/shop/order-access";
 import { isShopOrderStatus, shopStatusLabel } from "@/lib/shop/order-status";
+import { canChangeShopAddress, shopCancelDecision } from "@/lib/shop/owner-actions";
+import { getSiteConfig } from "@/lib/settings";
 import { absoluteUrl, formatINR } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +19,7 @@ export default async function ShopOrderPage({ params }: { params: { id: string }
   if (!user) notFound();
   const found = await prisma.shopOrder.findUnique({
     where: { id: params.id },
-    include: { lines: true, shipment: true, creditNotes: { orderBy: { createdAt: "desc" } } }
+    include: { lines: true, shipment: true, creditNotes: { orderBy: { createdAt: "desc" } }, cancellationRequest: { select: { status: true, refundAmountPaise: true } } }
   });
   if (!found || !(await canManageShopOrder(user.id, found))) notFound();
   const order = found;
@@ -25,17 +28,28 @@ export default async function ShopOrderPage({ params }: { params: { id: string }
     select: { id: true }
   });
   const copy = shopCopy("en");
+  const site = await getSiteConfig();
   const events = await prisma.auditLog.findMany({
     where: { entity: "ShopOrder", entityId: order.id },
     orderBy: { createdAt: "asc" },
-    select: { id: true, metadata: true, createdAt: true }
+    select: { id: true, action: true, metadata: true, createdAt: true }
   });
   const printed = order.lines.some((line) => line.needsDesign);
   const status = isShopOrderStatus(order.status) ? shopStatusLabel(order.status) : order.status;
+  const cancelDecision = shopCancelDecision(order.status, order.paymentStatus, order.totalPaise, order.cod ? order.advancePaise : order.totalPaise);
+  const canCancel = order.userId === user.id && cancelDecision.allowed && !order.cancellationRequest;
+  const canPay = order.status === "PENDING_PAYMENT" && order.paymentStatus === "PENDING";
+  const canChangeAddress = order.userId === user.id && canChangeShopAddress(order.status, Boolean(order.shipment?.awb || order.shipment?.shipmentId));
+  const address = order.addressJson && typeof order.addressJson === "object" && !Array.isArray(order.addressJson) ? order.addressJson as Record<string, unknown> : null;
   return (
     <div className="mx-auto max-w-2xl space-y-4 text-ink">
       <Link href="/dashboard/shop/orders" className="text-sm text-muted-ink">{copy.orders}</Link>
       <h1 className="font-display text-2xl font-bold">{status}</h1>
+      {order.paymentStatus === "PAID_AFTER_CANCELLATION" && (
+        <p className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+          Payment arrived after cancellation. Support will review whether to refund or reinstate this order.
+        </p>
+      )}
       <section className="space-y-2 rounded-[20px] bg-white p-4 shadow-sm">
         <h2 className="font-semibold">Tax invoice</h2>
         <p className="text-sm">{order.invoiceNumber || "Invoice number is issued after payment."}</p>
@@ -69,6 +83,19 @@ export default async function ShopOrderPage({ params }: { params: { id: string }
           </ul>
         )}
       </section>
+      <ShopOrderActions
+        orderId={order.id}
+        status={status}
+        paymentStatus={order.paymentStatus}
+        canPay={canPay}
+        canCancel={canCancel}
+        cancellationStatus={order.cancellationRequest?.status ?? null}
+        refundAmountPaise={order.cancellationRequest?.refundAmountPaise ?? (order.paymentStatus === "PAID" ? order.cod ? order.advancePaise : order.totalPaise : 0)}
+        canChangeAddress={canChangeAddress}
+        addressPincode={typeof address?.pincode === "string" ? address.pincode : null}
+        addressState={typeof address?.state === "string" ? address.state : null}
+        supportWhatsappNumber={site.supportWhatsappNumber}
+      />
       {order.status === "DELIVERED" && <ReprintRequest orderId={order.id} pending={Boolean(pendingReprint)} />}
       {order.status === "PROOF_SENT" && (
         <section className="space-y-3 rounded-[20px] bg-white p-4 shadow-sm">
@@ -80,7 +107,7 @@ export default async function ShopOrderPage({ params }: { params: { id: string }
         {events.length === 0 && <p>No updates yet.</p>}
         <ul className="space-y-2">
           {events.map((event) => (
-            <li key={event.id}>{timelineText(event.metadata)}</li>
+            <li key={event.id}>{timelineText(event.action, event.metadata)}</li>
           ))}
         </ul>
       </section>
@@ -98,7 +125,9 @@ export default async function ShopOrderPage({ params }: { params: { id: string }
   );
 }
 
-function timelineText(metadata: unknown) {
+function timelineText(action: string, metadata: unknown) {
+  if (action === "shop.order.cancel.request") return "Cancellation requested · waiting for admin review";
+  if (action === "shop.order.address.change") return "Delivery address updated";
   if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return "";
   const row = metadata as { from?: unknown; to?: unknown; comment?: unknown };
   const from = typeof row.from === "string" && isShopOrderStatus(row.from) ? shopStatusLabel(row.from) : "";

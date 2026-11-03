@@ -75,6 +75,12 @@ export function Screen({
   );
 }
 
+/** Extra scroll space keeps the final owner action clear of the raised centre QR tab. */
+export function useOwnerTabContentInset(): { paddingBottom: number } {
+  const insets = useSafeAreaInsets();
+  return { paddingBottom: Math.max(120, 96 + insets.bottom) };
+}
+
 const styles = StyleSheet.create({
   root: { flex: 1 },
   statusBarStrip: {

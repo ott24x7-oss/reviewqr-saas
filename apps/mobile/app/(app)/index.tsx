@@ -151,6 +151,7 @@ function HomeScreenContent() {
   const unreadFeedbackCount = (feedback.data?.items ?? []).filter((row) => row.status === "NEW").length;
   const feedbackToReply = (feedback.data?.items ?? []).filter((row) => row.status === "NEW").slice(0, 3);
   const recentOrders = (orders.data?.items ?? []).slice(0, 3);
+  const activeShopOrder = (shopOrders.data?.items ?? []).find((order) => !["DELIVERED", "CANCELLED"].includes(order.status));
   const recentBookings = (bookings.data?.items ?? []).slice(0, 3);
   const checklist = homeChecklist({
     hasLogo: !!business?.logo,
@@ -344,6 +345,12 @@ function HomeScreenContent() {
             {replyError ? <Text style={[styles.note, { color: palette.danger }]}>{replyError}</Text> : null}
           </View>
 
+          {activeShopOrder ? <Pressable accessibilityRole="button" accessibilityLabel={t.shopActiveStandOrder.replace("{status}", activeShopOrder.statusLabel)} onPress={() => router.push({ pathname: "/(app)/shop", params: { order: activeShopOrder.id } })} style={[styles.shopOrderPromo, { backgroundColor: palette.card, borderColor: palette.line }]}>
+            <View style={[styles.promoIcon, { backgroundColor: palette.accentSoft }]}><Package color={palette.deep} size={20} /></View>
+            <Text numberOfLines={2} style={[styles.shopOrderPromoText, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.shopActiveStandOrder.replace("{status}", activeShopOrder.statusLabel)}</Text>
+            <ChevronRight color={palette.primaryDeep} size={20} />
+          </Pressable> : null}
+
           <Pressable accessibilityRole="button" accessibilityLabel={promo === "unbranded" ? t.promoUnbrandedStand : promo === "refer" ? t.promoReferFreeMonths : t.promoBecomeReseller} onPress={openPromo} style={[styles.promo, { backgroundColor: palette.header }]}>
             <View style={[styles.promoIcon, { backgroundColor: palette.accentSoft }]}>
               {promo === "unbranded" ? <Package color={palette.deep} size={20} /> : promo === "refer" ? <Share2 color={palette.deep} size={20} /> : <UserRound color={palette.deep} size={20} />}
@@ -429,6 +436,8 @@ const styles = StyleSheet.create({
   liveRow: { minHeight: 56, flexDirection: "row", alignItems: "center", gap: 10 },
   avatar: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
   promo: { minHeight: 72, borderRadius: 20, padding: 14, flexDirection: "row", alignItems: "center", gap: 12 },
+  shopOrderPromo: { minHeight: 64, borderRadius: 18, padding: 11, flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1 },
+  shopOrderPromoText: { flex: 1, fontFamily: fonts.bodyStrong, fontSize: 14 },
   promoIcon: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   promoText: { flex: 1, fontFamily: fonts.bodyStrong, fontSize: 15 },
   pickerRow: { minHeight: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },

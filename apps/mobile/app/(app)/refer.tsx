@@ -1,4 +1,4 @@
-import { Screen } from "../../src/ui/screen";
+import { Screen, useOwnerTabContentInset } from "../../src/ui/screen";
 import type { OwnerReferralHome } from "@reviewqr/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
@@ -38,6 +38,7 @@ function stageTone(stage: OwnerReferralHome["referrals"][number]["stage"], palet
 function ReferScreenContent() {
   const { t, lang } = useI18n();
   const { palette } = useTheme();
+  const ownerTabContentInset = useOwnerTabContentInset();
   const styles = useMemo(() => makeStyles(palette), [palette]);
   const { user } = useSession();
   const home = useQuery({
@@ -75,7 +76,7 @@ function ReferScreenContent() {
   };
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: palette.paper }} contentContainerStyle={styles.content}>
+    <ScrollView style={{ flex: 1, backgroundColor: palette.paper }} contentContainerStyle={[styles.content, ownerTabContentInset]}>
       <Text style={[styles.pageTitle, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.referEarn}</Text>
       {home.isLoading ? <Skeleton height={100} /> : null}
       {home.isError ? <LoadErrorCard onRetry={() => home.refetch().catch(() => undefined)} /> : null}
@@ -136,7 +137,7 @@ function ReferScreenContent() {
               {link ? <QRCode value={link} size={168} color={palette.ink} backgroundColor={palette.white} /> : null}
             </View>
             <View style={styles.codeCopy}>
-              <Text style={[styles.code, { color: palette.ink }]}>{data.code}</Text>
+              <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.code, { color: palette.ink }]}>{data.code}</Text>
               <Text selectable style={[styles.link, { color: palette.muted }]}>{link}</Text>
               <Text style={[styles.caption, { color: palette.muted }, lang === "hi" && styles.hindi]}>{t.referralQr}</Text>
             </View>
@@ -228,12 +229,12 @@ function makeStyles(palette: Palette) {
     shareBlock: { gap: 8 },
     actionRow: { flexDirection: "row", gap: 8 },
     actionButton: { flex: 1 },
-    qrCard: { flexDirection: "row", alignItems: "center", gap: 16 },
+    qrCard: { flexDirection: "column", alignItems: "center", gap: 12 },
     qrWrap: { padding: 8, backgroundColor: palette.white, borderRadius: 12 },
-    codeCopy: { flex: 1, gap: 6 },
-    code: { fontFamily: fonts.bodyStrong, fontSize: 20 },
-    link: { fontFamily: fonts.body, fontSize: 12, lineHeight: 17 },
-    caption: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18 },
+    codeCopy: { width: "100%", gap: 6, alignItems: "center" },
+    code: { width: "100%", fontFamily: fonts.bodyStrong, fontSize: 20, textAlign: "center" },
+    link: { width: "100%", fontFamily: fonts.body, fontSize: 12, lineHeight: 17, textAlign: "center" },
+    caption: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18, textAlign: "center" },
     capCard: { gap: 10 },
     capHeading: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
     sectionTitle: { fontFamily: fonts.bodyStrong, fontSize: 17 },

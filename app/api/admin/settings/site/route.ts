@@ -25,6 +25,7 @@ export async function PUT(req: NextRequest) {
     appName: String(incoming.appName ?? current.appName).trim().slice(0, 60) || current.appName,
     logoUrl,
     supportEmail: String(incoming.supportEmail ?? current.supportEmail).trim(),
+    supportWhatsappNumber: String(incoming.supportWhatsappNumber ?? current.supportWhatsappNumber).trim(),
     appUrl: String(incoming.appUrl ?? current.appUrl).trim().replace(/\/$/, ""),
     marketingTagline: String(incoming.marketingTagline ?? current.marketingTagline).slice(0, 300),
     signupsEnabled: incoming.signupsEnabled ?? current.signupsEnabled,
@@ -33,6 +34,10 @@ export async function PUT(req: NextRequest) {
       incoming.maintenanceMessage ?? current.maintenanceMessage
     ).slice(0, 500)
   };
+  const supportDigits = next.supportWhatsappNumber.replace(/\D/g, "");
+  if (next.supportWhatsappNumber && (supportDigits.length < 8 || supportDigits.length > 15)) {
+    return NextResponse.json({ error: "Enter an international WhatsApp number with 8 to 15 digits" }, { status: 400 });
+  }
 
   await setSiteConfig(next, guard.user.id);
   await logAudit({

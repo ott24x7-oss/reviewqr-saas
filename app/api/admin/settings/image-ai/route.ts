@@ -21,7 +21,9 @@ export async function PUT(req: NextRequest) {
   const next = {
     enabled: typeof incoming.enabled === "boolean" ? incoming.enabled : current.enabled,
     apiUrl: String(incoming.apiUrl ?? current.apiUrl).trim().replace(/\/$/, ""),
-    apiKey: typeof incoming.apiKey === "string" ? incoming.apiKey.trim() : current.apiKey,
+    apiKey: typeof incoming.apiKey === "string" && incoming.apiKey.trim() && !incoming.apiKey.includes("•")
+      ? incoming.apiKey.trim()
+      : current.apiKey,
     model: String(incoming.model ?? current.model).trim().slice(0, 120),
     size: ["1024x1024", "1536x1024", "1024x1536"].includes(String(incoming.size)) ? String(incoming.size) : current.size,
     stylePrompt: String(incoming.stylePrompt ?? current.stylePrompt).trim().slice(0, 1000),

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { shopDesignSchema } from "./shop";
 
 export const dashboardSchema = z.object({
   ordersToday: z.number().int(),
@@ -116,9 +117,14 @@ export const shopOrderDetailSchema = z.object({
   statusLabel: z.string(),
   paymentStatus: z.string(),
   totalPaise: z.number().int(),
+  advancePaise: z.number().int(),
+  cod: z.boolean(),
+  refundAmountPaise: z.number().int(),
   invoiceNumber: z.string().nullable(),
   invoiceDownloadUrl: z.string().nullable(),
   checkoutUrl: z.string().nullable(),
+  cancellationRequestStatus: z.enum(["PENDING", "APPROVED", "REJECTED"]).nullable(),
+  supportWhatsappNumber: z.string().nullable(),
   createdAt: z.string(),
   subtotalPaise: z.number().int(),
   discountPaise: z.number().int(),
@@ -128,9 +134,11 @@ export const shopOrderDetailSchema = z.object({
   igstPaise: z.number().int(),
   lines: z.array(z.object({
     sku: z.string(), name: z.string(), qty: z.number().int(), unitPaise: z.number().int(), imageUrl: z.string().nullable(), unbranded: z.boolean(),
+    design: shopDesignSchema.nullable(),
     proof: z.object({ proofUrl: z.string().nullable(), proofContentType: z.string().nullable() }).nullable()
   })),
   address: z.object({ name: z.string(), phone: z.string(), line1: z.string(), line2: z.string().nullable(), city: z.string(), state: z.string(), pincode: z.string() }).nullable(),
+  shipmentBooked: z.boolean(),
   shipment: z.object({ provider: z.string(), courierName: z.string().nullable(), awb: z.string().nullable(), trackingUrl: z.string().nullable(), ndrNote: z.string().nullable(), latestEvent: z.object({ status: z.string(), at: z.string() }).nullable(), etaDays: z.number().int().nullable() }).nullable(),
   timeline: z.array(z.object({ label: z.string(), at: z.string() })),
   reprints: z.array(z.object({ id: z.string(), reason: z.string(), status: z.string(), createdAt: z.string() }))

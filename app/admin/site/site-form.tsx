@@ -89,6 +89,15 @@ export function SiteForm({
             />
           </div>
           <div>
+            <Label className="text-xs">Support WhatsApp number</Label>
+            <Input
+              inputMode="tel"
+              value={site.supportWhatsappNumber}
+              onChange={(e) => setSite({ ...site, supportWhatsappNumber: e.target.value })}
+              placeholder="919876543210"
+            />
+          </div>
+          <div>
             <Label className="text-xs">Marketing tagline</Label>
             <Textarea
               rows={2}

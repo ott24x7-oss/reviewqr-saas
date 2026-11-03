@@ -12,7 +12,9 @@ export async function PUT(req: NextRequest) {
   const next = {
     enabled: typeof incoming.enabled === "boolean" ? incoming.enabled : current.enabled,
     apiUrl: String(incoming.apiUrl ?? current.apiUrl).trim().replace(/\/$/, ""),
-    apiKey: typeof incoming.apiKey === "string" ? incoming.apiKey.trim() : current.apiKey,
+    apiKey: typeof incoming.apiKey === "string" && incoming.apiKey.trim() && !incoming.apiKey.includes("•")
+      ? incoming.apiKey.trim()
+      : current.apiKey,
     model: String(incoming.model ?? current.model).trim(),
     dailyCapPaise: Math.max(
       0,

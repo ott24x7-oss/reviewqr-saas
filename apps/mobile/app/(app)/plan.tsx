@@ -1,4 +1,4 @@
-import { Screen } from "../../src/ui/screen";
+import { Screen, useOwnerTabContentInset } from "../../src/ui/screen";
 import type { BillingSummary } from "@reviewqr/shared";
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
@@ -26,11 +26,12 @@ function expiryProgress(startsAt: string | null | undefined, when: string, now: 
   const start = startsAt ? new Date(startsAt).getTime() : Number.NaN;
   const end = new Date(when).getTime();
   if (Number.isNaN(start) || Number.isNaN(end) || end <= start) return 0;
-  return Math.max(0, Math.min(1, (end - now) / (end - start)));
+  return Math.max(0, Math.min(1, (now - start) / (end - start)));
 }
 
 function PlanScreenContent() {
   const palette = usePalette();
+  const ownerTabContentInset = useOwnerTabContentInset();
   const styles = useMemo(() => makeStyles(palette), [palette]);
   const { t, lang } = useI18n();
   const { user } = useSession();
@@ -59,13 +60,21 @@ function PlanScreenContent() {
     return () => clearTimeout(timer);
   }, [when]);
   const days = when && now != null ? Math.max(0, Math.ceil((new Date(when).getTime() - now) / 86400000)) : null;
-  const progress = when && now != null ? expiryProgress(plan.data?.startsAt, when, now) : 0;
+  const startAt = plan.data?.startsAt;
+  const startMs = startAt ? new Date(startAt).getTime() : Number.NaN;
+  const endMs = when ? new Date(when).getTime() : Number.NaN;
+  const hasPlanPeriod = Number.isFinite(startMs) && Number.isFinite(endMs) && endMs > startMs;
+  const totalDays = hasPlanPeriod ? Math.max(1, Math.ceil((endMs - startMs) / 86400000)) : null;
+  const daysUsed = hasPlanPeriod && now != null
+    ? Math.max(0, Math.min(totalDays || 0, Math.floor((now - startMs) / 86400000)))
+    : null;
+  const progress = hasPlanPeriod && now != null ? expiryProgress(startAt, when, now) : null;
   const modules = isModuleList(plan.data?.modules) ? plan.data.modules : null;
 
   return (
     <ScrollView
       style={styles.screen}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, ownerTabContentInset]}
       refreshControl={
         <RefreshControl
           refreshing={plan.isRefetching}
@@ -96,9 +105,14 @@ function PlanScreenContent() {
             </View>
           ))}
         </View>
-        <View style={styles.track}>
-          <View style={[styles.fill, { width: `${Math.round(progress * 100)}%` }]} />
-        </View>
+        {progress != null && totalDays != null && daysUsed != null ? <>
+          <View style={styles.track}>
+            <View style={[styles.fill, { width: `${Math.round(progress * 100)}%` }]} />
+          </View>
+          <Text style={[styles.note, lang === "hi" && styles.hindi]}>
+            {t.planDaysUsed.replace("{used}", String(daysUsed)).replace("{total}", String(totalDays))}
+          </Text>
+        </> : null}
         <Text style={[styles.note, lang === "hi" && styles.hindi]}>
           {whenLabel
             ? `${whenLabel}${days != null ? ` · ${t.daysLeft.replace("{days}", String(days))}` : ""}`
@@ -114,7 +128,9 @@ function PlanScreenContent() {
           title={referrals.data?.hasYearlyCap
             ? t.referralPlanBonus.replace("{months}", String(referrals.data.monthsEarnedThisYear))
             : t.referEarn}
-          hint={t.referEarn}
+          hint={referrals.data?.hasRewardDetails
+            ? t.referralHero.replace("{days}", String(referrals.data.bonusDaysForFriend)).replace("{months}", String(referrals.data.monthsPerReferral))
+            : t.referralHeroFallback}
           onPress={() => router.push("/(app)/refer")}
         />
       </Group>

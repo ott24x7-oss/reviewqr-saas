@@ -9,7 +9,7 @@ import { useSession } from "../state/session";
 import { fonts } from "../theme";
 import { Card } from "../ui/bits";
 import { PillButton } from "../ui/controls";
-import { Screen } from "../ui/screen";
+import { Screen, useOwnerTabContentInset } from "../ui/screen";
 import { useTheme } from "../ui/theme";
 
 function rupees(paise: number, lang: "en" | "hi") {
@@ -28,6 +28,7 @@ function commissionRate(value: unknown, lang: "en" | "hi") {
 function ResellerContent() {
   const { t, lang } = useI18n();
   const { palette } = useTheme();
+  const ownerTabContentInset = useOwnerTabContentInset();
   const { user } = useSession();
   const status = useQuery({
     queryKey: accountKey(user?.id ?? "", "agent-application"),
@@ -58,7 +59,7 @@ function ResellerContent() {
   const applicationUnavailable = status.isError;
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: palette.paper }} contentContainerStyle={styles.content}>
+    <ScrollView style={{ flex: 1, backgroundColor: palette.paper }} contentContainerStyle={[styles.content, ownerTabContentInset]}>
       <Text style={[styles.title, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.resellerTitle}</Text>
       <Text style={[styles.intro, { color: palette.muted }, lang === "hi" && styles.hindiBody]}>{t.resellerPitch}</Text>
       <Card style={styles.earnCard}>
@@ -69,7 +70,7 @@ function ResellerContent() {
           <View style={[styles.example, { backgroundColor: palette.accentSoft }]}>
             <Text style={[styles.exampleText, { color: palette.deep }, lang === "hi" && styles.hindiStrong]}>{t.resellerExample.replace("{plan}", plan).replace("{amount}", formattedExample)}</Text>
           </View>
-        </> : pitch.isError || pitch.data ? <Text style={[styles.note, { color: palette.muted }, lang === "hi" && styles.hindiBody]}>{t.resellerUnavailable}</Text> : null}
+        </> : !applicationUnavailable && (pitch.isError || pitch.data) ? <Text style={[styles.note, { color: palette.muted }, lang === "hi" && styles.hindiBody]}>{t.resellerUnavailable}</Text> : null}
         <Text style={[styles.note, { color: palette.muted }, lang === "hi" && styles.hindiBody]}>{t.resellerPayout}</Text>
       </Card>
       {applicationUnavailable ? <Card style={styles.statusCard}><Text style={[styles.body, { color: palette.muted }, lang === "hi" && styles.hindiBody]}>{t.resellerUnavailable}</Text></Card> : null}
@@ -84,7 +85,7 @@ function ResellerContent() {
       </Card>
       {hasAgentAccess ? <PillButton label={t.resellerOpenAgent} tone="dark" onPress={() => openAgent().catch(() => undefined)} /> : status.data?.status === "pending" || (status.data?.status === "rejected" && !status.data.canReapply)
         ? <PillButton label={t.resellerApplicationTitle} tone="dark" onPress={() => router.push("/(app)/agent-application")} />
-        : <PillButton label={t.resellerApply} tone="dark" disabled={applicationUnavailable || status.isLoading} hint={applicationUnavailable ? t.resellerUnavailable : status.isLoading ? t.resellerLoading : undefined} onPress={startApplication} />}
+        : <PillButton label={t.resellerApply} tone="dark" disabled={applicationUnavailable || status.isLoading} hint={status.isLoading ? t.resellerLoading : undefined} onPress={startApplication} />}
       <View style={styles.codeRow}>
         <UsersRound color={palette.muted} size={18} />
         <Text style={[styles.codeText, { color: palette.muted }, lang === "hi" && styles.hindiBody]}>{t.resellerHaveTeamCode}</Text>

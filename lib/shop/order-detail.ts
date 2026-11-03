@@ -4,6 +4,8 @@ import { isShopOrderStatus, shopStatusLabel } from "./order-status";
 import { canManageShopOrder } from "./order-access";
 import { publicShopProof } from "@/lib/admin/shop-proof";
 import { shopTrackingUrl } from "./tracking-url";
+import { shopDesignSchema } from "@reviewqr/shared";
+import { getSiteConfig } from "../settings";
 
 function addressFrom(value: unknown) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -21,22 +23,29 @@ function labelFrom(metadata: unknown) {
   return typeof to === "string" && isShopOrderStatus(to) ? shopStatusLabel(to) : "Updated";
 }
 
+function actionLabel(action: string, metadata: unknown) {
+  if (action === "shop.order.cancel.request") return "Cancellation requested";
+  if (action === "shop.order.address.change") return "Delivery address updated";
+  return labelFrom(metadata);
+}
+
 /** One hardware order, its payment state, and the status timeline. */
 export async function readShopOrder(userId: string, orderId: string) {
   const order = await prisma.shopOrder.findUnique({
     where: { id: orderId },
     include: {
-      lines: { select: { id: true, sku: true, name: true, qty: true, unitPaise: true, unbranded: true, variant: { select: { imageUrl: true } }, proofUrl: true } },
-      shipment: { select: { provider: true, courierName: true, awb: true, ndrNote: true } },
-      reprintRequests: { select: { id: true, reason: true, status: true, createdAt: true }, orderBy: { createdAt: "desc" } }
+      lines: { select: { id: true, sku: true, name: true, qty: true, unitPaise: true, unbranded: true, design: true, variant: { select: { imageUrl: true } }, proofUrl: true } },
+      shipment: { select: { provider: true, shipmentId: true, courierName: true, awb: true, ndrNote: true } },
+      reprintRequests: { select: { id: true, reason: true, status: true, createdAt: true }, orderBy: { createdAt: "desc" } },
+      cancellationRequest: { select: { status: true, refundAmountPaise: true } }
     }
   });
   if (!order || !(await canManageShopOrder(userId, order))) return fail(404, "Not found");
-  const [moves, latestCarrierEvent] = await Promise.all([
+  const [moves, latestCarrierEvent, site] = await Promise.all([
     prisma.auditLog.findMany({
-      where: { entity: "ShopOrder", entityId: order.id, action: "shop.order.move" },
+      where: { entity: "ShopOrder", entityId: order.id, action: { in: ["shop.order.move", "shop.order.cancel.request", "shop.order.address.change"] } },
       orderBy: { createdAt: "asc" },
-      select: { createdAt: true, metadata: true }
+      select: { action: true, createdAt: true, metadata: true }
     }),
     order.shipment
       ? prisma.shopCarrierEvent.findFirst({
@@ -44,7 +53,8 @@ export async function readShopOrder(userId: string, orderId: string) {
           orderBy: { createdAt: "desc" },
           select: { status: true, createdAt: true }
         })
-      : Promise.resolve(null)
+      : Promise.resolve(null),
+    getSiteConfig()
   ]);
   return ok({
     id: order.id,
@@ -52,8 +62,13 @@ export async function readShopOrder(userId: string, orderId: string) {
     statusLabel: isShopOrderStatus(order.status) ? shopStatusLabel(order.status) : order.status,
     paymentStatus: order.paymentStatus,
     totalPaise: order.totalPaise,
+    advancePaise: order.advancePaise,
+    cod: order.cod,
+    refundAmountPaise: order.cancellationRequest?.refundAmountPaise ?? (order.paymentStatus === "PAID" ? order.cod ? order.advancePaise : order.totalPaise : 0),
     invoiceNumber: order.invoiceNumber,
     checkoutUrl: order.checkoutUrl,
+    cancellationRequestStatus: order.cancellationRequest?.status ?? null,
+    supportWhatsappNumber: site.supportWhatsappNumber || null,
     createdAt: order.createdAt.toISOString(),
     subtotalPaise: order.subtotalPaise,
     discountPaise: order.discountPaise,
@@ -68,8 +83,10 @@ export async function readShopOrder(userId: string, orderId: string) {
       unitPaise: line.unitPaise,
       unbranded: line.unbranded,
       imageUrl: line.variant?.imageUrl ?? null,
+      design: shopDesignSchema.safeParse(line.design).success ? shopDesignSchema.parse(line.design) : null,
       proof: order.status === "PROOF_SENT" ? publicShopProof(order.id, line.id, line.proofUrl) : null
     })),
+    shipmentBooked: Boolean(order.shipment?.shipmentId || order.shipment?.awb),
     shipment: order.shipment ? {
       provider: order.shipment.provider,
       courierName: order.shipment.courierName,
@@ -83,7 +100,7 @@ export async function readShopOrder(userId: string, orderId: string) {
     invoiceDownloadUrl: null,
     timeline: [
       { label: "Order placed", at: order.createdAt.toISOString() },
-      ...moves.map((row) => ({ label: labelFrom(row.metadata), at: row.createdAt.toISOString() }))
+      ...moves.map((row) => ({ label: actionLabel(row.action, row.metadata), at: row.createdAt.toISOString() }))
     ],
     reprints: order.reprintRequests.map((row) => ({
       id: row.id,

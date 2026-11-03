@@ -4,6 +4,7 @@ import { fail, ok } from "@/lib/api/result";
 import { prisma } from "@/lib/db";
 import { setAgentTeamStatus } from "@/lib/plans/admin-team";
 import { moveShopOrder } from "@/lib/shop/order-move";
+import { reviewShopCancellationRequest } from "@/lib/shop/owner-actions-service";
 import { isShopOrderStatus, moveError, type ShopOrderStatusName } from "@/lib/shop/order-status";
 import { setAdminDeviceStatus } from "./devices";
 import { rejectAdminPayment } from "./money";
@@ -325,8 +326,21 @@ export async function applyInboxAction(input: {
       continue;
     }
     if ((input.segment === "support" || input.segment === "refunds") && input.action === "close") {
+      if (input.segment === "support") {
+        const cancellationRequest = await prisma.shopOrderCancellationRequest.findUnique({ where: { ticketId: id }, select: { status: true } });
+        if (cancellationRequest?.status === "PENDING") return fail(409, "Review a shop cancellation request with Approve cancellation or Reject");
+      }
       const result = await replyToTicket({ ticketId: id, authorId: input.actorId, status: "CLOSED" });
       if (result.ok) changed += 1;
+      continue;
+    }
+    if (input.segment === "support" && (input.action === "approve-cancel" || input.action === "reject-cancel")) {
+      const result = await reviewShopCancellationRequest(id, input.actorId, input.action, input.reason || "", input.ip);
+      if (result.ok && result.data.changed) {
+        changed += 1;
+        before.push({ id, status: "PENDING" });
+        after.push({ id, status: result.data.status, orderStatus: result.data.orderStatus });
+      }
       continue;
     }
     if (input.segment === "failed" && input.action === "reject") {
