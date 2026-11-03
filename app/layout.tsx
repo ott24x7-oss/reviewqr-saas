@@ -7,6 +7,7 @@ import { getBrand } from "@/lib/brand";
 import { DEFAULT_BRAND_NAME, DEFAULT_BRAND_TAGLINE } from "@/lib/brand-defaults";
 import { BRAND_APPLE, BRAND_FAVICON, BRAND_OG } from "@/lib/brand-assets";
 import "./globals.css";
+import "@/components/marketing/qr-site/qr-site.css";
 
 // Self-hosted (see scripts/build-fonts.py) so builds never depend on fonts.googleapis.com.
 const inter = localFont({
