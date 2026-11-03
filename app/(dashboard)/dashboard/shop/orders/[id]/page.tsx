@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ProofReply } from "@/components/shop/proof-reply";
 import { ReprintRequest } from "@/components/shop/reprint-request";
 import { ShopOrderActions } from "@/components/shop/order-actions";
+import { ShopManualUpiPayment } from "@/components/shop/manual-upi-payment";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { shopCopy } from "@/lib/shop/i18n";
@@ -10,7 +11,9 @@ import { canManageShopOrder } from "@/lib/shop/order-access";
 import { isShopOrderStatus, shopStatusLabel } from "@/lib/shop/order-status";
 import { canChangeShopAddress, shopCancelDecision } from "@/lib/shop/owner-actions";
 import { getSiteConfig } from "@/lib/settings";
+import { getPaymentsConfig } from "@/lib/settings";
 import { absoluteUrl, formatINR } from "@/lib/utils";
+import QRCode from "qrcode";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +31,7 @@ export default async function ShopOrderPage({ params }: { params: { id: string }
     select: { id: true }
   });
   const copy = shopCopy("en");
-  const site = await getSiteConfig();
+  const [site, payments] = await Promise.all([getSiteConfig(), getPaymentsConfig()]);
   const events = await prisma.auditLog.findMany({
     where: { entity: "ShopOrder", entityId: order.id },
     orderBy: { createdAt: "asc" },
@@ -39,6 +42,12 @@ export default async function ShopOrderPage({ params }: { params: { id: string }
   const cancelDecision = shopCancelDecision(order.status, order.paymentStatus, order.totalPaise, order.cod ? order.advancePaise : order.totalPaise);
   const canCancel = order.userId === user.id && cancelDecision.allowed && !order.cancellationRequest;
   const canPay = order.status === "PENDING_PAYMENT" && order.paymentStatus === "PENDING";
+  const manualUpi = canPay && payments.upiGateway === "manual" && payments.upiEnabled && !!payments.upiId && !!order.expiresAt;
+  const amountRupees = (order.advancePaise / 100).toFixed(2);
+  const upiLink = manualUpi
+    ? `upi://pay?pa=${encodeURIComponent(payments.upiId)}&pn=${encodeURIComponent(payments.upiPayeeName || "QR24x7")}&am=${amountRupees}&cu=INR&tn=${encodeURIComponent(`QR24x7 ${order.id.slice(-8)}`)}`
+    : "";
+  const upiQr = manualUpi ? await QRCode.toDataURL(upiLink, { margin: 1, width: 360, errorCorrectionLevel: "M" }) : "";
   const canChangeAddress = order.userId === user.id && canChangeShopAddress(order.status, Boolean(order.shipment?.awb || order.shipment?.shipmentId));
   const address = order.addressJson && typeof order.addressJson === "object" && !Array.isArray(order.addressJson) ? order.addressJson as Record<string, unknown> : null;
   return (
@@ -87,7 +96,7 @@ export default async function ShopOrderPage({ params }: { params: { id: string }
         orderId={order.id}
         status={status}
         paymentStatus={order.paymentStatus}
-        canPay={canPay}
+        canPay={canPay && !manualUpi}
         canCancel={canCancel}
         cancellationStatus={order.cancellationRequest?.status ?? null}
         refundAmountPaise={order.cancellationRequest?.refundAmountPaise ?? (order.paymentStatus === "PAID" ? order.cod ? order.advancePaise : order.totalPaise : 0)}
@@ -96,6 +105,15 @@ export default async function ShopOrderPage({ params }: { params: { id: string }
         addressState={typeof address?.state === "string" ? address.state : null}
         supportWhatsappNumber={site.supportWhatsappNumber}
       />
+      {manualUpi && order.expiresAt && <ShopManualUpiPayment
+        orderId={order.id}
+        amountPaise={order.advancePaise}
+        expiresAt={order.expiresAt.toISOString()}
+        upiId={payments.upiId}
+        payee={payments.upiPayeeName || "QR24x7"}
+        qrDataUrl={upiQr}
+        upiLink={upiLink}
+      />}
       {order.status === "DELIVERED" && <ReprintRequest orderId={order.id} pending={Boolean(pendingReprint)} />}
       {order.status === "PROOF_SENT" && (
         <section className="space-y-3 rounded-[20px] bg-white p-4 shadow-sm">

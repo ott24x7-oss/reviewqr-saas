@@ -138,6 +138,7 @@ export async function checkoutShop(userId: string, env: EnvLike = process.env, a
             })
           : undefined,
         fingerprint,
+        expiresAt: payments.upiGateway === "manual" ? new Date(Date.now() + 15 * 60_000) : null,
         lines: {
           create: snapshot.flatMap(({ variant, line, money, addonMoney }) => [{
             variantId: variant.id,
@@ -219,6 +220,14 @@ export async function checkoutShop(userId: string, env: EnvLike = process.env, a
       if (!settled.ok) return fail(400, settled.error);
       return ok({ orderId, paid: true, checkoutUrl: null, invoiceNumber: settled.invoiceNumber });
     }
+
+    if (payments.upiGateway === "manual") {
+      if (!payments.upiEnabled || !payments.upiId) return fail(400, "Manual UPI checkout is not available right now.");
+      const expiresAt = new Date(Date.now() + 15 * 60_000);
+      await prisma.shopOrder.update({ where: { id: orderId }, data: { expiresAt } });
+      return ok({ orderId, paid: false, checkoutUrl: null, invoiceNumber: null, expiresAt: expiresAt.toISOString() });
+    }
+    if (payments.upiGateway === "razorpay") return fail(400, "Razorpay is not configured for shop checkout.");
 
     if (checkoutUrl) {
       return ok({ orderId, paid: false, checkoutUrl, invoiceNumber: null });

@@ -44,6 +44,8 @@ const SECRET_FIELDS: Record<string, string[]> = {
     "stripeSecretKey",
     "stripeWebhookSecret",
     "mailImapPass",
+    "gmailClientSecret",
+    "gmailRefreshToken",
     "youpiWebhookSecret"
   ],
   [SETTING_KEYS.email]: ["relaySecret", "smtpPass"],
@@ -106,6 +108,7 @@ export type PaymentsConfig = {
   upiId: string;
   upiPayeeName: string;
   upiQrDataUrl: string;
+  upiGateway: "manual" | "youpi" | "razorpay";
   // USDT (crypto)
   usdtEnabled: boolean;
   usdtNetwork: string; // e.g. TRC20 / BEP20
@@ -118,6 +121,11 @@ export type PaymentsConfig = {
   mailImapUser: string;
   mailImapPass: string;
   mailFromFilter: string; // comma-separated sender substrings, e.g. "alerts@hdfcbank.net,noreply@binance.com"
+  mailTrustedAuthservIds: string; // comma-separated receiver authserv-id values, default "mx.google.com"
+  smsSenderAllow: string; // comma-separated Indian transactional SMS sender IDs
+  gmailClientId: string;
+  gmailClientSecret: string;
+  gmailRefreshToken: string;
   // YouPI (default checkout). Razorpay stays in the fields above and is off unless enabled by env.
   youpiBaseUrl: string;
   youpiMerchantId: string;
@@ -348,6 +356,7 @@ export const DEFAULT_PAYMENTS: PaymentsConfig = {
   upiId: "",
   upiPayeeName: DEFAULT_BRAND_NAME,
   upiQrDataUrl: "",
+  upiGateway: "youpi",
   usdtEnabled: false,
   usdtNetwork: "TRC20",
   usdtAddress: "",
@@ -358,6 +367,11 @@ export const DEFAULT_PAYMENTS: PaymentsConfig = {
   mailImapUser: "",
   mailImapPass: "",
   mailFromFilter: "",
+  mailTrustedAuthservIds: "mx.google.com",
+  smsSenderAllow: "",
+  gmailClientId: "",
+  gmailClientSecret: "",
+  gmailRefreshToken: "",
   youpiBaseUrl: "",
   youpiMerchantId: "",
   youpiWebhookSecret: "",
@@ -477,6 +491,7 @@ export async function getPaymentsConfig(): Promise<PaymentsConfig> {
     upiId: stored.upiId || "",
     upiPayeeName: brandNameOrDefault(stored.upiPayeeName, DEFAULT_PAYMENTS.upiPayeeName),
     upiQrDataUrl: stored.upiQrDataUrl || "",
+    upiGateway: stored.upiGateway === "manual" || stored.upiGateway === "razorpay" ? stored.upiGateway : "youpi",
     usdtEnabled: stored.usdtEnabled ?? false,
     usdtNetwork: stored.usdtNetwork || DEFAULT_PAYMENTS.usdtNetwork,
     usdtAddress: stored.usdtAddress || "",
@@ -487,6 +502,11 @@ export async function getPaymentsConfig(): Promise<PaymentsConfig> {
     mailImapUser: stored.mailImapUser || process.env.IMAP_USER || "",
     mailImapPass: stored.mailImapPass || process.env.IMAP_PASS || "",
     mailFromFilter: stored.mailFromFilter || "",
+    mailTrustedAuthservIds: stored.mailTrustedAuthservIds || DEFAULT_PAYMENTS.mailTrustedAuthservIds,
+    smsSenderAllow: stored.smsSenderAllow || "",
+    gmailClientId: stored.gmailClientId || "",
+    gmailClientSecret: stored.gmailClientSecret || "",
+    gmailRefreshToken: stored.gmailRefreshToken || "",
     youpiBaseUrl: stored.youpiBaseUrl || process.env.YOUPI_BASE_URL || "",
     youpiMerchantId: stored.youpiMerchantId || process.env.YOUPI_MERCHANT_ID || "",
     youpiWebhookSecret: stored.youpiWebhookSecret || process.env.YOUPI_WEBHOOK_SECRET || "",

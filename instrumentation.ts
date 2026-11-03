@@ -7,6 +7,8 @@ export async function register() {
   // Written as a nodejs check so webpack leaves the database and Baileys out of the edge bundle.
   if (process.env.NEXT_RUNTIME === "nodejs") {
     const { scheduleBaileysAutostart } = await import("./lib/boot/baileys-autostart");
+    const { scheduleBillingReconciliation } = await import("./lib/jobs/billing-scheduler");
     scheduleBaileysAutostart();
+    scheduleBillingReconciliation();
   }
 }

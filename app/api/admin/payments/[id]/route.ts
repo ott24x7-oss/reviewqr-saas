@@ -101,7 +101,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     reason,
     before: result.data.before,
     after: result.data.after,
-    metadata: { refundUtr: parsed.data.refundUtr },
+    metadata: { refundUtrLast4: (parsed.data.refundUtr || "").slice(-4) },
     ip,
     userAgent
   });

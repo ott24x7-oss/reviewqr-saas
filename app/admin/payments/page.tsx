@@ -8,6 +8,7 @@ import { getPaymentsConfig } from "@/lib/settings";
 import { formatINR } from "@/lib/utils";
 import { PaymentsConfigForm } from "./payments-form";
 import { PaymentsTable } from "./table";
+import { PaymentGatewayAdmin } from "./gateway-admin";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +34,8 @@ export default async function AdminPaymentsPage({ searchParams }: { searchParams
         initial={{
           ...cfg,
           mailImapPass: maskSecret(cfg.mailImapPass),
+          gmailClientSecret: maskSecret(cfg.gmailClientSecret),
+          gmailRefreshToken: maskSecret(cfg.gmailRefreshToken),
           razorpayKeySecret: maskSecret(cfg.razorpayKeySecret),
           razorpayWebhookSecret: maskSecret(cfg.razorpayWebhookSecret),
           youpiWebhookSecret: maskSecret(cfg.youpiWebhookSecret),
@@ -40,6 +43,7 @@ export default async function AdminPaymentsPage({ searchParams }: { searchParams
           stripeWebhookSecret: maskSecret(cfg.stripeWebhookSecret)
         }}
       />
+      <PaymentGatewayAdmin />
       <div className="mt-6">
         {!listed.ok ? <p className="text-sm text-rose-600">{listed.error}</p> : (
           <Suspense fallback={<TableSkeleton />}>

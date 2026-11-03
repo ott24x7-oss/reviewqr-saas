@@ -24,6 +24,7 @@ export function PaymentsConfigForm({ initial }: { initial: PaymentsConfig }) {
   const [cfg, setCfg] = React.useState<PaymentsConfig>(initial);
   const [saving, setSaving] = React.useState(false);
   const [keyTouched, setKeyTouched] = React.useState(false);
+  const [gmailSecretTouched, setGmailSecretTouched] = React.useState(false);
   const [testing, setTesting] = React.useState(false);
   const [testResult, setTestResult] = React.useState<{ ok: boolean; message: string } | null>(
     null
@@ -40,6 +41,9 @@ export function PaymentsConfigForm({ initial }: { initial: PaymentsConfig }) {
       // Only send the IMAP app-password when the admin typed a new one — the field
       // otherwise shows a masked placeholder and the server keeps the stored value.
       if (!keyTouched) delete body.mailImapPass;
+      if (!gmailSecretTouched) delete body.gmailClientSecret;
+      // The OAuth refresh token is written only by the Google callback.
+      delete body.gmailRefreshToken;
       const res = await fetch("/api/admin/settings/payments", {
         method: "PUT",
         headers: { "content-type": "application/json" },
@@ -49,6 +53,7 @@ export function PaymentsConfigForm({ initial }: { initial: PaymentsConfig }) {
       if (!res.ok) throw new Error(j.error || "Save failed");
       toast.success("Payment settings saved");
       setKeyTouched(false);
+      setGmailSecretTouched(false);
     } catch (e: any) {
       toast.error(e.message);
     } finally {
@@ -86,8 +91,7 @@ export function PaymentsConfigForm({ initial }: { initial: PaymentsConfig }) {
   return (
     <div className="space-y-4">
       <div className="rounded-xl border dark:border-slate-800 bg-white dark:bg-slate-900 p-4 text-sm text-muted-foreground">
-        Checkout uses YouPI. Manual UPI and USDT stay as a fallback. Razorpay stays off unless
-        PAYMENTS_RAZORPAY_ENABLED is set on the server.
+        Choose which UPI gateway billing uses below. Razorpay keeps its existing server feature flag; manual UPI needs the VPA and SMS or email sources configured here.
       </div>
 
       <Card>
@@ -169,6 +173,19 @@ export function PaymentsConfigForm({ initial }: { initial: PaymentsConfig }) {
                 placeholder="QR24x7"
               />
             </div>
+            <div className="sm:col-span-2">
+              <Label className="text-xs">Active UPI gateway</Label>
+              <select
+                value={cfg.upiGateway}
+                onChange={(e) => update("upiGateway", e.target.value as PaymentsConfig["upiGateway"])}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="youpi">YouPI</option>
+                <option value="manual">Own UPI gateway (SMS + email)</option>
+                <option value="razorpay">Razorpay (when enabled)</option>
+              </select>
+              <p className="mt-1 text-[11px] text-muted-foreground">This selection controls which UPI checkout the billing page offers. USDT remains separate.</p>
+            </div>
           </div>
           <div>
             <Label className="text-xs">UPI QR image URL</Label>
@@ -178,7 +195,7 @@ export function PaymentsConfigForm({ initial }: { initial: PaymentsConfig }) {
               placeholder="https://…/upi-qr.png"
             />
             <p className="text-[11px] text-muted-foreground mt-1">
-              Optional — paste a hosted QR image URL.
+              Legacy hosted image. New manual orders generate a QR with the exact order amount.
             </p>
           </div>
         </CardContent>
@@ -301,9 +318,33 @@ export function PaymentsConfigForm({ initial }: { initial: PaymentsConfig }) {
               placeholder="alerts@hdfcbank.net,noreply@binance.com"
             />
             <p className="text-[11px] text-muted-foreground mt-1">
-              Comma-separated senders to trust, e.g. alerts@hdfcbank.net,noreply@binance.com —
-              leave blank to scan all.
+              Comma-separated sender addresses or domains. Built-in Indian bank domains are also checked. Every email must pass aligned DKIM.
             </p>
+          </div>
+          <div>
+            <Label className="text-xs">Trusted Authentication-Results receiver IDs</Label>
+            <Input
+              value={cfg.mailTrustedAuthservIds}
+              onChange={(e) => update("mailTrustedAuthservIds", e.target.value)}
+              placeholder="mx.google.com"
+            />
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Comma-separated authserv-id values. Only the first Authentication-Results header is trusted; ARC results are ignored. Defaults to mx.google.com.
+            </p>
+          </div>
+
+          <div className="border-t pt-4 space-y-3">
+            <div><div className="text-sm font-medium">Gmail API (OAuth)</div><p className="text-[11px] text-muted-foreground">Read-only bank alert access. Add the callback URL shown after saving your OAuth client in Google Cloud.</p></div>
+            <div>
+              <Label className="text-xs">OAuth client ID</Label>
+              <Input value={cfg.gmailClientId} onChange={(e) => update("gmailClientId", e.target.value)} placeholder="Google OAuth client ID" />
+            </div>
+            <div>
+              <Label className="text-xs">OAuth client secret</Label>
+              <Input type="password" value={cfg.gmailClientSecret} onChange={(e) => { setGmailSecretTouched(true); update("gmailClientSecret", e.target.value); }} placeholder={gmailSecretTouched ? "" : "Leave masked to keep the saved secret"} />
+            </div>
+            <p className="text-xs text-muted-foreground">Gmail refresh token: {cfg.gmailRefreshToken.includes("•") ? "connected" : "not connected"}</p>
+            <a className="inline-block text-xs underline" href="/api/admin/settings/payments/gmail/connect">Connect Gmail with gmail.readonly</a>
           </div>
 
           {testResult && (
@@ -334,6 +375,15 @@ export function PaymentsConfigForm({ initial }: { initial: PaymentsConfig }) {
               Test connection
             </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle>SMS sender allow-list</CardTitle></CardHeader>
+        <CardContent className="space-y-2">
+          <Label className="text-xs">Allowed Indian bank sender IDs</Label>
+          <Input value={cfg.smsSenderAllow} onChange={(e) => update("smsSenderAllow", e.target.value)} placeholder="AX-AXISBK-S,VM-HDFCBK,JD-SBIUPI" />
+          <p className="text-[11px] text-muted-foreground">Comma-separated header IDs. Messages also need a recognized bank credit format; debit, OTP, and collect-request messages are discarded.</p>
         </CardContent>
       </Card>
 

@@ -142,7 +142,7 @@ The QR image itself encodes `https://<your-domain>/q/<code>?src=qr`.
    SELLER_GSTIN=...
    PAYMENTS_RAZORPAY_ENABLED=false
    ```
-   Point a daily Railway cron `POST` at `/api/billing/reconcile` with header `x-cron-secret`. The secret is compared with `timingSafeEqual` and must match `CRON_SECRET`. Manual UPI/USDT stays as the fallback. Razorpay checkout is not shown. This repo does not create the cron service.
+   Point a Railway cron `POST` at `/api/billing/reconcile` every minute with header `x-cron-secret`. The secret is compared with `timingSafeEqual` and must match `CRON_SECRET`. The job imports authenticated bank email alerts and reconciles unclaimed UPI credits. Manual UPI/USDT stays available as configured. This repo does not create the cron service.
 
 6. **Shop checkout and shipping.** Shop orders use the same YouPI webhook. `SHOP_PAYMENT_STUB` confirms a shop payment without YouPI only when `NODE_ENV` is not `production` and the variable is non-empty. In production the flag is ignored and a stub cannot issue an invoice number. Startup logs `[shop] SHOP_PAYMENT_STUB is set but ignored because NODE_ENV is production` when it is set there.
    Carrier credentials are saved encrypted under Admin → Shipping. These env values are optional fallbacks when the saved field is empty. The provider (mock, Shiprocket, or Delhivery) is still chosen in that screen. Mock plus production shows "Not configured" and does not call a carrier. Tests use the mock provider only.

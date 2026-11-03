@@ -10,10 +10,11 @@ import {
   youpiStatusFailed
 } from "@/lib/payments/youpi";
 import { activateCompletedPayment } from "@/lib/subscription";
+import { rateLimitDb } from "@/lib/rate-limit";
 
-// Throttle IMAP checks per order so client polling doesn't hammer the inbox.
+// UPI polling only checks the local credit ledger; inbox polling runs in the cron job.
 const lastCheck = new Map<string, number>();
-const THROTTLE_MS = 15_000;
+const THROTTLE_MS = 6_000;
 
 async function loadOrder(id: string, userId: string) {
   return prisma.payment.findFirst({ where: { id, userId } });
@@ -89,12 +90,17 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = (await req.json().catch(() => ({}))) as any;
   const reference = String(body.reference || "").trim();
-  if (reference.length < 4) {
+  if (!reference || reference.length < 4 || reference.length > 120) {
     return NextResponse.json({ error: "Enter the payment reference (UTR / transaction ID)." }, { status: 400 });
   }
   let order = await loadOrder(params.id, user.id);
   if (!order) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (order.status === "COMPLETED") return NextResponse.json(serialize(order));
+  if (order.method === "upi" && !/^\d{8,22}$/.test(reference.replace(/\s/g, ""))) {
+    return NextResponse.json({ error: "Enter the 8 to 22 digit bank UTR." }, { status: 400 });
+  }
+  const rate = await rateLimitDb({ key: `payment-utr:${user.id}:${order.id}`, limit: 5, windowSeconds: 900 });
+  if (!rate.ok) return NextResponse.json({ error: "Too many reference attempts. Please wait and try again." }, { status: 429 });
 
   await attachReference(order.id, user.id, reference);
   order = (await loadOrder(params.id, user.id)) || order;
