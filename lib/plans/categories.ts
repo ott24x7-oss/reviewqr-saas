@@ -40,7 +40,7 @@ const TICKS: Record<PlanCategory, Array<{ en: string; hi: string }>> = {
   combo: [
     { en: "Reviews, menu, and orders", hi: "रिव्यू, मेनू और ऑर्डर" },
     { en: "One QR + NFC stand", hi: "एक QR + NFC स्टैंड" },
-    { en: "GST invoice included", hi: "GST इनवॉइस शामिल" }
+    { en: "Payment receipt included", hi: "भुगतान रसीद शामिल" }
   ]
 };
 

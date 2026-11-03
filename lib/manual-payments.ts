@@ -12,9 +12,17 @@ import { fetchRecentPaymentEmails, type ParsedEmail } from "./email-verify";
 import { activateCompletedPayment } from "./subscription";
 import { matchBankCredit } from "./bank-credit-ledger";
 import { syncIncomingBankCredits } from "./bank-credit-sync";
-import { Prisma, type Payment, type SubscriptionTier } from "@prisma/client";
+import { Prisma, type Payment, type PlanDuration, type SubscriptionTier } from "@prisma/client";
 
 export type PayMethod = "upi" | "usdt";
+export type ManualPlanFields = {
+  amountPaise: number;
+  planId: string;
+  duration: PlanDuration;
+  modules: string[];
+  limits: unknown;
+  creditPaise: number;
+};
 
 const ORDER_TTL_MIN = 45;
 
@@ -23,12 +31,13 @@ export async function createOrder(
   userId: string,
   tier: SubscriptionTier,
   months: number,
-  method: PayMethod
+  method: PayMethod,
+  planFields?: ManualPlanFields
 ): Promise<Payment> {
   const plans = await getPricingConfig();
   const plan = plans[tier];
   if (!plan) throw new Error("Unknown plan");
-  const base = months >= 12 ? plan.yearly : plan.monthly; // paise
+  const base = planFields?.amountPaise ?? (months >= 12 ? plan.yearly : plan.monthly); // paise
   if (base <= 0) throw new Error("This plan is free");
 
   const cfg = await getPaymentsConfig();
@@ -43,6 +52,15 @@ export async function createOrder(
       periodMonths: months,
       amountUsdt,
       network,
+      ...(planFields
+        ? {
+            planId: planFields.planId,
+            duration: planFields.duration,
+            modules: planFields.modules,
+            limits: planFields.limits as Prisma.InputJsonValue,
+            creditPaise: planFields.creditPaise
+          }
+        : {}),
       expiresAt: new Date(Date.now() + (method === "upi" ? 15 : ORDER_TTL_MIN) * 60_000)
   });
   if (method === "upi") {

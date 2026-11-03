@@ -1,4 +1,4 @@
-/** What YouPI collects for one shop order. Prices stay GST-inclusive paise. */
+/** Amount collected for one shop order, expressed in paise. */
 
 export type ShopCheckoutConfig = {
   codEnabled: boolean;

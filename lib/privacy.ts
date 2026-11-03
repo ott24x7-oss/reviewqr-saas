@@ -44,5 +44,5 @@ export function anonymizedUserPatch(userId: string, now = new Date()) {
   };
 }
 
-/** Rows the delete route must not remove. Tax invoices stay on Payment. */
+/** Rows the delete route must not remove. Payment records and receipts stay on Payment. */
 export const ACCOUNT_DELETE_RETAINS = ["Payment"] as const;

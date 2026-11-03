@@ -209,7 +209,8 @@ export async function shopCartView(userId: string, audience: ShopAudience = "web
         })),
         coupon: await loadOffer("coupon", cart.couponCode),
         referral: await loadOffer("referral", cart.referralCode),
-        sameState: sameSupplyState(address?.state, payments.sellerState)
+        sameState: sameSupplyState(address?.state, payments.sellerState),
+        sellerGstin: payments.sellerGstin
       })
     : emptyQuote;
   const quote = quoteWithoutShipping.ok ? { ...quoteWithoutShipping, shippingPaise: 0 } : quoteWithoutShipping;

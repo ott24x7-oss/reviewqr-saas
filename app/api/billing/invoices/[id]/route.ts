@@ -26,29 +26,34 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     y -= size + 8;
   };
 
-  draw("Tax invoice", 20, true);
+  const gstRegistered = Boolean(payment.invoiceSellerGstin?.trim());
+  draw(gstRegistered ? "Tax invoice" : "Bill of supply", 20, true);
   draw(payment.invoiceNumber, 14, true);
   draw(`Issued ${payment.invoiceIssuedAt ? payment.invoiceIssuedAt.toISOString().slice(0, 10) : ""}`);
   y -= 8;
   draw("Seller", 12, true);
   draw(payment.invoiceSellerName || "QR24x7");
-  draw(payment.invoiceSellerGstin ? `GSTIN ${payment.invoiceSellerGstin}` : "GSTIN pending");
-  if (payment.invoicePlaceOfSupply) draw(`Place of supply ${payment.invoicePlaceOfSupply}`);
+  if (gstRegistered) {
+    draw(`GSTIN ${payment.invoiceSellerGstin}`);
+    if (payment.invoicePlaceOfSupply) draw(`Place of supply ${payment.invoicePlaceOfSupply}`);
+  }
   y -= 8;
   draw("Buyer", 12, true);
   draw(payment.invoiceBuyerName || "Customer");
-  draw(payment.invoiceBuyerGstin ? `GSTIN ${payment.invoiceBuyerGstin}` : "GSTIN not provided");
+  if (gstRegistered && payment.invoiceBuyerGstin) draw(`GSTIN ${payment.invoiceBuyerGstin}`);
   y -= 8;
   draw("Description", 12, true);
   draw(`QR24x7 ${payment.tier} plan, ${payment.periodMonths} month(s)`);
-  draw("SAC 998314");
-  draw(`Taxable value ${formatINR(payment.invoiceTaxablePaise || 0)}`);
-  draw(`CGST ${formatINR(payment.invoiceCgstPaise || 0)}`);
-  draw(`SGST ${formatINR(payment.invoiceSgstPaise || 0)}`);
-  draw(`IGST ${formatINR(payment.invoiceIgstPaise || 0)}`);
+  if (gstRegistered) {
+    draw("SAC 998314");
+    draw(`Taxable value ${formatINR(payment.invoiceTaxablePaise || 0)}`);
+    draw(`CGST ${formatINR(payment.invoiceCgstPaise || 0)}`);
+    draw(`SGST ${formatINR(payment.invoiceSgstPaise || 0)}`);
+    draw(`IGST ${formatINR(payment.invoiceIgstPaise || 0)}`);
+  }
   draw(`Total ${formatINR(payment.amount)}`, 13, true);
   if (payment.utr) draw(`UTR ${payment.utr}`);
-  draw("This invoice is retained for tax records.");
+  draw(gstRegistered ? "This invoice is retained for tax records." : "Thank you for your payment.");
 
   const bytes = await doc.save();
   return new NextResponse(new Blob([Buffer.from(bytes)]), {

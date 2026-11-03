@@ -99,7 +99,6 @@ function PaymentModal({
   months,
   upiEnabled,
   usdtEnabled,
-  youpiEnabled,
   planSlug,
   duration,
   priceLabel,
@@ -110,7 +109,6 @@ function PaymentModal({
   months: number;
   upiEnabled: boolean;
   usdtEnabled: boolean;
-  youpiEnabled: boolean;
   planSlug?: string;
   duration?: string;
   priceLabel: string;
@@ -127,45 +125,7 @@ function PaymentModal({
   const [expired, setExpired] = React.useState(false);
   const [secondsLeft, setSecondsLeft] = React.useState(0);
 
-  const [youpiNote, setYoupiNote] = React.useState<string | null>(null);
-  const [youpiBusy, setYoupiBusy] = React.useState(false);
-  const anyEnabled = youpiEnabled || upiEnabled || usdtEnabled;
-
-  async function startYoupi() {
-    setYoupiBusy(true);
-    setYoupiNote(null);
-    try {
-      const res = await fetch("/api/billing/youpi/order", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ tier, months, planSlug, duration })
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error || "Could not start payment");
-      if (json.activated || json.scheduled) {
-        toast.success(json.scheduled ? `Your plan changes to ${json.plan} when this period ends.` : "Plan updated");
-        router.refresh();
-        onClose();
-        return;
-      }
-      if (json.checkoutUrl) {
-        window.location.href = json.checkoutUrl;
-        return;
-      }
-      if (json.queued) {
-        setYoupiNote(
-          json.message ||
-            `Another payment is in progress. Your queue position is ${json.position}.`
-        );
-        return;
-      }
-      throw new Error("Checkout link was not returned");
-    } catch (e: any) {
-      toast.error(e.message);
-    } finally {
-      setYoupiBusy(false);
-    }
-  }
+  const anyEnabled = upiEnabled || usdtEnabled;
 
   async function createOrder(method: PayMethod) {
     setCreating(method);
@@ -173,11 +133,23 @@ function PaymentModal({
       const res = await fetch("/api/billing/order", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ tier, months, method })
+        body: JSON.stringify({ tier, months, method, planSlug, duration })
       });
       const json = await res.json();
       if (!res.ok) {
         toast.error(json.error || "Couldn't create order");
+        return;
+      }
+      if (json.scheduled) {
+        toast.success(`Your plan changes to ${json.plan} when this period ends.`);
+        router.refresh();
+        onClose();
+        return;
+      }
+      if (json.activated) {
+        toast.success("Plan updated");
+        router.refresh();
+        onClose();
         return;
       }
       setOrder(json as Order);
@@ -360,28 +332,6 @@ function PaymentModal({
               ) : (
                 <>
                   <p className="text-sm text-muted-foreground">Choose how you'd like to pay:</p>
-                  {youpiNote && (
-                    <p className="text-sm rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900">
-                      {youpiNote}
-                    </p>
-                  )}
-                  {youpiEnabled && (
-                    <button
-                      onClick={startYoupi}
-                      disabled={youpiBusy || creating !== null}
-                      className="w-full flex items-center gap-3 rounded-xl border border-primary p-3.5 text-left hover:bg-secondary/50 transition disabled:opacity-60"
-                    >
-                      <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                        {youpiBusy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Smartphone className="h-5 w-5" />}
-                      </span>
-                      <span>
-                        <span className="block font-medium text-sm">Pay with UPI</span>
-                        <span className="block text-xs text-muted-foreground">
-                          Opens secure checkout. Manual UPI stays below if you need it.
-                        </span>
-                      </span>
-                    </button>
-                  )}
                   {upiEnabled && (
                     <button
                       onClick={() => createOrder("upi")}
@@ -551,7 +501,6 @@ export function BillingClient({
   plans,
   upiEnabled,
   usdtEnabled,
-  youpiEnabled,
   catalog = [],
   initialDuration,
   initialSlug
@@ -560,7 +509,6 @@ export function BillingClient({
   plans: PricingConfig;
   upiEnabled: boolean;
   usdtEnabled: boolean;
-  youpiEnabled: boolean;
   catalog?: CatalogPlan[];
   initialDuration?: string;
   initialSlug?: string;
@@ -756,7 +704,6 @@ export function BillingClient({
           months={months}
           upiEnabled={upiEnabled}
           usdtEnabled={usdtEnabled}
-          youpiEnabled={youpiEnabled}
           priceLabel={
             catalogueChargePaise(catalog, modalTier, annual) == null
               ? "This plan is not on the catalogue"
@@ -774,7 +721,6 @@ export function BillingClient({
           duration={duration}
           upiEnabled={upiEnabled}
           usdtEnabled={usdtEnabled}
-          youpiEnabled={youpiEnabled}
           priceLabel={
             modalPlan.prices.find((row) => row.duration === duration)
               ? formatINR(modalPlan.prices.find((row) => row.duration === duration)!.pricePaise)

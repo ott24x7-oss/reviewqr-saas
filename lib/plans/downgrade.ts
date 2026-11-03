@@ -8,7 +8,7 @@ import { invoicePayPath, invoiceReminderText } from "./invoice-link";
 
 /**
  * A scheduled downgrade does not grant the next plan.
- * When the current period ends, leave a YouPI invoice and a reminder.
+ * When the current period ends, leave a manual UPI invoice and a reminder.
  * The plan starts only after that invoice is paid.
  */
 export async function applyDuePlanChanges(now = new Date(), userId?: string) {
@@ -38,7 +38,7 @@ export async function applyDuePlanChanges(now = new Date(), userId?: string) {
           userId: sub.userId,
           planId: plan.id,
           duration,
-          provider: "YOUPI",
+          provider: { in: ["YOUPI", "UPI"] },
           status: { in: ["PENDING", "QUEUED"] }
         },
         select: { id: true }
@@ -57,7 +57,8 @@ export async function applyDuePlanChanges(now = new Date(), userId?: string) {
             amount,
             currency: "INR",
             status: "PENDING",
-            provider: "YOUPI",
+            provider: "UPI",
+            method: "upi",
             tier: plan.legacyTier,
             periodMonths: months == null ? 0 : months,
             planId: plan.id,
@@ -106,7 +107,7 @@ export async function clearStalePendingPlans(now = new Date(), userId?: string) 
   const open = await prisma.payment.findMany({
     where: {
       ...(userId ? { userId } : {}),
-      provider: "YOUPI",
+      OR: [{ provider: "YOUPI" }, { provider: "UPI", planId: { not: null } }],
       status: { in: ["PENDING", "QUEUED"] }
     },
     select: {

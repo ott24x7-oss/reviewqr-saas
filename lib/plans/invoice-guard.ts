@@ -1,4 +1,4 @@
-/** A YouPI checkout that never receives a payment link is abandoned after this long. */
+/** A short checkout that never receives payment details is abandoned after this long. */
 export const CHECKOUT_ABANDON_MS = 45 * 60 * 1000;
 
 /**
@@ -42,7 +42,7 @@ export function pendingForInvoice(
 }
 
 /**
- * Payable YouPI invoices are PENDING or QUEUED.
+ * Payable plan invoices are PENDING or QUEUED.
  * Expired means `expiresAt` has passed.
  * Cancelled means a scheduled invoice whose pending plan was cleared or the subscription was cancelled.
  * Abandoned means a short checkout that never received a payment link.

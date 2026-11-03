@@ -1,5 +1,5 @@
 /**
- * Shop quote. Prices are GST-inclusive paise.
+ * Shop quote. Prices are listed in paise; tax is split only for a registered seller.
  * A coupon applies to the subtotal, then a referral applies to what remains.
  * The discount is shared across lines, then each line is split at its own GST rate.
  */
@@ -97,6 +97,7 @@ export function quoteShop(input: {
   coupon?: DiscountOffer | null;
   referral?: DiscountOffer | null;
   sameState: boolean;
+  sellerGstin?: string | null;
   now?: Date;
 }): QuoteResult {
   if (!input.lines.length) return { ok: false, error: "Add at least one item" };
@@ -127,7 +128,7 @@ export function quoteShop(input: {
     const grossPaise = grosses[index];
     const discount = shares[index];
     const netPaise = grossPaise - discount;
-    const tax = splitGst(netPaise, line.gstPercent, input.sameState);
+    const tax = splitGst(netPaise, line.gstPercent, input.sameState, input.sellerGstin);
     return {
       sku: line.sku,
       qty: line.qty,

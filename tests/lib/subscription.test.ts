@@ -44,9 +44,14 @@ describe("subscription dates and invoices", () => {
     expect(next.getDate()).toBe(15);
   });
 
-  it("splits an inclusive 18% amount into CGST and SGST", () => {
-    expect(splitGst(11800, 18, true)).toEqual({ taxable: 10000, cgst: 900, sgst: 900, igst: 0 });
-    expect(splitGst(11800, 18, false).igst).toBe(1800);
+  it("records a full amount with no GST when the seller has no GSTIN", () => {
+    expect(splitGst(11800, 18, true, "")).toEqual({ taxable: 11800, cgst: 0, sgst: 0, igst: 0 });
+  });
+
+  it("splits an inclusive 18% amount when the seller has a GSTIN", () => {
+    const sellerGstin = "29AABCU9603R1ZM";
+    expect(splitGst(11800, 18, true, sellerGstin)).toEqual({ taxable: 10000, cgst: 900, sgst: 900, igst: 0 });
+    expect(splitGst(11800, 18, false, sellerGstin).igst).toBe(1800);
   });
 });
 
