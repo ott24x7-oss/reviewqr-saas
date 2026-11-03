@@ -126,6 +126,7 @@ model User {
   announcementDismissals AnnouncementDismiss[]
   printBatches    PrintBatch[]
   refreshSessions RefreshSession[]
+  magicLinkTokens MagicLinkToken[]
   pushDevices     PushDevice[]
   shippingAddresses ShippingAddress[]
   referralCodes   ReferralCode[]
@@ -1457,6 +1458,21 @@ model EmailOtp {
 
   @@index([identifier, purpose])
   @@index([tokenHash])
+}
+
+/// Single-use WhatsApp login links. Only the SHA-256 token hash is stored.
+model MagicLinkToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  phone     String
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, createdAt])
+  @@index([expiresAt])
 }
 
 // Which channel actually carried a login code. No code and no phone are stored.

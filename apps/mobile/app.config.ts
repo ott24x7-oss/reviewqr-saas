@@ -36,7 +36,8 @@ export default ({ config }: ConfigContext): ExpoConfig => applyAppVariant(({
         autoVerify: true,
         data: [
           { scheme: "https", host: "qr24x7.in", pathPrefix: "/refer" },
-          { scheme: "https", host: "qr24x7.in", pathPrefix: "/register" }
+          { scheme: "https", host: "qr24x7.in", pathPrefix: "/register" },
+          { scheme: "https", host: "qr24x7.in", pathPrefix: "/m" }
         ],
         category: ["BROWSABLE", "DEFAULT"]
       }
