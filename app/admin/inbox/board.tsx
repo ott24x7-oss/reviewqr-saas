@@ -99,19 +99,25 @@ export function InboxBoard({
                 <td className="px-3 py-8 text-zinc-500" colSpan={4}>Nothing waiting in this queue.</td>
               </tr>
             ) : (
-              items.map((item) => (
+              items.map((item) => {
+                const cancellation = segment === "support" && item.title.startsWith("Shop cancellation request · ");
+                const rowActions = cancellation
+                  ? [{ id: "approve-cancel", label: "Approve cancellation" }, { id: "reject-cancel", label: "Reject" }]
+                  : actions;
+                return (
                 <tr key={item.id} className="border-t border-zinc-100 dark:border-zinc-800">
                   <td className="px-3 py-3">
-                    <input type="checkbox" aria-label={`Select ${item.title}`} checked={picked.includes(item.id)} onChange={(event) => setPicked((current) => (event.target.checked ? [...current, item.id] : current.filter((id) => id !== item.id)))} />
+                    <input type="checkbox" aria-label={`Select ${item.title}`} disabled={cancellation} checked={picked.includes(item.id)} onChange={(event) => setPicked((current) => (event.target.checked ? [...current, item.id] : current.filter((id) => id !== item.id)))} />
                   </td>
                   <td className="px-3 py-3">
                     <div className="font-medium">{item.title}</div>
                     <div className="text-xs text-zinc-500">{item.subtitle}</div>
+                    {cancellation ? <Link className="mt-1 inline-block text-xs underline" href={`/admin/support/${item.id}`}>Review request details</Link> : null}
                   </td>
                   <td className="px-3 py-3"><StatusBadge value={item.status} /></td>
                   <td className="px-3 py-3">
                     <div className="flex flex-wrap gap-2">
-                      {actions.map((action) => (
+                      {rowActions.map((action) => (
                         <button key={action.id} type="button" className="rounded-[10px] border px-2 py-1 text-xs" onClick={() => setPending({ action: action.id, ids: [item.id] })}>
                           {action.label}
                         </button>
@@ -119,7 +125,8 @@ export function InboxBoard({
                     </div>
                   </td>
                 </tr>
-              ))
+                );
+              })
             )}
           </tbody>
         </table>

@@ -24,10 +24,13 @@ import { cartStepError, normalizeShopQuantity, validateShopAddress, type ShopAdd
 import { toggleUnbrandedSwitch, unbrandedQuoteDisplay } from "./totals";
 import { ShopProductArt, type ShopArtKind } from "./product-art";
 import { shopStepperState } from "./status-stepper";
+import { buyNowFlow } from "./buy-now";
+import { filterShopOrders, orderActions, type ShopOrderFilter } from "./order-actions";
 import { fonts } from "../theme";
 import { PrimaryButton, SecondaryButton } from "../ui/buttons";
+import { useOwnerTabContentInset } from "../ui/screen";
 import { useTheme } from "../ui/theme";
-import type { Palette } from "../ui/tokens";
+import { contrastRatio, type Palette } from "../ui/tokens";
 
 type CatalogResponse = { items: ShopProduct[] };
 type CartLine = ShopCartView["lines"][number];
@@ -175,8 +178,12 @@ function ShopImage({
 }
 
 function ShopStatusChip({ status, t, palette, lang }: { status: string; t: ReturnType<typeof useI18n>["t"]; palette: Palette; lang: string }) {
-  const color = status === "DELIVERED" ? palette.success : ["CANCELLED", "RTO"].includes(status) ? palette.danger : palette.primary;
-  return <View style={[styles.statusChip, { backgroundColor: `${color}18` }]}><Text style={[styles.statusChipText, { color }, lang === "hi" && styles.hindi]}>{statusLabel(status, t)}</Text></View>;
+  const isDelivered = status === "DELIVERED";
+  const isCancelled = ["CANCELLED", "RTO"].includes(status);
+  const tint = isDelivered ? palette.success : isCancelled ? palette.danger : palette.primaryDeep;
+  const color = isDelivered ? palette.success : isCancelled ? palette.danger
+    : contrastRatio(palette.primaryDeep, palette.surface) >= 5 ? palette.primaryDeep : palette.primary;
+  return <View style={[styles.statusChip, { backgroundColor: `${tint}18` }]}><Text style={[styles.statusChipText, { color }, lang === "hi" && styles.hindi]}>{statusLabel(status, t)}</Text></View>;
 }
 
 function QuantityStepper({ value, min, max, onChange, decreaseLabel, increaseLabel, label, palette }: { value: number; min: number; max: number; onChange: (value: number) => void; decreaseLabel: string; increaseLabel: string; label: string; palette: Palette }) {
@@ -221,9 +228,10 @@ function ChoiceSheet({ visible, title, options, selected, onSelect, onClose, pal
   );
 }
 
-function ProductSheet({ product, businessName, qrPreviewUrl, palette, t, lang, reduceMotion, busy, preselectUnbranded, onClose, onAdd }: {
+function ProductSheet({ product, businessName, qrPreviewUrl, palette, t, lang, reduceMotion, busy, preselectUnbranded, onClose, onAdd, onBuyNow }: {
   product: ShopProduct | null; businessName: string; qrPreviewUrl: string | null; palette: Palette; t: ReturnType<typeof useI18n>["t"];
-  lang: string; reduceMotion: boolean; busy: boolean; preselectUnbranded: boolean; onClose: () => void; onAdd: (variant: ProductVariant, qty: number, unbranded: boolean) => void;
+  lang: string; reduceMotion: boolean; busy: boolean; preselectUnbranded: boolean; onClose: () => void;
+  onAdd: (variant: ProductVariant, qty: number, unbranded: boolean) => void; onBuyNow: (variant: ProductVariant, qty: number, unbranded: boolean) => void;
 }) {
   const [sku, setSku] = useState(product?.variants[0]?.sku || "");
   const variant = product?.variants.find((item) => item.sku === sku) || product?.variants[0];
@@ -298,7 +306,8 @@ function ProductSheet({ product, businessName, qrPreviewUrl, palette, t, lang, r
             </View> : null}
           </ScrollView>
           <View style={[styles.sheetFooter, { borderTopColor: palette.line }]}>
-            <PrimaryButton label={`${t.shopAdd} · ${money(variant.salePaise * safeQty + (selectedUnbranded ? unbrandedAddonPaise * safeQty : 0))}`} disabled={busy || variant.stock < safeQty} onPress={() => onAdd(variant, safeQty, selectedUnbranded)} />
+            <SecondaryButton brand label={t.shopAddToCart} disabled={busy || variant.stock < safeQty} onPress={() => onAdd(variant, safeQty, selectedUnbranded)} />
+            <PrimaryButton label={`${t.shopBuyNow} · ${money(variant.salePaise * safeQty + (selectedUnbranded ? unbrandedAddonPaise * safeQty : 0))}`} disabled={busy || variant.stock < safeQty} onPress={() => onBuyNow(variant, safeQty, selectedUnbranded)} />
           </View>
         </View>
       </View>
@@ -309,17 +318,22 @@ function ProductSheet({ product, businessName, qrPreviewUrl, palette, t, lang, r
 export function ShopScreen() {
   const { t, lang } = useI18n();
   const { palette, reduceMotion } = useTheme();
+  const ownerTabContentInset = useOwnerTabContentInset();
   const stylesByPalette = useMemo(() => makeStyles(palette), [palette]);
   const { user } = useSession();
   const { business } = useBusiness();
   const client = useQueryClient();
   const router = useRouter();
-  const params = useLocalSearchParams<{ order?: string; unbranded?: string }>();
+  const params = useLocalSearchParams<{ order?: string; unbranded?: string; view?: string }>();
   const orderParam = typeof params.order === "string" ? params.order : "";
   const [selectedOrder, setSelectedOrder] = useState<{ key: string; id: string | null } | null>(null);
   const linkKey = orderParam;
   const openId = selectedOrder?.key === linkKey ? selectedOrder.id : orderParam || null;
-  const [view, setView] = useState<ShopView>("catalogue");
+  const routeViewKey = params.view ?? "";
+  const [viewOverride, setViewOverride] = useState<{ key: string; view: ShopView } | null>(null);
+  const view = viewOverride?.key === routeViewKey ? viewOverride.view : routeViewKey === "orders" ? "orders" : "catalogue";
+  const setView = (next: ShopView) => setViewOverride({ key: routeViewKey, view: next });
+  const [orderFilter, setOrderFilter] = useState<ShopOrderFilter>("ALL");
   const [productSheet, setProductSheet] = useState<ShopProduct | null>(null);
   const [prefillUnbranded, setPrefillUnbranded] = useState(false);
   const promoOpened = useRef(false);
@@ -327,10 +341,12 @@ export function ShopScreen() {
   const [busy, setBusy] = useState(false);
   const [busySku, setBusySku] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [serverCartError, setServerCartError] = useState<string | null>(null);
   const [cartEdit, setCartEdit] = useState<{ revision: number; data: ShopCartView } | null>(null);
   const [picker, setPicker] = useState<PickerState | null>(null);
   const [addressOpen, setAddressOpen] = useState(false);
+  const [addAddressForOrder, setAddAddressForOrder] = useState(false);
   const [newAddress, setNewAddress] = useState<NewAddress>(EMPTY_ADDRESS);
   const [addressError, setAddressError] = useState<string | null>(null);
   const [estimate, setEstimate] = useState<Estimate | null>(null);
@@ -416,20 +432,22 @@ export function ShopScreen() {
     setCartEdit({ revision: cartQuery.dataUpdatedAt, data: next });
   }
 
-  async function addToCart(sku: string, qty: number, unbranded = false) {
+  async function addToCart(sku: string, qty: number, unbranded = false, design?: CartLine["design"]) {
     setBusySku(sku);
     setError(null);
     try {
-      const next = await apiData<ShopCartView>("/api/v1/shop/cart/items", { method: "POST", body: JSON.stringify({ sku, qty, unbranded }) });
+      const next = await apiData<ShopCartView>("/api/v1/shop/cart/items", { method: "POST", body: JSON.stringify({ sku, qty, unbranded, design }) });
       client.setQueryData(accountKey(userId, "shop-cart", business?.id), next);
       setCartDraft(next);
       setAddedSku(sku);
       setTimeout(() => setAddedSku((current) => current === sku ? null : current), 1800);
+      return next;
     } catch (err) {
       setError(localizeShopMessage(err instanceof ApiError ? err.message : t.shopErrorAdd, lang, t));
     } finally {
       setBusySku(null);
     }
+    return null;
   }
 
   function cartPayload(cart: ShopCartView) {
@@ -528,6 +546,15 @@ export function ShopScreen() {
       const created = await apiData<{ id: string; name: string; phone: string; line1: string; line2: string | null; city: string; state: string; pincode: string; label: string | null; isDefault: boolean }>("/api/v1/shop/addresses", {
         method: "POST", body: JSON.stringify({ ...newAddress, isDefault: true })
       });
+      if (addAddressForOrder && openId) {
+        await apiData(`/api/v1/shop/orders/${openId}/address`, { method: "POST", body: JSON.stringify({ addressId: created.id }) });
+        setNewAddress(EMPTY_ADDRESS);
+        setAddAddressForOrder(false);
+        setAddressOpen(false);
+        setEstimate(null);
+        await Promise.all([detail.refetch(), orders.refetch(), cartQuery.refetch()]);
+        return;
+      }
       setNewAddress(EMPTY_ADDRESS);
       setAddressOpen(false);
       setEstimate(null);
@@ -562,9 +589,10 @@ export function ShopScreen() {
     }
   }
 
-  async function payNow() {
-    if (!cartDraft || pendingOrderId) return;
-    const next = await persistCart();
+  async function payNow(cartOverride?: ShopCartView | null) {
+    const draft = cartOverride ?? cartDraft;
+    if (!draft || pendingOrderId) return;
+    const next = await persistCart(draft);
     if (!next) return;
     const issue = cartStepError({
       lines: next.lines.map((line) => ({ qty: line.qty, minQty: line.minQty, stock: line.stock, active: line.active, designError: line.designError })),
@@ -607,12 +635,25 @@ export function ShopScreen() {
     }
   }
 
+  function openBuyNow(product: ShopProduct) {
+    const flow = buyNowFlow(product);
+    if (!flow) return;
+    if (flow.mode === "sheet") {
+      setProductSheet(product);
+      return;
+    }
+    setView("cart");
+    void addToCart(flow.sku, flow.qty).then((next) => { if (next) void payNow(next); });
+  }
+
   async function orderAction(path: string, body: object, success?: () => void) {
     if (!openId) return;
     setError(null);
+    setSuccessMessage(null);
     setBusy(true);
     try {
-      await apiData(`/api/v1/shop/orders/${openId}/${path}`, { method: "POST", body: JSON.stringify(body) });
+      const result = await apiData<{ message?: string }>(`/api/v1/shop/orders/${openId}/${path}`, { method: "POST", body: JSON.stringify(body) });
+      if (path === "cancel" && result.message) setSuccessMessage(result.message);
       success?.();
       await Promise.all([detail.refetch(), orders.refetch()]);
     } catch (err) {
@@ -624,6 +665,45 @@ export function ShopScreen() {
 
   async function openExternal(url: string) {
     await WebBrowser.openBrowserAsync(url).catch(() => undefined);
+  }
+
+  function closeAddressSheet() {
+    setAddressOpen(false);
+    setAddAddressForOrder(false);
+    setAddressError(null);
+  }
+
+  async function resumeOrderPayment() {
+    if (!openId) return;
+    setError(null);
+    setBusy(true);
+    try {
+      const payment = await apiData<{ checkoutUrl: string }>(`/api/v1/shop/orders/${openId}/payment`, { method: "POST" });
+      await openExternal(payment.checkoutUrl);
+      await Promise.all([detail.refetch(), orders.refetch()]);
+    } catch (err) {
+      setError(localizeShopMessage(err instanceof ApiError ? err.message : t.shopErrorPayment, lang, t));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function buyAgainOrder() {
+    if (!openId) return;
+    setError(null);
+    setBusy(true);
+    try {
+      const result = await apiData<{ cart: ShopCartView; skipped: string[] }>(`/api/v1/shop/orders/${openId}/buy-again`, { method: "POST" });
+      client.setQueryData(accountKey(userId, "shop-cart", business?.id), result.cart);
+      setCartDraft(result.cart);
+      setOpenOrder(null);
+      setView("cart");
+      if (result.skipped.length) setError(t.shopBuyAgainSkipped.replace("{items}", result.skipped.join(", ")));
+    } catch (err) {
+      setError(localizeShopMessage(err instanceof ApiError ? err.message : t.shopErrorOrder, lang, t));
+    } finally {
+      setBusy(false);
+    }
   }
 
   const scrollRefresh = <RefreshControl refreshing={catalog.isRefetching || cartQuery.isRefetching || orders.isRefetching || detail.isRefetching} onRefresh={() => { void refresh(); }} tintColor={palette.primary} />;
@@ -640,15 +720,15 @@ export function ShopScreen() {
             <Text style={[styles.headerText, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.shopMyOrders}</Text>
           </Pressable>
           <Pressable accessibilityRole="button" accessibilityLabel={`${t.cart}, ${cartUnits}`} onPress={() => { setView("cart"); setError(null); }} style={[styles.headerCartButton, { backgroundColor: palette.primaryDeep }]}>
-            <ShoppingCart size={20} color={palette.onPrimary} />
-            <Text style={[styles.cartBadgeText, { color: palette.onPrimary }]}>{cartUnits}</Text>
+            <ShoppingCart size={20} color={palette.onPrimaryStrong} />
+            <Text style={[styles.cartBadgeText, { color: palette.onPrimaryStrong }]}>{cartUnits}</Text>
           </Pressable>
         </View> : null}
         {openId ? <View style={{ flex: 1 }} /> : null}
       </View>
 
       {!openId && currentView === "catalogue" ? (
-        <ScrollView contentContainerStyle={stylesByPalette.content} refreshControl={scrollRefresh}>
+        <ScrollView contentContainerStyle={[stylesByPalette.content, ownerTabContentInset]} refreshControl={scrollRefresh}>
           {activeOrder ? <Pressable accessibilityRole="button" accessibilityLabel={`${t.shopActiveOrder}, ${statusLabel(activeOrder.status, t)}`} onPress={() => setOpenOrder(activeOrder.id)} style={[stylesByPalette.activeOrderCard, { backgroundColor: palette.card, borderColor: palette.line }]}>
             {activeOrder.lines[0]?.imageUrl ? <Image source={{ uri: activeOrder.lines[0].imageUrl }} style={styles.activeThumb} /> : <ShopProductArt kind="stand" businessName={business?.name || "QR24x7"} palette={palette} size={56} />}
             <View style={styles.activeOrderInfo}>
@@ -664,14 +744,16 @@ export function ShopScreen() {
           {!catalog.isLoading && !catalog.isError && !catalog.data?.items.length ? <Text style={[styles.bodyText, { color: palette.muted }]}>{t.shopEmptyCatalog}</Text> : null}
           <View style={styles.productGrid}>
             {(catalog.data?.items ?? []).map((product) => <ProductCard key={product.slug} product={product} businessName={business?.name || "QR24x7"} palette={palette} t={t} lang={lang} busy={busySku === product.variants[0]?.sku} added={addedSku === product.variants[0]?.sku} onOpen={() => setProductSheet(product)} onAdd={() => {
-              const first = product.variants[0];
-              if (first) void addToCart(first.sku, Math.max(1, first.minQty));
-            }} />)}
+              const flow = buyNowFlow(product);
+              if (!flow) return;
+              if (flow.mode === "sheet") setProductSheet(product);
+              else void addToCart(flow.sku, flow.qty);
+            }} onBuyNow={() => openBuyNow(product)} />)}
           </View>
         </ScrollView>
       ) : null}
 
-      {!openId && currentView === "cart" ? <ScrollView contentContainerStyle={stylesByPalette.content} keyboardShouldPersistTaps="handled" refreshControl={scrollRefresh}>
+      {!openId && currentView === "cart" ? <ScrollView contentContainerStyle={[stylesByPalette.content, ownerTabContentInset]} keyboardShouldPersistTaps="handled" refreshControl={scrollRefresh}>
         <Text style={[styles.sectionTitle, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.shopItems}</Text>
         {!cartDraft && cartQuery.isLoading ? <View style={[styles.skeleton, { backgroundColor: palette.card }]} /> : null}
         {cartDraft?.lines.length === 0 ? <View style={[stylesByPalette.panel, { backgroundColor: palette.card }]}><Text style={[styles.bodyText, { color: palette.muted }]}>{t.shopEmptyCart}</Text><SecondaryButton label={t.catalogue} onPress={() => setView("catalogue")} /></View> : null}
@@ -738,39 +820,55 @@ export function ShopScreen() {
         </> : null}
       </ScrollView> : null}
 
-      {!openId && currentView === "orders" ? <ScrollView contentContainerStyle={stylesByPalette.content} refreshControl={scrollRefresh}>
+      {!openId && currentView === "orders" ? <ScrollView contentContainerStyle={[stylesByPalette.content, ownerTabContentInset]} refreshControl={scrollRefresh}>
+        <View style={styles.orderFilters}>
+          {(["ALL", "ACTIVE", "DELIVERED", "CANCELLED"] as const).map((filter) => {
+            const label = filter === "ALL" ? t.shopOrdersAll : filter === "ACTIVE" ? t.shopOrdersActive : filter === "DELIVERED" ? t.shopOrdersDelivered : t.shopOrdersCancelled;
+            const selected = orderFilter === filter;
+            return <Pressable key={filter} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ selected }} onPress={() => setOrderFilter(filter)} style={[styles.orderFilter, { backgroundColor: selected ? palette.primaryDeep : palette.card, borderColor: selected ? palette.primaryDeep : palette.line }]}>
+              <Text numberOfLines={1} style={[styles.orderFilterText, { color: selected ? palette.onPrimaryStrong : palette.ink }, lang === "hi" && styles.hindi]}>{label}</Text>
+            </Pressable>;
+          })}
+        </View>
         {orders.isLoading ? <View style={[styles.skeleton, { backgroundColor: palette.card }]} /> : null}
         {orders.isError ? <InlineMessage message={t.loadError} palette={palette} action={t.retry} onAction={() => void orders.refetch()} /> : null}
         {!orders.isLoading && !orders.isError && !orders.data?.items.length ? <View style={[stylesByPalette.panel, { backgroundColor: palette.card }]}>
           <Package size={32} color={palette.muted} />
           <Text style={[styles.sectionTitle, { color: palette.ink }]}>{t.shopEmptyOrders}</Text>
           <Text style={[styles.bodyText, { color: palette.muted }]}>{t.shopEmptyOrdersBody}</Text>
-          <SecondaryButton label={t.catalogue} onPress={() => setView("catalogue")} />
+          <SecondaryButton label={t.shopNow} onPress={() => setView("catalogue")} />
         </View> : null}
-        {(orders.data?.items ?? []).map((order) => <OrderListCard key={order.id} order={order} palette={palette} t={t} lang={lang} businessName={business?.name || "QR24x7"} onPress={() => setOpenOrder(order.id)} />)}
+        {orders.data?.items.length && !filterShopOrders(orders.data.items, orderFilter).length ? <Text style={[styles.bodyText, { color: palette.muted }]}>{t.shopNoFilteredOrders}</Text> : null}
+        {filterShopOrders(orders.data?.items ?? [], orderFilter).map((order) => <OrderListCard key={order.id} order={order} palette={palette} t={t} lang={lang} businessName={business?.name || "QR24x7"} onPress={() => setOpenOrder(order.id)} />)}
       </ScrollView> : null}
 
-      {openId ? <ScrollView contentContainerStyle={stylesByPalette.content} refreshControl={scrollRefresh}>
+      {openId ? <ScrollView contentContainerStyle={[stylesByPalette.content, ownerTabContentInset]} refreshControl={scrollRefresh}>
         {detail.isLoading ? <View style={[styles.skeleton, { backgroundColor: palette.card }]} /> : null}
         {detail.isError ? <InlineMessage message={t.loadError} palette={palette} action={t.retry} onAction={() => void detail.refetch()} /> : null}
-        {detail.data ? <OrderDetailView detail={detail.data} palette={palette} t={t} lang={lang} busy={busy} proofNote={proofNote} setProofNote={setProofNote} reprintNote={reprintNote} setReprintNote={setReprintNote} reprintReason={reprintReason} setReprintReason={setReprintReason} picker={openPicker} onAction={orderAction} onOpenExternal={openExternal} onHelp={() => router.push("/(app)/help")} onCopyAwb={async (awb) => { await Clipboard.setStringAsync(awb); }} /> : null}
+        {detail.data ? <OrderDetailView detail={detail.data} addresses={cartDraft?.addresses ?? []} palette={palette} t={t} lang={lang} busy={busy} proofNote={proofNote} setProofNote={setProofNote} reprintNote={reprintNote} setReprintNote={setReprintNote} reprintReason={reprintReason} setReprintReason={setReprintReason} picker={openPicker} onAction={orderAction} onOpenExternal={openExternal} onHelp={() => router.push("/(app)/help")} onResumePay={() => { void resumeOrderPayment(); }} onBuyAgain={() => { void buyAgainOrder(); }} onChangeAddress={(addressId) => { void orderAction("address", { addressId }); }} onAddAddress={() => { setAddressError(null); setNewAddress(detail.data?.address ? { ...detail.data.address, line2: detail.data.address.line2 || "" } : EMPTY_ADDRESS); setAddAddressForOrder(true); setAddressOpen(true); }} onCopyAwb={async (awb) => { await Clipboard.setStringAsync(awb); }} /> : null}
         {error ? <InlineMessage message={error} palette={palette} /> : null}
+        {successMessage ? <InlineMessage message={successMessage} palette={palette} tone="success" /> : null}
       </ScrollView> : null}
 
       <ProductSheet key={productSheet?.slug || "closed"} product={productSheet} businessName={business?.name || "QR24x7"} qrPreviewUrl={firstQr} palette={palette} t={t} lang={lang} reduceMotion={reduceMotion} busy={!!busySku} preselectUnbranded={prefillUnbranded} onClose={() => { setProductSheet(null); setPrefillUnbranded(false); }} onAdd={(variant, qty, unbranded) => {
         setProductSheet(null);
         setPrefillUnbranded(false);
         void addToCart(variant.sku, qty, unbranded);
+      }} onBuyNow={(variant, qty, unbranded) => {
+        setProductSheet(null);
+        setPrefillUnbranded(false);
+        setView("cart");
+        void addToCart(variant.sku, qty, unbranded).then((next) => { if (next) void payNow(next); });
       }} />
 
       <ChoiceSheet visible={!!picker} title={picker?.title || ""} options={picker?.options || []} selected={picker?.selected} onSelect={(value) => picker?.onSelect(value)} onClose={() => setPicker(null)} palette={palette} t={t} lang={lang} reduceMotion={reduceMotion} />
 
-      <Modal visible={addressOpen} transparent animationType={reduceMotion ? "none" : "slide"} onRequestClose={() => setAddressOpen(false)}>
+      <Modal visible={addressOpen} transparent animationType={reduceMotion ? "none" : "slide"} onRequestClose={closeAddressSheet}>
         <View style={styles.modalRoot}>
-        <Pressable accessibilityRole="button" accessibilityLabel={t.shopClose} onPress={() => setAddressOpen(false)} style={[styles.modalScrim, { backgroundColor: palette.scrim }]} />
+        <Pressable accessibilityRole="button" accessibilityLabel={t.shopClose} onPress={closeAddressSheet} style={[styles.modalScrim, { backgroundColor: palette.scrim }]} />
           <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ width: "100%" }}>
             <View style={[styles.sheet, { backgroundColor: palette.card, borderColor: palette.line }]}>
-              <View style={styles.sheetHeader}><Text style={[styles.sectionTitle, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.shopAddAddress}</Text><Pressable accessibilityRole="button" accessibilityLabel={t.shopClose} onPress={() => setAddressOpen(false)} style={styles.iconButton}><X size={20} color={palette.ink} /></Pressable></View>
+              <View style={styles.sheetHeader}><Text style={[styles.sectionTitle, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.shopAddAddress}</Text><Pressable accessibilityRole="button" accessibilityLabel={t.shopClose} onPress={closeAddressSheet} style={styles.iconButton}><X size={20} color={palette.ink} /></Pressable></View>
               <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.formBody}>
                 <ShopField label={t.name} value={newAddress.name} onChangeText={(value) => setNewAddress({ ...newAddress, name: value })} palette={palette} />
                 <ShopField label={t.phone} value={newAddress.phone} keyboardType="phone-pad" onChangeText={(value) => setNewAddress({ ...newAddress, phone: value })} palette={palette} />
@@ -793,20 +891,19 @@ export function ShopScreen() {
   );
 }
 
-function ProductCard({ product, businessName, palette, t, lang, busy, added, onOpen, onAdd }: {
+function ProductCard({ product, businessName, palette, t, lang, busy, added, onOpen, onAdd, onBuyNow }: {
   product: ShopProduct; businessName: string; palette: Palette; t: ReturnType<typeof useI18n>["t"]; lang: string;
-  busy: boolean; added: boolean; onOpen: () => void; onAdd: () => void;
+  busy: boolean; added: boolean; onOpen: () => void; onAdd: () => void; onBuyNow: () => void;
 }) {
   const first = product.variants[0];
   if (!first) return null;
-  const many = product.variants.length > 1;
   const discount = offPercent(first.mrpPaise, first.salePaise);
   return (
     <View style={[styles.productCard, { backgroundColor: palette.card, borderColor: palette.line }]}>
       <Pressable accessibilityRole="button" accessibilityLabel={productName(product, lang)} onPress={onOpen} style={styles.productImagePress}>
         <View style={[styles.productImage, { backgroundColor: palette.surface2 }]}>
           <ShopImage imageUrl={product.imageUrl} product={product} businessName={businessName} palette={palette} size={156} />
-          {discount ? <View style={[styles.discountBadge, { backgroundColor: palette.success }]}><Text style={[styles.discountBadgeText, { color: palette.onPrimary }]}>{t.shopOff.replace("{percent}", String(discount))}</Text></View> : null}
+          {discount ? <View style={[styles.discountBadge, { backgroundColor: palette.primaryDeep }]}><Text style={[styles.discountBadgeText, { color: palette.onPrimaryStrong }]}>{t.shopOff.replace("{percent}", String(discount))}</Text></View> : null}
           {safePaise(product.unbrandedAddonPaise) > 0 ? <View style={[styles.unbrandedPill, { backgroundColor: palette.card }]}><Text style={[styles.unbrandedPillText, { color: palette.ink }]}>{t.shopUnbrandedBadge}</Text></View> : null}
         </View>
       </Pressable>
@@ -814,8 +911,11 @@ function ProductCard({ product, businessName, palette, t, lang, busy, added, onO
         <Text numberOfLines={2} style={[styles.productName, { color: palette.ink }, lang === "hi" && styles.hindi]}>{productName(product, lang)}</Text>
         {product.needsNfc ? <Text style={[styles.nfcTag, { color: palette.primary }]}>{t.shopNfcIncluded}</Text> : <View style={{ height: 19 }} />}
         <View style={styles.priceLine}><Text style={[styles.cardPrice, { color: palette.ink }]}>{money(first.salePaise)}</Text>{first.mrpPaise > first.salePaise ? <Text style={[styles.crossedPrice, { color: palette.muted }]}>{money(first.mrpPaise)}</Text> : null}</View>
-        <Pressable accessibilityRole="button" accessibilityLabel={many ? t.shopChoose : added ? t.shopAdded : t.shopAdd} onPress={many ? onOpen : onAdd} disabled={busy} style={[styles.productAction, { backgroundColor: palette.primaryDeep }]}>
-          <Text style={[styles.productActionText, { color: palette.onPrimary }, lang === "hi" && styles.hindi]}>{many ? t.shopChoose : added ? t.shopAdded : busy ? t.hintWait : t.shopAdd}</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel={added ? t.shopAdded : t.shopAddToCart} onPress={onAdd} disabled={busy} style={[styles.productAction, styles.productActionSecondary, { borderColor: palette.primaryOnSurface }]}>
+          <Text numberOfLines={1} style={[styles.productActionText, { color: palette.primaryOnSurface }, lang === "hi" && styles.hindi]}>{busy ? t.hintWait : added ? t.shopAdded : t.shopAddToCart}</Text>
+        </Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel={t.shopBuyNow} onPress={onBuyNow} disabled={busy || first.stock < first.minQty} style={[styles.productAction, { backgroundColor: palette.primaryDeep }]}>
+          <Text numberOfLines={1} style={[styles.productActionText, { color: palette.onPrimaryStrong }, lang === "hi" && styles.hindi]}>{busy ? t.hintWait : t.shopBuyNow}</Text>
         </Pressable>
       </View>
     </View>
@@ -891,15 +991,38 @@ function OrderListCard({ order, palette, t, lang, businessName, onPress }: { ord
   </Pressable>;
 }
 
-function OrderDetailView({ detail, palette, t, lang, busy, proofNote, setProofNote, reprintNote, setReprintNote, reprintReason, setReprintReason, picker, onAction, onOpenExternal, onHelp, onCopyAwb }: {
+function OrderDetailView({ detail, addresses, palette, t, lang, busy, proofNote, setProofNote, reprintNote, setReprintNote, reprintReason, setReprintReason, picker, onAction, onOpenExternal, onHelp, onResumePay, onBuyAgain, onChangeAddress, onAddAddress, onCopyAwb }: {
   detail: ShopOrderDetail; palette: Palette; t: ReturnType<typeof useI18n>["t"]; lang: string; busy: boolean;
+  addresses: ShopCartView["addresses"];
   proofNote: string; setProofNote: (value: string) => void; reprintNote: string; setReprintNote: (value: string) => void;
   reprintReason: "damage" | "misprint"; setReprintReason: (value: "damage" | "misprint") => void;
   picker: (title: string, options: PickerOption[], selected: string | null | undefined, onSelect: (value: string) => void) => void;
   onAction: (path: string, body: object, success?: () => void) => Promise<void>;
-  onOpenExternal: (url: string) => Promise<void>; onHelp: () => void; onCopyAwb: (awb: string) => Promise<void>;
+  onOpenExternal: (url: string) => Promise<void>; onHelp: () => void; onResumePay: () => void; onBuyAgain: () => void;
+  onChangeAddress: (addressId: string) => void; onAddAddress: () => void; onCopyAwb: (awb: string) => Promise<void>;
 }) {
   const [copiedAwb, setCopiedAwb] = useState<string | null>(null);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelOther, setCancelOther] = useState("");
+  const actions = orderActions(detail.status, {
+    paymentStatus: detail.paymentStatus,
+    cancellationRequestPending: detail.cancellationRequestStatus !== null,
+    shipmentBooked: detail.shipmentBooked
+  });
+  const cancellationReasons = [
+    { label: t.shopCancelMistake, value: "Ordered by mistake" },
+    { label: t.shopCancelChange, value: "Need to change my order" },
+    { label: t.shopCancelDelay, value: "Delivery is taking too long" },
+    { label: t.shopCancelOther, value: "other" }
+  ];
+  const supportNumber = (detail.supportWhatsappNumber || "").replace(/\D/g, "");
+  const supportMessage = t.shopSupportPrefill
+    .replace("{order}", detail.invoiceNumber || `#${detail.id.slice(-8)}`)
+    .replace("{status}", statusLabel(detail.status, t));
+  const supportUrl = supportNumber.length >= 8
+    ? `https://wa.me/${supportNumber}?text=${encodeURIComponent(supportMessage)}`
+    : null;
   const progress = shopStepperState(detail.status);
   const steps = ["paid", "proof", "approved", "printing", "packed", "shipped", "delivered"];
   return <View style={styles.detailStack}>
@@ -907,6 +1030,7 @@ function OrderDetailView({ detail, palette, t, lang, busy, proofNote, setProofNo
       <View style={{ flex: 1, gap: 4 }}><Text style={[styles.sectionTitle, { color: palette.ink }]}>{detail.invoiceNumber || `#${detail.id.slice(-8)}`}</Text><Text style={[styles.caption, { color: palette.muted }]}>{t.shopOrderDate}: {dateTime(detail.createdAt, lang)}</Text></View>
       <ShopStatusChip status={detail.status} t={t} palette={palette} lang={lang} />
     </View>
+    {detail.paymentStatus === "PAID_AFTER_CANCELLATION" ? <InlineMessage message={t.shopPaidAfterCancellation} palette={palette} tone="success" /> : null}
 
     {progress.kind === "terminal" ? <View style={[styles.terminalBanner, { backgroundColor: palette.danger }]}>
       <Text style={[styles.bodyStrong, { color: palette.onDanger }]}>{statusLabel(progress.status, t)}</Text>
@@ -919,7 +1043,7 @@ function OrderDetailView({ detail, palette, t, lang, busy, proofNote, setProofNo
           const complete = index <= progress.currentIndex;
           return <View key={step} style={styles.stepRow}>
             <View style={styles.stepRail}>
-              <View style={[styles.stepDot, { backgroundColor: complete ? palette.primary : palette.surface, borderColor: complete ? palette.primary : palette.line }]}>{index < progress.currentIndex ? <Check size={12} color={palette.onPrimary} /> : null}</View>
+              <View style={[styles.stepDot, { backgroundColor: complete ? palette.primaryDeep : palette.surface, borderColor: complete ? palette.primaryDeep : palette.line }]}>{index < progress.currentIndex ? <Check size={12} color={palette.onPrimaryStrong} /> : null}</View>
               {index < steps.length - 1 ? <View style={[styles.stepConnector, { backgroundColor: index < progress.currentIndex ? palette.primary : palette.line }]} /> : null}
             </View>
             <Text style={[styles.stepLabel, { color: complete ? palette.ink : palette.muted }, index === progress.currentIndex && styles.bodyStrong, lang === "hi" && styles.hindi]}>{stageLabel(step, t)}</Text>
@@ -932,7 +1056,7 @@ function OrderDetailView({ detail, palette, t, lang, busy, proofNote, setProofNo
       <Text style={[styles.sectionTitle, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.shopItems}</Text>
       {detail.lines.map((line, index) => <View key={`${line.sku}-${index}`} style={styles.orderLineRow}>
         {line.imageUrl ? <Image source={{ uri: line.imageUrl }} style={styles.orderThumb} /> : <ShopProductArt kind="stand" businessName="QR24x7" palette={palette} size={62} />}
-        <View style={{ flex: 1 }}><Text style={[styles.bodyStrong, { color: palette.ink }]}>{line.name}</Text><Text style={[styles.caption, { color: palette.muted }]}>{line.qty} × {money(line.unitPaise)}</Text>{line.unbranded ? <Text style={[styles.unbrandedOrderBadge, { backgroundColor: palette.accentSoft, color: palette.deep }, lang === "hi" && styles.hindi]}>{t.shopUnbrandedBadge}</Text> : null}</View>
+        <View style={{ flex: 1 }}><Text style={[styles.bodyStrong, { color: palette.ink }]}>{line.name}</Text><Text style={[styles.caption, { color: palette.muted }]}>{line.qty} × {money(line.unitPaise)}</Text>{line.unbranded ? <Text style={[styles.unbrandedOrderBadge, { backgroundColor: palette.accentSoft, color: palette.ink }, lang === "hi" && styles.hindi]}>{t.shopUnbrandedBadge}</Text> : null}</View>
       </View>)}
     </View>
 
@@ -995,14 +1119,63 @@ function OrderDetailView({ detail, palette, t, lang, busy, proofNote, setProofNo
 
     <View style={[styles.detailPanel, { backgroundColor: palette.card, borderColor: palette.line }]}>
       <Text style={[styles.sectionTitle, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.shopNeedHelp}</Text>
+      {supportUrl ? <SecondaryButton label={t.shopContactWhatsApp} onPress={() => void onOpenExternal(supportUrl)} /> : <Text style={[styles.bodyText, { color: palette.muted }]}>{t.shopNoSupportWhatsApp}</Text>}
       <SecondaryButton label={t.shopNeedHelp} onPress={onHelp} />
     </View>
+
+    <View style={[styles.detailPanel, { backgroundColor: palette.card, borderColor: palette.line }]}>
+      <Text style={[styles.sectionTitle, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.shopManageOrder}</Text>
+      {actions.payNow ? <PrimaryButton label={t.shopPayNow} disabled={busy} onPress={onResumePay} /> : null}
+      {actions.cancellationRequestPending ? <Text style={[styles.bodyText, { color: palette.warning }]}>{detail.cancellationRequestStatus === "PENDING" ? t.shopCancelRequestPending : t.shopCancelRequestStatus.replace("{status}", detail.cancellationRequestStatus || "")}</Text> : null}
+      {actions.cancel ? <SecondaryButton label={t.shopCancelOrder} disabled={busy} onPress={() => { setCancelReason(""); setCancelOther(""); setCancelOpen(true); }} /> : null}
+      {actions.changeAddress ? <>
+        <Text style={[styles.caption, { color: palette.muted }, lang === "hi" && styles.hindi]}>{t.shopCancelAddressRule}</Text>
+        {addresses.length ? <SecondaryButton label={t.shopChangeAddress} disabled={busy} onPress={() => picker(
+          t.shopChangeAddress,
+          addresses.map((address) => ({ label: `${address.name} · ${address.line1}, ${address.city} ${address.pincode}`, value: address.id })),
+          undefined,
+          onChangeAddress
+        )} /> : <Text style={[styles.bodyText, { color: palette.muted }]}>{t.shopNoSavedAddresses}</Text>}
+        <SecondaryButton label={t.shopAddAddress} disabled={busy} onPress={onAddAddress} />
+      </> : null}
+      {actions.buyAgain ? <SecondaryButton label={t.shopBuyAgain} disabled={busy} onPress={onBuyAgain} /> : null}
+    </View>
+
+    <Modal visible={cancelOpen} transparent animationType="slide" onRequestClose={() => setCancelOpen(false)}>
+      <View style={styles.modalRoot}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t.shopClose} onPress={() => setCancelOpen(false)} style={[styles.modalScrim, { backgroundColor: palette.scrim }]} />
+        <View style={[styles.sheet, { backgroundColor: palette.card, borderColor: palette.line }]}>
+          <View style={styles.sheetHeader}>
+            <Text style={[styles.sectionTitle, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.shopCancelOrder}</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel={t.shopClose} onPress={() => setCancelOpen(false)} style={styles.iconButton}><X size={20} color={palette.ink} /></Pressable>
+          </View>
+          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.formBody}>
+            <Text style={[styles.bodyText, { color: palette.muted }, lang === "hi" && styles.hindi]}>{t.shopCancelReason}</Text>
+            {cancellationReasons.map((reason) => <Pressable key={reason.value} accessibilityRole="radio" accessibilityState={{ checked: cancelReason === reason.value }} onPress={() => setCancelReason(reason.value)} style={[styles.choiceRow, { borderBottomColor: palette.line }]}>
+              <Text style={[styles.bodyText, { color: palette.ink }, lang === "hi" && styles.hindi]}>{reason.label}</Text>
+              {cancelReason === reason.value ? <Check size={18} color={palette.primaryDeep} /> : null}
+            </Pressable>)}
+            {cancelReason === "other" ? <ShopField label={t.shopCancelOtherHint} value={cancelOther} onChangeText={setCancelOther} palette={palette} multiline maxLength={500} /> : null}
+            <Text style={[styles.bodyText, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.shopCancelConfirmBody}</Text>
+            {detail.paymentStatus === "PAID" ? <>
+              <Text style={[styles.bodyStrong, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.shopRefundAmount.replace("{amount}", money(detail.refundAmountPaise))}</Text>
+              <Text style={[styles.caption, { color: palette.muted }, lang === "hi" && styles.hindi]}>{t.shopRefundMethod}</Text>
+            </> : null}
+            <PrimaryButton label={t.shopCancelConfirm} disabled={busy || !cancelReason || (cancelReason === "other" && !cancelOther.trim())} onPress={() => {
+              const reason = cancelReason === "other" ? cancelOther.trim() : cancellationReasons.find((item) => item.value === cancelReason)?.label || cancelReason;
+              void onAction("cancel", { reason }, () => setCancelOpen(false));
+            }} />
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
   </View>;
 }
 
-function InlineMessage({ message, palette, action, onAction }: { message: string; palette: Palette; action?: string; onAction?: () => void }) {
-  return <View style={[styles.inlineMessage, { backgroundColor: `${palette.danger}12`, borderColor: `${palette.danger}55` }]}>
-    <Text style={[styles.bodyText, { color: palette.danger, flex: 1 }]}>{message}</Text>
+function InlineMessage({ message, palette, action, onAction, tone = "error" }: { message: string; palette: Palette; action?: string; onAction?: () => void; tone?: "error" | "success" }) {
+  const color = tone === "success" ? palette.success : palette.danger;
+  return <View style={[styles.inlineMessage, { backgroundColor: `${color}12`, borderColor: `${color}55` }]}>
+    <Text style={[styles.bodyText, { color, flex: 1 }]}>{message}</Text>
     {action && onAction ? <Pressable accessibilityRole="button" accessibilityLabel={action} onPress={onAction} style={styles.inlineAction}><Text style={[styles.bodyStrong, { color: palette.primary }]}>{action}</Text></Pressable> : null}
   </View>;
 }
@@ -1037,6 +1210,7 @@ function makeStyles(palette: Palette) {
     unbrandedPillText: { fontFamily: fonts.bodyStrong, fontSize: 9 },
     unbrandedOrderBadge: { alignSelf: "flex-start", overflow: "hidden", borderRadius: 999, paddingHorizontal: 7, paddingVertical: 3, fontFamily: fonts.bodyStrong, fontSize: 10, marginTop: 4 },
     productAction: { minHeight: 44, borderRadius: 14, alignItems: "center", justifyContent: "center", paddingHorizontal: 8 },
+    productActionSecondary: { borderWidth: 1 },
     productActionText: { fontFamily: fonts.bodyStrong, fontSize: 13 },
     sectionTitle: { fontFamily: fonts.title, fontSize: 18 },
     bodyText: { fontFamily: fonts.body, fontSize: 14, lineHeight: 20 },
@@ -1055,7 +1229,7 @@ function makeStyles(palette: Palette) {
     productSheet: { maxHeight: "94%" },
     sheetHeader: { minHeight: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
     sheetBody: { gap: 16, paddingBottom: 8 },
-    sheetFooter: { borderTopWidth: 1, paddingTop: 12 },
+    sheetFooter: { borderTopWidth: 1, paddingTop: 12, gap: 8 },
     largeProductImage: { alignItems: "center", justifyContent: "center", width: "100%", aspectRatio: 1, borderRadius: 20, overflow: "hidden" },
     variantChoice: { minHeight: 56, flexDirection: "row", alignItems: "center", gap: 8, borderRadius: 14, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8 },
     discountText: { fontFamily: fonts.bodyStrong, fontSize: 12 },
@@ -1088,6 +1262,9 @@ function makeStyles(palette: Palette) {
     summaryRow: { minHeight: 25, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
     divider: { height: 1, marginVertical: 2 },
     orderCard: { minHeight: 91, borderWidth: 1, borderRadius: 18, padding: 10, flexDirection: "row", alignItems: "center", gap: 10 },
+    orderFilters: { flexDirection: "row", flexWrap: "wrap", gap: 7 },
+    orderFilter: { minHeight: 44, paddingHorizontal: 12, justifyContent: "center", borderRadius: 999, borderWidth: 1 },
+    orderFilterText: { fontFamily: fonts.bodyStrong, fontSize: 12 },
     orderThumb: { width: 68, height: 68, borderRadius: 13, backgroundColor: palette.surface2 },
     orderCardBody: { flex: 1, gap: 4 },
     activeThumb: { width: 56, height: 56, borderRadius: 12, backgroundColor: palette.surface2 },
@@ -1146,6 +1323,7 @@ const styles = StyleSheet.create({
   unbrandedPillText: { fontFamily: fonts.bodyStrong, fontSize: 9 },
   unbrandedOrderBadge: { alignSelf: "flex-start", overflow: "hidden", borderRadius: 999, paddingHorizontal: 7, paddingVertical: 3, fontFamily: fonts.bodyStrong, fontSize: 10, marginTop: 4 },
   productAction: { minHeight: 44, borderRadius: 14, alignItems: "center", justifyContent: "center", paddingHorizontal: 8 },
+  productActionSecondary: { borderWidth: 1 },
   productActionText: { fontFamily: fonts.bodyStrong, fontSize: 13 },
   sectionTitle: { fontFamily: fonts.title, fontSize: 18 },
   bodyText: { fontFamily: fonts.body, fontSize: 14, lineHeight: 20 },
@@ -1164,7 +1342,7 @@ const styles = StyleSheet.create({
   productSheet: { maxHeight: "94%" },
   sheetHeader: { minHeight: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
   sheetBody: { gap: 16, paddingBottom: 8 },
-  sheetFooter: { borderTopWidth: 1, paddingTop: 12 },
+  sheetFooter: { borderTopWidth: 1, paddingTop: 12, gap: 8 },
   largeProductImage: { alignItems: "center", justifyContent: "center", width: "100%", aspectRatio: 1, borderRadius: 20, overflow: "hidden" },
   variantChoice: { minHeight: 56, flexDirection: "row", alignItems: "center", gap: 8, borderRadius: 14, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8 },
   discountText: { fontFamily: fonts.bodyStrong, fontSize: 12 },
@@ -1196,6 +1374,9 @@ const styles = StyleSheet.create({
   summaryRow: { minHeight: 25, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
   divider: { height: 1, marginVertical: 2 },
   orderCard: { minHeight: 91, borderWidth: 1, borderRadius: 18, padding: 10, flexDirection: "row", alignItems: "center", gap: 10 },
+  orderFilters: { flexDirection: "row", flexWrap: "wrap", gap: 7 },
+  orderFilter: { minHeight: 44, paddingHorizontal: 12, justifyContent: "center", borderRadius: 999, borderWidth: 1 },
+  orderFilterText: { fontFamily: fonts.bodyStrong, fontSize: 12 },
   orderThumb: { width: 68, height: 68, borderRadius: 13 },
   orderCardBody: { flex: 1, gap: 4 },
   activeThumb: { width: 56, height: 56, borderRadius: 12 },

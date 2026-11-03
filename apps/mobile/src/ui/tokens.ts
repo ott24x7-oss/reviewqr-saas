@@ -20,6 +20,10 @@ export type Palette = {
   primary: string;
   primaryDeep: string;
   onPrimary: string;
+  /** Foreground with WCAG AA contrast on a filled primaryDeep button. */
+  onPrimaryStrong: string;
+  /** Brand foreground with WCAG AA contrast on the theme surface. */
+  primaryOnSurface: string;
   accentSoft: string;
   bg: string;
   surface: string;
@@ -63,7 +67,7 @@ export function withOpacity(color: string, opacity: number) {
   return `rgba(${red},${green},${blue},${Math.max(0, Math.min(1, opacity))})`;
 }
 
-type PaletteSeed = Omit<Palette, "deep" | "bright" | "ink" | "paper" | "card" | "star" | "white" | "inkSoft" | "chip" | "scrim" | "header" | "headerInk" | "navy" | "cyan" | "cyanSoft" | "glass" | "cinematic" | "onDanger"> & {
+type PaletteSeed = Omit<Palette, "deep" | "bright" | "ink" | "paper" | "card" | "star" | "white" | "inkSoft" | "chip" | "scrim" | "header" | "headerInk" | "navy" | "cyan" | "cyanSoft" | "glass" | "cinematic" | "onDanger" | "onPrimaryStrong" | "primaryOnSurface"> & {
   deep?: string;
   onDanger?: string;
   header?: string;
@@ -71,10 +75,46 @@ type PaletteSeed = Omit<Palette, "deep" | "bright" | "ink" | "paper" | "card" | 
   cinematic?: boolean;
 };
 
+function linearChannel(value: number) {
+  const normalized = value / 255;
+  return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+}
+
+function luminance(color: string) {
+  const hex = color.startsWith("#") ? color.slice(1) : "";
+  if (!/^[\da-f]{6}$/i.test(hex)) return 0;
+  const red = Number.parseInt(hex.slice(0, 2), 16);
+  const green = Number.parseInt(hex.slice(2, 4), 16);
+  const blue = Number.parseInt(hex.slice(4, 6), 16);
+  return 0.2126 * linearChannel(red) + 0.7152 * linearChannel(green) + 0.0722 * linearChannel(blue);
+}
+
+/** WCAG 2.1 contrast ratio for two opaque hex colors. */
+export function contrastRatio(foreground: string, background: string) {
+  const first = luminance(foreground);
+  const second = luminance(background);
+  return (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05);
+}
+
+function onPrimaryButton(fill: string, preferredDark: string) {
+  if (contrastRatio("#FFFFFF", fill) >= 4.5) return "#FFFFFF";
+  const darkInk = contrastRatio(preferredDark, fill) >= 4.5 ? preferredDark : "#050507";
+  if (contrastRatio(darkInk, fill) >= 4.5) return darkInk;
+  return contrastRatio("#FFFFFF", fill) >= contrastRatio(darkInk, fill) ? "#FFFFFF" : darkInk;
+}
+
+function primaryOnSurface(primary: string, primaryDeep: string, surface: string, fallback: string) {
+  if (contrastRatio(primaryDeep, surface) >= 4.5) return primaryDeep;
+  if (contrastRatio(primary, surface) >= 4.5) return primary;
+  return fallback;
+}
+
 function createPalette(seed: PaletteSeed): Palette {
   const header = seed.header ?? seed.primaryDeep;
   return {
     ...seed,
+    onPrimaryStrong: onPrimaryButton(seed.primaryDeep, seed.onPrimary),
+    primaryOnSurface: primaryOnSurface(seed.primary, seed.primaryDeep, seed.surface, seed.text),
     cinematic: seed.cinematic ?? false,
     onDanger: seed.onDanger ?? "#FFFFFF",
     deep: seed.deep ?? seed.primaryDeep,
@@ -210,6 +250,8 @@ export function getThemePalette(appTheme: AppThemeName, scheme: "light" | "dark"
     deep: accent.primary,
     bright: accent.gradient[1],
     onPrimary: accent.onPrimary,
+    onPrimaryStrong: onPrimaryButton(accent.primaryDeep, accent.onPrimary),
+    primaryOnSurface: primaryOnSurface(accent.primary, accent.primaryDeep, base.surface, base.text),
     accentSoft: accent.soft,
     cyan: accent.primary,
     cyanSoft: accent.soft,

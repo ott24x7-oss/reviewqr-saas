@@ -1,4 +1,4 @@
-import { Screen } from "../../src/ui/screen";
+import { Screen, useOwnerTabContentInset } from "../../src/ui/screen";
 import type { FeatureId } from "@reviewqr/shared";
 import { router, type Href } from "expo-router";
 import {
@@ -26,6 +26,7 @@ type StoreSettings = { layout?: string };
 function MeScreenContent() {
   const { t, lang, choose } = useI18n();
   const { palette, choice, setChoice } = useTheme();
+  const ownerTabContentInset = useOwnerTabContentInset();
   const { user, logout, refreshUser } = useSession();
   const { business, reload } = useBusiness();
   const { setMode } = useAgentMode();
@@ -105,7 +106,7 @@ function MeScreenContent() {
     }
   }
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: palette.paper }} contentContainerStyle={styles.content}>
+    <ScrollView style={{ flex: 1, backgroundColor: palette.paper }} contentContainerStyle={[styles.content, ownerTabContentInset]}>
       <Text style={[styles.title, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.meTab}</Text>
       <Pressable accessibilityRole="button" accessibilityLabel={t.plans} onPress={() => router.push("/(app)/plan")} style={[styles.profile, { backgroundColor: palette.card, borderColor: palette.line }]}>
         <View style={[styles.profileIcon, { backgroundColor: palette.accentSoft }]}>
@@ -124,6 +125,7 @@ function MeScreenContent() {
       <Group>
         <GroupRow icon={MessageSquareQuote} tint="amber" title={t.reviewsFeedback} hint={unreadFeedbackCount > 0 ? t.unreadCount.replace("{count}", String(unreadFeedbackCount)) : t.reviews} onPress={() => go("/(app)/reviews")} />
         <GroupRow icon={Store} tint="green" title={t.businessDetails} hint={t.hintBusinessRow} onPress={() => go("/(app)/business-edit")} />
+        <GroupRow icon={ShoppingBag} tint="amber" title={t.shopMyOrders} hint={t.shopDeliveryPending} onPress={() => go({ pathname: "/(app)/shop", params: { view: "orders" } })} />
         <GroupRow icon={QrCode} tint="ink" title={t.pageAndQr} hint={t.shareQr} onPress={() => go("/(app)/tap")} />
         {hasBrandingState ? <View style={[styles.brandingRow, { backgroundColor: palette.card, borderColor: palette.line }]}>
           <View style={{ flex: 1, gap: 3 }}>

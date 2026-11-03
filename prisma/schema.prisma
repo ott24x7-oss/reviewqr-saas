@@ -1755,8 +1755,15 @@ enum ShopOrderStatus {
 enum ShopPayStatus {
   PENDING
   PAID
+  PAID_AFTER_CANCELLATION
   FAILED
   REFUNDED
+}
+
+enum ShopCancellationRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 model ShopOrder {
@@ -1797,6 +1804,7 @@ model ShopOrder {
   invoiceNumber     String?         @unique
   invoiceIssuedAt   DateTime?
   paidAt            DateTime?
+  paidAfterCancellationPaise Int?
   fingerprint       String?         @db.Text
   lines             ShopOrderLine[]
   deliveries        ShopPaymentDelivery[]
@@ -1804,6 +1812,7 @@ model ShopOrder {
   commissions       ShopCommission[]
   reprintRequests   ShopReprintRequest[]
   creditNotes       ShopCreditNote[]
+  cancellationRequest ShopOrderCancellationRequest?
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
@@ -1812,6 +1821,25 @@ model ShopOrder {
   @@index([paymentStatus])
   @@index([businessId])
   @@index([agentId])
+}
+
+model ShopOrderCancellationRequest {
+  id                String                         @id @default(cuid())
+  orderId           String                         @unique
+  order             ShopOrder                      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  userId            String
+  ticketId          String                         @unique
+  status            ShopCancellationRequestStatus @default(PENDING)
+  reason            String                         @db.Text
+  refundAmountPaise Int                            @default(0)
+  refundMethod      String?
+  reviewedAt        DateTime?
+  reviewedById      String?
+  createdAt         DateTime                       @default(now())
+  updatedAt         DateTime                       @updatedAt
+
+  @@index([status, createdAt])
+  @@index([userId, createdAt])
 }
 
 model ShopOrderLine {

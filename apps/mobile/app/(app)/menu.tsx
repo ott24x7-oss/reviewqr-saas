@@ -1,4 +1,4 @@
-import { Screen } from "../../src/ui/screen";
+import { Screen, useOwnerTabContentInset } from "../../src/ui/screen";
 import { FeatureGate } from "../../src/state/plan-lock";
 import { FlashList } from "@shopify/flash-list";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -61,6 +61,7 @@ function photoUri(photo?: string | null) {
 }
 
 function MenuTabContent() {
+  const ownerTabContentInset = useOwnerTabContentInset();
   const { t, lang } = useI18n();
   const { palette } = useTheme();
   const { user } = useSession();
@@ -181,7 +182,7 @@ function MenuTabContent() {
         key={grid ? "grid" : "list"}
         numColumns={grid ? 2 : 1}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.pad}
+        contentContainerStyle={[styles.pad, ownerTabContentInset]}
         ListHeaderComponent={
           <View style={styles.header}>
             <View style={styles.titleRow}>
@@ -262,7 +263,7 @@ function MenuTabContent() {
           accessibilityRole="button"
           accessibilityLabel={t.quickAdd}
           onPress={() => setOpen(true)}
-          style={[styles.fab, { backgroundColor: palette.primary }]}
+          style={[styles.fab, { backgroundColor: palette.primary, bottom: Math.max(32, ownerTabContentInset.paddingBottom - 72) }]}
         >
           <Plus color={palette.onPrimary} size={24} strokeWidth={1.75} />
         </Pressable>

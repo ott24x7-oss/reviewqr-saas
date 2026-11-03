@@ -152,6 +152,7 @@ export type SiteConfig = {
   appName: string;
   logoUrl: string;
   supportEmail: string;
+  supportWhatsappNumber: string;
   appUrl: string;
   marketingTagline: string;
   signupsEnabled: boolean;
@@ -388,6 +389,7 @@ export const DEFAULT_SITE: SiteConfig = {
   appName: DEFAULT_BRAND_NAME,
   logoUrl: BRAND_ICON,
   supportEmail: "hello@qr24x7.in",
+  supportWhatsappNumber: "",
   appUrl: "",
   marketingTagline: DEFAULT_BRAND_TAGLINE,
   signupsEnabled: true,
@@ -632,6 +634,7 @@ export async function getSiteConfig(): Promise<SiteConfig> {
       stored.supportEmail && stored.supportEmail !== "hello@reviewqr.in"
         ? stored.supportEmail
         : DEFAULT_SITE.supportEmail,
+    supportWhatsappNumber: stored.supportWhatsappNumber?.trim() || process.env.SUPPORT_WHATSAPP_NUMBER || DEFAULT_SITE.supportWhatsappNumber,
     appUrl: stored.appUrl || process.env.NEXT_PUBLIC_APP_URL || "",
     marketingTagline: brandTaglineOrDefault(stored.marketingTagline, DEFAULT_SITE.marketingTagline),
     signupsEnabled: stored.signupsEnabled ?? true,

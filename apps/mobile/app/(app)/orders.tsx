@@ -1,4 +1,4 @@
-import { Screen } from "../../src/ui/screen";
+import { Screen, useOwnerTabContentInset } from "../../src/ui/screen";
 import { FlashList } from "@shopify/flash-list";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createAudioPlayer, type AudioPlayer } from "expo-audio";
@@ -130,6 +130,7 @@ function SwipeAdvance({ hint, onAdvance, children }: { hint: string; onAdvance: 
 }
 
 function OrdersScreenContent() {
+  const ownerTabContentInset = useOwnerTabContentInset();
   const { t, lang } = useI18n();
   const { palette } = useTheme();
   const { user } = useSession();
@@ -453,7 +454,7 @@ function OrdersScreenContent() {
         data={showSkeleton || locked ? [] : listData}
         keyExtractor={(item) => item.id}
         ListHeaderComponent={header}
-        contentContainerStyle={styles.listPad}
+        contentContainerStyle={[styles.listPad, ownerTabContentInset]}
         ListEmptyComponent={
           locked || showSkeleton || loading ? null : listError ? <LoadErrorCard onRetry={() => retryList().catch(() => undefined)} /> : tab === "orders" ? (
             <EmptyState icon={ClipboardList} title={t.emptyOrdersTitle} body={t.emptyOrdersBody} action={t.sharePage} onAction={() => router.push({ pathname: "/(app)/tap", params: { section: "link" } })} />

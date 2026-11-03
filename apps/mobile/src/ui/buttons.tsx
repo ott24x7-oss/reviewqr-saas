@@ -1,4 +1,3 @@
-import { LinearGradient } from "expo-linear-gradient";
 import type { LucideIcon } from "lucide-react-native";
 import { Platform, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import Animated, {
@@ -36,8 +35,8 @@ export function PrimaryButton({ label, onPress, disabled, hint, icon: Icon, test
     : { shadowColor: palette.primary, shadowOpacity: 0.35, shadowRadius: 16, shadowOffset: { width: 0, height: 10 }, elevation: 8 };
   const face = (
     <View style={styles.row}>
-      {Icon ? <Icon color={off ? palette.muted : palette.onPrimary} size={20} strokeWidth={1.75} /> : null}
-      <Text style={[off ? [styles.disabledText, { color: palette.muted }] : [styles.primaryText, { color: palette.onPrimary }], lang === "hi" && styles.hindi]}>{label}</Text>
+      {Icon ? <Icon color={off ? palette.muted : palette.onPrimaryStrong} size={20} strokeWidth={1.75} /> : null}
+      <Text style={[off ? [styles.disabledText, { color: palette.muted }] : [styles.primaryText, { color: palette.onPrimaryStrong }], lang === "hi" && styles.hindi]}>{label}</Text>
     </View>
   );
 
@@ -64,17 +63,7 @@ export function PrimaryButton({ label, onPress, disabled, hint, icon: Icon, test
         >
           {off ? (
             <View style={[styles.primary, styles.disabledFill, { backgroundColor: palette.line }]}>{face}</View>
-          ) : (
-            <LinearGradient
-              colors={[...palette.buttonGradient]}
-              locations={[0, 1]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.primary}
-            >
-              {face}
-            </LinearGradient>
-          )}
+          ) : <View style={[styles.primary, { backgroundColor: palette.primaryDeep }]}>{face}</View>}
         </Pressable>
       </View>
       {off && hint ? <Text style={[styles.hint, { color: palette.muted }, lang === "hi" && styles.hindiHint]}>{hint}</Text> : null}
@@ -82,7 +71,7 @@ export function PrimaryButton({ label, onPress, disabled, hint, icon: Icon, test
   );
 }
 
-export function SecondaryButton({ label, onPress, disabled, icon: Icon, testID, style, accessibilityLabel }: PressProps) {
+export function SecondaryButton({ label, onPress, disabled, icon: Icon, testID, style, accessibilityLabel, brand }: PressProps & { brand?: boolean }) {
   const { lang } = useI18n();
   const { palette } = useTheme();
   const scale = useSharedValue(1);
@@ -103,10 +92,10 @@ export function SecondaryButton({ label, onPress, disabled, icon: Icon, testID, 
         onPressOut={() => {
           scale.value = withSpring(1, { damping: 15, stiffness: 320 });
         }}
-        style={[styles.secondary, { backgroundColor: palette.card, borderColor: palette.line }]}
+        style={[styles.secondary, { backgroundColor: palette.card, borderColor: brand ? palette.primaryOnSurface : palette.line }]}
       >
-        {Icon ? <Icon color={palette.ink} size={20} strokeWidth={1.75} /> : null}
-        <Text style={[styles.secondaryText, { color: palette.ink }, lang === "hi" && styles.hindi]}>{label}</Text>
+        {Icon ? <Icon color={brand ? palette.primaryOnSurface : palette.ink} size={20} strokeWidth={1.75} /> : null}
+        <Text style={[styles.secondaryText, { color: brand ? palette.primaryOnSurface : palette.ink }, lang === "hi" && styles.hindi]}>{label}</Text>
       </Pressable>
     </Animated.View>
   );

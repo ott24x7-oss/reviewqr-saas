@@ -1,0 +1,4 @@
+ALTER TYPE "ShopPayStatus" ADD VALUE 'PAID_AFTER_CANCELLATION';
+
+ALTER TABLE "ShopOrder"
+  ADD COLUMN "paidAfterCancellationPaise" INTEGER;
