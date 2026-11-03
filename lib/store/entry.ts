@@ -15,7 +15,33 @@ export type EntryRow = {
   colour: string;
   photo: string;
   barcode: string;
+  kind: string;
+  durationMinutes: string;
+  available: string;
+  imageUrl: string;
 };
+
+/** Canonical spreadsheet contract shared by the owner web and mobile flows. */
+export const BULK_COLUMNS = [
+  "name", "price", "mrp", "category", "hindi_name", "description", "veg", "brand",
+  "barcode", "kind", "duration_minutes", "available", "image_url"
+] as const;
+
+export const BULK_COLUMN_NOTES: Array<{ key: (typeof BULK_COLUMNS)[number]; en: string; hi: string }> = [
+  { key: "name", en: "Item name (required)", hi: "आइटम का नाम (ज़रूरी)" },
+  { key: "price", en: "Price in rupees; leave blank for price on request", hi: "कीमत रुपये में; पूछने पर कीमत के लिए खाली छोड़ें" },
+  { key: "mrp", en: "Optional MRP in rupees", hi: "वैकल्पिक एमआरपी रुपये में" },
+  { key: "category", en: "Optional category", hi: "वैकल्पिक श्रेणी" },
+  { key: "hindi_name", en: "Optional Hindi name", hi: "वैकल्पिक हिंदी नाम" },
+  { key: "description", en: "Optional description", hi: "वैकल्पिक विवरण" },
+  { key: "veg", en: "VEG, NON_VEG, EGG, or blank", hi: "VEG, NON_VEG, EGG या खाली" },
+  { key: "brand", en: "Optional brand", hi: "वैकल्पिक ब्रांड" },
+  { key: "barcode", en: "Optional barcode", hi: "वैकल्पिक बारकोड" },
+  { key: "kind", en: "PRODUCT or SERVICE (default PRODUCT)", hi: "PRODUCT या SERVICE (डिफ़ॉल्ट PRODUCT)" },
+  { key: "duration_minutes", en: "Service duration in minutes", hi: "सेवा की अवधि मिनट में" },
+  { key: "available", en: "yes or no (default yes)", hi: "yes या no (डिफ़ॉल्ट yes)" },
+  { key: "image_url", en: "Optional public HTTPS PNG/JPEG/WebP image URL", hi: "वैकल्पिक सार्वजनिक HTTPS PNG/JPEG/WebP फोटो लिंक" }
+];
 
 export type ProductDraft = {
   name: string;
@@ -40,7 +66,12 @@ const HEADER_MAP: Record<string, keyof EntryRow> = {
   colour: "colour",
   color: "colour",
   barcode: "barcode",
-  photo: "photo"
+  photo: "photo",
+  hindi_name: "nameHi",
+  kind: "kind",
+  duration_minutes: "durationMinutes",
+  available: "available",
+  image_url: "imageUrl"
 };
 
 export function blankRow(): EntryRow {
@@ -55,7 +86,11 @@ export function blankRow(): EntryRow {
     mrp: "",
     colour: "",
     photo: "",
-    barcode: ""
+    barcode: "",
+    kind: "",
+    durationMinutes: "",
+    available: "",
+    imageUrl: ""
   };
 }
 
@@ -105,12 +140,12 @@ export function splitPastedItems(text: string): EntryRow[] {
 
 export function rowsFromTable(table: string[][]): EntryRow[] {
   if (!table.length) return [];
-  const first = table[0].map((cell) => cell.trim().toLowerCase());
+  const first = table[0].map((cell) => cell.trim().toLowerCase().replace(/[ -]+/g, "_"));
   const hasHeader = first.includes("name") && (first.includes("price") || first.includes("mrp"));
   const header = hasHeader ? first : ["name", "price", "category", "hindi name", "description", "veg", "brand", "mrp"];
   const body = hasHeader ? table.slice(1) : table;
   return body
-    .filter((cells) => cells.some((cell) => cell.trim()))
+    .filter((cells) => cells.some((cell) => cell.trim()) && !((cells[0] || "").trim().startsWith("#")))
     .map((cells) => {
       const row = blankRow();
       header.forEach((key, index) => {
@@ -157,10 +192,10 @@ export function parseCsv(text: string): EntryRow[] {
 }
 
 export function templateCsv() {
-  return (
-    "\uFEFFname,price,category,Hindi name,description,veg,brand,MRP\n" +
-    "Filter coffee,80,Coffee,फ़िल्टर कॉफ़ी,South Indian coffee,VEG,,\n"
-  );
+  const escape = (value: string) => `"${value.replace(/"/g, '""')}"`;
+  const notes = BULK_COLUMN_NOTES.map((note) => `${note.en} / ${note.hi}`);
+  notes[0] = `# ${notes[0]}`;
+  return "\uFEFF" + BULK_COLUMNS.join(",") + "\r\n" + `${notes.map(escape).join(",")}\r\n`;
 }
 
 function readJson(raw: string): unknown {

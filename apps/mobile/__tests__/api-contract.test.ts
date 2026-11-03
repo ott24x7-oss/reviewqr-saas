@@ -52,7 +52,7 @@ function serverRoutes(area: "admin" | "agent") {
       else if (entry.name === "route.ts") {
         const rel = path.relative(base, dir).split(path.sep).filter(Boolean).map((part) => (/^\[.+\]$/.test(part) ? ":id" : part));
         const source = fs.readFileSync(full, "utf8");
-        for (const match of source.matchAll(/export const (GET|POST|PUT|PATCH|DELETE)\b/g)) routes.push(`${match[1]} /${rel.join("/")}`);
+        for (const match of source.matchAll(/export (?:const|async function) (GET|POST|PUT|PATCH|DELETE)\b/g)) routes.push(`${match[1]} /${rel.join("/")}`);
       }
     }
   };
@@ -65,7 +65,9 @@ function serverRoutes(area: "admin" | "agent") {
 type Sent = { path: string; method: string; headers: Record<string, string>; body?: string; status: number; response: unknown };
 const sent: Sent[] = [];
 const recorder: AdminTransport = async (requestPath, request) => {
-  const response = await adminMockTransport(requestPath, request);
+  const response = requestPath.startsWith("/item-image-jobs")
+    ? { status: 200, body: { data: request.method === "GET" ? { jobs: [] } : { approved: 1, rejected: 0 } } }
+    : await adminMockTransport(requestPath, request);
   sent.push({ path: requestPath, ...request, status: response.status, response: response.body });
   return response;
 };
@@ -125,7 +127,9 @@ const adminCases: AdminCase[] = [
   { fn: "devices", route: "GET /devices", path: "/devices", call: () => adminApi.devices() },
   { fn: "myDevices", route: "GET /devices/mine", path: "/devices/mine", response: adminMyDevicesSchema, call: () => adminApi.myDevices() },
   { fn: "deviceAction", route: "POST /devices/:id", path: "/devices/dev-1", body: adminDeviceActionSchema, call: () => adminApi.deviceAction("dev-1", "revoke") },
-  { fn: "audit", route: "GET /audit", path: "/audit?action=plan.update", call: () => adminApi.audit({ action: "plan.update" }) }
+  { fn: "audit", route: "GET /audit", path: "/audit?action=plan.update", call: () => adminApi.audit({ action: "plan.update" }) },
+  { fn: "itemImageJobs", route: "GET /item-image-jobs", path: "/item-image-jobs?businessId=biz-1", call: () => adminApi.itemImageJobs("biz-1") },
+  { fn: "itemImageDecision", route: "POST /item-image-jobs", path: "/item-image-jobs", call: () => adminApi.itemImageDecision({ action: "approve", jobIds: ["job-1"] }) }
 ];
 
 describe("admin client contract", () => {

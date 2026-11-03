@@ -2,7 +2,7 @@ import { Screen } from "../../src/ui/screen";
 import { FeatureGate } from "../../src/state/plan-lock";
 import { FlashList } from "@shopify/flash-list";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { Plus, Search, UtensilsCrossed } from "lucide-react-native";
@@ -188,6 +188,12 @@ function MenuTabContent() {
               <Text style={[styles.title, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.menuTab}</Text>
               <HelpButton title={t.help} body={t.coachMenuAddBody} />
             </View>
+            {!locked ? <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={lang === "hi" ? "बल्क अपलोड" : "Bulk upload"}
+              onPress={() => router.push("/(app)/menu-bulk")}
+              style={[styles.bulkAction, { backgroundColor: palette.card, borderColor: palette.line }]}
+            ><Text style={[styles.bulkText, { color: palette.ink }, lang === "hi" && styles.hindi]}>{lang === "hi" ? "बल्क अपलोड · CSV / Excel" : "Bulk upload · CSV / Excel"}</Text></Pressable> : null}
             {(items.data?.items.length ?? 0) >= 4 ? (
               <View style={styles.row}>
                 <Chip label={t.gridView} selected={grid} onPress={() => setGrid(true)} />
@@ -219,13 +225,18 @@ function MenuTabContent() {
             {items.isLoading ? <Skeleton height={120} /> : null}
             {!locked && items.isError ? <LoadErrorCard onRetry={() => items.refetch().catch(() => undefined)} /> : null}
             {!locked && !items.isLoading && !items.isError && rows.length === 0 ? (
-              <EmptyState
-                icon={UtensilsCrossed}
-                title={t.emptyMenuTitle}
-                body={t.emptyMenuBody}
-                action={t.quickAdd}
-                onAction={() => setOpen(true)}
-              />
+              <>
+                <EmptyState
+                  icon={UtensilsCrossed}
+                  title={t.emptyMenuTitle}
+                  body={t.emptyMenuBody}
+                  action={t.quickAdd}
+                  onAction={() => setOpen(true)}
+                />
+                <Pressable accessibilityRole="button" accessibilityLabel={lang === "hi" ? "बल्क अपलोड" : "Bulk upload"} onPress={() => router.push("/(app)/menu-bulk")} style={[styles.bulkAction, { backgroundColor: palette.card, borderColor: palette.line }]}>
+                  <Text style={[styles.bulkText, { color: palette.ink }, lang === "hi" && styles.hindi]}>{lang === "hi" ? "बल्क अपलोड शुरू करें" : "Start a bulk upload"}</Text>
+                </Pressable>
+              </>
             ) : null}
           </View>
         }
@@ -478,6 +489,8 @@ const styles = StyleSheet.create({
   pad: { padding: 16, paddingBottom: 120 },
   header: { gap: 12, marginBottom: 12 },
   titleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  bulkAction: { minHeight: 48, borderWidth: 1, borderRadius: 14, justifyContent: "center", paddingHorizontal: 14 },
+  bulkText: { fontFamily: fonts.bodyStrong, fontSize: 14 },
   title: { fontFamily: fonts.display, fontSize: 28 },
   searchScroll: { flexGrow: 0 },
   searchContent: { flexGrow: 0 },

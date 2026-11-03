@@ -156,6 +156,14 @@ export type AdminBusiness = {
   };
   timeline: AdminTimelineEntry[];
 };
+export type AdminItemImageJob = {
+  id: string;
+  status: string;
+  candidateUrl: string | null;
+  createdAt: string;
+  business: { id: string; name: string };
+  item: { id: string; name: string; photo: string | null };
+};
 export type AdminUserActionBody = z.input<typeof adminUserActionSchema>;
 export type AdminBusinessActionBody = z.input<typeof adminBusinessActionSchema>;
 export type AdminRevealed = { phone: string };

@@ -30,6 +30,7 @@ export const SETTING_KEYS = {
   site: "site",
   turnstile: "turnstile",
   ai: "ai",
+  imageAi: "ai.images",
   shipping: "shipping",
   shop: "shop",
   app: "app.release"
@@ -49,6 +50,7 @@ const SECRET_FIELDS: Record<string, string[]> = {
   [SETTING_KEYS.whatsapp]: ["apiToken"],
   [SETTING_KEYS.turnstile]: ["secretKey"],
   [SETTING_KEYS.ai]: ["apiKey"],
+  [SETTING_KEYS.imageAi]: ["apiKey"],
   [SETTING_KEYS.shipping]: ["shiprocketPassword", "delhiveryToken", "webhookSecret"]
 };
 
@@ -76,6 +78,18 @@ export type AiConfig = {
   dailyCapPaise: number;
   /** Paise added to the daily cap for each AI call. */
   estimatePaisePerCall: number;
+};
+
+export type ImageAiConfig = {
+  enabled: boolean;
+  /** OpenAI-compatible images API base URL. */
+  apiUrl: string;
+  apiKey: string;
+  model: string;
+  size: string;
+  stylePrompt: string;
+  estimatePaisePerImage: number;
+  dailyCapPaise: number;
 };
 
 export type PaymentsConfig = {
@@ -392,6 +406,17 @@ export const DEFAULT_AI: AiConfig = {
   estimatePaisePerCall: 100
 };
 
+export const DEFAULT_IMAGE_AI: ImageAiConfig = {
+  enabled: false,
+  apiUrl: "https://api.openai.com/v1",
+  apiKey: "",
+  model: "gpt-image-1",
+  size: "1024x1024",
+  stylePrompt: "clean studio product photo on a plain light background, soft shadow, no text, no logo, no watermark",
+  estimatePaisePerImage: 500,
+  dailyCapPaise: 50000
+};
+
 function nonNegativeInt(value: unknown, fallback: number) {
   const n = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(n) || n < 0) return fallback;
@@ -661,4 +686,22 @@ export async function getAiConfig(): Promise<AiConfig> {
 }
 export async function setAiConfig(v: AiConfig, by?: string) {
   await writeKey(SETTING_KEYS.ai, v, by);
+}
+
+export async function getImageAiConfig(): Promise<ImageAiConfig> {
+  const stored = await readKey<Partial<ImageAiConfig>>(SETTING_KEYS.imageAi, {});
+  return {
+    enabled: stored.enabled ?? false,
+    apiUrl: (stored.apiUrl || DEFAULT_IMAGE_AI.apiUrl).replace(/\/$/, ""),
+    apiKey: stored.apiKey || "",
+    model: stored.model || DEFAULT_IMAGE_AI.model,
+    size: stored.size || DEFAULT_IMAGE_AI.size,
+    stylePrompt: stored.stylePrompt || DEFAULT_IMAGE_AI.stylePrompt,
+    estimatePaisePerImage: nonNegativeInt(stored.estimatePaisePerImage, DEFAULT_IMAGE_AI.estimatePaisePerImage),
+    dailyCapPaise: nonNegativeInt(stored.dailyCapPaise, DEFAULT_IMAGE_AI.dailyCapPaise)
+  };
+}
+
+export async function setImageAiConfig(value: ImageAiConfig, by?: string) {
+  await writeKey(SETTING_KEYS.imageAi, value, by);
 }

@@ -389,6 +389,7 @@ model Business {
   tapPage      TapPage?
   menuCategories MenuCategory[]
   menuItems    MenuItem[]
+  itemImageJobs ItemImageJob[]
   menuOrders   MenuOrder[]
   storeSettings StoreSettings?
   coupons      Coupon[]
@@ -1099,11 +1100,40 @@ model MenuItem {
   addOns     MenuAddOn[]
   views      MenuItemView[]
   bookings   BookingRequest[]
+  imageJobs  ItemImageJob[]
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @updatedAt
 
   @@index([businessId, available])
   @@index([categoryId])
+}
+
+enum ItemImageJobStatus {
+  QUEUED
+  RUNNING
+  READY
+  APPROVED
+  REJECTED
+  FAILED
+}
+
+model ItemImageJob {
+  id            String             @id @default(cuid())
+  businessId    String
+  business      Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  itemId        String
+  item          MenuItem           @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  status        ItemImageJobStatus @default(QUEUED)
+  prompt        String             @db.Text
+  candidateUrl  String?
+  error         String?            @db.Text
+  requestedById String
+  decidedById   String?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  @@index([businessId, status, createdAt])
+  @@index([itemId, status])
 }
 
 model MenuVariant {

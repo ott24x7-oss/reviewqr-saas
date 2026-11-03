@@ -1,10 +1,13 @@
 import { loadAdminAiSettings } from "@/lib/admin/channel-settings";
 import { AiConfigForm } from "./ai-form";
+import Link from "next/link";
+import { ImageAiForm } from "./image-ai-form";
+import { loadAdminImageAiSettings } from "@/lib/admin/image-ai-settings";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminAiPage() {
-  const cfg = await loadAdminAiSettings();
+  const [cfg, imageCfg] = await Promise.all([loadAdminAiSettings(), loadAdminImageAiSettings()]);
   return (
     <div className="space-y-5">
       <div>
@@ -17,6 +20,8 @@ export default async function AdminAiPage() {
         </p>
       </div>
       <AiConfigForm initial={cfg} />
+      <div className="flex flex-wrap gap-4 text-sm"><Link className="underline" href="/admin/ai/images">Review generated item photos</Link></div>
+      <ImageAiForm initial={imageCfg} />
     </div>
   );
 }
