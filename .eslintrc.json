@@ -1,5 +1,5 @@
 {
-  "ignorePatterns": ["apps/mobile/**"],
+  "ignorePatterns": ["apps/mobile/**", "apps/sms-gateway/**"],
   "extends": ["next/core-web-vitals"],
   "rules": {
     "react/no-unescaped-entities": "off",
