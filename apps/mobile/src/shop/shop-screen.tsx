@@ -175,14 +175,14 @@ function ShopStatusChip({ status, t, palette, lang }: { status: string; t: Retur
   return <View style={[styles.statusChip, { backgroundColor: `${color}18` }]}><Text style={[styles.statusChipText, { color }, lang === "hi" && styles.hindi]}>{statusLabel(status, t)}</Text></View>;
 }
 
-function QuantityStepper({ value, min, max, onChange, label, palette }: { value: number; min: number; max: number; onChange: (value: number) => void; label: string; palette: Palette }) {
+function QuantityStepper({ value, min, max, onChange, decreaseLabel, increaseLabel, label, palette }: { value: number; min: number; max: number; onChange: (value: number) => void; decreaseLabel: string; increaseLabel: string; label: string; palette: Palette }) {
   return (
     <View style={styles.quantityRow}>
-      <Pressable accessibilityRole="button" accessibilityLabel={`${label}: ${value - 1}`} accessibilityState={{ disabled: value <= min }} disabled={value <= min} onPress={() => onChange(value - 1)} style={[styles.stepperButton, { borderColor: palette.line, backgroundColor: palette.card }]}>
+      <Pressable accessibilityRole="button" accessibilityLabel={decreaseLabel} accessibilityState={{ disabled: value <= min }} disabled={value <= min} onPress={() => onChange(value - 1)} style={[styles.stepperButton, { borderColor: palette.line, backgroundColor: palette.card }]}>
         <Minus size={18} color={palette.ink} />
       </Pressable>
       <Text accessibilityLabel={`${label} ${value}`} style={[styles.quantityValue, { color: palette.ink }]}>{value}</Text>
-      <Pressable accessibilityRole="button" accessibilityLabel={`${label}: ${value + 1}`} accessibilityState={{ disabled: value >= max }} disabled={value >= max} onPress={() => onChange(value + 1)} style={[styles.stepperButton, { borderColor: palette.line, backgroundColor: palette.card }]}>
+      <Pressable accessibilityRole="button" accessibilityLabel={increaseLabel} accessibilityState={{ disabled: value >= max }} disabled={value >= max} onPress={() => onChange(value + 1)} style={[styles.stepperButton, { borderColor: palette.line, backgroundColor: palette.card }]}>
         <Plus size={18} color={palette.ink} />
       </Pressable>
     </View>
@@ -258,7 +258,7 @@ function ProductSheet({ product, businessName, qrPreviewUrl, palette, t, lang, r
                 <Text style={[styles.priceText, { color: palette.ink }]}>{money(variant.salePaise)}</Text>
                 {variant.mrpPaise > variant.salePaise ? <Text style={[styles.crossedPrice, { color: palette.muted }]}>{money(variant.mrpPaise)}</Text> : null}
               </View>
-              <QuantityStepper value={safeQty} min={variant.minQty} max={Math.max(variant.minQty, variant.stock)} onChange={(value) => setQty(normalizeShopQuantity(value, variant.minQty, variant.stock))} label={t.shopQty} palette={palette} />
+              <QuantityStepper value={safeQty} min={variant.minQty} max={Math.max(variant.minQty, variant.stock)} onChange={(value) => setQty(normalizeShopQuantity(value, variant.minQty, variant.stock))} decreaseLabel={t.shopDecreaseQty} increaseLabel={t.shopIncreaseQty} label={t.shopQty} palette={palette} />
             </View>
             <View style={styles.stackGap}>
               <Text style={[styles.labelText, { color: palette.ink }]}>{t.shopDescription}</Text>
@@ -839,7 +839,7 @@ function CartLineCard({ line, index, cart, palette, t, lang, onQty, onRemove, on
       </View>
       <View style={styles.inlineBetween}>
         <Text style={[styles.labelText, { color: palette.ink }]}>{t.shopQty}</Text>
-        <QuantityStepper value={line.qty} min={line.minQty} max={Math.max(line.minQty, line.stock)} onChange={onQty} label={t.shopQty} palette={palette} />
+        <QuantityStepper value={line.qty} min={line.minQty} max={Math.max(line.minQty, line.stock)} onChange={onQty} decreaseLabel={t.shopDecreaseQty} increaseLabel={t.shopIncreaseQty} label={t.shopQty} palette={palette} />
       </View>
       {line.unbrandedUnitPaise > 0 ? <Pressable accessibilityRole="switch" accessibilityLabel={`${t.shopUnbrandedSwitch} ${money(line.unbrandedUnitPaise)}`} accessibilityState={{ checked: line.unbranded }} onPress={onToggleUnbranded} style={[styles.brandingToggle, { borderColor: line.unbranded ? palette.primary : palette.line, backgroundColor: palette.surface }]}>
         <View style={{ flex: 1, gap: 3 }}><Text style={[styles.bodyStrong, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.shopUnbrandedSwitch} +{money(line.unbrandedUnitPaise)} × {line.qty}</Text><Text style={[styles.caption, { color: palette.muted }, lang === "hi" && styles.hindi]}>{t.shopUnbrandedExplain}</Text></View>
