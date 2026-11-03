@@ -7,6 +7,7 @@
 import { ImapFlow } from "imapflow";
 import { simpleParser } from "mailparser";
 import { assertSafeHost } from "./ssrf";
+import { bankEmailDiagnostics, parseSenderAddress } from "./payments/bank-parser";
 
 export type MailCfg = {
   host: string;
@@ -21,9 +22,23 @@ export type ParsedEmail = {
   messageId: string;
   subject: string;
   from: string;
+  fromAddress: string;
   text: string;
   date: Date;
+  authenticationResults: string[];
+  arcAuthenticationResults: string[];
 };
+
+function headerValues(parsed: Awaited<ReturnType<typeof simpleParser>>, name: string): string[] {
+  const value = (parsed.headers as any)?.get?.(name.toLowerCase());
+  const list = Array.isArray(value) ? value : value == null ? [] : [value];
+  return list.map((item: any) => {
+    if (typeof item === "string") return item;
+    if (typeof item?.value === "string") return item.value;
+    if (typeof item?.text === "string") return item.text;
+    return String(item ?? "");
+  }).filter(Boolean);
+}
 
 function makeClient(cfg: MailCfg) {
   return new ImapFlow({
@@ -95,15 +110,28 @@ export async function fetchRecentPaymentEmails(
           try {
             const parsed = await simpleParser(msg.source as Buffer);
             const from = (parsed.from?.text || "").toLowerCase();
-            if (senders.length && !senders.some((s) => from.includes(s))) continue;
+            const fromAddress = (parsed.from?.value?.[0]?.address || "").toLowerCase();
+            const sender = parseSenderAddress(fromAddress);
+            if (!sender) continue;
+            const configuredDomains = senders.map((value) => value.includes("@") ? value.split("@").pop() || "" : value);
+            const diagnostics = bankEmailDiagnostics({
+              from: fromAddress,
+              authenticationResults: headerValues(parsed, "authentication-results"),
+              arcAuthenticationResults: headerValues(parsed, "arc-authentication-results")
+            }, configuredDomains);
+            if (!diagnostics.domainAllowed || !diagnostics.dkimAligned) continue;
+            if (senders.length && !senders.some((s) => fromAddress.includes(s))) continue;
             const text = (parsed.text || parsed.html || "").toString();
             out.push({
               uid: String(msg.uid),
               messageId: parsed.messageId || String(msg.uid),
               subject: parsed.subject || "",
               from,
+              fromAddress,
               text,
-              date: parsed.date || new Date()
+              date: parsed.date || new Date(),
+              authenticationResults: headerValues(parsed, "authentication-results"),
+              arcAuthenticationResults: headerValues(parsed, "arc-authentication-results")
             });
           } catch {
             // skip unparseable message

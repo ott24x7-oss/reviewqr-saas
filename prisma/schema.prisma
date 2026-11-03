@@ -832,6 +832,7 @@ model Payment {
   verifiedVia  String?   // "email" | "manual" | "webhook"
   matchedEmail String?   // uid/subject of the confirmation email that matched
   expiresAt    DateTime? // pending order expiry
+  bankCredit   BankCredit?
 
   deliveries PaymentDelivery[]
 
@@ -843,6 +844,59 @@ model Payment {
   @@index([provider, status])
   @@index([planId])
   @@index([status, createdAt])
+}
+
+// Append-only record of an incoming bank credit from SMS, Gmail, or IMAP.
+// Unique UTR and paymentId constraints prevent one transfer from being reused.
+model BankCredit {
+  id           String   @id @default(cuid())
+  source       String   // sms | gmail | imap
+  amountPaise  Int
+  utr          String?  @unique
+  sender       String
+  payerName    String?
+  receivedAt   DateTime
+  rawHash      String   @unique
+  signature    String?  @unique
+  bodyExcerpt  String   @db.Text
+  paymentId    String?  @unique
+  payment      Payment? @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  shopOrderId  String?  @unique
+  shopOrder    ShopOrder? @relation(fields: [shopOrderId], references: [id], onDelete: Restrict)
+  claimedAt    DateTime?
+  deviceId     String?
+  device       SmsGatewayDevice? @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+  reviewNote   String?
+  createdAt    DateTime @default(now())
+
+  @@index([source, receivedAt])
+  @@index([paymentId, receivedAt])
+  @@index([amountPaise, receivedAt])
+}
+
+model SmsGatewayDevice {
+  id          String   @id @default(cuid())
+  name        String
+  model       String
+  version     String
+  signingKey  String   @db.Text // AES-GCM encrypted with the app settings key
+  active      Boolean  @default(true)
+  lastSeenAt  DateTime?
+  credits     BankCredit[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([active, lastSeenAt])
+}
+
+model SmsGatewayPairingToken {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt, usedAt])
 }
 
 // One row per Indian financial year. Locked with SELECT … FOR UPDATE while issuing invoice numbers.
@@ -1801,6 +1855,7 @@ model ShopOrder {
   checkoutUrl       String?         @db.Text
   utr               String?
   verifiedVia       String?
+  expiresAt         DateTime?
   invoiceNumber     String?         @unique
   invoiceIssuedAt   DateTime?
   paidAt            DateTime?
@@ -1808,6 +1863,7 @@ model ShopOrder {
   fingerprint       String?         @db.Text
   lines             ShopOrderLine[]
   deliveries        ShopPaymentDelivery[]
+  bankCredit        BankCredit?
   shipment          ShopShipment?
   commissions       ShopCommission[]
   reprintRequests   ShopReprintRequest[]

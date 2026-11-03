@@ -29,6 +29,9 @@ export async function PUT(req: NextRequest) {
     upiId: String(incoming.upiId ?? current.upiId).trim(),
     upiPayeeName: String(incoming.upiPayeeName ?? current.upiPayeeName).trim() || "QR24x7",
     upiQrDataUrl: String(incoming.upiQrDataUrl ?? current.upiQrDataUrl),
+    upiGateway: ["manual", "youpi", "razorpay"].includes(String(incoming.upiGateway))
+      ? incoming.upiGateway as "manual" | "youpi" | "razorpay"
+      : current.upiGateway,
     // USDT
     usdtEnabled: typeof incoming.usdtEnabled === "boolean" ? incoming.usdtEnabled : current.usdtEnabled,
     usdtNetwork: String(incoming.usdtNetwork ?? current.usdtNetwork).trim() || "TRC20",
@@ -42,6 +45,10 @@ export async function PUT(req: NextRequest) {
     mailImapUser: String(incoming.mailImapUser ?? current.mailImapUser).trim(),
     mailImapPass: secret(incoming.mailImapPass, current.mailImapPass),
     mailFromFilter: String(incoming.mailFromFilter ?? current.mailFromFilter).trim(),
+    smsSenderAllow: String(incoming.smsSenderAllow ?? current.smsSenderAllow).trim(),
+    gmailClientId: String(incoming.gmailClientId ?? current.gmailClientId).trim(),
+    gmailClientSecret: secret(incoming.gmailClientSecret, current.gmailClientSecret),
+    gmailRefreshToken: secret(incoming.gmailRefreshToken, current.gmailRefreshToken),
     youpiBaseUrl: String(incoming.youpiBaseUrl ?? current.youpiBaseUrl).trim().replace(/\/$/, ""),
     youpiMerchantId: String(incoming.youpiMerchantId ?? current.youpiMerchantId).trim(),
     youpiWebhookSecret: secret(incoming.youpiWebhookSecret, current.youpiWebhookSecret),

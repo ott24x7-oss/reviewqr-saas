@@ -21,6 +21,7 @@ import type { PricingConfig } from "@/lib/settings";
 import { catalogueChargePaise } from "@/lib/plans/catalogue-price";
 import { formatINR, cn } from "@/lib/utils";
 import type { SubscriptionTier } from "@prisma/client";
+import { useAppLanguage } from "@/components/app-ui/i18n";
 
 type PayMethod = "upi" | "usdt";
 
@@ -116,6 +117,7 @@ function PaymentModal({
   onClose: () => void;
 }) {
   const router = useRouter();
+  const { text } = useAppLanguage();
   const { copied, copy } = useCopy();
   const [creating, setCreating] = React.useState<PayMethod | null>(null);
   const [order, setOrder] = React.useState<Order | null>(null);
@@ -123,6 +125,7 @@ function PaymentModal({
   const [submitting, setSubmitting] = React.useState(false);
   const [status, setStatus] = React.useState<OrderStatus>("PENDING");
   const [expired, setExpired] = React.useState(false);
+  const [secondsLeft, setSecondsLeft] = React.useState(0);
 
   const [youpiNote, setYoupiNote] = React.useState<string | null>(null);
   const [youpiBusy, setYoupiBusy] = React.useState(false);
@@ -213,7 +216,7 @@ function PaymentModal({
     }
 
     check();
-    const interval = setInterval(check, 4000);
+    const interval = setInterval(check, 6000);
     return () => {
       cancelled = true;
       clearInterval(interval);
@@ -225,7 +228,9 @@ function PaymentModal({
     if (!order || status !== "PENDING") return;
     const expiresAt = new Date(order.expiresAt).getTime();
     function tick() {
-      if (Date.now() >= expiresAt) setExpired(true);
+      const remaining = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+      setSecondsLeft(remaining);
+      if (remaining === 0) setExpired(true);
     }
     tick();
     const t = setInterval(tick, 1000);
@@ -430,8 +435,9 @@ function PaymentModal({
                   <div className="text-center">
                     <div className="text-3xl font-bold">₹{order.amountInrDisplay}</div>
                     <p className="mt-1 text-sm font-bold text-amber-600">
-                      Pay the EXACT amount ₹{order.amountInrDisplay} so we can auto-verify it.
+                      {text(`Pay exactly ₹${order.amountInrDisplay} so we can verify your transfer.`, `ठीक ₹${order.amountInrDisplay} का भुगतान करें ताकि हम आपका भुगतान सत्यापित कर सकें।`)}
                     </p>
+                    <p className="mt-1 text-xs text-muted-foreground">{text(`Order expires in ${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, "0")}`, `ऑर्डर ${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, "0")} में समाप्त होगा`)}</p>
                   </div>
 
                   {order.upi?.qr && (
@@ -442,7 +448,7 @@ function PaymentModal({
                         className="h-44 w-44 rounded-lg border border-border bg-white p-2"
                       />
                       <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <QrCode className="h-3 w-3" /> Scan to pay
+                        <QrCode className="h-3 w-3" /> {text("Scan to pay", "भुगतान के लिए स्कैन करें")}
                       </span>
                     </div>
                   )}
@@ -461,7 +467,7 @@ function PaymentModal({
                       </div>
                       <a href={order.upi.link}>
                         <Button className="w-full" variant="gradient">
-                          <Smartphone className="h-4 w-4 mr-1.5" /> Pay with any UPI app
+                          <Smartphone className="h-4 w-4 mr-1.5" /> {text("Pay with UPI app", "UPI ऐप से भुगतान करें")}
                         </Button>
                       </a>
                     </>
@@ -495,13 +501,13 @@ function PaymentModal({
               {/* Reference input */}
               <div className="space-y-1.5 pt-2 border-t border-border">
                 <Label htmlFor="pay-ref">
-                  {isUpi ? "UPI reference / UTR" : "Transaction hash"}
+                  {isUpi ? text("UPI reference / UTR (optional)", "UPI रेफ़रेंस / UTR (वैकल्पिक)") : "Transaction hash"}
                 </Label>
                 <Input
                   id="pay-ref"
                   value={reference}
                   onChange={(e) => setReference(e.target.value)}
-                  placeholder={isUpi ? "e.g. 4012XXXXXXXX" : "0x…"}
+                  placeholder={isUpi ? text("Bank UTR / reference number", "बैंक UTR / रेफ़रेंस नंबर") : "0x…"}
                   className="font-mono"
                 />
                 <Button
@@ -512,7 +518,7 @@ function PaymentModal({
                   {submitting ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    "I've paid — verify now"
+                    text("I've paid — verify now", "भुगतान हो गया — अभी सत्यापित करें")
                   )}
                 </Button>
               </div>
@@ -520,7 +526,7 @@ function PaymentModal({
               {/* Polling indicator */}
               <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                Verifying your payment…
+                {text("Checking for your payment…", "आपके भुगतान की जाँच हो रही है…")}
               </div>
             </div>
           )}

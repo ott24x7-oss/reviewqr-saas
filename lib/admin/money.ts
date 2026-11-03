@@ -165,7 +165,7 @@ export async function refundAdminPayment(id: string, refundUtr: string) {
   if (!updated.count) return fail(409, "Only a completed payment can be refunded");
   await reverseCommissionsForPayment(id);
   await reverseReferralForPayment(id);
-  return ok({ before: { status: payment.status }, after: { status: "REFUNDED", refundUtr: utr } });
+  return ok({ before: { status: payment.status }, after: { status: "REFUNDED", refundUtrLast4: utr.slice(-4) } });
 }
 
 export async function reconcileAdminPayment(id: string) {

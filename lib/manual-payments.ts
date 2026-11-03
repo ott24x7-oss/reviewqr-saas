@@ -10,7 +10,9 @@ import { prisma } from "./db";
 import { getPaymentsConfig, getPricingConfig } from "./settings";
 import { fetchRecentPaymentEmails, type ParsedEmail } from "./email-verify";
 import { activateCompletedPayment } from "./subscription";
-import type { Payment, SubscriptionTier } from "@prisma/client";
+import { matchBankCredit } from "./bank-credit-ledger";
+import { syncIncomingBankCredits } from "./bank-credit-sync";
+import { Prisma, type Payment, type SubscriptionTier } from "@prisma/client";
 
 export type PayMethod = "upi" | "usdt";
 
@@ -29,24 +31,8 @@ export async function createOrder(
   const base = months >= 12 ? plan.yearly : plan.monthly; // paise
   if (base <= 0) throw new Error("This plan is free");
 
-  // Unique 1–98 paise suffix so each pending INR amount is distinct for matching.
-  const suffix = 1 + Math.floor(Math.random() * 98);
-  const amount = base - (base % 100) + suffix; // e.g. 99900 -> 99937 (= ₹999.37)
-
   const cfg = await getPaymentsConfig();
-  let amountUsdt: number | null = null;
-  let network: string | null = null;
-  if (method === "usdt") {
-    const inr = amount / 100;
-    const rate = cfg.usdtRateInr > 0 ? cfg.usdtRateInr : 90;
-    // Unique cents suffix on the USDT amount too.
-    amountUsdt = Math.round((inr / rate) * 100) / 100 + (1 + Math.floor(Math.random() * 89)) / 100;
-    amountUsdt = Math.round(amountUsdt * 100) / 100;
-    network = cfg.usdtNetwork || "TRC20";
-  }
-
-  return prisma.payment.create({
-    data: {
+  const createData = (amount: number, amountUsdt: number | null, network: string | null): Prisma.PaymentUncheckedCreateInput => ({
       userId,
       amount,
       currency: "INR",
@@ -57,9 +43,37 @@ export async function createOrder(
       periodMonths: months,
       amountUsdt,
       network,
-      expiresAt: new Date(Date.now() + ORDER_TTL_MIN * 60_000)
-    }
+      expiresAt: new Date(Date.now() + (method === "upi" ? 15 : ORDER_TTL_MIN) * 60_000)
   });
+  if (method === "upi") {
+    // Keep amount selection and insert under one advisory lock, so concurrent
+    // checkouts sharing a base price choose separate paise values.
+    return prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(2407, 19)`;
+      const floor = base - (base % 100);
+      const occupied = await tx.payment.findMany({
+        // Keep each paise suffix reserved throughout the same 24h grace window
+        // used by matching, so a delayed alert cannot collide with a new order.
+        where: { status: "PENDING", method: "upi", expiresAt: { gt: new Date(Date.now() - 24 * 60 * 60_000) }, amount: { gte: floor + 1, lte: floor + 98 } },
+        select: { amount: true }
+      });
+      const used = new Set(occupied.map((payment) => payment.amount));
+      const first = 1 + Math.floor(Math.random() * 98);
+      let selected: number | null = null;
+      for (let offset = 0; offset < 98; offset++) {
+        const suffix = ((first - 1 + offset) % 98) + 1;
+        const candidate = floor + suffix;
+        if (!used.has(candidate)) { selected = candidate; break; }
+      }
+      if (selected == null) throw new Error("No unique UPI amount is available right now. Try again shortly.");
+      return tx.payment.create({ data: createData(selected, null, null) });
+    });
+  }
+  const amount = base - (base % 100) + 1 + Math.floor(Math.random() * 98);
+  const inr = amount / 100;
+  const rate = cfg.usdtRateInr > 0 ? cfg.usdtRateInr : 90;
+  const amountUsdt = Math.round((inr / rate) * 100) / 100 + (1 + Math.floor(Math.random() * 89)) / 100;
+  return prisma.payment.create({ data: createData(amount, Math.round(amountUsdt * 100) / 100, cfg.usdtNetwork || "TRC20") });
 }
 
 /** Attach the customer-entered UTR / tx-hash to a pending order. */
@@ -146,6 +160,21 @@ async function activate(payment: Payment, via: string, matchedEmail: string | nu
 /** Try to verify a single pending order against the inbox. Returns true if activated. */
 export async function reconcilePayment(payment: Payment): Promise<boolean> {
   if (payment.status !== "PENDING") return payment.status === "COMPLETED";
+  if (payment.method === "upi") {
+    const credits = await prisma.bankCredit.findMany({
+      where: {
+        paymentId: null,
+        shopOrderId: null,
+        amountPaise: payment.amount,
+        receivedAt: { gt: new Date(payment.createdAt.getTime() - 3 * 60_000), lt: new Date((payment.expiresAt?.getTime() || Date.now()) + 24 * 60 * 60_000) },
+        ...(payment.reference ? { utr: payment.reference.replace(/\D/g, "") } : {})
+      },
+      select: { id: true },
+      take: 30
+    });
+    for (const credit of credits) if ((await matchBankCredit(credit.id)).matched) return true;
+    return false;
+  }
   const cfg = await getPaymentsConfig();
   if (!cfg.mailVerifyEnabled || !cfg.mailImapUser) return false;
   // Refuse to auto-verify without a sender allow-list (see matchEmail rationale).
@@ -170,16 +199,25 @@ export async function reconcilePayment(payment: Payment): Promise<boolean> {
 
 /** Reconcile all non-expired pending orders in one inbox pass (for cron). */
 export async function reconcileAllPending(): Promise<{ checked: number; activated: number }> {
+  let bankChecked = 0;
+  let bankActivated = 0;
+  try {
+    const sync = await syncIncomingBankCredits();
+    bankChecked = sync.checked;
+    bankActivated = sync.matched;
+  } catch {
+    // A failed inbox source must not prevent the separate legacy USDT path from running.
+  }
   const cfg = await getPaymentsConfig();
-  if (!cfg.mailVerifyEnabled || !cfg.mailImapUser) return { checked: 0, activated: 0 };
+  if (!cfg.mailVerifyEnabled || !cfg.mailImapUser) return { checked: bankChecked, activated: bankActivated };
   // Refuse to auto-verify without a sender allow-list (see matchEmail rationale).
   if (!cfg.mailFromFilter.trim()) return { checked: 0, activated: 0 };
   const pending = await prisma.payment.findMany({
-    where: { status: "PENDING", method: { in: ["upi", "usdt"] }, expiresAt: { gt: new Date() } },
+    where: { status: "PENDING", method: "usdt", expiresAt: { gt: new Date() } },
     orderBy: { createdAt: "desc" },
     take: 100
   });
-  if (pending.length === 0) return { checked: 0, activated: 0 };
+  if (pending.length === 0) return { checked: bankChecked, activated: bankActivated };
   const emails = await fetchRecentPaymentEmails(
     {
       host: cfg.mailImapHost,
@@ -190,7 +228,7 @@ export async function reconcileAllPending(): Promise<{ checked: number; activate
     },
     1440
   );
-  let activated = 0;
+  let activated = bankActivated;
   const usedInBatch = new Set<string>();
   for (const p of pending) {
     const hit = matchEmail(p, emails);
@@ -202,7 +240,7 @@ export async function reconcileAllPending(): Promise<{ checked: number; activate
     await activate(p, "email", `${hit.messageId} :: ${hit.subject}`);
     activated++;
   }
-  return { checked: pending.length, activated };
+  return { checked: pending.length + bankChecked, activated };
 }
 
 /** Admin force-activation (manual confirmation). */
@@ -215,9 +253,17 @@ export async function activateManually(paymentId: string): Promise<boolean> {
 
 /** Expire stale pending orders (best-effort housekeeping). */
 export async function expireStale(): Promise<number> {
-  const r = await prisma.payment.updateMany({
-    where: { status: "PENDING", expiresAt: { lt: new Date() } },
-    data: { status: "FAILED" }
-  });
-  return r.count;
+  const now = new Date();
+  const [upi, other] = await Promise.all([
+    // Keep a UPI order eligible for delayed bank alerts through its matching grace window.
+    prisma.payment.updateMany({
+      where: { status: "PENDING", method: "upi", expiresAt: { lt: new Date(now.getTime() - 24 * 60 * 60_000) } },
+      data: { status: "FAILED" }
+    }),
+    prisma.payment.updateMany({
+      where: { status: "PENDING", method: { not: "upi" }, expiresAt: { lt: now } },
+      data: { status: "FAILED" }
+    })
+  ]);
+  return upi.count + other.count;
 }

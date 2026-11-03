@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { getPaymentsConfig } from "@/lib/settings";
 import { createOrder, type PayMethod } from "@/lib/manual-payments";
+import QRCode from "qrcode";
 
 /** Create a pending UPI/USDT order and return the pay-to details. */
 export async function POST(req: NextRequest) {
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest) {
   }
 
   const cfg = await getPaymentsConfig();
-  if (method === "upi" && (!cfg.upiEnabled || !cfg.upiId)) {
+  if (method === "upi" && (cfg.upiGateway !== "manual" || !cfg.upiEnabled || !cfg.upiId)) {
     return NextResponse.json({ error: "UPI payments are not available right now." }, { status: 400 });
   }
   if (method === "usdt" && (!cfg.usdtEnabled || !cfg.usdtAddress)) {
@@ -31,8 +32,9 @@ export async function POST(req: NextRequest) {
       method === "upi"
         ? `upi://pay?pa=${encodeURIComponent(cfg.upiId)}&pn=${encodeURIComponent(
             cfg.upiPayeeName || "QR24x7"
-          )}&am=${rupees}&cu=INR&tn=${encodeURIComponent("QR24x7 " + tier)}`
+          )}&am=${rupees}&cu=INR&tn=${encodeURIComponent("QR24x7 " + order.id.slice(-8))}`
         : null;
+    const upiQr = upiLink ? await QRCode.toDataURL(upiLink, { margin: 1, width: 320, errorCorrectionLevel: "M" }) : null;
 
     return NextResponse.json({
       id: order.id,
@@ -43,7 +45,7 @@ export async function POST(req: NextRequest) {
       amountInrDisplay: rupees,
       amountUsdt: order.amountUsdt,
       expiresAt: order.expiresAt,
-      upi: method === "upi" ? { id: cfg.upiId, payee: cfg.upiPayeeName, qr: cfg.upiQrDataUrl, link: upiLink } : null,
+      upi: method === "upi" ? { id: cfg.upiId, payee: cfg.upiPayeeName, qr: upiQr, link: upiLink } : null,
       usdt: method === "usdt" ? { address: cfg.usdtAddress, network: cfg.usdtNetwork } : null
     });
   } catch (e: any) {

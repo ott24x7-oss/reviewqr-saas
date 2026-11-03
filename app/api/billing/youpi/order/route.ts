@@ -9,6 +9,7 @@ import { DURATIONS } from "@/lib/plans/catalog";
 import { quotePlanCheckout, scheduleDowngrade } from "@/lib/plans/checkout";
 import { legacyPlanId } from "@/lib/plans/legacy";
 import { activateCompletedPayment } from "@/lib/subscription";
+import { getPaymentsConfig } from "@/lib/settings";
 import { shopStubHonoured } from "@/lib/shop/payment-stub";
 
 export async function POST(req: NextRequest) {
@@ -21,6 +22,10 @@ export async function POST(req: NextRequest) {
   }
 
   const cfg = await getYoupiConfig();
+  const paymentSettings = await getPaymentsConfig();
+  if (paymentSettings.upiGateway !== "youpi") {
+    return NextResponse.json({ error: "YouPI is not the active UPI gateway." }, { status: 400 });
+  }
   if (!youpiConfigured(cfg)) {
     return NextResponse.json({ error: "UPI checkout is not available right now." }, { status: 400 });
   }

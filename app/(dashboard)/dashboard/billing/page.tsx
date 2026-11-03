@@ -98,9 +98,9 @@ export default async function BillingPage({
       <BillingClient
         currentTier={user.subscriptionTier}
         plans={plans}
-        upiEnabled={cfg.upiEnabled && !!cfg.upiId}
+        upiEnabled={cfg.upiGateway === "manual" && cfg.upiEnabled && !!cfg.upiId}
         usdtEnabled={cfg.usdtEnabled && !!cfg.usdtAddress}
-        youpiEnabled={!!(cfg.youpiBaseUrl && cfg.youpiMerchantId)}
+        youpiEnabled={cfg.upiGateway === "youpi" && !!(cfg.youpiBaseUrl && cfg.youpiMerchantId)}
         initialSlug={searchParams?.plan || ""}
         initialDuration={searchParams?.duration || ""}
         catalog={catalog.map((plan) => ({
