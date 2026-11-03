@@ -14,7 +14,7 @@ import { fonts } from "../../src/theme";
 import { Card, EmptyState, LoadErrorCard, Skeleton } from "../../src/ui/bits";
 import { PrimaryButton, SecondaryButton } from "../../src/ui/buttons";
 import { useTheme } from "../../src/ui/theme";
-import { buildReferralShareText, formatReferralDate, normalizeReferralHome, projectedExpiryDisplay, stageForReward } from "../../src/referral/presentation";
+import { buildReferralHeroText, buildReferralShareText, formatReferralDate, normalizeReferralHome, projectedExpiryDisplay, stageForReward } from "../../src/referral/presentation";
 import type { Palette } from "../../src/ui/tokens";
 
 function referralStageLabel(stage: OwnerReferralHome["referrals"][number]["stage"], t: ReturnType<typeof useI18n>["t"]) {
@@ -88,9 +88,11 @@ function ReferScreenContent() {
               <Gift color={palette.deep} size={24} />
             </View>
             <Text accessibilityRole="header" style={[styles.heroTitle, { color: palette.ink }, lang === "hi" && styles.hindi]}>
-              {data.hasRewardDetails
-                ? t.referralHero.replace("{days}", String(data.bonusDaysForFriend)).replace("{months}", String(data.monthsPerReferral))
-                : t.referralHeroFallback}
+              {buildReferralHeroText(data.bonusDaysForFriend, data.monthsPerReferral, lang, {
+                fallback: t.referralHeroFallback,
+                withFriendBonus: t.referralHero,
+                withoutFriendBonus: t.referralHeroNoFriendBonus
+              })}
             </Text>
             {data.hasCurrentExpiry ? <Text style={[styles.note, { color: palette.muted }, lang === "hi" && styles.hindi]}>
               {data.currentEndsAt

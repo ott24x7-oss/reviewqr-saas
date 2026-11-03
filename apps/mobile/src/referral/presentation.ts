@@ -11,6 +11,12 @@ export type NormalizedReferralHome = OwnerReferralHome & {
 
 type ReferralShareText = Partial<Record<"en" | "hi", string>> | null | undefined;
 
+type ReferralHeroCopy = {
+  fallback: string;
+  withFriendBonus: string;
+  withoutFriendBonus: string;
+};
+
 function record(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }
@@ -25,6 +31,83 @@ function nonNegativeInteger(value: unknown): number {
 
 function isNonNegativeInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value >= 0;
+}
+
+function positiveInteger(value: number | null | undefined): number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
+}
+
+function friendDayQuantity(days: number, lang: "en" | "hi"): string {
+  if (lang === "hi") return `${days} दिन`;
+  return `${days} ${days === 1 ? "day" : "days"}`;
+}
+
+function freeMonthQuantity(months: number, lang: "en" | "hi"): string {
+  if (lang === "hi") return `${months} मुफ़्त ${months === 1 ? "महीना" : "महीने"}`;
+  return `${months} free ${months === 1 ? "month" : "months"}`;
+}
+
+export function buildReferralHeroText(
+  bonusDaysForFriend: number | null | undefined,
+  monthsPerReferral: number | null | undefined,
+  lang: "en" | "hi",
+  copy: ReferralHeroCopy
+): string {
+  const months = positiveInteger(monthsPerReferral);
+  if (months === 0) return copy.fallback;
+
+  const days = positiveInteger(bonusDaysForFriend);
+  if (days === 0) {
+    return copy.withoutFriendBonus.replace("{freeMonths}", freeMonthQuantity(months, lang));
+  }
+  return copy.withFriendBonus
+    .replace("{friendDays}", friendDayQuantity(days, lang))
+    .replace("{freeMonths}", freeMonthQuantity(months, lang));
+}
+
+function buildFallbackReferralShareText(
+  lang: "en" | "hi",
+  referralCode: string | null,
+  referralLink: string | null,
+  bonusDaysForFriend: number,
+  monthsPerReferral: number
+): string {
+  let intro: string;
+  if (lang === "hi") {
+    if (referralCode && referralLink) intro = `मेरे रेफ़रल कोड ${referralCode} से QR24x7 से जुड़ें।`;
+    else if (referralCode) intro = `मेरे रेफ़रल कोड ${referralCode} से QR24x7 से जुड़ें।`;
+    else intro = "QR24x7 से जुड़ें।";
+
+    const days = positiveInteger(bonusDaysForFriend);
+    const months = positiveInteger(monthsPerReferral);
+    if (days === 0 && months === 0) return referralLink ? `${intro}\n${referralLink}` : intro;
+    const friendReward = days > 0
+      ? `उस बिज़नेस को ${days} बोनस दिन ${days === 1 ? "मिलेगा" : "मिलेंगे"}`
+      : "";
+    const ownerReward = months > 0
+      ? `मुझे अधिकतम ${freeMonthQuantity(months, lang)} ${months === 1 ? "मिलेगा" : "मिलेंगे"}`
+      : "";
+    const rewards = [friendReward, ownerReward].filter(Boolean).join(" और ");
+    const offer = ` आपका बिज़नेस प्लान लेने पर ${rewards}।`;
+    return `${intro}${offer}${referralLink ? `\n${referralLink}` : ""}`;
+  }
+
+  if (referralCode && referralLink) intro = `Join QR24x7 with my referral code ${referralCode}.`;
+  else if (referralCode) intro = `Join QR24x7 with my referral code ${referralCode}.`;
+  else intro = "Join QR24x7.";
+
+  const days = positiveInteger(bonusDaysForFriend);
+  const months = positiveInteger(monthsPerReferral);
+  if (days === 0 && months === 0) return referralLink ? `${intro}\n${referralLink}` : intro;
+  const friendReward = days > 0
+    ? `you get ${days} bonus ${days === 1 ? "day" : "days"}`
+    : "";
+  const ownerReward = months > 0
+    ? `I get up to ${freeMonthQuantity(months, lang)}`
+    : "";
+  const rewards = [friendReward, ownerReward].filter(Boolean).join(" and ");
+  const offer = ` When your business buys a plan, ${rewards}.`;
+  return `${intro}${offer}${referralLink ? `\n${referralLink}` : ""}`;
 }
 
 function optionalDate(value: unknown): string | null {
@@ -45,7 +128,8 @@ export function buildReferralShareText(
   shareText: ReferralShareText,
   lang: "en" | "hi",
   code = "",
-  link = ""
+  link = "",
+  rewards: { bonusDaysForFriend?: number; monthsPerReferral?: number } = {}
 ) {
   const provided = nonEmptyString(shareText?.[lang]);
   if (provided) return provided;
@@ -53,14 +137,13 @@ export function buildReferralShareText(
   const referralCode = nonEmptyString(code);
   const referralLink = nonEmptyString(link);
   if (!referralCode && !referralLink) return "";
-  if (lang === "hi") {
-    if (referralCode && referralLink) return `मेरा रेफ़रल कोड ${referralCode} इस्तेमाल करके QR24x7 से जुड़ें: ${referralLink}`;
-    if (referralCode) return `मेरा रेफ़रल कोड ${referralCode} इस्तेमाल करके QR24x7 से जुड़ें।`;
-    return `QR24x7 से जुड़ें: ${referralLink}`;
-  }
-  if (referralCode && referralLink) return `Join QR24x7 with my referral code ${referralCode}: ${referralLink}`;
-  if (referralCode) return `Join QR24x7 with my referral code ${referralCode}.`;
-  return `Join QR24x7: ${referralLink}`;
+  return buildFallbackReferralShareText(
+    lang,
+    referralCode,
+    referralLink,
+    positiveInteger(rewards.bonusDaysForFriend),
+    positiveInteger(rewards.monthsPerReferral)
+  );
 }
 
 /**
@@ -73,9 +156,11 @@ export function normalizeReferralHome(raw: unknown): NormalizedReferralHome {
   const code = nonEmptyString(source.code) ?? "";
   const link = nonEmptyString(source.link) ?? (code ? `https://qr24x7.in/refer/${encodeURIComponent(code)}` : "");
   const suppliedShareText = record(source.shareText);
+  const monthsPerReferral = nonNegativeInteger(source.monthsPerReferral);
+  const bonusDaysForFriend = nonNegativeInteger(source.bonusDaysForFriend);
   const shareText = {
-    en: buildReferralShareText(suppliedShareText, "en", code, link),
-    hi: buildReferralShareText(suppliedShareText, "hi", code, link)
+    en: buildReferralShareText(suppliedShareText, "en", code, link, { bonusDaysForFriend, monthsPerReferral }),
+    hi: buildReferralShareText(suppliedShareText, "hi", code, link, { bonusDaysForFriend, monthsPerReferral })
   };
   const rawReferrals = Array.isArray(source.referrals) ? source.referrals : [];
   const legacyRewards = (Array.isArray(source.rewards) ? source.rewards : []).map((value, index) => {
@@ -105,8 +190,8 @@ export function normalizeReferralHome(raw: unknown): NormalizedReferralHome {
     code,
     link,
     shareText,
-    monthsPerReferral: nonNegativeInteger(source.monthsPerReferral),
-    bonusDaysForFriend: nonNegativeInteger(source.bonusDaysForFriend),
+    monthsPerReferral,
+    bonusDaysForFriend,
     holdDays: nonNegativeInteger(source.holdDays),
     maxMonthsPerYear: nonNegativeInteger(source.maxMonthsPerYear),
     monthsEarnedThisYear: nonNegativeInteger(source.monthsEarnedThisYear),

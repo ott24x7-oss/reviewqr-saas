@@ -10,6 +10,7 @@ import { hashToken, randomToken } from "../tokens";
 import { absoluteUrl, slugify } from "../utils";
 import { escapeHtml, sendEmail } from "../email";
 import { cappedRewardMonths, hasActivePaidPlan } from "../plans/referral";
+import { buildOwnerReferralShareText } from "./referral-copy";
 import { getPlanProgramSettings } from "../plans/settings";
 import { extendByReward } from "../plans/quote";
 
@@ -314,15 +315,13 @@ export async function ownerReferHome(userId: string) {
   const code = referral.code;
   const link = absoluteUrl(`/refer/${code}`);
   // The promotional amount is the largest configured reward. Each referred plan's actual amount appears in its progress row.
-  const monthsPerReferral = Math.max(...Object.values(settings.monthsByDuration));
+  const monthsPerReferral = Math.max(0, ...Object.values(settings.monthsByDuration));
   const bonusDaysForFriend = settings.newBusinessDays;
+  const shareText = buildOwnerReferralShareText(link, bonusDaysForFriend, monthsPerReferral);
   return ok({
     code,
     link,
-    shareText: {
-      en: `Join QR24x7 with my link. When your business buys a plan, you get ${bonusDaysForFriend} bonus days and I get up to ${monthsPerReferral} free months: ${link}`,
-      hi: `मेरे लिंक से QR24x7 से जुड़ें। आपका बिज़नेस प्लान लेने पर आपको ${bonusDaysForFriend} बोनस दिन मिलेंगे और मुझे ${monthsPerReferral} महीने तक मुफ़्त मिलेंगे: ${link}`
-    },
+    shareText,
     monthsPerReferral,
     bonusDaysForFriend,
     holdDays: settings.holdDays,
