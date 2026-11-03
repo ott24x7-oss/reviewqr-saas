@@ -10,8 +10,8 @@ The manual UPI gateway uses the existing payment amount and activation flow, wit
 
    `https://<app-host>/api/admin/settings/payments/gmail/callback`
 
-   The app requests the `gmail.readonly` scope. An email is accepted only when its parsed sender domain is allowed and aligned DKIM passes in `Authentication-Results` or ARC authentication results.
-4. Set the Railway cron to `POST /api/billing/reconcile` every minute with `x-cron-secret: <CRON_SECRET>`. This syncs email credits and retries matching.
+   The app requests the `gmail.readonly` scope. An email is accepted only when its parsed sender domain is allowed and a DKIM pass in the first `Authentication-Results` header aligns to that domain (or an allow-listed parent domain). The receiver ID must be trusted; it defaults to `mx.google.com` and can be configured as a comma-separated list in payment settings. Later `Authentication-Results` headers and ARC results are ignored for verification.
+4. The app's Node.js process checks for pending own-UPI payments and runs `billing.reconcile` every minute while any are pending. No external cron or manual schedule is required. `POST /api/billing/reconcile` remains available for an authenticated admin or an optional `x-cron-secret` caller.
 
 ## Pair the existing APK
 

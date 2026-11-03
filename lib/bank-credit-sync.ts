@@ -8,7 +8,12 @@ function senderAllowFilter(configured: string) {
   return [...new Set([...BANK_EMAIL_DOMAINS, ...configured.split(",").map((value) => value.trim()).filter(Boolean)])].join(",");
 }
 
-async function importEmails(source: "imap" | "gmail", emails: Awaited<ReturnType<typeof fetchRecentPaymentEmails>>, configuredFilter: string) {
+async function importEmails(
+  source: "imap" | "gmail",
+  emails: Awaited<ReturnType<typeof fetchRecentPaymentEmails>>,
+  configuredFilter: string,
+  trustedAuthservIds: string[]
+) {
   let imported = 0;
   for (const email of emails) {
     const parsed = parseBankEmail({
@@ -17,7 +22,7 @@ async function importEmails(source: "imap" | "gmail", emails: Awaited<ReturnType
       text: email.text,
       authenticationResults: email.authenticationResults,
       arcAuthenticationResults: email.arcAuthenticationResults
-    }, configuredFilter.split(",").map((value) => value.trim()).filter(Boolean));
+    }, configuredFilter.split(",").map((value) => value.trim()).filter(Boolean), trustedAuthservIds);
     const sender = parseSenderAddress(email.fromAddress || email.from);
     if (!parsed || !sender) continue;
     const identity = email.messageId || `${sender.address}:${email.date.toISOString()}:${email.subject}`;
@@ -49,9 +54,10 @@ export async function syncIncomingBankCredits() {
       port: cfg.mailImapPort,
       user: cfg.mailImapUser,
       pass: cfg.mailImapPass,
-      fromFilter: filter
+      fromFilter: filter,
+      trustedAuthservIds: cfg.mailTrustedAuthservIds.split(",").map((value) => value.trim()).filter(Boolean)
     }, 1440, 80);
-    imapImported = await importEmails("imap", emails, cfg.mailFromFilter);
+    imapImported = await importEmails("imap", emails, cfg.mailFromFilter, cfg.mailTrustedAuthservIds.split(",").map((value) => value.trim()).filter(Boolean));
   }
 
   if (cfg.mailVerifyEnabled && cfg.gmailClientId && cfg.gmailClientSecret && cfg.gmailRefreshToken) {
@@ -60,7 +66,7 @@ export async function syncIncomingBankCredits() {
       clientSecret: cfg.gmailClientSecret,
       refreshToken: cfg.gmailRefreshToken
     }, 1440, 80);
-    gmailImported = await importEmails("gmail", emails, cfg.mailFromFilter);
+    gmailImported = await importEmails("gmail", emails, cfg.mailFromFilter, cfg.mailTrustedAuthservIds.split(",").map((value) => value.trim()).filter(Boolean));
   }
 
   const matched = await matchAllUnclaimedBankCredits();

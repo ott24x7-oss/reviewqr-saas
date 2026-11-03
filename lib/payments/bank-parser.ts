@@ -22,6 +22,8 @@ export const BANK_EMAIL_DOMAINS = [
   "unionbankofindia.com", "ippbonline.com", "binance.com", "paypal.com"
 ] as const;
 
+export const DEFAULT_TRUSTED_AUTH_SERV_IDS = ["mx.google.com"] as const;
+
 const AMOUNT_PATTERNS = [
   /\binr\s*([\d,]+(?:\.\d{1,2})?)\s*(?:was|has\s*been|is)?\s*credited\b/i,
   /\bamount\s*credited\s*[:\s]*(?:inr|rs\.?|₹)?\s*([\d,]+(?:\.\d{1,2})?)/i,
@@ -104,38 +106,104 @@ function isAllowedDomain(domain: string, configuredDomains: string[]): boolean {
   return allowed.some((entry) => domain === entry || domain.endsWith(`.${entry}`));
 }
 
-function dkimPassesForDomain(headers: string | string[] | undefined, domain: string): boolean {
-  const values = Array.isArray(headers) ? headers : [headers || ""];
-  return values.some((raw) => {
-    const header = String(raw).toLowerCase().replace(/\r?\n[ \t]+/g, " ");
-    if (!/\bdkim\s*=\s*pass\b/.test(header)) return false;
-    const identities = [
-      ...[...header.matchAll(/\bheader\.d\s*=\s*([^\s;]+)/g)].map((match) => match[1]),
-      ...[...header.matchAll(/\bheader\.i\s*=\s*([^\s;]+)/g)].map((match) => match[1].replace(/^@/, "").split("@").pop() || "")
-    ].map((value) => value.replace(/^@/, "").replace(/\.$/, ""));
-    return identities.some((identity) => identity === domain);
-  });
+function isExplicitlyAllowedDomain(domain: string, configuredDomains: string[]): boolean {
+  const allowed = [...BANK_EMAIL_DOMAINS, ...configuredDomains]
+    .map((value) => normalizeDomain(value.replace(/^.*@/, "")))
+    .filter(Boolean);
+  return allowed.includes(domain);
 }
 
-export function bankEmailDiagnostics(input: BankEmailInput, configuredDomains: string[] = []) {
+function normalizeDomain(value: string): string {
+  return value.trim().toLowerCase().replace(/^@/, "").replace(/\.$/, "");
+}
+
+function authservId(raw: string): string {
+  return normalizeDomain(raw.split(";", 1)[0]?.trim().split(/\s+/, 1)[0] || "");
+}
+
+function identityDomains(clause: string): string[] {
+  let depth = 0;
+  let quote = "";
+  let escaped = false;
+  let uncommented = "";
+  for (const char of clause) {
+    if (escaped) {
+      if (depth === 0) uncommented += char;
+      escaped = false;
+      continue;
+    }
+    if (quote && char === "\\") {
+      if (depth === 0) uncommented += char;
+      escaped = true;
+      continue;
+    }
+    if (quote) {
+      if (depth === 0) uncommented += char;
+      if (char === quote) quote = "";
+      continue;
+    }
+    if (char === "\"" || char === "'") {
+      if (depth === 0) uncommented += char;
+      quote = char;
+    } else if (char === "(") depth++;
+    else if (char === ")") depth = Math.max(0, depth - 1);
+    else if (depth === 0) uncommented += char;
+  }
+  const values = [...uncommented.matchAll(/\bheader\.(d|i)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s;()]+))/gi)]
+    .map((match) => match[2] || match[3] || match[4] || "");
+  return values.map((value) => normalizeDomain(value.split("@").pop() || "")).filter(Boolean);
+}
+
+function dkimPassesForDomain(
+  headers: string | string[] | undefined,
+  domain: string,
+  configuredDomains: string[],
+  configuredAuthservIds: string[]
+): boolean {
+  // Header arrays preserve wire order. The first Authentication-Results is the
+  // receiver's result; later copies and ARC results are sender-controlled input.
+  const raw = Array.isArray(headers) ? headers[0] : headers;
+  if (!raw) return false;
+  const header = String(raw).replace(/\r?\n[ \t]+/g, " ").trim();
+  const trusted = configuredAuthservIds.length ? configuredAuthservIds : [...DEFAULT_TRUSTED_AUTH_SERV_IDS];
+  const allowedAuthservIds = new Set(trusted.map(normalizeDomain).filter(Boolean));
+  const clauses = header.split(";");
+  if (!allowedAuthservIds.has(authservId(header))) return false;
+
+  const passingAlignedClauses = clauses.slice(1).filter((clause) => {
+    if (!/^\s*dkim\s*=\s*pass(?:\s|$)/i.test(clause)) return false;
+    return identityDomains(clause).some((identity) =>
+      identity === domain || (domain.endsWith(`.${identity}`) && isExplicitlyAllowedDomain(identity, configuredDomains))
+    );
+  });
+  return passingAlignedClauses.length >= 1;
+}
+
+export function bankEmailDiagnostics(
+  input: BankEmailInput,
+  configuredDomains: string[] = [],
+  trustedAuthservIds: string[] = [...DEFAULT_TRUSTED_AUTH_SERV_IDS]
+) {
   const sender = parseSenderAddress(input.from);
   if (!sender) return { senderAddress: null, domainAllowed: false, dkimAligned: false };
   return {
     senderAddress: sender.address,
     domainAllowed: isAllowedDomain(sender.domain, configuredDomains),
-    dkimAligned: dkimPassesForDomain(input.authenticationResults, sender.domain)
-      || dkimPassesForDomain(input.arcAuthenticationResults, sender.domain)
+    dkimAligned: dkimPassesForDomain(input.authenticationResults, sender.domain, configuredDomains, trustedAuthservIds)
   };
 }
 
 /** Email is accepted only when the parsed mailbox domain is trusted and aligned DKIM passed. */
-export function parseBankEmail(input: BankEmailInput, configuredDomains: string[] = []): ParsedBankCredit | null {
+export function parseBankEmail(
+  input: BankEmailInput,
+  configuredDomains: string[] = [],
+  trustedAuthservIds: string[] = [...DEFAULT_TRUSTED_AUTH_SERV_IDS]
+): ParsedBankCredit | null {
   const address = senderAddress(input.from);
   if (!address) return null;
   const domain = address.split("@").pop() || "";
   if (!isAllowedDomain(domain, configuredDomains)) return null;
-  if (!dkimPassesForDomain(input.authenticationResults, domain)
-      && !dkimPassesForDomain(input.arcAuthenticationResults, domain)) return null;
+  if (!dkimPassesForDomain(input.authenticationResults, domain, configuredDomains, trustedAuthservIds)) return null;
 
   const text = `${input.subject || ""}\n${input.text || ""}`.slice(0, 20000);
   if (NON_CREDIT.test(text) || !CREDIT_CUE.test(text)) return null;

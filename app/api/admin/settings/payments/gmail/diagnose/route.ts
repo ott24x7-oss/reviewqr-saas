@@ -17,12 +17,20 @@ export async function GET(req: NextRequest) {
       emails = await fetchRecentGmailPaymentEmails({ clientId: cfg.gmailClientId, clientSecret: cfg.gmailClientSecret, refreshToken: cfg.gmailRefreshToken }, 1440, 40);
     } else {
       const filter = [...new Set([...BANK_EMAIL_DOMAINS, ...configured])].join(",");
-      emails = await fetchRecentPaymentEmails({ host: cfg.mailImapHost, port: cfg.mailImapPort, user: cfg.mailImapUser, pass: cfg.mailImapPass, fromFilter: filter }, 1440, 40);
+      emails = await fetchRecentPaymentEmails({
+        host: cfg.mailImapHost,
+        port: cfg.mailImapPort,
+        user: cfg.mailImapUser,
+        pass: cfg.mailImapPass,
+        fromFilter: filter,
+        trustedAuthservIds: cfg.mailTrustedAuthservIds.split(",").map((item) => item.trim()).filter(Boolean)
+      }, 1440, 40);
     }
     const rows = emails.map((email) => {
       const input = { from: email.fromAddress || email.from, subject: email.subject, text: email.text, authenticationResults: email.authenticationResults, arcAuthenticationResults: email.arcAuthenticationResults };
-      const diagnostics = bankEmailDiagnostics(input, configured);
-      const parsed = parseBankEmail(input, configured);
+      const trustedAuthservIds = cfg.mailTrustedAuthservIds.split(",").map((item) => item.trim()).filter(Boolean);
+      const diagnostics = bankEmailDiagnostics(input, configured, trustedAuthservIds);
+      const parsed = parseBankEmail(input, configured, trustedAuthservIds);
       return {
         date: email.date.toISOString(),
         from: parseSenderAddress(email.fromAddress || email.from)?.address || "Unknown sender",

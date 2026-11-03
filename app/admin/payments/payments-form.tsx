@@ -321,6 +321,17 @@ export function PaymentsConfigForm({ initial }: { initial: PaymentsConfig }) {
               Comma-separated sender addresses or domains. Built-in Indian bank domains are also checked. Every email must pass aligned DKIM.
             </p>
           </div>
+          <div>
+            <Label className="text-xs">Trusted Authentication-Results receiver IDs</Label>
+            <Input
+              value={cfg.mailTrustedAuthservIds}
+              onChange={(e) => update("mailTrustedAuthservIds", e.target.value)}
+              placeholder="mx.google.com"
+            />
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Comma-separated authserv-id values. Only the first Authentication-Results header is trusted; ARC results are ignored. Defaults to mx.google.com.
+            </p>
+          </div>
 
           <div className="border-t pt-4 space-y-3">
             <div><div className="text-sm font-medium">Gmail API (OAuth)</div><p className="text-[11px] text-muted-foreground">Read-only bank alert access. Add the callback URL shown after saving your OAuth client in Google Cloud.</p></div>

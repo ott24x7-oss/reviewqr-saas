@@ -185,7 +185,8 @@ export async function reconcilePayment(payment: Payment): Promise<boolean> {
       port: cfg.mailImapPort,
       user: cfg.mailImapUser,
       pass: cfg.mailImapPass,
-      fromFilter: cfg.mailFromFilter
+      fromFilter: cfg.mailFromFilter,
+      trustedAuthservIds: cfg.mailTrustedAuthservIds.split(",").map((value) => value.trim()).filter(Boolean)
     },
     1440
   );
@@ -224,7 +225,8 @@ export async function reconcileAllPending(): Promise<{ checked: number; activate
       port: cfg.mailImapPort,
       user: cfg.mailImapUser,
       pass: cfg.mailImapPass,
-      fromFilter: cfg.mailFromFilter
+      fromFilter: cfg.mailFromFilter,
+      trustedAuthservIds: cfg.mailTrustedAuthservIds.split(",").map((value) => value.trim()).filter(Boolean)
     },
     1440
   );

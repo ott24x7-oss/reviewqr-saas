@@ -36,15 +36,64 @@ describe("bank email sender authentication", () => {
     expect(parseBankEmail(trusted)).toMatchObject({ amountPaise: 99937, utr: "123456789012" });
   });
 
+  it("accepts multiple passing aligned DKIM signatures", () => {
+    expect(parseBankEmail({
+      ...trusted,
+      authenticationResults: "mx.google.com; dkim=pass header.d=axisbank.com header.i=@axisbank.com; dkim=pass header.d=axisbank.com header.i=@axisbank.com"
+    })).toMatchObject({ amountPaise: 99937, utr: "123456789012" });
+  });
+
   it("rejects spoofed display names, untrusted domains, and missing or misaligned DKIM", () => {
     expect(parseBankEmail({ ...trusted, from: "alerts@attacker.invalid" })).toBeNull();
     expect(parseBankEmail({ ...trusted, from: "Axis Bank <fraud@attacker.invalid>" })).toBeNull();
+    expect(parseBankEmail({ ...trusted, from: "Axis Bank alerts@axisbank.com <alerts@attacker.invalid>" })).toBeNull();
     expect(parseBankEmail({ ...trusted, authenticationResults: "dkim=fail header.d=axisbank.com" })).toBeNull();
     expect(parseBankEmail({ ...trusted, authenticationResults: "dkim=pass header.d=attacker.invalid" })).toBeNull();
     expect(bankEmailDiagnostics({ ...trusted, from: "Axis Bank <alerts@attacker.invalid>" })).toMatchObject({ domainAllowed: false, dkimAligned: false });
   });
 
-  it("accepts an aligned DKIM result in ARC authentication results", () => {
-    expect(parseBankEmail({ ...trusted, authenticationResults: "", arcAuthenticationResults: "i=1; dkim=pass header.d=axisbank.com" })).not.toBeNull();
+  it("keeps a passing result and its DKIM identity in the same clause", () => {
+    expect(parseBankEmail({
+      ...trusted,
+      authenticationResults: "mx.google.com; dkim=pass header.i=@evil.com; dkim=fail header.d=axisbank.in"
+    })).toBeNull();
+  });
+
+  it("ignores extra Authentication-Results headers after Gmail's topmost header", () => {
+    expect(parseBankEmail({
+      ...trusted,
+      authenticationResults: [
+        "mx.google.com; dkim=fail header.d=axisbank.com",
+        "mx.google.com; dkim=pass header.d=axisbank.com"
+      ]
+    })).toBeNull();
+  });
+
+  it("ignores ARC authentication results", () => {
+    expect(parseBankEmail({
+      ...trusted,
+      authenticationResults: "mx.google.com; dkim=fail header.d=axisbank.com",
+      arcAuthenticationResults: "i=1; dkim=pass header.d=axisbank.com"
+    })).toBeNull();
+  });
+
+  it("accepts genuine Axis and HDFC samples and an allow-listed parent DKIM domain", () => {
+    expect(parseBankEmail(trusted)).not.toBeNull();
+    expect(parseBankEmail({
+      from: "HDFC Bank <alerts@hdfcbank.net>",
+      subject: "Credit alert",
+      text: "INR 250.50 has been credited to your account. UTR 223456789012",
+      authenticationResults: "mx.google.com; dkim=pass header.d=hdfcbank.net header.i=@hdfcbank.net"
+    })).toMatchObject({ amountPaise: 25050, utr: "223456789012" });
+    expect(parseBankEmail({
+      ...trusted,
+      from: "Axis Bank <alerts@alerts.axisbank.com>",
+      authenticationResults: "mx.google.com; dkim=pass header.d=axisbank.com"
+    })).not.toBeNull();
+  });
+
+  it("requires the receiver ID to be in the configured trust list", () => {
+    expect(parseBankEmail({ ...trusted, authenticationResults: "mail.example.net; dkim=pass header.d=axisbank.com" })).toBeNull();
+    expect(parseBankEmail({ ...trusted, authenticationResults: "mail.example.net; dkim=pass header.d=axisbank.com" }, [], ["mail.example.net"])).not.toBeNull();
   });
 });

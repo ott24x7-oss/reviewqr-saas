@@ -45,6 +45,7 @@ export async function PUT(req: NextRequest) {
     mailImapUser: String(incoming.mailImapUser ?? current.mailImapUser).trim(),
     mailImapPass: secret(incoming.mailImapPass, current.mailImapPass),
     mailFromFilter: String(incoming.mailFromFilter ?? current.mailFromFilter).trim(),
+    mailTrustedAuthservIds: String(incoming.mailTrustedAuthservIds ?? current.mailTrustedAuthservIds).trim() || "mx.google.com",
     smsSenderAllow: String(incoming.smsSenderAllow ?? current.smsSenderAllow).trim(),
     gmailClientId: String(incoming.gmailClientId ?? current.gmailClientId).trim(),
     gmailClientSecret: secret(incoming.gmailClientSecret, current.gmailClientSecret),

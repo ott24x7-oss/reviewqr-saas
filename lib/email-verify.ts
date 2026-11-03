@@ -15,6 +15,7 @@ export type MailCfg = {
   user: string;
   pass: string;
   fromFilter: string; // comma-separated sender substrings
+  trustedAuthservIds?: string[];
 };
 
 export type ParsedEmail = {
@@ -29,15 +30,16 @@ export type ParsedEmail = {
   arcAuthenticationResults: string[];
 };
 
-function headerValues(parsed: Awaited<ReturnType<typeof simpleParser>>, name: string): string[] {
-  const value = (parsed.headers as any)?.get?.(name.toLowerCase());
-  const list = Array.isArray(value) ? value : value == null ? [] : [value];
-  return list.map((item: any) => {
-    if (typeof item === "string") return item;
-    if (typeof item?.value === "string") return item.value;
-    if (typeof item?.text === "string") return item.text;
-    return String(item ?? "");
-  }).filter(Boolean);
+function headerValues(source: Buffer, name: string): string[] {
+  // Preserve the raw message order: the first Authentication-Results header is
+  // the receiving server's result. Parsed header maps may group duplicates.
+  const rawHeaders = source.toString("latin1").split(/\r?\n\r?\n/, 1)[0] || "";
+  const unfolded = rawHeaders.replace(/\r?\n[ \t]+/g, " ");
+  return unfolded.split(/\r?\n/).flatMap((line) => {
+    const colon = line.indexOf(":");
+    if (colon < 0 || line.slice(0, colon).trim().toLowerCase() !== name.toLowerCase()) return [];
+    return [line.slice(colon + 1).trim()];
+  });
 }
 
 function makeClient(cfg: MailCfg) {
@@ -116,9 +118,9 @@ export async function fetchRecentPaymentEmails(
             const configuredDomains = senders.map((value) => value.includes("@") ? value.split("@").pop() || "" : value);
             const diagnostics = bankEmailDiagnostics({
               from: fromAddress,
-              authenticationResults: headerValues(parsed, "authentication-results"),
-              arcAuthenticationResults: headerValues(parsed, "arc-authentication-results")
-            }, configuredDomains);
+              authenticationResults: headerValues(msg.source as Buffer, "authentication-results"),
+              arcAuthenticationResults: headerValues(msg.source as Buffer, "arc-authentication-results")
+            }, configuredDomains, cfg.trustedAuthservIds);
             if (!diagnostics.domainAllowed || !diagnostics.dkimAligned) continue;
             if (senders.length && !senders.some((s) => fromAddress.includes(s))) continue;
             const text = (parsed.text || parsed.html || "").toString();
@@ -130,8 +132,8 @@ export async function fetchRecentPaymentEmails(
               fromAddress,
               text,
               date: parsed.date || new Date(),
-              authenticationResults: headerValues(parsed, "authentication-results"),
-              arcAuthenticationResults: headerValues(parsed, "arc-authentication-results")
+              authenticationResults: headerValues(msg.source as Buffer, "authentication-results"),
+              arcAuthenticationResults: headerValues(msg.source as Buffer, "arc-authentication-results")
             });
           } catch {
             // skip unparseable message

@@ -87,14 +87,14 @@ export async function fetchRecentGmailPaymentEmails(cfg: GmailConfig, sinceMinut
   return emails;
 }
 
-export function parseGmailCredit(email: ParsedEmail, fromFilter: string) {
+export function parseGmailCredit(email: ParsedEmail, fromFilter: string, trustedAuthservIds?: string[]) {
   return parseBankEmail({
     from: email.fromAddress || email.from,
     subject: email.subject,
     text: email.text,
     authenticationResults: email.authenticationResults,
     arcAuthenticationResults: email.arcAuthenticationResults
-  }, configuredDomains(fromFilter));
+  }, configuredDomains(fromFilter), trustedAuthservIds);
 }
 
 export async function gmailConnectionTest(cfg: GmailConfig): Promise<{ ok: boolean; message: string }> {

@@ -121,6 +121,7 @@ export type PaymentsConfig = {
   mailImapUser: string;
   mailImapPass: string;
   mailFromFilter: string; // comma-separated sender substrings, e.g. "alerts@hdfcbank.net,noreply@binance.com"
+  mailTrustedAuthservIds: string; // comma-separated receiver authserv-id values, default "mx.google.com"
   smsSenderAllow: string; // comma-separated Indian transactional SMS sender IDs
   gmailClientId: string;
   gmailClientSecret: string;
@@ -366,6 +367,7 @@ export const DEFAULT_PAYMENTS: PaymentsConfig = {
   mailImapUser: "",
   mailImapPass: "",
   mailFromFilter: "",
+  mailTrustedAuthservIds: "mx.google.com",
   smsSenderAllow: "",
   gmailClientId: "",
   gmailClientSecret: "",
@@ -500,6 +502,7 @@ export async function getPaymentsConfig(): Promise<PaymentsConfig> {
     mailImapUser: stored.mailImapUser || process.env.IMAP_USER || "",
     mailImapPass: stored.mailImapPass || process.env.IMAP_PASS || "",
     mailFromFilter: stored.mailFromFilter || "",
+    mailTrustedAuthservIds: stored.mailTrustedAuthservIds || DEFAULT_PAYMENTS.mailTrustedAuthservIds,
     smsSenderAllow: stored.smsSenderAllow || "",
     gmailClientId: stored.gmailClientId || "",
     gmailClientSecret: stored.gmailClientSecret || "",
