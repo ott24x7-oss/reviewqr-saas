@@ -108,8 +108,9 @@ function ApplicationContent() {
     return message ? <Text accessibilityRole="alert" style={[styles.error, { color: palette.danger }, lang === "hi" && styles.hindi]}>{message}</Text> : null;
   }
 
-  const reapplyDate = status.data?.reapplyAt
-    ? new Intl.DateTimeFormat(lang === "hi" ? "hi-IN" : "en-IN", { day: "numeric", month: "short", year: "numeric" }).format(new Date(status.data.reapplyAt))
+  const reapplyTimestamp = status.data?.reapplyAt ? new Date(status.data.reapplyAt).getTime() : Number.NaN;
+  const reapplyDate = Number.isFinite(reapplyTimestamp)
+    ? new Intl.DateTimeFormat(lang === "hi" ? "hi-IN" : "en-IN", { day: "numeric", month: "short", year: "numeric" }).format(reapplyTimestamp)
     : "";
 
   if (status.isLoading) return <Screen><View style={styles.center}><Text style={[styles.body, { color: palette.muted }]}>{t.resellerLoading}</Text></View></Screen>;

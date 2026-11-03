@@ -3,14 +3,15 @@ import { Screen } from "../../src/ui/screen";
 import type { TapLink, TapPage } from "@reviewqr/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
-import { router, useLocalSearchParams } from "expo-router";
-import { Check, Download, Globe2, GripVertical, Link2, MessageCircle, Nfc, Pencil, Phone, Plus, Printer, Share2, Star, UtensilsCrossed } from "lucide-react-native";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import { Check, Download, Globe2, GripVertical, Link2, MessageCircle, Nfc, Pencil, Phone, Plus, Printer, Share2, Star, UtensilsCrossed, X } from "lucide-react-native";
 import type { LucideIcon } from "lucide-react-native";
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { PanResponder, Platform, Pressable, Share, StyleSheet, Switch, Text, View } from "react-native";
 import type { ElementRef, RefObject } from "react";
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from "react-native-reanimated";
 import { WebView } from "react-native-webview";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as WebBrowser from "expo-web-browser";
 import { apiBaseUrl } from "../../src/api/instance";
 import { trackOnce } from "../../src/analytics/events";
@@ -70,6 +71,7 @@ function buttonIcon(type: string): LucideIcon {
 
 function TapScreenContent() {
   const { palette, reduceMotion, lowRam } = useTheme();
+  const insets = useSafeAreaInsets();
   const styles = useMemo(() => makeStyles(palette), [palette]);
   const glow = useSharedValue(0.35);
   const reveal = useSharedValue(reduceMotion ? 1 : 0);
@@ -77,6 +79,7 @@ function TapScreenContent() {
   const [bright, setBright] = useState(false);
   const params = useLocalSearchParams<{ section?: string; setupGuide?: string }>();
   const section = typeof params.section === "string" ? params.section : "";
+  const customerMode = section === "qr";
   const { t, lang } = useI18n();
   const { user } = useSession();
   const { business } = useBusiness();
@@ -119,7 +122,7 @@ function TapScreenContent() {
   const base = apiBaseUrl();
   const preview = data?.publicPath && base ? `${base}${data.publicPath}` : "";
   const showSetupTour = SETUP_TAP_STEPS.some((key) => params.setupGuide === key);
-  const showQrPageTour = shouldShowQrPageTour(section, showSetupTour);
+  const showQrPageTour = !customerMode && shouldShowQrPageTour(section, showSetupTour);
 
   async function saveColour() {
     if (!business) return;
@@ -231,12 +234,55 @@ function TapScreenContent() {
   useEffect(() => {
     return () => {
       const level = brightLevel.current;
+      brightLevel.current = null;
       if (level == null || Platform.OS === "web") return;
       import("expo-brightness")
         .then((Brightness) => Brightness.setBrightnessAsync(level))
         .catch(() => undefined);
     };
   }, []);
+  useFocusEffect(useCallback(() => {
+    if (!customerMode) return () => {
+      const level = brightLevel.current;
+      brightLevel.current = null;
+      setBright(false);
+      if (level != null && Platform.OS !== "web") {
+        import("expo-brightness")
+          .then((Brightness) => Brightness.setBrightnessAsync(level))
+          .catch(() => undefined);
+      }
+    };
+    let active = true;
+    let originalLevel: number | null = null;
+    if (Platform.OS === "web") {
+      setBright(true);
+      return () => setBright(false);
+    }
+    void import("expo-brightness")
+      .then(async (Brightness) => {
+        originalLevel = await Brightness.getBrightnessAsync().catch(() => null);
+        if (originalLevel != null) brightLevel.current = originalLevel;
+        if (!active) {
+          if (originalLevel != null) await Brightness.setBrightnessAsync(originalLevel).catch(() => undefined);
+          return;
+        }
+        await Brightness.setBrightnessAsync(1).catch(() => undefined);
+        if (active) setBright(true);
+        else if (originalLevel != null) await Brightness.setBrightnessAsync(originalLevel).catch(() => undefined);
+      })
+      .catch(() => { if (active) setBright(true); });
+    return () => {
+      active = false;
+      const level = originalLevel ?? brightLevel.current;
+      brightLevel.current = null;
+      setBright(false);
+      if (level != null) {
+        import("expo-brightness")
+          .then((Brightness) => Brightness.setBrightnessAsync(level))
+          .catch(() => undefined);
+      }
+    };
+  }, [customerMode]));
   const glowStyle = useAnimatedStyle(() => ({ opacity: glow.value }));
   const qrStyle = useAnimatedStyle(() => ({ opacity: 0.15 + reveal.value * 0.85, transform: [{ scale: 0.92 + reveal.value * 0.08 }] }));
 
@@ -251,7 +297,9 @@ function TapScreenContent() {
       return;
     }
     if (bright) {
-      if (brightLevel.current != null) await Brightness.setBrightnessAsync(brightLevel.current).catch(() => undefined);
+      const level = brightLevel.current;
+      if (level != null) await Brightness.setBrightnessAsync(level).catch(() => undefined);
+      brightLevel.current = null;
       setBright(false);
       return;
     }
@@ -375,34 +423,46 @@ function TapScreenContent() {
   );
 
   return (
-    <KeyboardAwareScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <KeyboardAwareScrollView
+      style={[styles.screen, customerMode && styles.customerScreen]}
+      contentContainerStyle={customerMode ? [styles.customerContent, { paddingBottom: 20 + insets.bottom }] : styles.content}
+    >
       {tap.isLoading ? <Skeleton height={88} /> : null}
       {tap.isError ? <LoadErrorCard onRetry={() => tap.refetch().catch(() => undefined)} /> : null}
       {section === "link" ? linkBlock : section === "buttons" ? buttonBlock : section === "theme" ? themeBlock : (
-        <View style={styles.stack}>
-          <View style={styles.titleRow}>
-            <Text style={[styles.section, lang === "hi" && styles.hindi]}>{t.shareQr}</Text>
-            <HelpButton title={t.coachQrShow} body={t.coachQrShowBody} />
-          </View>
-          <View ref={qrTarget} collapsable={false} style={[styles.standCard, { backgroundColor: palette.card, borderColor: bright ? palette.primary : palette.line }]}>
+        <View style={[styles.stack, customerMode && styles.customerStack]}>
+          {customerMode ? (
+            <View style={styles.customerHeading}>
+              <Text style={[styles.section, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.showToCustomer}</Text>
+              <Pressable accessibilityRole="button" accessibilityLabel={t.close} onPress={() => { if (router.canGoBack()) router.back(); else router.replace("/(app)"); }} style={styles.customerClose}>
+                <X color={palette.muted} size={22} />
+              </Pressable>
+            </View>
+          ) : (
+            <View style={styles.titleRow}>
+              <Text style={[styles.section, lang === "hi" && styles.hindi]}>{t.shareQr}</Text>
+              <HelpButton title={t.coachQrShow} body={t.coachQrShowBody} />
+            </View>
+          )}
+          <View ref={qrTarget} collapsable={false} style={[styles.standCard, customerMode && styles.customerCard, { backgroundColor: palette.card, borderColor: bright ? palette.primary : palette.line }]}>
             <View style={styles.standBrand}>
               {business.logo ? <Image source={{ uri: business.logo }} style={styles.standLogo} contentFit="contain" accessibilityLabel={business.name} /> : null}
               <Text style={[styles.standName, { color: palette.ink }, lang === "hi" && styles.hindi]} numberOfLines={2}>{business.name}</Text>
             </View>
-            <View style={styles.frame}>
+            <View style={[styles.frame, customerMode && styles.customerFrame]}>
               {qrUri ? (
                 <>
                   {!lowRam ? <Animated.View style={[styles.glow, { backgroundColor: palette.primary }, glowStyle]} /> : null}
                   <Animated.View style={qrStyle}>
-                    <Image source={{ uri: qrUri }} placeholder={{ blurhash: BLURHASH }} style={[styles.qr, { backgroundColor: palette.card }]} contentFit="contain" accessibilityLabel={t.shareQr} />
+                    <Image source={{ uri: qrUri }} placeholder={{ blurhash: BLURHASH }} style={[styles.qr, customerMode && styles.customerQr, { backgroundColor: palette.card }]} contentFit="contain" accessibilityLabel={t.shareQr} />
                     <QrModules reduceMotion={reduceMotion || lowRam} color={palette.card} />
                   </Animated.View>
                 </>
               ) : <Text style={[styles.note, { color: palette.muted }, lang === "hi" && styles.hindi]}>{t.noQr}</Text>}
             </View>
           </View>
-          {qrUri ? <PillButton label={bright ? t.showToCustomerOn : t.showToCustomer} onPress={() => { showToCustomer().catch(() => undefined); }} tone="dark" /> : null}
-          <View ref={qrShareTarget} collapsable={false} style={styles.iconActions}>
+          {!customerMode && qrUri ? <PillButton label={bright ? t.showToCustomerOn : t.showToCustomer} onPress={() => { showToCustomer().catch(() => undefined); }} tone="dark" /> : null}
+          {!customerMode ? <View ref={qrShareTarget} collapsable={false} style={styles.iconActions}>
             <QrIconAction label={t.shareQr} icon={Share2} onPress={share} palette={palette} />
             <QrIconAction label={t.downloadQr} icon={Download} onPress={share} palette={palette} />
             <QrIconAction label={t.printStand} icon={Printer} onPress={() => router.push("/(app)/shop")} palette={palette} />
@@ -413,7 +473,7 @@ function TapScreenContent() {
               }
               router.push("/(app)/nfc");
             }} palette={palette} />
-          </View>
+          </View> : null}
           {section !== "qr" ? <>
             <SectionHeader label={t.directTitle} />
             <Group>
@@ -646,7 +706,12 @@ function makeStyles(colors: Palette) {
   return StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.paper },
   content: { padding: 16, gap: 12 },
+  customerScreen: { backgroundColor: colors.bg },
+  customerContent: { flexGrow: 1, justifyContent: "center", padding: 20 },
   stack: { gap: 12 },
+  customerStack: { width: "100%", maxWidth: 440, alignSelf: "center", gap: 14 },
+  customerHeading: { minHeight: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  customerClose: { width: 48, height: 48, alignItems: "center", justifyContent: "center" },
   section: { fontFamily: fonts.bodyStrong, color: colors.ink, fontSize: 16 },
   row: { gap: 8 },
   chip: { minHeight: 48, borderRadius: 999, paddingHorizontal: 14, justifyContent: "center", backgroundColor: colors.card },
@@ -674,12 +739,15 @@ function makeStyles(colors: Palette) {
   titleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   frame: { alignItems: "center", justifyContent: "center", minHeight: 240 },
   standCard: { borderRadius: 24, borderWidth: 1, padding: 18, gap: 12, alignItems: "center" },
+  customerCard: { width: "100%", padding: 14, gap: 6 },
+  customerFrame: { minHeight: 284 },
   standBrand: { minHeight: 48, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 },
   standLogo: { width: 40, height: 40, borderRadius: 10 },
   standName: { flexShrink: 1, fontFamily: fonts.title, fontSize: 18, textAlign: "center" },
   iconActions: { flexDirection: "row", justifyContent: "space-around", alignItems: "center", marginTop: 2 },
   glow: { position: "absolute", width: 220, height: 220, borderRadius: 28 },
-  qr: { width: 200, height: 200, borderRadius: 16 }
+  qr: { width: 200, height: 200, borderRadius: 16 },
+  customerQr: { width: 264, height: 264 }
 });
 }
 

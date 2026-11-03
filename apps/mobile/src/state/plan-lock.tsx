@@ -1,12 +1,13 @@
 import { featureById, isFeatureId, type FeatureId } from "@reviewqr/shared";
-import { router } from "expo-router";
-import { useEffect, useState, type ReactNode } from "react";
+import { router, usePathname } from "expo-router";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useI18n } from "../i18n";
 import { fonts } from "../theme";
 import { BottomSheet } from "../ui/bits";
 import { useTheme } from "../ui/theme";
-import { hasModule, useEntitlement } from "./entitlement";
+import { useEntitlement } from "./entitlement";
+import { isFeatureLockedByModules } from "./plan-lock-logic";
 import { emitPlanRequired, onPlanRequired } from "./plan-signal";
 
 let afterClose: (() => void) | null = null;
@@ -28,7 +29,7 @@ export function useFeatures() {
   function locked(id: FeatureId) {
     const feature = featureById(id);
     if (!feature || loading) return false;
-    return !hasModule(query.data?.modules, feature.module);
+    return isFeatureLockedByModules(query.data?.modules, feature.module, query.isError);
   }
   return { locked, loading };
 }
@@ -64,7 +65,15 @@ export function PlanLockSheet({
 
 export function PlanLockHost() {
   const [featureId, setFeatureId] = useState<string | null>(null);
+  const pathname = usePathname();
+  const previousPathname = useRef(pathname);
   useEffect(() => onPlanRequired(setFeatureId), []);
+  useEffect(() => {
+    if (previousPathname.current === pathname) return;
+    previousPathname.current = pathname;
+    afterClose = null;
+    setFeatureId(null);
+  }, [pathname]);
   return (
     <PlanLockSheet
       featureId={featureId}

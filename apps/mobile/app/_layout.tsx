@@ -42,12 +42,15 @@ function VariantRouteStack({ variant }: { variant: AppVariant }) {
 
 function Boot({ fontsReady, variant }: { fontsReady: boolean; variant: AppVariant }) {
   const { ready } = useSession();
-  const { ready: themeReady, scheme } = useTheme();
+  const { ready: themeReady, scheme, palette } = useTheme();
   const path = usePathname();
+  const segments = useSegments();
   const motionLab = path.includes("motion-lab");
+  const ownerHome = segments[0] === "(app)" && ["/", "/index", "/(app)", "/(app)/index"].includes(path);
+  const statusBarStyle = palette.cinematic || ownerHome || scheme === "dark" ? "light" : "dark";
   return (
     <>
-      <StatusBar style={scheme === "dark" ? "light" : "dark"} />
+      <StatusBar style={statusBarStyle} />
       <LaunchFrame fontsReady={fontsReady} sessionReady={ready && themeReady} skip={motionLab}>
         <ConnectivityBanner />
         {fontsReady && themeReady ? <VariantRouteStack variant={variant} /> : null}

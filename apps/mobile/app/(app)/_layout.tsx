@@ -2,9 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Redirect, router, Tabs, usePathname } from "expo-router";
 import { useEffect, useMemo, type ReactNode } from "react";
-import { ActivityIndicator, View } from "react-native";
+import * as Sentry from "@sentry/react-native";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { apiData } from "../../src/api/data";
 import { useI18n } from "../../src/i18n";
+import { PrimaryButton, SecondaryButton } from "../../src/ui/buttons";
+import { Screen } from "../../src/ui/screen";
 import { PushBridge } from "../../src/push/register";
 import { accountKey } from "../../src/query/keys";
 import { BusinessProvider, useBusiness } from "../../src/state/business";
@@ -17,6 +20,38 @@ import { PENDING_AGENT_JOIN_KEY } from "../../src/agent/join-code";
 import { fonts } from "../../src/theme";
 import { PremiumTabBar } from "../../src/ui/tab-bar";
 import { usePalette } from "../../src/ui/theme";
+import { routeErrorCopy } from "../../src/ui/route-error-copy";
+
+export function ErrorBoundary({ error, retry }: { error: Error; retry: () => void }) {
+  const { lang } = useI18n();
+  const palette = usePalette();
+  const copy = routeErrorCopy(lang);
+
+  useEffect(() => {
+    Sentry.captureException(error);
+  }, [error]);
+
+  return (
+    <Screen>
+      <View style={[errorStyles.content, { backgroundColor: palette.paper }]}>
+        <View style={[errorStyles.card, { backgroundColor: palette.card, borderColor: palette.line }]}>
+          <Text accessibilityRole="header" style={[errorStyles.title, { color: palette.ink }, lang === "hi" && errorStyles.hindi]}>{copy.title}</Text>
+          <Text style={[errorStyles.body, { color: palette.muted }, lang === "hi" && errorStyles.hindi]}>{copy.body}</Text>
+          <PrimaryButton label={copy.retry} onPress={retry} />
+          <SecondaryButton label={copy.home} onPress={() => router.replace("/(app)/index")} />
+        </View>
+      </View>
+    </Screen>
+  );
+}
+
+const errorStyles = StyleSheet.create({
+  content: { flex: 1, justifyContent: "center", padding: 20 },
+  card: { gap: 14, borderWidth: 1, borderRadius: 22, padding: 22 },
+  title: { fontFamily: fonts.title, fontSize: 22, lineHeight: 28 },
+  body: { fontFamily: fonts.body, fontSize: 15, lineHeight: 22 },
+  hindi: { fontFamily: fonts.hindi }
+});
 
 function PanelGate({ children }: { children: ReactNode }) {
   const { user } = useSession();
@@ -89,39 +124,41 @@ function OwnerTabs() {
     >
       <Tabs.Screen name="index" options={{ title: t.home }} />
       <Tabs.Screen name="orders" options={{ title: t.orders }} />
+      {/* The custom bar filters Reviews out, while the route stays programmatically reachable. */}
       <Tabs.Screen name="reviews" options={{ title: t.reviews }} />
       <Tabs.Screen name="shop" options={{ title: t.shop }} />
       <Tabs.Screen name="more" options={{ title: t.meTab }} />
-      <Tabs.Screen name="analytics" options={{ title: t.analytics, href: null }} />
-      <Tabs.Screen name="menu" options={{ title: t.menuTab, href: null }} />
-      <Tabs.Screen name="services" options={{ title: t.services, href: null }} />
-      <Tabs.Screen name="bookings" options={{ title: t.bookings, href: null }} />
-      <Tabs.Screen name="booking-detail" options={{ title: t.bookingDetail, href: null }} />
-      <Tabs.Screen name="feedback" options={{ title: t.feedbackTab, href: null }} />
-      <Tabs.Screen name="business-new" options={{ title: t.addBusiness, href: null }} />
-      <Tabs.Screen name="business-edit" options={{ title: t.businessDetails, href: null }} />
-      <Tabs.Screen name="tap" options={{ title: t.preview, href: null }} />
-      <Tabs.Screen name="nfc" options={{ title: t.nfc, href: null }} />
-      <Tabs.Screen name="delete-account" options={{ title: t.deleteAccount, href: null }} />
-      <Tabs.Screen name="help" options={{ title: t.help, href: null }} />
-      <Tabs.Screen name="plan" options={{ title: t.plans, href: null }} />
-      <Tabs.Screen name="staff" options={{ title: t.staff, href: null }} />
-      <Tabs.Screen name="store" options={{ title: t.storeSettings, href: null }} />
-      <Tabs.Screen name="order-detail" options={{ title: t.viewDetails, href: null }} />
-      <Tabs.Screen name="customers" options={{ title: t.customers, href: null }} />
-      <Tabs.Screen name="offers" options={{ title: t.offers, href: null }} />
-      <Tabs.Screen name="campaigns" options={{ title: t.campaigns, href: null }} />
-      <Tabs.Screen name="refer" options={{ title: t.referEarn, href: null }} />
-      <Tabs.Screen name="qr-codes" options={{ title: t.qrList, href: null }} />
-      <Tabs.Screen name="inbox" options={{ title: t.inbox, href: null }} />
-      <Tabs.Screen name="account" options={{ title: t.account, href: null }} />
-      <Tabs.Screen name="theme" options={{ title: t.appLook, href: null }} />
+      <Tabs.Screen name="analytics" options={{ title: t.analytics }} />
+      <Tabs.Screen name="menu" options={{ title: t.menuTab }} />
+      <Tabs.Screen name="services" options={{ title: t.services }} />
+      <Tabs.Screen name="bookings" options={{ title: t.bookings }} />
+      <Tabs.Screen name="booking-detail" options={{ title: t.bookingDetail }} />
+      <Tabs.Screen name="feedback" options={{ title: t.feedbackTab }} />
+      <Tabs.Screen name="business-new" options={{ title: t.addBusiness }} />
+      <Tabs.Screen name="business-edit" options={{ title: t.businessDetails }} />
+      {/* Keep tap navigable from in-app actions; the custom tab bar filters it out. */}
+      <Tabs.Screen name="tap" options={{ title: t.preview }} />
+      <Tabs.Screen name="nfc" options={{ title: t.nfc }} />
+      <Tabs.Screen name="delete-account" options={{ title: t.deleteAccount }} />
+      <Tabs.Screen name="help" options={{ title: t.help }} />
+      <Tabs.Screen name="plan" options={{ title: t.plans }} />
+      <Tabs.Screen name="staff" options={{ title: t.staff }} />
+      <Tabs.Screen name="store" options={{ title: t.storeSettings }} />
+      <Tabs.Screen name="order-detail" options={{ title: t.viewDetails }} />
+      <Tabs.Screen name="customers" options={{ title: t.customers }} />
+      <Tabs.Screen name="offers" options={{ title: t.offers }} />
+      <Tabs.Screen name="campaigns" options={{ title: t.campaigns }} />
+      <Tabs.Screen name="refer" options={{ title: t.referEarn }} />
+      <Tabs.Screen name="qr-codes" options={{ title: t.qrList }} />
+      <Tabs.Screen name="inbox" options={{ title: t.inbox }} />
+      <Tabs.Screen name="account" options={{ title: t.account }} />
+      <Tabs.Screen name="theme" options={{ title: t.appLook }} />
       <Tabs.Screen name="agent" options={{ title: t.agentHome }} />
-      <Tabs.Screen name="agent-home" options={{ title: t.agentHomeTab, href: null }} />
+      <Tabs.Screen name="agent-home" options={{ title: t.agentHomeTab }} />
       <Tabs.Screen name="agent-join" options={{ title: t.agentJoin }} />
       <Tabs.Screen name="agent-pending" options={{ title: t.agentWaitingTitle }} />
-      <Tabs.Screen name="agent-reseller" options={{ title: t.resellerTitle, href: null }} />
-      <Tabs.Screen name="agent-application" options={{ title: t.resellerApplicationTitle, href: null }} />
+      <Tabs.Screen name="agent-reseller" options={{ title: t.resellerTitle }} />
+      <Tabs.Screen name="agent-application" options={{ title: t.resellerApplicationTitle }} />
     </Tabs>
   );
 }
@@ -176,8 +213,8 @@ function AgentTabs() {
       <Tabs.Screen name="agent-how" options={{ title: t.agentHowTitle }} />
       <Tabs.Screen name="agent-join" options={{ title: t.agentJoin }} />
       <Tabs.Screen name="agent-pending" options={{ title: t.agentWaitingTitle }} />
-      <Tabs.Screen name="agent-reseller" options={{ title: t.resellerTitle, href: null }} />
-      <Tabs.Screen name="agent-application" options={{ title: t.resellerApplicationTitle, href: null }} />
+      <Tabs.Screen name="agent-reseller" options={{ title: t.resellerTitle }} />
+      <Tabs.Screen name="agent-application" options={{ title: t.resellerApplicationTitle }} />
       <Tabs.Screen name="agent" options={{ title: t.agentHome }} />
     </Tabs>
   );

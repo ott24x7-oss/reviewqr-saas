@@ -21,7 +21,8 @@ import { enqueueOrderStatus, isNetworkFailure } from "../../src/orders/queue";
 import { noteOrderCompleted } from "../../src/review/prompt";
 import { useReviewMoment } from "../../src/review/watch";
 import { useBusiness } from "../../src/state/business";
-import { hasModule, useEntitlement } from "../../src/state/entitlement";
+import { useEntitlement } from "../../src/state/entitlement";
+import { isFeatureLockedByModules } from "../../src/state/plan-lock-logic";
 import { openPlanLock, useFeatures } from "../../src/state/plan-lock";
 import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
@@ -152,7 +153,6 @@ function OrdersScreenContent() {
   const [skeletonReady, setSkeletonReady] = useState(false);
   const entitlement = useEntitlement();
   const { locked: featureLocked } = useFeatures();
-  const modules = entitlement.data?.modules;
   const id = business?.id;
   const userId = user?.id ?? "";
   const known = useRef<Set<string> | null>(null);
@@ -343,9 +343,9 @@ function OrdersScreenContent() {
     }
   }
 
-  const menuLocked = !!(modules && !hasModule(modules, "MENU"));
-  const storeLocked = !!(modules && !hasModule(modules, "STORE"));
-  const reviewsLocked = !!(modules && !hasModule(modules, "REVIEWS"));
+  const menuLocked = isFeatureLockedByModules(entitlement.data?.modules, "MENU", entitlement.isError);
+  const storeLocked = isFeatureLockedByModules(entitlement.data?.modules, "STORE", entitlement.isError);
+  const reviewsLocked = isFeatureLockedByModules(entitlement.data?.modules, "REVIEWS", entitlement.isError);
   const locked = tab === "products" ? menuLocked : tab === "orders" ? storeLocked : reviewsLocked;
   useEffect(() => {
     if (!locked) return;

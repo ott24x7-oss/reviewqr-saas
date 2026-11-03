@@ -7,7 +7,8 @@ describe("push routes", () => {
   });
 
   it("opens feedback, orders, billing, and a shop shipment", () => {
-    expect(routeForPush({ type: "negative_feedback", reviewId: "r1" })).toBe("/(app)/orders?tab=feedback");
+    expect(routeForPush({ type: "negative_feedback", reviewId: "r1" })).toBe("/(app)/reviews");
+    expect(routeForPush({ url: "https://reviewqr.example/dashboard/feedback?reviewId=r2" })).toBe("/(app)/reviews");
     expect(routeForPush({ type: "store_order", orderId: "o1" })).toBe("/(app)/orders?tab=orders");
     expect(routeForPush({ type: "booking_request", bookingId: "b1" })).toBe("/(app)/bookings");
     expect(routeForPush({ url: "https://reviewqr.example/dashboard/sell/bookings" })).toBe("/(app)/bookings");

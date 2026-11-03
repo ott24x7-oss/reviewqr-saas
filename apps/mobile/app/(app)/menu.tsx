@@ -20,7 +20,8 @@ import { HelpButton } from "../../src/guide/help-sheet";
 import { useI18n } from "../../src/i18n";
 import { accountKey } from "../../src/query/keys";
 import { useBusiness } from "../../src/state/business";
-import { hasModule, useEntitlement } from "../../src/state/entitlement";
+import { useEntitlement } from "../../src/state/entitlement";
+import { isFeatureLockedByModules } from "../../src/state/plan-lock-logic";
 import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
 import { BottomSheet, Card, Chip, EmptyState, LoadErrorCard, Skeleton } from "../../src/ui/bits";
@@ -86,8 +87,7 @@ function MenuTabContent() {
   const itemNameTarget = useRef<ElementRef<typeof View>>(null);
   const itemPriceTarget = useRef<ElementRef<typeof View>>(null);
   const id = business?.id;
-  const modules = entitlement.data?.modules;
-  const locked = !!(modules && !hasModule(modules, "MENU"));
+  const locked = isFeatureLockedByModules(entitlement.data?.modules, "MENU", entitlement.isError);
   const items = useQuery({
     queryKey: accountKey(user?.id ?? "", "menu", id),
     enabled: !!user && !!id && !locked,

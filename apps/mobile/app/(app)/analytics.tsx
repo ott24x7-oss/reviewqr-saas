@@ -20,6 +20,7 @@ import { PillButton } from "../../src/ui/controls";
 import { usePalette } from "../../src/ui/theme";
 import type { Palette } from "../../src/ui/tokens";
 import { withOpacity } from "../../src/ui/tokens";
+import { ownerShowQrTarget } from "../../src/nav/owner-tabs";
 
 type Analytics = {
   summary: {
@@ -37,7 +38,7 @@ type Analytics = {
   heatmap: number[][];
   topItems: { itemId: string; name: string; views: number }[];
   byQr: { qrId: string; label: string; scans: number }[];
-  modules: { store: boolean };
+  modules?: { store?: boolean };
 };
 
 const DAYS = ["S", "M", "T", "W", "T", "F", "S"];
@@ -103,7 +104,7 @@ function AnalyticsScreenContent() {
           title={t.firstScans}
           body={t.firstScansBody}
           action={t.showMyQr}
-          onAction={() => router.push("/(app)/tap")}
+          onAction={() => router.push(ownerShowQrTarget())}
         />
       ) : !query.isLoading && !query.isError ? (
       <>
@@ -114,7 +115,7 @@ function AnalyticsScreenContent() {
         <Card
           label={t.ordersValue}
           value={
-            query.data && !query.data.modules.store
+            query.data?.modules?.store === false
               ? "—"
               : summary?.orders == null
                 ? "…"

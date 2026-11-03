@@ -43,7 +43,7 @@ export function routeForPush(data: Record<string, unknown> | null | undefined) {
   if (type === "agent_application_rejected") return "/(app)/agent-application";
   if (/^(?:qr24x7|reviewqr):\/\/qr\/?$/.test(url)) return "/(app)/tap";
   if (type === "referral_reward" || url.includes("/dashboard/refer")) return "/(app)/refer";
-  if (type === "negative_feedback" || url.includes("/feedback")) return "/(app)/orders?tab=feedback";
+  if (type === "negative_feedback" || url.includes("/feedback")) return "/(app)/reviews";
   if (type === "booking_request" || url.includes("/sell/bookings")) return "/(app)/bookings";
   if (type === "shop_order_status") {
     const id = typeof data?.order === "string" ? data.order : orderFromShopPath(url);
