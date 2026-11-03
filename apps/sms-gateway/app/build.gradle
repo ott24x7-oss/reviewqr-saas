@@ -1,0 +1,99 @@
+import java.util.Properties
+
+plugins {
+    id "com.android.application"
+}
+
+def releaseKeystorePropertiesFile = rootProject.file("keystore.properties")
+def releaseKeystoreProperties = new Properties()
+if (releaseKeystorePropertiesFile.isFile()) {
+    releaseKeystorePropertiesFile.withInputStream { stream ->
+        releaseKeystoreProperties.load(stream)
+    }
+}
+
+def releaseStoreFilePath = releaseKeystoreProperties.getProperty("storeFile")?.trim()
+def releaseStoreFile = releaseStoreFilePath ? rootProject.file(releaseStoreFilePath) : null
+def requiredReleaseProperties = ["storeFile", "storePassword", "keyAlias", "keyPassword"]
+
+def verifyReleaseSigningConfig = tasks.register("verifyReleaseSigningConfig") {
+    group = "verification"
+    description = "Checks that the release keystore and credentials are configured."
+    doLast {
+        if (!releaseKeystorePropertiesFile.isFile()) {
+            throw new GradleException(
+                    "Release signing is required. Create ${releaseKeystorePropertiesFile} from " +
+                            "keystore.properties.example and set storeFile, storePassword, keyAlias, and keyPassword."
+            )
+        }
+
+        def missingProperties = requiredReleaseProperties.findAll {
+            !releaseKeystoreProperties.getProperty(it)?.trim()
+        }
+        if (!missingProperties.isEmpty()) {
+            throw new GradleException(
+                    "Release signing is incomplete in ${releaseKeystorePropertiesFile}. " +
+                            "Missing: ${missingProperties.join(', ')}."
+            )
+        }
+
+        if (releaseStoreFile == null || !releaseStoreFile.isFile()) {
+            throw new GradleException(
+                    "Release keystore not found. Check the storeFile path in ${releaseKeystorePropertiesFile}."
+            )
+        }
+    }
+}
+
+android {
+    namespace "com.qr24x7.smsgateway"
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "com.qr24x7.smsgateway"
+        minSdk 26
+        targetSdk 34
+        versionCode 1
+        versionName "1.0.0"
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+
+    signingConfigs {
+        release {
+            if (releaseStoreFile != null) storeFile = releaseStoreFile
+            if (releaseKeystoreProperties.getProperty("storePassword") != null) {
+                storePassword = releaseKeystoreProperties.getProperty("storePassword")
+            }
+            if (releaseKeystoreProperties.getProperty("keyAlias") != null) {
+                keyAlias = releaseKeystoreProperties.getProperty("keyAlias")
+            }
+            if (releaseKeystoreProperties.getProperty("keyPassword") != null) {
+                keyPassword = releaseKeystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
+            minifyEnabled false
+        }
+        debug {
+            minifyEnabled false
+        }
+    }
+}
+
+tasks.matching { it.name == "preReleaseBuild" || it.name == "validateSigningRelease" }.configureEach {
+    dependsOn verifyReleaseSigningConfig
+}
+
+dependencies {
+    implementation "com.google.zxing:core:3.5.3"
+    implementation "androidx.security:security-crypto:1.1.0-alpha06"
+    implementation "androidx.core:core:1.15.0"
+}

@@ -34,6 +34,14 @@ next-env.d.ts
 # prisma
 prisma/migrations/dev.db*
 
+# Android SMS gateway
+apps/sms-gateway/keystore.properties
+*.jks
+*.keystore
+apps/sms-gateway/**/build/
+apps/sms-gateway/.gradle/
+apps/sms-gateway/local.properties
+
 # playwright
 /test-results/
 /playwright-report/

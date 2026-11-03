@@ -4,6 +4,9 @@ const nextConfig = {
   // overwrite the production build that the owner smoke test runs against.
   distDir: process.env.NEXT_DIST_DIR || ".next",
   reactStrictMode: true,
+  outputFileTracingExcludes: {
+    "/*": ["./apps/sms-gateway/**"]
+  },
   transpilePackages: ["@reviewqr/shared"],
   images: {
     remotePatterns: [
