@@ -10,14 +10,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PasswordField } from "@/components/brand/password-field";
-import {
-  channelLine,
-  LangToggle,
-  OtpCodeField,
-  useAuthLang,
-  useResendCountdown,
-  WhatsAppIcon
-} from "@/components/auth/otp-ui";
+import { LangToggle, useAuthLang, WhatsAppIcon } from "@/components/auth/otp-ui";
+
+type MagicConfig = { enabled: boolean; waUrl: string };
 
 function LoginForm() {
   const search = useSearchParams();
@@ -25,13 +20,23 @@ function LoginForm() {
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [loading, setLoading] = React.useState(false);
-  const [phone, setPhone] = React.useState("");
-  const [otpCode, setOtpCode] = React.useState("");
-  const [otpSent, setOtpSent] = React.useState(false);
-  const [channel, setChannel] = React.useState<string | undefined>();
   const [error, setError] = React.useState("");
-  const [resendAfter, setResendAfter] = React.useState(30);
-  const left = useResendCountdown(otpSent, resendAfter);
+  const [magic, setMagic] = React.useState<MagicConfig | null>(null);
+
+  React.useEffect(() => {
+    let live = true;
+    fetch("/api/v1/auth/magic/config", { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((config) => {
+        if (live && config && typeof config.enabled === "boolean" && typeof config.waUrl === "string") {
+          setMagic(config);
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, []);
 
   React.useEffect(() => {
     if (search.get("verified") === "1") toast.success("Email confirmed. You can sign in.");
@@ -57,65 +62,6 @@ function LoginForm() {
     window.location.assign(entered.path);
   }
 
-  async function sendCode() {
-    setLoading(true);
-    setError("");
-    try {
-      const res = await fetch("/api/auth/otp/request", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ phone })
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error || "Could not send the code");
-      setOtpSent(true);
-      setOtpCode("");
-      setChannel(json.channel);
-      setResendAfter(typeof json.resendAfterSec === "number" ? json.resendAfterSec : 30);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not send the code");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function verifyCode(event: React.FormEvent) {
-    event.preventDefault();
-    setLoading(true);
-    setError("");
-    try {
-      const res = await fetch("/api/auth/otp/verify", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ phone, code: otpCode })
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error || "Invalid code");
-      const entered = await enterSession(
-        {
-          otpToken: String(json.otpToken || ""),
-          email: "otp-login@invalid.local",
-          password: "unused"
-        },
-        search.get("callbackUrl")
-      );
-      if (!entered.ok) throw new Error("Could not sign in");
-      toast.success("Welcome back!");
-      window.location.assign(entered.path);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Invalid code");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function changeNumber() {
-    setOtpSent(false);
-    setOtpCode("");
-    setError("");
-    setChannel(undefined);
-  }
-
   return (
     <Card className="shadow-card">
       <CardHeader className="text-center">
@@ -125,99 +71,64 @@ function LoginForm() {
       </CardHeader>
       <CardContent className="space-y-6">
         {error ? <p role="alert" className="auth-error text-sm">{error}</p> : null}
-        <form onSubmit={otpSent ? verifyCode : (event) => { event.preventDefault(); void sendCode(); }} className="space-y-4">
-            {!otpSent ? (
-              <div className="space-y-1.5">
-                <Label htmlFor="phone">{t.phone}</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  inputMode="tel"
-                  autoComplete="tel"
-                  required
-                  value={phone}
-                  onChange={(event) => setPhone(event.target.value)}
-                  placeholder={t.phonePlaceholder}
-                  className="h-11"
-                />
-              </div>
-            ) : (
-              <>
-                <p className="text-sm">{t.notice}</p>
-                <p className="text-sm">{channelLine(channel, t)}</p>
-                <OtpCodeField id="otp" label={t.code} value={otpCode} onChange={setOtpCode} />
-              </>
-            )}
-            <Button type="submit" className="auth-whatsapp w-full" disabled={loading || (otpSent && otpCode.length !== 6)}>
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <WhatsAppIcon />}
-              {otpSent ? t.verify : t.send}
+        {magic?.enabled && magic.waUrl ? (
+          <>
+            <Button asChild type="button" className="auth-whatsapp w-full" size="lg">
+              <a href={magic.waUrl} target="_blank" rel="noreferrer">
+                <WhatsAppIcon />
+                Continue with WhatsApp
+              </a>
             </Button>
-            {otpSent ? (
-              <div className="flex items-center justify-between gap-2 text-sm">
-                <button type="button" onClick={changeNumber}>{t.change}</button>
-                <button type="button" disabled={left > 0 || loading} onClick={() => void sendCode()}>
-                  {left > 0 ? t.resendIn(left) : t.resend}
-                </button>
-              </div>
-            ) : null}
-            <button
-              type="button"
-              className="w-full text-sm"
-              onClick={() => document.getElementById("email")?.focus()}
-            >
-              {t.emailInstead}
-            </button>
-          </form>
-          <form onSubmit={signInWithPassword} className="space-y-4 border-t pt-6">
-            <div className="space-y-1.5">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="you@business.com"
-                className="h-11"
-              />
+            <div className="flex items-center gap-3 text-xs text-muted-foreground" aria-hidden="true">
+              <span className="h-px flex-1 bg-border" />
+              <span>or sign in with email</span>
+              <span className="h-px flex-1 bg-border" />
             </div>
-            <div className="space-y-1.5">
-              <div className="flex justify-between">
-                <Label htmlFor="password">Password</Label>
-                <Link href="/forgot-password" className="text-sm text-primary hover:underline">
-                  Forgot?
-                </Link>
-              </div>
-              <PasswordField
-                id="password"
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={setPassword}
-                placeholder="••••••••"
-              />
+          </>
+        ) : null}
+        <form onSubmit={signInWithPassword} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="you@business.com"
+              className="h-11"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <div className="flex justify-between">
+              <Label htmlFor="password">Password</Label>
+              <Link href="/forgot-password" className="text-sm text-primary hover:underline">
+                Forgot?
+              </Link>
             </div>
-            <Button type="submit" variant="gradient" size="lg" className="w-full" disabled={loading}>
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
-              Sign in
-            </Button>
-            <button
-              type="button"
-              className="w-full text-sm"
-              onClick={() => document.getElementById("phone")?.focus()}
-            >
-              {t.whatsappInstead}
-            </button>
-          </form>
-        <div className="mt-6 text-center text-sm text-muted-foreground">
+            <PasswordField
+              id="password"
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={setPassword}
+              placeholder="••••••••"
+            />
+          </div>
+          <Button type="submit" variant="gradient" size="lg" className="w-full" disabled={loading}>
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
+            Sign in
+          </Button>
+        </form>
+        <div className="text-center text-sm text-muted-foreground">
           New to QR24x7?{" "}
           <Link href="/register" className="font-medium text-primary hover:underline">
             Create an account
           </Link>
         </div>
         {process.env.NODE_ENV !== "production" ? (
-          <div className="mt-4 rounded-lg bg-secondary p-3 text-xs text-muted-foreground">
+          <div className="rounded-lg bg-secondary p-3 text-xs text-muted-foreground">
             <strong>Demo:</strong> demo@reviewqr.in / Demo@123
           </div>
         ) : null}
