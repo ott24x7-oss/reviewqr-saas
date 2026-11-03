@@ -9,15 +9,18 @@ import { Label } from "@/components/admin/ui/controls";
 export function ShopCheckoutSettings({
   codEnabled,
   codAdvancePercent,
-  commissionPercent
+  commissionPercent,
+  unbrandedAddonPaise
 }: {
   codEnabled: boolean;
   codAdvancePercent: number;
   commissionPercent: number;
+  unbrandedAddonPaise: number;
 }) {
   const [enabled, setEnabled] = React.useState(codEnabled);
   const [percent, setPercent] = React.useState(String(codAdvancePercent));
   const [commission, setCommission] = React.useState(String(commissionPercent));
+  const [unbrandedPrice, setUnbrandedPrice] = React.useState((unbrandedAddonPaise / 100).toFixed(2));
   const [saving, setSaving] = React.useState(false);
 
   async function save() {
@@ -29,7 +32,8 @@ export function ShopCheckoutSettings({
         body: JSON.stringify({
           codEnabled: enabled,
           codAdvancePercent: Number(percent),
-          commissionPercent: Number(commission)
+          commissionPercent: Number(commission),
+          unbrandedAddonPaise: Math.round(Number(unbrandedPrice) * 100)
         })
       });
       const payload = (await response.json()) as { error?: string };
@@ -62,6 +66,10 @@ export function ShopCheckoutSettings({
         <p className="text-sm text-muted-foreground">
           Default 10. A shop order snapshots the selected business&apos;s agent. A plan renewal pays the owner&apos;s only agent.
         </p>
+      </div>
+      <div className="space-y-1">
+        <Label htmlFor="unbranded-addon-price">Unbranded add-on per printed item (₹, GST-inclusive)</Label>
+        <Input id="unbranded-addon-price" type="number" min="0.01" step="0.01" inputMode="decimal" value={unbrandedPrice} onChange={(event) => setUnbrandedPrice(event.target.value)} />
       </div>
       <Button type="button" className="rounded-full" onClick={save} disabled={saving}>Save checkout</Button>
     </section>

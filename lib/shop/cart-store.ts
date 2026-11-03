@@ -4,20 +4,20 @@ import { fail, ok, type ServiceResult } from "@/lib/api/result";
 import { requireBusinessAccess } from "@/lib/access";
 import { prisma } from "@/lib/db";
 import { PRINT_TEMPLATES } from "@/lib/print/templates";
-import { getPaymentsConfig, getShippingConfig } from "@/lib/settings";
+import { getPaymentsConfig, getShippingConfig, getShopCheckoutConfig } from "@/lib/settings";
 import { ensureCatalog } from "./catalog-store";
 import { designError, type ShopDesign } from "./design";
 import { deliveryEstimate } from "./estimate";
 import { gstinError, normalizeGstin } from "./gstin";
 import { addressError, sameSupplyState } from "./address";
 import { quoteShop, type DiscountOffer } from "./quote";
-import { isPhysicalShopProduct } from "./physical";
+import { isPhysicalShopProduct, shopCategory } from "./physical";
 import { providerForEstimates } from "./shipping-resolve";
 import { absoluteUrl } from "@/lib/utils";
 
 type ShopAudience = "web" | "app";
 
-type LineInput = { sku: string; qty: number; design?: ShopDesign | null };
+type LineInput = { sku: string; qty: number; design?: ShopDesign | null; unbranded?: boolean };
 
 function readDesign(value: Prisma.JsonValue | null | undefined): ShopDesign | null {
   const parsed = shopDesignSchema.safeParse(value);
@@ -71,7 +71,7 @@ function productCard(product: {
     imageUrl: string | null;
     includedLifetime: boolean;
   }>;
-}) {
+}, unbrandedAddonPaise = 9900) {
   const variant = product.variants[0];
   return {
     slug: product.slug,
@@ -87,30 +87,32 @@ function productCard(product: {
     ships: variant?.ships ?? true,
     // The cover is the first variant photo the admin uploaded; the grid draws a preview when there is none.
     imageUrl: product.variants.find((item) => item.imageUrl)?.imageUrl ?? null,
+    category: shopCategory(product),
+    unbrandedAddonPaise: shopCategory(product) === "digital" ? 0 : unbrandedAddonPaise,
     variants: product.variants
   };
 }
 
 export async function shopCatalog(audience: ShopAudience = "web") {
   await ensureCatalog();
-  const products = await prisma.catalogProduct.findMany({
+  const [products, checkout] = await Promise.all([prisma.catalogProduct.findMany({
     where: { active: true },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     include: { variants: { where: { active: true }, orderBy: { salePaise: "asc" } } }
-  });
-  const cards = products.filter((product) => product.variants.length > 0).map(productCard);
+  }), getShopCheckoutConfig()]);
+  const cards = products.filter((product) => product.variants.length > 0).map((product) => productCard(product, checkout.unbrandedAddonPaise));
   if (audience === "web") return cards;
   return cards.filter((product) => isPhysicalShopProduct(product));
 }
 
 export async function shopProduct(slug: string) {
   await ensureCatalog();
-  const product = await prisma.catalogProduct.findFirst({
+  const [product, checkout] = await Promise.all([prisma.catalogProduct.findFirst({
     where: { slug, active: true },
     include: { variants: { where: { active: true }, orderBy: { salePaise: "asc" } } }
-  });
+  }), getShopCheckoutConfig()]);
   if (!product || product.variants.length === 0) return null;
-  return productCard(product);
+  return productCard(product, checkout.unbrandedAddonPaise);
 }
 
 /** Units in the owner's cart, for the shop header badge. */
@@ -138,10 +140,11 @@ async function businessesFor(userId: string) {
 
 export async function shopCartView(userId: string, audience: ShopAudience = "web", previewBusinessId?: string | null) {
   const cart = await cartFor(userId);
-  const [addresses, businesses, payments] = await Promise.all([
+  const [addresses, businesses, payments, checkout] = await Promise.all([
     prisma.shippingAddress.findMany({ where: { userId }, orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }] }),
     businessesFor(userId),
-    getPaymentsConfig()
+    getPaymentsConfig(),
+    getShopCheckoutConfig()
   ]);
   const variantIds = cart.lines.map((line) => line.variantId);
   const variants = variantIds.length
@@ -168,6 +171,8 @@ export async function shopCartView(userId: string, audience: ShopAudience = "web
       name: variant?.name ?? "Removed item",
       nameHi: variant?.nameHi ?? null,
       qty: line.qty,
+      unbranded: line.unbranded,
+      unbrandedUnitPaise: variant && isPhysicalShopProduct({ slug: variant.product.slug, name: variant.product.name, variants: [variant] }) ? checkout.unbrandedAddonPaise : 0,
       unitPaise: variant?.salePaise ?? 0,
       mrpPaise: variant?.mrpPaise ?? 0,
       gstPercent: variant?.gstPercent ?? 18,
@@ -198,7 +203,9 @@ export async function shopCartView(userId: string, audience: ShopAudience = "web
           stock: line.stock,
           minQty: line.minQty,
           active: line.active,
-          includedLifetime: line.includedLifetime
+          includedLifetime: line.includedLifetime,
+          unbranded: line.unbranded,
+          unbrandedUnitPaise: line.unbrandedUnitPaise
         })),
         coupon: await loadOffer("coupon", cart.couponCode),
         referral: await loadOffer("referral", cart.referralCode),
@@ -249,13 +256,16 @@ async function assertBusiness(userId: string, businessId: string | null | undefi
   return null;
 }
 
-async function checkedLines(userId: string, businessId: string | null, lines: LineInput[]): Promise<ServiceResult<Array<{ variantId: string; qty: number; design: ShopDesign | null }>>> {
+async function checkedLines(userId: string, businessId: string | null, lines: LineInput[]): Promise<ServiceResult<Array<{ variantId: string; qty: number; design: ShopDesign | null; unbranded: boolean }>>> {
   const variants = await variantsBySku(lines.map((line) => line.sku));
   const bySku = new Map(variants.map((variant) => [variant.sku, variant]));
   const next = [];
   for (const line of lines) {
     const variant = bySku.get(line.sku);
     if (!variant) return fail(400, "This item is not for sale");
+    if (line.unbranded && !isPhysicalShopProduct({ slug: variant.product.slug, name: variant.product.name, variants: [variant] })) {
+      return fail(400, "Unbranded printing is only available for physical products");
+    }
     const design = line.design ?? null;
     const problem = designError({ needsDesign: variant.product.needsDesign, needsNfc: variant.product.needsNfc }, design);
     if (design && problem && (design.templateId || design.qrShortCode || design.deviceId)) return fail(400, problem);
@@ -275,7 +285,7 @@ async function checkedLines(userId: string, businessId: string | null, lines: Li
       const access = await assertBusiness(userId, design.businessId);
       if (access) return access;
     }
-    next.push({ variantId: variant.id, qty: line.qty, design });
+    next.push({ variantId: variant.id, qty: line.qty, design, unbranded: line.unbranded === true });
   }
   return ok(next);
 }
@@ -357,6 +367,7 @@ export async function saveShopCart(
             cartId: cart.id,
             variantId: line.variantId,
             qty: line.qty,
+            unbranded: line.unbranded,
             design: line.design ? (line.design as Prisma.InputJsonValue) : undefined
           }))
         });
@@ -369,10 +380,13 @@ export async function saveShopCart(
 export async function addShopCartItem(userId: string, item: LineInput, audience: ShopAudience = "web") {
   const cart = await cartFor(userId);
   const current = await shopCartView(userId, audience);
-  const lines = current.lines.filter((line) => line.sku).map((line) => ({ sku: line.sku, qty: line.qty, design: line.design }));
+  const lines = current.lines.filter((line) => line.sku).map((line) => ({ sku: line.sku, qty: line.qty, design: line.design, unbranded: line.unbranded }));
   const existing = lines.find((line) => line.sku === item.sku);
-  if (existing) existing.qty += item.qty;
-  else lines.push({ sku: item.sku, qty: item.qty, design: item.design ?? null });
+  if (existing) {
+    existing.qty += item.qty;
+    existing.unbranded = existing.unbranded || item.unbranded === true;
+  }
+  else lines.push({ sku: item.sku, qty: item.qty, design: item.design ?? null, unbranded: item.unbranded === true });
   return saveShopCart(
     userId,
     {

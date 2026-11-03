@@ -20,6 +20,7 @@ export function ProductBuy({ product, businessName = null }: { product: ShopProd
   const [pincode, setPincode] = React.useState("");
   const [estimate, setEstimate] = React.useState("");
   const [adding, setAdding] = React.useState(false);
+  const [unbranded, setUnbranded] = React.useState(false);
   const name = lang === "hi" && product.nameHi ? product.nameHi : product.name;
   const description = lang === "hi" && product.descriptionHi ? product.descriptionHi : product.description;
   const photo = variant?.imageUrl || product.imageUrl;
@@ -30,7 +31,7 @@ export function ProductBuy({ product, businessName = null }: { product: ShopProd
       const response = await fetch("/api/v1/shop/cart/items", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ sku, qty })
+        body: JSON.stringify({ sku, qty, unbranded })
       });
       const payload = (await response.json()) as { error?: { message?: string } };
       if (!response.ok) throw new Error(payload.error?.message || "Could not add this item");
@@ -103,6 +104,10 @@ export function ProductBuy({ product, businessName = null }: { product: ShopProd
         )}
         <p className="text-sm text-muted-ink">{copy.priceNote}</p>
         <p className="text-sm">{product.needsDesign ? copy.policy : copy.digital}</p>
+        {product.unbrandedAddonPaise > 0 && <label className="flex min-h-12 cursor-pointer items-start gap-3 rounded-2xl border border-border p-3 text-left">
+          <input className="mt-1 h-4 w-4 accent-ink" type="checkbox" checked={unbranded} onChange={(event) => setUnbranded(event.target.checked)} />
+          <span className="space-y-1"><span className="block text-sm font-semibold">{copy.unbranded} +{formatINR(product.unbrandedAddonPaise)} / {copy.qty}</span><span className="block text-xs text-muted-ink">{copy.unbrandedExplainer}</span></span>
+        </label>}
         <div className="space-y-2">
           <Label htmlFor="qty">{copy.qty}</Label>
           <Input id="qty" inputMode="numeric" value={qty} onChange={(event) => setQty(Math.max(1, Math.floor(Number(event.target.value) || 1)))} />

@@ -16,6 +16,7 @@ import { loadEntitlement } from "@/lib/plans/entitlements";
 import { orderedReviewTargets } from "@/lib/review-policy";
 import { loadPublicTap, type TapRecord } from "@/lib/tap/resolve";
 import { scanSource } from "@/lib/tap/source";
+import { showPlatformBranding } from "@/lib/branding/hide-business-branding";
 import { readAdminThemes } from "@/lib/tap/theme-store";
 import { resolveTheme, tokensToStyle } from "@/lib/tap/themes";
 import { LandingPlaceholder } from "./landing-placeholder";
@@ -129,9 +130,9 @@ export async function PublicTap({
               </div>
             </div>
           </div>
-          <p className="tap-footer">
+          {showPlatformBranding(record.hideBranding) ? <p className="tap-footer">
             Powered by <a href="/">QR24x7</a>
-          </p>
+          </p> : null}
         </div>
       </div>
     );
@@ -181,6 +182,7 @@ export async function PublicTap({
   return (
     <div className={tapFontClass}>
       <TapExperience
+        hideBranding={record.hideBranding}
         code={code}
         channel={channel}
         src={source}

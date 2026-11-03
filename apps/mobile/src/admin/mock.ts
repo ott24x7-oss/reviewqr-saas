@@ -566,6 +566,7 @@ export async function adminMockTransport(path: string, request: AdminTransportRe
         unitPaise,
         pricePaise: unitPaise,
         needsNfc: false,
+        unbranded: false,
         proofUrl: row.status === "PROOF_SENT" ? "https://example.test/proof.png" : null,
         proofContentType: row.status === "PROOF_SENT" ? "image/png" : null
       }]

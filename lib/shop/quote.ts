@@ -21,6 +21,8 @@ export type QuoteLineInput = {
   minQty: number;
   active?: boolean;
   includedLifetime?: boolean;
+  unbranded?: boolean;
+  unbrandedUnitPaise?: number;
 };
 
 export type QuoteLine = {
@@ -34,6 +36,7 @@ export type QuoteLine = {
   cgstPaise: number;
   sgstPaise: number;
   igstPaise: number;
+  unbranded: boolean;
 };
 
 export type QuoteOk = {
@@ -97,8 +100,12 @@ export function quoteShop(input: {
   now?: Date;
 }): QuoteResult {
   if (!input.lines.length) return { ok: false, error: "Add at least one item" };
+  const expanded = input.lines.flatMap((line) => [
+    { ...line, unbranded: false },
+    ...(line.unbranded ? [{ ...line, sku: `${line.sku}::UNBRANDED`, unitPaise: line.unbrandedUnitPaise ?? 0, unbranded: true }] : [])
+  ]);
   const grosses: number[] = [];
-  for (const line of input.lines) {
+  for (const line of expanded) {
     if (line.active === false) return { ok: false, error: "This item is not for sale" };
     if (!Number.isInteger(line.qty) || line.qty < 1) return { ok: false, error: "Quantity must be a whole number" };
     if (!Number.isInteger(line.minQty) || line.qty < line.minQty) return { ok: false, error: "Quantity is below the minimum order" };
@@ -116,7 +123,7 @@ export function quoteShop(input: {
   const discountPaise = Math.min(subtotalPaise, coupon.paise + referral.paise);
   const shares = allocate(grosses, discountPaise);
 
-  const lines: QuoteLine[] = input.lines.map((line, index) => {
+  const lines: QuoteLine[] = expanded.map((line, index) => {
     const grossPaise = grosses[index];
     const discount = shares[index];
     const netPaise = grossPaise - discount;
@@ -131,7 +138,8 @@ export function quoteShop(input: {
       taxablePaise: tax.taxable,
       cgstPaise: tax.cgst,
       sgstPaise: tax.sgst,
-      igstPaise: tax.igst
+      igstPaise: tax.igst,
+      unbranded: line.unbranded
     };
   });
 

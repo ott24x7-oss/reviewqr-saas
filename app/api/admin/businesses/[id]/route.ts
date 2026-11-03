@@ -15,8 +15,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     isActive?: boolean;
     reviewGating?: boolean;
     ratingThreshold?: number;
+    hideBranding?: boolean;
   };
-  const data: { name?: string; isActive?: boolean; reviewGating?: boolean; ratingThreshold?: number } = {};
+  const data: { name?: string; isActive?: boolean; reviewGating?: boolean; ratingThreshold?: number; hideBranding?: boolean; hideBrandingSource?: "ADMIN" } = {};
   if (typeof body.name === "string") {
     const name = body.name.trim();
     if (name.length < 2 || name.length > 80) {
@@ -25,6 +26,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     data.name = name;
   }
   if (typeof body.isActive === "boolean") data.isActive = body.isActive;
+  if (typeof body.hideBranding === "boolean") {
+    data.hideBranding = body.hideBranding;
+    data.hideBrandingSource = "ADMIN";
+  }
   if (typeof body.reviewGating === "boolean") data.reviewGating = body.reviewGating;
   if (typeof body.ratingThreshold === "number" && body.ratingThreshold >= 4 && body.ratingThreshold <= 5) {
     data.ratingThreshold = Math.trunc(body.ratingThreshold);
@@ -36,7 +41,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const business = await prisma.business.update({ where: { id: existing.id }, data });
   await logAudit({
     userId: guard.user.id,
-    action: typeof data.isActive === "boolean" ? "business.suspend" : "business.update",
+    action: typeof body.hideBranding === "boolean" ? "business.branding.update" : typeof data.isActive === "boolean" ? "business.suspend" : "business.update",
     entity: "Business",
     entityId: business.id,
     metadata: data,

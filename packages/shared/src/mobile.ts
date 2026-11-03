@@ -127,7 +127,7 @@ export const shopOrderDetailSchema = z.object({
   sgstPaise: z.number().int(),
   igstPaise: z.number().int(),
   lines: z.array(z.object({
-    sku: z.string(), name: z.string(), qty: z.number().int(), unitPaise: z.number().int(), imageUrl: z.string().nullable(),
+    sku: z.string(), name: z.string(), qty: z.number().int(), unitPaise: z.number().int(), imageUrl: z.string().nullable(), unbranded: z.boolean(),
     proof: z.object({ proofUrl: z.string().nullable(), proofContentType: z.string().nullable() }).nullable()
   })),
   address: z.object({ name: z.string(), phone: z.string(), line1: z.string(), line2: z.string().nullable(), city: z.string(), state: z.string(), pincode: z.string() }).nullable(),

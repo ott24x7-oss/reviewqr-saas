@@ -21,6 +21,7 @@ import { useBusiness } from "../state/business";
 import { useSession } from "../state/session";
 import { pollPayment } from "./poll";
 import { cartStepError, normalizeShopQuantity, validateShopAddress, type ShopAddressDraft } from "./cart-validation";
+import { toggleUnbrandedSwitch, unbrandedQuoteDisplay } from "./totals";
 import { ShopProductArt, type ShopArtKind } from "./product-art";
 import { shopStepperState } from "./status-stepper";
 import { fonts } from "../theme";
@@ -216,13 +217,14 @@ function ChoiceSheet({ visible, title, options, selected, onSelect, onClose, pal
   );
 }
 
-function ProductSheet({ product, businessName, qrPreviewUrl, palette, t, lang, reduceMotion, busy, onClose, onAdd }: {
+function ProductSheet({ product, businessName, qrPreviewUrl, palette, t, lang, reduceMotion, busy, preselectUnbranded, onClose, onAdd }: {
   product: ShopProduct | null; businessName: string; qrPreviewUrl: string | null; palette: Palette; t: ReturnType<typeof useI18n>["t"];
-  lang: string; reduceMotion: boolean; busy: boolean; onClose: () => void; onAdd: (variant: ProductVariant, qty: number) => void;
+  lang: string; reduceMotion: boolean; busy: boolean; preselectUnbranded: boolean; onClose: () => void; onAdd: (variant: ProductVariant, qty: number, unbranded: boolean) => void;
 }) {
   const [sku, setSku] = useState(product?.variants[0]?.sku || "");
   const variant = product?.variants.find((item) => item.sku === sku) || product?.variants[0];
   const [qty, setQty] = useState(product?.variants[0]?.minQty || 1);
+  const [unbranded, setUnbranded] = useState(preselectUnbranded);
   if (!product || !variant) return null;
   const safeQty = normalizeShopQuantity(qty, variant.minQty, variant.stock);
   const description = lang === "hi" && product.descriptionHi ? product.descriptionHi : product.description;
@@ -272,9 +274,25 @@ function ProductSheet({ product, businessName, qrPreviewUrl, palette, t, lang, r
               {product.needsNfc ? <Text style={[styles.bodyText, { color: palette.primary }]}>{t.shopNfcIncluded}</Text> : null}
               {product.needsDesign ? <Text style={[styles.bodyText, { color: palette.muted }, lang === "hi" && styles.hindi]}>{t.shopDesignConfirm}</Text> : null}
             </View>
+            {product.unbrandedAddonPaise > 0 ? <View style={styles.brandingPreviewWrap} accessibilityLabel={`${t.shopUnbrandedBefore}; ${t.shopUnbrandedAfter}`}>
+              <Text style={[styles.labelText, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.shopUnbrandedBadge}</Text>
+              <Text style={[styles.caption, { color: palette.muted }, lang === "hi" && styles.hindi]}>{t.shopUnbrandedExplain}</Text>
+              <View style={styles.brandingPreviewRow}>
+                {[true, false].map((withMark) => <View key={String(withMark)} style={[styles.brandingMiniCard, { backgroundColor: palette.card, borderColor: palette.line }]}>
+                  <Text numberOfLines={1} style={[styles.caption, { color: palette.ink }]}>{businessName || t.shopBusiness}</Text>
+                  <View style={[styles.brandingMiniQr, { borderColor: palette.ink }]}><View style={[styles.brandingMiniDot, { backgroundColor: palette.ink }]} /></View>
+                  {withMark ? <Text style={[styles.brandingMark, { color: palette.muted }]}>QR24x7</Text> : <View style={{ height: 12 }} />}
+                  <Text style={[styles.miniPreviewCaption, { color: palette.muted }]}>{withMark ? t.shopUnbrandedBefore : t.shopUnbrandedAfter}</Text>
+                </View>)}
+              </View>
+              <Pressable accessibilityRole="switch" accessibilityLabel={`${t.shopUnbrandedSwitch} ${money(product.unbrandedAddonPaise)}`} accessibilityState={{ checked: unbranded }} onPress={() => setUnbranded(toggleUnbrandedSwitch)} style={[styles.brandingToggle, { borderColor: unbranded ? palette.primary : palette.line, backgroundColor: palette.surface }]}>
+                <View style={{ flex: 1, gap: 3 }}><Text style={[styles.bodyStrong, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.shopUnbrandedSwitch} +{money(product.unbrandedAddonPaise)}</Text><Text style={[styles.caption, { color: palette.muted }, lang === "hi" && styles.hindi]}>{t.shopUnbrandedExplain}</Text></View>
+                <View style={[styles.switchTrack, { backgroundColor: unbranded ? palette.primary : palette.line }]}><View style={[styles.switchKnob, { backgroundColor: palette.card, transform: [{ translateX: unbranded ? 18 : 0 }] }]} /></View>
+              </Pressable>
+            </View> : null}
           </ScrollView>
           <View style={[styles.sheetFooter, { borderTopColor: palette.line }]}>
-            <PrimaryButton label={`${t.shopAdd} · ${money(variant.salePaise * safeQty)}`} disabled={busy || variant.stock < safeQty} onPress={() => onAdd(variant, safeQty)} />
+            <PrimaryButton label={`${t.shopAdd} · ${money(variant.salePaise * safeQty + (unbranded ? product.unbrandedAddonPaise * safeQty : 0))}`} disabled={busy || variant.stock < safeQty} onPress={() => onAdd(variant, safeQty, unbranded)} />
           </View>
         </View>
       </View>
@@ -290,13 +308,15 @@ export function ShopScreen() {
   const { business } = useBusiness();
   const client = useQueryClient();
   const router = useRouter();
-  const params = useLocalSearchParams<{ order?: string }>();
+  const params = useLocalSearchParams<{ order?: string; unbranded?: string }>();
   const orderParam = typeof params.order === "string" ? params.order : "";
   const [selectedOrder, setSelectedOrder] = useState<{ key: string; id: string | null } | null>(null);
   const linkKey = orderParam;
   const openId = selectedOrder?.key === linkKey ? selectedOrder.id : orderParam || null;
   const [view, setView] = useState<ShopView>("catalogue");
   const [productSheet, setProductSheet] = useState<ShopProduct | null>(null);
+  const [prefillUnbranded, setPrefillUnbranded] = useState(false);
+  const promoOpened = useRef(false);
   const [addedSku, setAddedSku] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [busySku, setBusySku] = useState<string | null>(null);
@@ -322,6 +342,17 @@ export function ShopScreen() {
     queryKey: accountKey(userId, "shop-catalog"), enabled: !!user,
     queryFn: () => apiData<CatalogResponse>("/api/v1/shop/catalog")
   });
+  useEffect(() => {
+    if (params.unbranded !== "1" || promoOpened.current || !catalog.data?.items.length) return;
+    const product = catalog.data.items.find((item) => item.unbrandedAddonPaise > 0);
+    if (!product) return;
+    const frame = requestAnimationFrame(() => {
+      promoOpened.current = true;
+      setPrefillUnbranded(true);
+      setProductSheet(product);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [params.unbranded, catalog.data]);
   const cartQuery = useQuery<ShopCartView>({
     queryKey: accountKey(userId, "shop-cart", business?.id), enabled: !!user,
     queryFn: () => apiData<ShopCartView>(`/api/v1/shop/cart${business?.id ? `?businessId=${encodeURIComponent(business.id)}` : ""}`)
@@ -379,11 +410,11 @@ export function ShopScreen() {
     setCartEdit({ revision: cartQuery.dataUpdatedAt, data: next });
   }
 
-  async function addToCart(sku: string, qty: number) {
+  async function addToCart(sku: string, qty: number, unbranded = false) {
     setBusySku(sku);
     setError(null);
     try {
-      const next = await apiData<ShopCartView>("/api/v1/shop/cart/items", { method: "POST", body: JSON.stringify({ sku, qty }) });
+      const next = await apiData<ShopCartView>("/api/v1/shop/cart/items", { method: "POST", body: JSON.stringify({ sku, qty, unbranded }) });
       client.setQueryData(accountKey(userId, "shop-cart", business?.id), next);
       setCartDraft(next);
       setAddedSku(sku);
@@ -403,7 +434,7 @@ export function ShopScreen() {
       buyerGstin: cart.buyerGstin,
       buyerLegalName: cart.buyerLegalName,
       addressId: effectiveAddressId(cart),
-      lines: cart.lines.map((line) => ({ sku: line.sku, qty: line.qty, design: line.design }))
+      lines: cart.lines.map((line) => ({ sku: line.sku, qty: line.qty, design: line.design, unbranded: line.unbranded }))
     };
   }
 
@@ -591,6 +622,7 @@ export function ShopScreen() {
 
   const scrollRefresh = <RefreshControl refreshing={catalog.isRefetching || cartQuery.isRefetching || orders.isRefetching || detail.isRefetching} onRefresh={() => { void refresh(); }} tintColor={palette.primary} />;
   const selectedAddress = cartDraft?.addresses.find((address) => address.id === effectiveAddressId(cartDraft)) || null;
+  const unbrandedQuote = cartDraft?.quote.ok ? unbrandedQuoteDisplay(cartDraft.quote.lines, t.shopUnbranded) : null;
 
   return (
     <View style={[stylesByPalette.screen, { backgroundColor: palette.paper }]}>
@@ -637,7 +669,7 @@ export function ShopScreen() {
         <Text style={[styles.sectionTitle, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.shopItems}</Text>
         {!cartDraft && cartQuery.isLoading ? <View style={[styles.skeleton, { backgroundColor: palette.card }]} /> : null}
         {cartDraft?.lines.length === 0 ? <View style={[stylesByPalette.panel, { backgroundColor: palette.card }]}><Text style={[styles.bodyText, { color: palette.muted }]}>{t.shopEmptyCart}</Text><SecondaryButton label={t.catalogue} onPress={() => setView("catalogue")} /></View> : null}
-      {cartDraft?.lines.map((line, index) => <CartLineCard key={`${line.sku}-${index}`} line={line} index={index} cart={cartDraft} palette={palette} t={t} lang={lang} onQty={(qty) => changeLine(index, { qty: normalizeShopQuantity(qty, line.minQty, line.stock) })} onRemove={() => setCart({ lines: cartDraft.lines.filter((_, lineIndex) => lineIndex !== index) })} onPickBusiness={(title, options, selected) => openPicker(title, options, selected, (value) => { void chooseBusiness(value); })} onPick={(title, options, selected, key) => openPicker(title, options, selected, (value) => selectDesign(index, key, value))} />)}
+      {cartDraft?.lines.map((line, index) => <CartLineCard key={`${line.sku}-${index}`} line={line} index={index} cart={cartDraft} palette={palette} t={t} lang={lang} onQty={(qty) => changeLine(index, { qty: normalizeShopQuantity(qty, line.minQty, line.stock) })} onRemove={() => setCart({ lines: cartDraft.lines.filter((_, lineIndex) => lineIndex !== index) })} onToggleUnbranded={() => changeLine(index, { unbranded: !line.unbranded })} onPickBusiness={(title, options, selected) => openPicker(title, options, selected, (value) => { void chooseBusiness(value); })} onPick={(title, options, selected, key) => openPicker(title, options, selected, (value) => selectDesign(index, key, value))} />)}
         {cartDraft?.lines.length ? <>
           <View style={[stylesByPalette.panel, { backgroundColor: palette.card, borderColor: palette.line }]}>
             <Text style={[styles.sectionTitle, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.shopBusiness}</Text>
@@ -679,6 +711,7 @@ export function ShopScreen() {
           <View style={[stylesByPalette.panel, { backgroundColor: palette.card, borderColor: palette.line }]}>
             <Text style={[styles.sectionTitle, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.shopSummary}</Text>
             {cartDraft.quote.ok ? <>
+              {unbrandedQuote ? <SummaryRow label={unbrandedQuote.label} amount={unbrandedQuote.amountPaise} palette={palette} /> : null}
               <SummaryRow label={t.shopSubtotal} amount={cartDraft.quote.subtotalPaise} palette={palette} />
               <SummaryRow label={t.shopDiscount} amount={-cartDraft.quote.discountPaise} palette={palette} />
               <SummaryRow label={t.shopTaxable} amount={cartDraft.quote.taxablePaise} palette={palette} />
@@ -718,9 +751,10 @@ export function ShopScreen() {
         {error ? <InlineMessage message={error} palette={palette} /> : null}
       </ScrollView> : null}
 
-      <ProductSheet key={productSheet?.slug || "closed"} product={productSheet} businessName={business?.name || "QR24x7"} qrPreviewUrl={firstQr} palette={palette} t={t} lang={lang} reduceMotion={reduceMotion} busy={!!busySku} onClose={() => setProductSheet(null)} onAdd={(variant, qty) => {
+      <ProductSheet key={productSheet?.slug || "closed"} product={productSheet} businessName={business?.name || "QR24x7"} qrPreviewUrl={firstQr} palette={palette} t={t} lang={lang} reduceMotion={reduceMotion} busy={!!busySku} preselectUnbranded={prefillUnbranded} onClose={() => { setProductSheet(null); setPrefillUnbranded(false); }} onAdd={(variant, qty, unbranded) => {
         setProductSheet(null);
-        void addToCart(variant.sku, qty);
+        setPrefillUnbranded(false);
+        void addToCart(variant.sku, qty, unbranded);
       }} />
 
       <ChoiceSheet visible={!!picker} title={picker?.title || ""} options={picker?.options || []} selected={picker?.selected} onSelect={(value) => picker?.onSelect(value)} onClose={() => setPicker(null)} palette={palette} t={t} lang={lang} reduceMotion={reduceMotion} />
@@ -767,6 +801,7 @@ function ProductCard({ product, businessName, palette, t, lang, busy, added, onO
         <View style={[styles.productImage, { backgroundColor: palette.surface2 }]}>
           <ShopImage imageUrl={product.imageUrl} product={product} businessName={businessName} palette={palette} size={156} />
           {discount ? <View style={[styles.discountBadge, { backgroundColor: palette.success }]}><Text style={[styles.discountBadgeText, { color: palette.onPrimary }]}>{t.shopOff.replace("{percent}", String(discount))}</Text></View> : null}
+          {product.unbrandedAddonPaise > 0 ? <View style={[styles.unbrandedPill, { backgroundColor: palette.card }]}><Text style={[styles.unbrandedPillText, { color: palette.ink }]}>{t.shopUnbrandedBadge}</Text></View> : null}
         </View>
       </Pressable>
       <View style={styles.productCardBody}>
@@ -781,9 +816,10 @@ function ProductCard({ product, businessName, palette, t, lang, busy, added, onO
   );
 }
 
-function CartLineCard({ line, index, cart, palette, t, lang, onQty, onRemove, onPickBusiness, onPick }: {
+function CartLineCard({ line, index, cart, palette, t, lang, onQty, onRemove, onToggleUnbranded, onPickBusiness, onPick }: {
   line: CartLine; index: number; cart: ShopCartView; palette: Palette; t: ReturnType<typeof useI18n>["t"]; lang: string;
   onQty: (qty: number) => void; onRemove: () => void;
+  onToggleUnbranded: () => void;
   onPickBusiness: (title: string, options: PickerOption[], selected: string | null | undefined) => void;
   onPick: (title: string, options: PickerOption[], selected: string | null | undefined, key: "templateId" | "qrShortCode" | "deviceId") => void;
 }) {
@@ -805,6 +841,10 @@ function CartLineCard({ line, index, cart, palette, t, lang, onQty, onRemove, on
         <Text style={[styles.labelText, { color: palette.ink }]}>{t.shopQty}</Text>
         <QuantityStepper value={line.qty} min={line.minQty} max={Math.max(line.minQty, line.stock)} onChange={onQty} label={t.shopQty} palette={palette} />
       </View>
+      {line.unbrandedUnitPaise > 0 ? <Pressable accessibilityRole="switch" accessibilityLabel={`${t.shopUnbrandedSwitch} ${money(line.unbrandedUnitPaise)}`} accessibilityState={{ checked: line.unbranded }} onPress={onToggleUnbranded} style={[styles.brandingToggle, { borderColor: line.unbranded ? palette.primary : palette.line, backgroundColor: palette.surface }]}>
+        <View style={{ flex: 1, gap: 3 }}><Text style={[styles.bodyStrong, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.shopUnbrandedSwitch} +{money(line.unbrandedUnitPaise)} × {line.qty}</Text><Text style={[styles.caption, { color: palette.muted }, lang === "hi" && styles.hindi]}>{t.shopUnbrandedExplain}</Text></View>
+        <View style={[styles.switchTrack, { backgroundColor: line.unbranded ? palette.primary : palette.line }]}><View style={[styles.switchKnob, { backgroundColor: palette.card, transform: [{ translateX: line.unbranded ? 18 : 0 }] }]} /></View>
+      </Pressable> : null}
       {line.needsDesign || line.needsNfc ? <View style={styles.designFields}>
         {designError ? <Text style={[styles.inlineError, { color: palette.danger }]}>{localizeShopMessage(designError, lang, t)}</Text> : null}
         <ChoiceField title={t.shopBusiness} value={cart.businesses.find((item) => item.id === cart.businessId)?.name || t.shopChooseBusiness} palette={palette} onPress={() => onPickBusiness(t.shopChooseBusiness, cart.businesses.map((row) => ({ label: row.name, value: row.id })), cart.businessId)} />
@@ -886,7 +926,7 @@ function OrderDetailView({ detail, palette, t, lang, busy, proofNote, setProofNo
       <Text style={[styles.sectionTitle, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.shopItems}</Text>
       {detail.lines.map((line, index) => <View key={`${line.sku}-${index}`} style={styles.orderLineRow}>
         {line.imageUrl ? <Image source={{ uri: line.imageUrl }} style={styles.orderThumb} /> : <ShopProductArt kind="stand" businessName="QR24x7" palette={palette} size={62} />}
-        <View style={{ flex: 1 }}><Text style={[styles.bodyStrong, { color: palette.ink }]}>{line.name}</Text><Text style={[styles.caption, { color: palette.muted }]}>{line.qty} × {money(line.unitPaise)}</Text></View>
+        <View style={{ flex: 1 }}><Text style={[styles.bodyStrong, { color: palette.ink }]}>{line.name}</Text><Text style={[styles.caption, { color: palette.muted }]}>{line.qty} × {money(line.unitPaise)}</Text>{line.unbranded ? <Text style={[styles.unbrandedOrderBadge, { backgroundColor: palette.accentSoft, color: palette.deep }, lang === "hi" && styles.hindi]}>{t.shopUnbrandedBadge}</Text> : null}</View>
       </View>)}
     </View>
 
@@ -987,6 +1027,9 @@ function makeStyles(palette: Palette) {
     crossedPrice: { fontFamily: fonts.body, fontSize: 12, textDecorationLine: "line-through" },
     discountBadge: { position: "absolute", top: 8, left: 8, borderRadius: 9, paddingHorizontal: 7, paddingVertical: 4 },
     discountBadgeText: { fontFamily: fonts.bodyStrong, fontSize: 10 },
+    unbrandedPill: { position: "absolute", top: 8, right: 8, maxWidth: "80%", borderRadius: 999, paddingHorizontal: 8, paddingVertical: 5 },
+    unbrandedPillText: { fontFamily: fonts.bodyStrong, fontSize: 9 },
+    unbrandedOrderBadge: { alignSelf: "flex-start", overflow: "hidden", borderRadius: 999, paddingHorizontal: 7, paddingVertical: 3, fontFamily: fonts.bodyStrong, fontSize: 10, marginTop: 4 },
     productAction: { minHeight: 44, borderRadius: 14, alignItems: "center", justifyContent: "center", paddingHorizontal: 8 },
     productActionText: { fontFamily: fonts.bodyStrong, fontSize: 13 },
     sectionTitle: { fontFamily: fonts.title, fontSize: 18 },
@@ -1011,6 +1054,16 @@ function makeStyles(palette: Palette) {
     variantChoice: { minHeight: 56, flexDirection: "row", alignItems: "center", gap: 8, borderRadius: 14, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8 },
     discountText: { fontFamily: fonts.bodyStrong, fontSize: 12 },
     designPreview: { alignItems: "center", gap: 10, borderWidth: 1, borderRadius: 18, padding: 14 },
+    brandingPreviewWrap: { gap: 8 },
+    brandingPreviewRow: { flexDirection: "row", gap: 8 },
+    brandingMiniCard: { flex: 1, minHeight: 112, borderRadius: 13, borderWidth: 1, padding: 7, alignItems: "center", justifyContent: "center", gap: 5 },
+    brandingMiniQr: { width: 38, height: 38, borderWidth: 2, alignItems: "center", justifyContent: "center" },
+    brandingMiniDot: { width: 15, height: 15 },
+    brandingMark: { fontFamily: fonts.bodyStrong, fontSize: 8 },
+    miniPreviewCaption: { fontFamily: fonts.body, fontSize: 9, textAlign: "center" },
+    brandingToggle: { minHeight: 60, borderWidth: 1, borderRadius: 15, padding: 11, flexDirection: "row", alignItems: "center", gap: 10 },
+    switchTrack: { width: 44, height: 26, borderRadius: 13, padding: 4, justifyContent: "center" },
+    switchKnob: { width: 18, height: 18, borderRadius: 9 },
     previewPiece: { minHeight: 174, minWidth: 164, alignItems: "center", justifyContent: "center", gap: 6, padding: 10, borderRadius: 16, borderWidth: 1 },
     previewBusinessName: { maxWidth: 150, fontFamily: fonts.bodyStrong, fontSize: 13 },
     previewCaption: { fontFamily: fonts.body, fontSize: 10 },
@@ -1083,6 +1136,9 @@ const styles = StyleSheet.create({
   crossedPrice: { fontFamily: fonts.body, fontSize: 12, textDecorationLine: "line-through" },
   discountBadge: { position: "absolute", top: 8, left: 8, borderRadius: 9, paddingHorizontal: 7, paddingVertical: 4 },
   discountBadgeText: { fontFamily: fonts.bodyStrong, fontSize: 10 },
+  unbrandedPill: { position: "absolute", top: 8, right: 8, maxWidth: "80%", borderRadius: 999, paddingHorizontal: 8, paddingVertical: 5 },
+  unbrandedPillText: { fontFamily: fonts.bodyStrong, fontSize: 9 },
+  unbrandedOrderBadge: { alignSelf: "flex-start", overflow: "hidden", borderRadius: 999, paddingHorizontal: 7, paddingVertical: 3, fontFamily: fonts.bodyStrong, fontSize: 10, marginTop: 4 },
   productAction: { minHeight: 44, borderRadius: 14, alignItems: "center", justifyContent: "center", paddingHorizontal: 8 },
   productActionText: { fontFamily: fonts.bodyStrong, fontSize: 13 },
   sectionTitle: { fontFamily: fonts.title, fontSize: 18 },
@@ -1107,6 +1163,16 @@ const styles = StyleSheet.create({
   variantChoice: { minHeight: 56, flexDirection: "row", alignItems: "center", gap: 8, borderRadius: 14, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8 },
   discountText: { fontFamily: fonts.bodyStrong, fontSize: 12 },
   designPreview: { alignItems: "center", gap: 10, borderWidth: 1, borderRadius: 18, padding: 14 },
+  brandingPreviewWrap: { gap: 8 },
+  brandingPreviewRow: { flexDirection: "row", gap: 8 },
+  brandingMiniCard: { flex: 1, minHeight: 112, borderRadius: 13, borderWidth: 1, padding: 7, alignItems: "center", justifyContent: "center", gap: 5 },
+  brandingMiniQr: { width: 38, height: 38, borderWidth: 2, alignItems: "center", justifyContent: "center" },
+  brandingMiniDot: { width: 15, height: 15 },
+  brandingMark: { fontFamily: fonts.bodyStrong, fontSize: 8 },
+  miniPreviewCaption: { fontFamily: fonts.body, fontSize: 9, textAlign: "center" },
+  brandingToggle: { minHeight: 60, borderWidth: 1, borderRadius: 15, padding: 11, flexDirection: "row", alignItems: "center", gap: 10 },
+  switchTrack: { width: 44, height: 26, borderRadius: 13, padding: 4, justifyContent: "center" },
+  switchKnob: { width: 18, height: 18, borderRadius: 9 },
   previewPiece: { minHeight: 174, minWidth: 164, alignItems: "center", justifyContent: "center", gap: 6, padding: 10, borderRadius: 16, borderWidth: 1 },
   previewBusinessName: { maxWidth: 150, fontFamily: fonts.bodyStrong, fontSize: 13 },
   previewCaption: { fontFamily: fonts.body, fontSize: 10 },

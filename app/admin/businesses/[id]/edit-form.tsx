@@ -12,6 +12,7 @@ export function AdminBusinessForm({
   name,
   ownerEmail,
   isActive,
+  hideBranding,
   reviewGating,
   ratingThreshold
 }: {
@@ -19,12 +20,14 @@ export function AdminBusinessForm({
   name: string;
   ownerEmail: string;
   isActive: boolean;
+  hideBranding: boolean;
   reviewGating: boolean;
   ratingThreshold: number;
 }) {
   const router = useRouter();
   const [nextName, setNextName] = React.useState(name);
   const [active, setActive] = React.useState(isActive);
+  const [hideBrand, setHideBrand] = React.useState(hideBranding);
   const [gating, setGating] = React.useState(reviewGating);
   const [threshold, setThreshold] = React.useState(Math.max(4, ratingThreshold));
   const [busy, setBusy] = React.useState(false);
@@ -39,6 +42,7 @@ export function AdminBusinessForm({
         body: JSON.stringify({
           name: nextName,
           isActive: active,
+          hideBranding: hideBrand,
           reviewGating: gating,
           ratingThreshold: threshold
         })
@@ -67,6 +71,10 @@ export function AdminBusinessForm({
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />
         Active (public review page and QR redirect)
+      </label>
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" checked={hideBrand} onChange={(e) => setHideBrand(e.target.checked)} />
+        Hide QR24x7 branding for this business (admin override)
       </label>
       <label className="flex items-start gap-2 text-sm">
         <input type="checkbox" checked={gating} onChange={(e) => setGating(e.target.checked)} />

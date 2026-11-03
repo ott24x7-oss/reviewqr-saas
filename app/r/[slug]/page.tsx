@@ -6,6 +6,8 @@ import { getAiConfig, getTurnstileConfig } from "@/lib/settings";
 import { effectiveTier } from "@/lib/payments";
 import { readAdminThemes } from "@/lib/tap/theme-store";
 import { resolveTheme, tokensToStyle } from "@/lib/tap/themes";
+import { loadEntitlement } from "@/lib/plans/entitlements";
+import { hideBusinessBranding } from "@/lib/branding/hide-business-branding";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -93,7 +95,12 @@ export default async function ReviewPage({
   ]);
 
   const brand = await getBrand();
-  const [aiCfg, turnstile] = await Promise.all([getAiConfig(), getTurnstileConfig()]);
+  const [aiCfg, turnstile, entitlement] = await Promise.all([getAiConfig(), getTurnstileConfig(), loadEntitlement(business.ownerId).catch(() => null)]);
+  const hideBranding = hideBusinessBranding({
+    enabled: business.hideBranding,
+    source: business.hideBrandingSource,
+    agencyPlan: entitlement?.tier === "AGENCY"
+  });
   const aiEnabled = aiCfg.enabled && !!aiCfg.apiKey && !!business.aiReviewsEnabled;
 
   const reviewPlatform = business.reviewPlatform === "trustpilot" ? "trustpilot" : "google";
@@ -172,6 +179,7 @@ export default async function ReviewPage({
       }}
       reviews={reviews}
       brand={brand}
+      hideBranding={hideBranding}
       aiEnabled={aiEnabled}
       turnstileSiteKey={turnstile.secretKey && turnstile.siteKey ? turnstile.siteKey : null}
     />

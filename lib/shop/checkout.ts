@@ -31,6 +31,7 @@ export async function checkoutShop(userId: string, env: EnvLike = process.env, a
   const view = await shopCartView(userId, audience);
   if (!view.lines.length) return fail(400, "Add at least one item");
   if (view.lines.some((line) => !line.active || !line.sku)) return fail(400, "This item is not for sale");
+  if (view.lines.some((line) => line.unbranded) && !view.businessId) return fail(400, "Choose the business for this unbranded order");
   const designProblem = view.lines.find((line) => line.designError);
   if (designProblem?.designError) return fail(400, designProblem.designError);
   if (!view.quote.ok) return fail(400, view.quote.error);
@@ -67,12 +68,15 @@ export async function checkoutShop(userId: string, env: EnvLike = process.env, a
     variant: (typeof variants)[number];
     line: (typeof view.lines)[number];
     money: (typeof view.quote.lines)[number];
+    addonMoney?: (typeof view.quote.lines)[number];
   }> = [];
   for (const line of view.lines) {
     const variant = bySku.get(line.sku);
     const money = quoted.get(line.sku);
     if (!variant || !money) return fail(400, "This item is not for sale");
-    snapshot.push({ variant, line, money });
+    const addonMoney = line.unbranded ? quoted.get(`${line.sku}::UNBRANDED`) : undefined;
+    if (line.unbranded && !addonMoney) return fail(400, "Could not quote the unbranded add-on");
+    snapshot.push({ variant, line, money, addonMoney });
   }
 
   const fingerprint = JSON.stringify({
@@ -84,7 +88,7 @@ export async function checkoutShop(userId: string, env: EnvLike = process.env, a
     addressId: view.addressId,
     totalPaise: view.quote.totalPaise,
     advancePaise: charge.advancePaise,
-    lines: snapshot.map(({ line }) => ({ sku: line.sku, qty: line.qty, design: line.design }))
+    lines: snapshot.map(({ line }) => ({ sku: line.sku, qty: line.qty, design: line.design, unbranded: line.unbranded }))
   });
 
   const pending = await prisma.shopOrder.findFirst({
@@ -135,11 +139,12 @@ export async function checkoutShop(userId: string, env: EnvLike = process.env, a
           : undefined,
         fingerprint,
         lines: {
-          create: snapshot.map(({ variant, line, money }) => ({
+          create: snapshot.flatMap(({ variant, line, money, addonMoney }) => [{
             variantId: variant.id,
             sku: variant.sku,
             name: variant.name,
             qty: line.qty,
+            unbranded: line.unbranded,
             unitPaise: variant.salePaise,
             hsn: variant.hsn,
             gstPercent: variant.gstPercent,
@@ -157,7 +162,29 @@ export async function checkoutShop(userId: string, env: EnvLike = process.env, a
             includedMonths: variant.includedMonths,
             includedLifetime: variant.includedLifetime,
             design: jsonValue(line.design)
-          }))
+          }, ...(addonMoney ? [{
+            variantId: null,
+            sku: `${variant.sku}-UNBRANDED`,
+            name: "Unbranded add-on",
+            qty: line.qty,
+            unitPaise: shopConfig.unbrandedAddonPaise,
+            hsn: variant.hsn,
+            gstPercent: variant.gstPercent,
+            discountPaise: addonMoney.discountPaise,
+            netPaise: addonMoney.netPaise,
+            taxablePaise: addonMoney.taxablePaise,
+            cgstPaise: addonMoney.cgstPaise,
+            sgstPaise: addonMoney.sgstPaise,
+            igstPaise: addonMoney.igstPaise,
+            ships: false,
+            needsDesign: false,
+            needsNfc: false,
+            weightGrams: 0,
+            includedTier: null,
+            includedMonths: null,
+            includedLifetime: false,
+            unbranded: true
+          }] : [])])
         }
       }
     });

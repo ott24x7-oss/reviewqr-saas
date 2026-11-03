@@ -75,6 +75,7 @@ export async function fulfillPaidShopOrder(input: FulfillInput): Promise<Fulfill
 
     const lines = await tx.shopOrderLine.findMany({ where: { orderId: row.id } });
     for (const line of lines) {
+      if (!line.variantId && line.unbranded) continue;
       if (!line.variantId) return { ok: false as const, error: "This item is not for sale" };
       const locked = await tx.$queryRaw<Array<{ stock: number }>>`
         SELECT "stock" FROM "CatalogVariant" WHERE "id" = ${line.variantId} FOR UPDATE
@@ -82,6 +83,13 @@ export async function fulfillPaidShopOrder(input: FulfillInput): Promise<Fulfill
       if (!locked[0] || locked[0].stock < line.qty) {
         return { ok: false as const, error: line.includedLifetime ? "Founder lifetime is sold out" : "Not enough stock" };
       }
+    }
+
+    if (row.businessId && lines.some((line) => line.unbranded)) {
+      await tx.business.updateMany({
+        where: { id: row.businessId, OR: [{ hideBrandingSource: null }, { hideBrandingSource: "PLAN" }, { hideBrandingSource: "PURCHASE" }] },
+        data: { hideBranding: true, hideBrandingSource: "PURCHASE" }
+      });
     }
 
     let beneficiaryId = row.userId;

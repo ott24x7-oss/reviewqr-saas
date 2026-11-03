@@ -1,6 +1,8 @@
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/db";
 import { effectiveTier } from "@/lib/payments";
+import { loadEntitlement } from "@/lib/plans/entitlements";
+import { hideBusinessBranding } from "@/lib/branding/hide-business-branding";
 
 export function tapAccess(owner: Parameters<typeof effectiveTier>[0]) {
   const paid = effectiveTier(owner) !== "FREE";
@@ -20,6 +22,7 @@ export type TapRecord =
       ownerId: string;
       businessId: string;
       paid: boolean;
+      hideBranding: boolean;
       business: TapBusinessFields;
       locationSlug: string;
       staffSlug: string;
@@ -31,6 +34,7 @@ export type TapRecord =
       ownerId: string;
       businessId: string;
       paid: boolean;
+      hideBranding: boolean;
       business: TapBusinessFields;
       locationSlug: string;
       staffSlug: string;
@@ -93,12 +97,19 @@ async function queryTap(code: string): Promise<TapRecord> {
   };
   const owner = qr.business.owner;
   const access = tapAccess(owner);
+  const entitlement = await loadEntitlement(owner.id).catch(() => null);
+  const hideBranding = hideBusinessBranding({
+    enabled: qr.business.hideBranding,
+    source: qr.business.hideBrandingSource,
+    agencyPlan: entitlement?.tier === "AGENCY"
+  });
   const shared = {
     qrId: qr.id,
     shortCode: qr.shortCode,
     ownerId: owner.id,
     businessId: qr.business.id,
     paid: access.paid,
+    hideBranding,
     business,
     locationSlug: qr.location?.slug || "",
     staffSlug: qr.staff?.slug || ""
@@ -186,12 +197,19 @@ async function queryBusinessPage(businessId: string): Promise<TapRecord> {
     published: tapPage?.published ?? null
   };
   const access = tapAccess(business.owner);
+  const entitlement = await loadEntitlement(business.owner.id).catch(() => null);
+  const hideBranding = hideBusinessBranding({
+    enabled: business.hideBranding,
+    source: business.hideBrandingSource,
+    agencyPlan: entitlement?.tier === "AGENCY"
+  });
   const shared = {
     qrId: "",
     shortCode: "",
     ownerId: business.owner.id,
     businessId: business.id,
     paid: access.paid,
+    hideBranding,
     business: fields,
     locationSlug: "",
     staffSlug: ""

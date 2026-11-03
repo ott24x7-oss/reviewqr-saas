@@ -20,6 +20,7 @@ export default async function AdminShopPage() {
         codEnabled={checkout.codEnabled}
         codAdvancePercent={checkout.codAdvancePercent}
         commissionPercent={checkout.commissionPercent}
+        unbrandedAddonPaise={checkout.unbrandedAddonPaise}
       />
       <CatalogBoard products={products} />
     </div>

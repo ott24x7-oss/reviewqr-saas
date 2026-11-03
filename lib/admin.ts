@@ -33,6 +33,7 @@ export type AuditAction =
   | "user.subscription.extend"
   | "business.archive"
   | "business.update"
+  | "business.branding.update"
   | "business.delete"
   | "settings.payments.update"
   | "settings.email.update"

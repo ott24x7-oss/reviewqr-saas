@@ -13,6 +13,7 @@ export async function PUT(req: NextRequest) {
     codEnabled?: boolean;
     codAdvancePercent?: number;
     commissionPercent?: number;
+    unbrandedAddonPaise?: number;
   };
   const current = await getShopCheckoutConfig();
   if (incoming.codAdvancePercent != null && !Number.isInteger(incoming.codAdvancePercent)) {
@@ -21,10 +22,14 @@ export async function PUT(req: NextRequest) {
   if (incoming.commissionPercent != null && !Number.isInteger(incoming.commissionPercent)) {
     return NextResponse.json({ error: "Commission must be a whole percent from 0 to 100" }, { status: 400 });
   }
+  if (incoming.unbrandedAddonPaise != null && !Number.isInteger(incoming.unbrandedAddonPaise)) {
+    return NextResponse.json({ error: "Unbranded add-on price must be a whole number of paise" }, { status: 400 });
+  }
   const next = {
     codEnabled: typeof incoming.codEnabled === "boolean" ? incoming.codEnabled : current.codEnabled,
     codAdvancePercent: incoming.codAdvancePercent ?? current.codAdvancePercent,
-    commissionPercent: incoming.commissionPercent ?? current.commissionPercent
+    commissionPercent: incoming.commissionPercent ?? current.commissionPercent,
+    unbrandedAddonPaise: incoming.unbrandedAddonPaise ?? current.unbrandedAddonPaise
   };
   const problem = shopCheckoutError(next);
   if (problem) return NextResponse.json({ error: problem }, { status: 400 });
