@@ -1,6 +1,7 @@
-import { LegacyHashRedirect } from "@/components/marketing/landing/legacy-hash-redirect";
-import { HomeV3 } from "@/components/marketing/home-v3/home";
 import type { Metadata } from "next";
+import { LegacyHashRedirect } from "@/components/marketing/qr-site/legacy-hash-redirect";
+import { HomeMarketing } from "@/components/marketing/qr-site/marketing-pages";
+import { SiteShell } from "@/components/marketing/qr-site/ui";
 import { listActivePlanPrices, listPublicPlans } from "@/lib/plans/public";
 import { buyHref } from "@/lib/plans/categories";
 import { freePlanOffer } from "@/lib/landing/anchor";
@@ -38,21 +39,20 @@ export default async function HomePage() {
   ]);
   const free = freePlanOffer(priced);
   const startHref = free ? buyHref(free.slug, free.duration) : "/register";
+  const whatsapp = talkToUsHref();
+
   return (
-    <>
-      <link rel="preload" as="image" href="/landing/photos/kirana-640.avif" type="image/avif" fetchPriority="high" />
+    <SiteShell brand={brand} startHref={startHref} whatsapp={whatsapp} credits={landingPhotoCredits()}>
       <LegacyHashRedirect />
-      <HomeV3
-        name={brand.name}
-        email={brand.supportEmail || "hello@qr24x7.in"}
+      <HomeMarketing
+        brand={brand}
         trust={trust}
         startHref={startHref}
-        whatsapp={talkToUsHref()}
+        whatsapp={whatsapp}
         plans={catalog}
         hardware={hardware}
-        credits={landingPhotoCredits()}
         stories={landingStories()}
       />
-    </>
+    </SiteShell>
   );
 }

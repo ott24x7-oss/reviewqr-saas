@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
-import { MarketingNavbar } from "@/components/marketing/navbar";
-import { Footer } from "@/components/marketing/footer";
-import { marketingFontClass } from "@/components/brand/fonts";
-import { LandingLangProvider } from "@/components/marketing/landing-v2/lang";
-import { HowSteps } from "@/components/marketing/landing-v2/how-steps";
+import { HowItWorksMarketing } from "@/components/marketing/qr-site/marketing-pages";
+import { SiteShell } from "@/components/marketing/qr-site/ui";
 import { getBrand } from "@/lib/brand";
 
 export const dynamic = "force-dynamic";
@@ -24,17 +21,5 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function HowItWorksPage() {
   const brand = await getBrand();
-  return (
-    <LandingLangProvider>
-      <main className={`marketing-page min-h-screen overflow-x-hidden px-4 py-8 ${marketingFontClass}`}>
-        <MarketingNavbar brand={brand} />
-        <div className="mt-6">
-          <HowSteps />
-        </div>
-        <div className="mt-16">
-          <Footer brand={brand} />
-        </div>
-      </main>
-    </LandingLangProvider>
-  );
+  return <SiteShell brand={brand}><HowItWorksMarketing brand={brand} startHref="/register" /></SiteShell>;
 }

@@ -1,10 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { MarketingNavbar } from "@/components/marketing/navbar";
-import { Footer } from "@/components/marketing/footer";
-import { marketingFontClass } from "@/components/brand/fonts";
-import { LandingLangProvider } from "@/components/marketing/landing-v2/lang";
-import { PlanDetail } from "@/components/marketing/landing-v2/plan-detail";
+import { PlanDetail } from "@/components/marketing/qr-site/plan-detail";
+import { SiteShell } from "@/components/marketing/qr-site/ui";
 import { getBrand } from "@/lib/brand";
 import { listStandAddons } from "@/lib/landing/hardware";
 import { listPublicPlans } from "@/lib/plans/public";
@@ -27,10 +24,9 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const { plan, brand } = await load(params.slug);
   if (!plan) return { title: "Plan" };
   const description = plan.descriptionEn || `${plan.nameEn} for Google reviews, a menu, or WhatsApp orders.`;
-  const imagePath =
-    plan.imageUrl && !plan.imageUrl.startsWith("data:")
-      ? plan.imageUrl
-      : `/landing/${fallbackImageName(plan.category)}-1600.webp`;
+  const imagePath = plan.imageUrl && !plan.imageUrl.startsWith("data:")
+    ? plan.imageUrl
+    : `/landing/${fallbackImageName(plan.category)}-1600.webp`;
   return {
     title: { absolute: `${plan.nameEn} | ${brand.name}` },
     description,
@@ -46,10 +42,9 @@ export default async function PlanPage({ params, searchParams }: { params: Param
   const [{ plan, brand, hardware }, copy] = await Promise.all([load(params.slug), getPricingCopy()]);
   if (!plan) notFound();
   const base = (brand.appUrl || process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "");
-  const imagePath =
-    plan.imageUrl && !plan.imageUrl.startsWith("data:")
-      ? plan.imageUrl
-      : `/landing/${fallbackImageName(plan.category)}-1600.webp`;
+  const imagePath = plan.imageUrl && !plan.imageUrl.startsWith("data:")
+    ? plan.imageUrl
+    : `/landing/${fallbackImageName(plan.category)}-1600.webp`;
   const image = imagePath.startsWith("http") ? imagePath : `${base}${imagePath}`;
   const jsonLd = {
     "@context": "https://schema.org",
@@ -69,13 +64,9 @@ export default async function PlanPage({ params, searchParams }: { params: Param
   };
 
   return (
-    <LandingLangProvider>
-      <main className={`marketing-page min-h-screen overflow-x-hidden ${marketingFontClass}`}>
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-        <MarketingNavbar brand={brand} />
-        <PlanDetail plan={plan} hardware={hardware} initialDuration={searchParams.duration} faqs={copy.faqs} />
-        <Footer brand={brand} />
-      </main>
-    </LandingLangProvider>
+    <SiteShell brand={brand}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <PlanDetail plan={plan} hardware={hardware} initialDuration={searchParams.duration} faqs={copy.faqs} />
+    </SiteShell>
   );
 }

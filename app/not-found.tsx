@@ -1,22 +1,23 @@
 import Link from "next/link";
-import { Home, Search } from "lucide-react";
+import { ArrowUpRight, Search } from "lucide-react";
+import { SiteShell } from "@/components/marketing/qr-site/ui";
+import { getBrand } from "@/lib/brand";
 
-export default function NotFound() {
+export default async function NotFound() {
+  const brand = await getBrand();
   return (
-    <main className="relative min-h-screen bg-background flex items-center justify-center px-5">
-      <div className="rounded-2xl border bg-card p-8 sm:p-12 max-w-md w-full text-center shadow-card">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-50 text-primary-700">
-          <Search className="h-8 w-8" />
+    <SiteShell brand={brand}>
+      <section className="qr-notfound">
+        <div className="qr-wrap">
+          <div className="qr-notfound-card">
+            <Search size={25} aria-hidden="true" />
+            <p className="qr-notfound-code">404</p>
+            <h1>Page not found</h1>
+            <p>The page you’re looking for doesn’t exist or may have moved.</p>
+            <Link href="/" className="qr-button qr-button-dark">Back to home <ArrowUpRight size={16} /></Link>
+          </div>
         </div>
-        <div className="mt-6 font-display text-6xl font-bold gradient-text">404</div>
-        <h1 className="mt-2 font-display text-xl font-semibold text-foreground">Page not found</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          The page you're looking for doesn't exist or may have moved.
-        </p>
-        <Link href="/" className="btn-primary btn-lg mt-6 inline-flex">
-          <Home className="h-4 w-4" /> Back to home
-        </Link>
-      </div>
-    </main>
+      </section>
+    </SiteShell>
   );
 }

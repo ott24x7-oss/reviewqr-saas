@@ -1,4 +1,5 @@
 import { prisma } from "../db";
+import { LANDING_STAT_MINIMUMS } from "./stats";
 
 export type LandingQuote = {
   id: string;
@@ -25,12 +26,6 @@ export type LandingTrust = {
   orderCount: number | null;
 };
 
-/**
- * Site-wide reviews required before the public page shows an average.
- * A smaller sample stays a count. The score itself stays hidden.
- */
-const PUBLIC_RATING_MIN_REVIEWS = 20;
-
 /** Real counts only. Empty database fields stay null so the page can hide them. */
 export async function landingTrust(): Promise<LandingTrust> {
   const [businesses, reviews, orders] = await Promise.all([
@@ -40,7 +35,7 @@ export async function landingTrust(): Promise<LandingTrust> {
   ]);
   const reviewCount = reviews._count._all;
   const average = reviews._avg.rating;
-  const ratingReady = reviewCount >= PUBLIC_RATING_MIN_REVIEWS && average != null;
+  const ratingReady = reviewCount >= LANDING_STAT_MINIMUMS.ratings && average != null;
   return {
     businesses: businesses > 0 ? businesses : null,
     reviewCount: reviewCount > 0 ? reviewCount : null,
