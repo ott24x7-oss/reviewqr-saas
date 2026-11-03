@@ -147,7 +147,7 @@ function MeScreenContent() {
       <Group>
         {user?.role === "AGENT"
           ? <GroupRow icon={Users} tint="green" title={t.agentHomeTab} hint={t.agentMoreTab} onPress={() => { setMode("agent"); router.push("/(app)/agent-home"); }} />
-          : <GroupRow icon={Users} tint="green" title={t.promoBecomeReseller} hint={t.agentJoinBody} onPress={() => go("/(app)/agent-join")} />}
+          : <GroupRow icon={Users} tint="green" title={t.promoBecomeReseller} hint={t.resellerPitch} onPress={() => go("/(app)/agent-reseller")} />}
       </Group>
 
       <SectionHeader label={t.sectionSettings} />

@@ -27,7 +27,7 @@ jest.mock("../src/admin/api", () => ({
   adminApi: { inboxAction: jest.fn() },
   useAdminInbox: () => ({
     data: {
-      counts: { agents: 2, devices: 1, proofs: 0, payouts: 3, refunds: 0, shop: 0, support: 0, failed: 0 },
+      counts: { applications: 0, agents: 2, devices: 1, proofs: 0, payouts: 3, refunds: 0, shop: 0, support: 0, failed: 0 },
       items: []
     },
     isRefetching: false,

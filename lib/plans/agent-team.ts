@@ -565,7 +565,11 @@ class JoinRefused extends Error {
 
 type JoinStatus = "PENDING" | "ACTIVE" | "PAUSED" | "REJECTED";
 
-export async function joinTeam(userId: string, codeRaw: string): Promise<ServiceResult<{ status: JoinStatus; leaderName: string }>> {
+export async function joinTeam(
+  userId: string,
+  codeRaw: string,
+  options: { allowRejectedReapply?: boolean } = {}
+): Promise<ServiceResult<{ status: JoinStatus; leaderName: string }>> {
   const code = normalizeCode(codeRaw);
   if (!code) return fail(400, "Enter a valid team code");
   const invite = await prisma.agentInvite.findUnique({
@@ -613,8 +617,8 @@ export async function joinTeam(userId: string, codeRaw: string): Promise<Service
         cursor = ancestor.leaderId;
       }
       const existing = await tx.agentProfile.findUnique({ where: { userId } });
-      if (existing?.leaderId) throw new JoinRefused(400, "You are already on a team");
-      if (existing?.status === "REJECTED") throw new JoinRefused(400, "Your agent account was not approved");
+      if (existing?.leaderId && !(existing.status === "REJECTED" && options.allowRejectedReapply)) throw new JoinRefused(400, "You are already on a team");
+      if (existing?.status === "REJECTED" && !options.allowRejectedReapply) throw new JoinRefused(400, "Your agent account was not approved");
       if (existing) {
         const children = await tx.agentProfile.count({ where: { leaderId: existing.id } });
         if (children > 0) throw new JoinRefused(400, "Move this team from the admin page");

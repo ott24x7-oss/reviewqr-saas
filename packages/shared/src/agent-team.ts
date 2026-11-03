@@ -128,6 +128,39 @@ export const agentJoinResultSchema = z.object({
   leaderName: z.string()
 });
 
+export const agentApplicationHowSellSchema = z.enum(["SHOP_VISITS", "EXISTING_CLIENTS", "ONLINE", "OTHER"]);
+export const agentApplicationSubmitSchema = z.object({
+  name: z.string().trim().min(2).max(80),
+  phone: z.string().trim().min(10).max(20),
+  city: z.string().trim().min(2).max(80),
+  state: z.string().trim().min(2).max(80),
+  howSell: agentApplicationHowSellSchema,
+  experience: z.string().trim().max(500).optional().default(""),
+  languages: z.array(z.string().trim().min(2).max(40)).min(1).max(8),
+  referralOrTeamCode: z.string().trim().max(80).optional().default(""),
+  termsAccepted: z.literal(true)
+});
+export const agentApplicationStatusSchema = z.object({
+  status: z.enum(["none", "pending", "approved", "rejected"]),
+  rejectionReason: z.string().nullable(),
+  appliedAt: z.string().nullable(),
+  reapplyAt: z.string().nullable(),
+  canReapply: z.boolean()
+});
+export const agentApplicationResultSchema = z.object({ status: z.enum(["PENDING", "ACTIVE"]) });
+export const agentResellerPitchSchema = z.object({
+  planCommission: z.object({ basis: z.enum(["PERCENT", "FLAT"]), percent: z.number().int(), flatPaise: z.number().int() }),
+  shopCommission: z.object({ basis: z.enum(["PERCENT", "FLAT"]), percent: z.number().int(), flatPaise: z.number().int() }),
+  growthPlanName: z.string(),
+  growthPlanNameHi: z.string(),
+  growthExampleMonthlyPaise: z.number().int(),
+  payoutMethod: z.literal("UPI")
+});
+export type AgentApplicationSubmit = z.infer<typeof agentApplicationSubmitSchema>;
+export type AgentApplicationStatus = z.infer<typeof agentApplicationStatusSchema>;
+export type AgentApplicationResult = z.infer<typeof agentApplicationResultSchema>;
+export type AgentResellerPitch = z.infer<typeof agentResellerPitchSchema>;
+
 export type AgentStatus = z.infer<typeof agentStatusSchema>;
 export type AgentCommissionKind = z.infer<typeof agentCommissionKindSchema>;
 export type AgentHome = z.infer<typeof agentHomeSchema>;

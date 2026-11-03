@@ -58,6 +58,7 @@ let payouts: AgentPayout[];
 let profile: AgentProfile;
 let members: AgentTeamMember[];
 let inviteCounter: number;
+let applicationStatus: "none" | "pending" | "approved" | "rejected";
 
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
@@ -71,6 +72,7 @@ export function resetAgentMock() {
   profile = { name: "Diwakar Sharma", city: "Jaipur", upiId: "diwakar@upi", pan: "•••••1234", bankLast4: "7261" };
   members = [clone(seededMember)];
   inviteCounter = 0;
+  applicationStatus = "none";
 }
 
 resetAgentMock();
@@ -97,6 +99,17 @@ export async function agentMockRequest<T>(path: string, init: RequestInit = {}):
 
   if (pathname === "/agent/home" && method === "GET") {
     result = home;
+  } else if (pathname === "/agent/apply" && method === "GET") {
+    result = { status: applicationStatus, rejectionReason: null, appliedAt: null, reapplyAt: null, canReapply: applicationStatus === "none" };
+  } else if (pathname === "/agent/apply" && method === "POST") {
+    applicationStatus = "pending";
+    result = { status: "PENDING" };
+  } else if (pathname === "/agent/apply/pitch" && method === "GET") {
+    result = {
+      planCommission: { basis: "PERCENT", percent: 20, flatPaise: 0 },
+      shopCommission: { basis: "PERCENT", percent: 10, flatPaise: 0 },
+      growthPlanName: "Growth", growthPlanNameHi: "ग्रोथ", growthExampleMonthlyPaise: 499800, payoutMethod: "UPI"
+    };
   } else if (pathname === "/agent/businesses" && method === "GET") {
     result = { items: businesses };
   } else if (pathname === "/agent/commissions" && method === "GET") {

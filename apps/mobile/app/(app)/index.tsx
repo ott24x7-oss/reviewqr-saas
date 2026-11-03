@@ -175,7 +175,7 @@ function HomeScreenContent() {
     else if (user?.role === "AGENT") {
       setMode("agent");
       router.push("/(app)/agent-home");
-    } else router.push("/(app)/agent-join");
+    } else router.push("/(app)/agent-reseller");
   }
 
   return (

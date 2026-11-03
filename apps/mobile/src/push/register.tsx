@@ -1,17 +1,26 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { apiData } from "../api/data";
 import { accountKey } from "../query/keys";
 import { useSession } from "../state/session";
+import { useAgentMode } from "../agent/mode-context";
 import { rememberPushToken } from "./stored-token";
 import { routeForPush } from "./routes";
 
 /** Registers this Android device when the owner allows push, and opens the screen a tap names. */
 export function PushBridge() {
-  const { user } = useSession();
+  const { user, refreshUser } = useSession();
+  const { setMode } = useAgentMode();
   const client = useQueryClient();
   const openedColdStart = useRef(false);
+  const openPushDestination = useCallback(async (data: Record<string, unknown>) => {
+    if (data.type === "agent_application_approved") {
+      await refreshUser().catch(() => undefined);
+      setMode("agent");
+    }
+    router.push(routeForPush(data));
+  }, [refreshUser, setMode]);
 
   useEffect(() => {
     let live = true;
@@ -22,12 +31,12 @@ export function PushBridge() {
       const last = await Notifications.getLastNotificationResponseAsync();
       if (!live || !last) return;
       const data = last.notification.request.content.data as Record<string, unknown>;
-      router.push(routeForPush(data));
+      await openPushDestination(data);
     })().catch(() => undefined);
     return () => {
       live = false;
     };
-  }, []);
+  }, [openPushDestination]);
 
   useEffect(() => {
     let remove = () => {};
@@ -47,7 +56,7 @@ export function PushBridge() {
         if (data?.type === "plan_active") {
           client.invalidateQueries({ queryKey: accountKey(user?.id ?? "", "subscription") }).catch(() => undefined);
         }
-        router.push(routeForPush(data));
+        openPushDestination(data).catch(() => undefined);
       });
       const received = Notifications.addNotificationReceivedListener((event) => {
         const data = event.request.content.data as Record<string, unknown>;
@@ -79,7 +88,7 @@ export function PushBridge() {
       live = false;
       remove();
     };
-  }, [client, user?.id, user?.pushEnabled]);
+  }, [client, openPushDestination, user?.id, user?.pushEnabled]);
 
   return null;
 }

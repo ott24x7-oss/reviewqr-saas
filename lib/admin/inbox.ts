@@ -8,6 +8,7 @@ import { isShopOrderStatus, moveError, type ShopOrderStatusName } from "@/lib/sh
 import { setAdminDeviceStatus } from "./devices";
 import { rejectAdminPayment } from "./money";
 import { replyToTicket } from "./support-admin";
+import { reviewResellerApplication } from "../plans/agent-applications";
 
 const SHOP_QUEUE = ["PAID", "APPROVED", "PRINTING", "PACKED"] as const;
 const FORWARD = ["PROOF_SENT", "APPROVED", "PRINTING", "NFC_WRITTEN", "PACKED", "PICKUP_SCHEDULED", "SHIPPED", "DELIVERED"];
@@ -20,14 +21,15 @@ const refundWhere = {
   ]
 };
 
-function card(row: { id: string; title: string; subtitle: string; status: string; createdAt: Date }) {
+function card(row: { id: string; title: string; subtitle: string; details?: string; status: string; createdAt: Date }) {
   return { ...row, createdAt: row.createdAt.toISOString() };
 }
 
 async function inboxCountRows() {
   const stale = new Date(Date.now() - 30 * 60 * 1000);
-  const [agents, devices, proofs, payoutGroups, refunds, shop, support, failed] = await Promise.all([
+  const [agents, applications, devices, proofs, payoutGroups, refunds, shop, support, failed] = await Promise.all([
     prisma.agentProfile.count({ where: { status: "PENDING" } }),
+    prisma.agentApplication.count({ where: { status: "PENDING" } }),
     prisma.adminDevice.count({ where: { status: "PENDING" } }),
     prisma.shopOrder.count({ where: { status: "PROOF_SENT" } }),
     prisma.shopCommission.groupBy({ by: ["agentId"], where: { status: "APPROVED" }, _sum: { amountPaise: true } }),
@@ -38,7 +40,7 @@ async function inboxCountRows() {
       where: { OR: [{ status: "FAILED" }, { status: "PENDING", createdAt: { lt: stale } }] }
     })
   ]);
-  return { agents, devices, proofs, payoutGroups, refunds, shop, support, failed };
+  return { agents, applications, devices, proofs, payoutGroups, refunds, shop, support, failed };
 }
 
 /** Sidebar badge and the queue counts next to matching nav items. One count query. */
@@ -46,6 +48,7 @@ export async function adminShellCounts() {
   const counts = await inboxCountRows();
   const inbox =
     counts.agents +
+    counts.applications +
     counts.devices +
     counts.proofs +
     counts.payoutGroups.length +
@@ -55,7 +58,7 @@ export async function adminShellCounts() {
     counts.failed;
   return {
     inbox,
-    "/admin/agents": counts.agents,
+    "/admin/agents": counts.agents + counts.applications,
     "/admin/apps": counts.devices,
     "/admin/support": counts.support,
     "/admin/production": counts.shop + counts.proofs,
@@ -72,12 +75,12 @@ export async function adminInboxBadge() {
 
 export async function loadAdminInbox(search: URLSearchParams) {
   const segment = search.get("segment") || "agents";
-  const allowed = ["agents", "devices", "proofs", "payouts", "refunds", "shop", "support", "failed"];
+  const allowed = ["agents", "applications", "devices", "proofs", "payouts", "refunds", "shop", "support", "failed"];
   if (!allowed.includes(segment)) return fail(400, "Unknown inbox segment");
   const page = readPage(search);
   if (isPageError(page)) return fail(400, page.error);
   const stale = new Date(Date.now() - 30 * 60 * 1000);
-  const { agents, devices, proofs, payoutGroups, refunds, shop, support, failed } = await inboxCountRows();
+  const { agents, applications, devices, proofs, payoutGroups, refunds, shop, support, failed } = await inboxCountRows();
 
   let items: Array<{ id: string; title: string; subtitle: string; status: string; createdAt: string }> = [];
   let nextCursor: string | null = null;
@@ -114,6 +117,29 @@ export async function loadAdminInbox(search: URLSearchParams) {
           status: row.status,
           createdAt: row.createdAt
         }));
+      }
+      if (segment === "applications") {
+        const rows = await prisma.agentApplication.findMany({
+          where: { status: "PENDING" },
+          orderBy: { appliedAt: "asc" },
+          ...cursorQuery(page.cursorId, page.limit),
+          include: { user: { select: { createdAt: true, _count: { select: { businesses: true } } } } }
+        });
+        const methodEn: Record<string, string> = { SHOP_VISITS: "shop visits", EXISTING_CLIENTS: "existing clients", ONLINE: "online", OTHER: "other" };
+        const methodHi: Record<string, string> = { SHOP_VISITS: "दुकानों पर जाकर", EXISTING_CLIENTS: "मौजूदा ग्राहकों को", ONLINE: "ऑनलाइन", OTHER: "अन्य" };
+        return rows.map((row) => {
+          const signupAt = row.user.createdAt.toISOString().slice(0, 10);
+          return {
+            id: row.id,
+            title: row.applicantName,
+            subtitle: `${row.phone} · ${row.city}, ${row.state} · ${row.user._count.businesses} businesses`,
+            subtitleHi: `${row.phone} · ${row.city}, ${row.state} · ${row.user._count.businesses} कारोबार`,
+            details: `Selling: ${methodEn[row.howSell] || row.howSell} · Experience: ${row.experience || "Not provided"} · Languages: ${row.languages.join(", ")} · Code: ${row.referralOrTeamCode || "None"} · Signed up: ${signupAt}`,
+            detailsHi: `बिक्री: ${methodHi[row.howSell] || row.howSell} · अनुभव: ${row.experience || "नहीं दिया"} · भाषाएँ: ${row.languages.join(", ")} · कोड: ${row.referralOrTeamCode || "नहीं"} · साइन अप: ${signupAt}`,
+            status: row.status,
+            createdAt: row.appliedAt
+          };
+        });
       }
       if (segment === "devices") {
         const rows = await prisma.adminDevice.findMany({
@@ -182,6 +208,7 @@ export async function loadAdminInbox(search: URLSearchParams) {
   return ok({
     counts: {
       agents,
+      applications,
       devices,
       proofs,
       payouts: payoutGroups.length,
@@ -230,6 +257,20 @@ export async function applyInboxAction(input: {
   const before: Array<Record<string, unknown>> = [];
   const after: Array<Record<string, unknown>> = [];
   for (const id of ids) {
+    if (input.segment === "applications" && (input.action === "approve" || input.action === "reject")) {
+      const result = await reviewResellerApplication({
+        applicationId: id,
+        action: input.action,
+        actorId: input.actorId,
+        reason: input.reason || undefined
+      });
+      if (result.ok) {
+        changed += 1;
+        before.push({ id, ...result.data.before });
+        after.push({ id, ...result.data.after });
+      }
+      continue;
+    }
     if (input.segment === "agents" && (input.action === "approve" || input.action === "reject")) {
       const prior = await prisma.agentProfile.findUnique({ where: { id }, select: { status: true, active: true } });
       // A rejection is REJECTED, never PAUSED, so a leader cannot resume it.

@@ -61,11 +61,12 @@ export function dashboardHealth(data: AdminDashboard, now = Date.now()): AdminHe
   ];
 }
 
-export const INBOX_SEGMENTS: AdminInboxSegment[] = ["agents", "devices", "proofs", "payouts", "refunds", "shop", "support", "failed"];
+export const INBOX_SEGMENTS: AdminInboxSegment[] = ["applications", "agents", "devices", "proofs", "payouts", "refunds", "shop", "support", "failed"];
 
 /** What POST /inbox accepts for each segment (lib/admin/inbox.ts applyInboxAction). */
 export function inboxActions(segment: AdminInboxSegment): AdminInboxAction[] {
   switch (segment) {
+    case "applications": return ["approve", "reject"];
     case "agents": return ["approve", "reject"];
     case "devices": return ["approve", "revoke"];
     case "proofs": return ["approve"];

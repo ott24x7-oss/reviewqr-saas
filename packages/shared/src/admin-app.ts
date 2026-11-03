@@ -63,6 +63,7 @@ export const adminRangeSchema = z.enum(["today", "7d", "30d", "mtd", "custom"]);
 
 export const adminInboxSegmentSchema = z.enum([
   "agents",
+  "applications",
   "devices",
   "proofs",
   "payouts",
@@ -78,6 +79,13 @@ export const adminInboxActionSchema = z.object({
   id: z.string().min(1).max(64).optional(),
   ids: z.array(z.string().min(1).max(64)).max(50).optional(),
   reason: z.string().max(500).optional()
+});
+
+export const adminAgentApplicationDecisionSchema = z.object({
+  action: z.enum(["approve", "reject"]),
+  reason: z.string().trim().max(500).optional(),
+  leaderId: z.string().min(1).max(64).nullable().optional(),
+  sharePercent: z.number().int().min(0).max(100).nullable().optional()
 });
 
 export const adminUserActionSchema = z.discriminatedUnion("action", [

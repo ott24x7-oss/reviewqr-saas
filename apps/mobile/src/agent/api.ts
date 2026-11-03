@@ -2,6 +2,7 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { apiData } from "../api/data";
 import { accountKey } from "../query/keys";
 import { useSession } from "../state/session";
+import type { AgentApplicationStatus, AgentApplicationSubmit, AgentApplicationResult, AgentResellerPitch } from "@reviewqr/shared";
 import { agentMockEnabled } from "./env";
 import { agentMockRequest } from "./mock";
 import type {
@@ -103,5 +104,8 @@ export const agentRequests = {
   invite: (phone?: string) => agentRequest<AgentInviteResponse>("/agent/team/invite", { method: "POST", body: JSON.stringify(phone ? { phone } : {}) }),
   /** Send either a share percent or pause/resume, never both. */
   updateMember: (memberId: string, body: AgentMemberUpdate) => agentRequest<{ status: string } | { sharePercent: number }>(`/agent/team/${encodeURIComponent(memberId)}`, { method: "PATCH", body: JSON.stringify(body) }),
-  join: (code: string) => agentRequest<AgentJoinResponse>("/agent/join", { method: "POST", body: JSON.stringify({ code }) })
+  join: (code: string) => agentRequest<AgentJoinResponse>("/agent/join", { method: "POST", body: JSON.stringify({ code }) }),
+  applicationStatus: () => agentRequest<AgentApplicationStatus>("/agent/apply"),
+  submitApplication: (body: AgentApplicationSubmit) => agentRequest<AgentApplicationResult>("/agent/apply", { method: "POST", body: JSON.stringify(body) }),
+  pitch: () => agentRequest<AgentResellerPitch>("/agent/apply/pitch")
 };

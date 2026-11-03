@@ -43,7 +43,7 @@ export function AdminInboxScreen() {
   const { withStepUp } = useAdminSecurity();
   const selectSegment = (next: AdminInboxSegment) => router.setParams({ segment: next } as never);
   const inbox = inboxQuery.data;
-  const labels: Record<AdminInboxSegment, string> = { agents: t.agentsPending, devices: t.devicesPending, proofs: t.proofs, payouts: t.payoutsDue, refunds: t.refunds, shop: t.shopOrdersSegment, support: t.supportTickets, failed: t.failedPayments };
+  const labels: Record<AdminInboxSegment, string> = { applications: t.applicationsPending, agents: t.agentsPending, devices: t.devicesPending, proofs: t.proofs, payouts: t.payoutsDue, refunds: t.refunds, shop: t.shopOrdersSegment, support: t.supportTickets, failed: t.failedPayments };
   const pendingAgents = useMemo(() => segment === "agents" ? inbox?.items ?? [] : [], [inbox, segment]);
   const total = Object.values(inbox?.counts ?? {}).reduce((a, b) => a + b, 0);
 
@@ -119,7 +119,7 @@ function InboxCard({ item, buttons, label, lang, working, onAction }: { item: Ad
     <GestureDetector gesture={swipe}>
       <Animated.View style={style}>
         <AdminCard style={styles.itemCard}>
-          <View style={styles.itemTop}><View style={{ flex: 1, gap: 4 }}><Text style={[styles.itemTitle, { color: palette.ink }]}>{item.title}</Text><Text style={[styles.itemSubtitle, { color: palette.muted }]}>{item.subtitle}</Text></View><AdminStatus label={item.status} /></View>
+          <View style={styles.itemTop}><View style={{ flex: 1, gap: 4 }}><Text style={[styles.itemTitle, { color: palette.ink }]}>{item.title}</Text><Text style={[styles.itemSubtitle, { color: palette.muted }]}>{lang === "hi" ? item.subtitleHi || item.subtitle : item.subtitle}</Text>{item.details ? <Text style={[styles.itemSubtitle, { color: palette.muted }]}>{lang === "hi" ? item.detailsHi || item.details : item.details}</Text> : null}</View><AdminStatus label={item.status} /></View>
           <View style={styles.itemMeta}><Text style={[styles.metaText, { color: palette.muted }]}>{label}</Text><Text style={[styles.metaText, { color: palette.muted }]}>{formatAdminDate(item.createdAt, lang)}</Text></View>
           <View style={styles.actions}>{buttons.map((action) => <AdminAction key={action} label={actionLabel(action, t)} tone={outline(action) ? "outline" : "primary"} disabled={working} onPress={() => onAction(action)} icon={working ? <ActivityIndicator color={outline(action) ? palette.ink : palette.onPrimary} /> : outline(action) ? <X color={palette.ink} size={16} /> : <Check color={palette.onPrimary} size={16} />} />)}</View>
           {buttons.includes("approve") ? <Text style={[styles.swipeHint, { color: palette.muted }]}>{t.swipeHint}</Text> : null}

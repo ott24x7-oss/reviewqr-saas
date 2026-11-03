@@ -89,7 +89,7 @@ export type AdminKpi = { key: AdminKpiKey; value: number; changePercent: number 
 export type AdminInboxSegment = z.infer<typeof adminInboxSegmentSchema>;
 export type AdminInboxActionBody = z.infer<typeof adminInboxActionSchema>;
 export type AdminInboxAction = AdminInboxActionBody["action"];
-export type AdminInboxItem = { id: string; title: string; subtitle: string; status: string; createdAt: string };
+export type AdminInboxItem = { id: string; title: string; subtitle: string; subtitleHi?: string; details?: string; detailsHi?: string; status: string; createdAt: string };
 export type AdminInbox = {
   counts: Record<AdminInboxSegment, number>;
   segment: AdminInboxSegment;

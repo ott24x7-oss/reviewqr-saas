@@ -135,6 +135,7 @@ model User {
   shopCommissions ShopCommission[]
   subscriptions Subscription[]
   agentProfile AgentProfile?
+  agentApplication AgentApplication?
   commissionRules CommissionRule[]
   commissionPayouts CommissionPayout[]
   ownerReferral OwnerReferral?
@@ -1875,6 +1876,12 @@ enum AgentStatus {
   REJECTED
 }
 
+enum AgentApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 // One credit per agent, kind, and source. An order and a renewal never share a source.
 model ShopCommission {
   id          String             @id @default(cuid())
@@ -2048,6 +2055,31 @@ model AgentProfile {
 
   @@index([leaderId])
   @@index([status])
+}
+
+model AgentApplication {
+  id                 String                  @id @default(cuid())
+  userId             String                  @unique
+  user               User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status             AgentApplicationStatus  @default(PENDING)
+  applicantName      String                  @db.VarChar(80)
+  phone              String                  @db.VarChar(20)
+  city               String                  @db.VarChar(80)
+  state              String                  @db.VarChar(80)
+  howSell            String                  @db.VarChar(32)
+  experience         String                  @default("") @db.VarChar(500)
+  languages          String[]                @default([])
+  referralOrTeamCode String                  @default("") @db.VarChar(80)
+  termsVersion       String                  @db.VarChar(40)
+  termsAcceptedAt    DateTime
+  rejectionReason    String?                 @db.VarChar(500)
+  reviewedById       String?
+  reviewedAt         DateTime?
+  appliedAt          DateTime                @default(now())
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+
+  @@index([status, appliedAt])
 }
 
 // A leader's invite. Joining never charges a fee and never creates a commission.

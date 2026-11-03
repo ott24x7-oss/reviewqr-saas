@@ -45,10 +45,10 @@ export function AgentModeProvider({ children }: { children: ReactNode }) {
   const mode = resolveAppMode(user?.role, savedMode, businesses.length > 0);
   const canSwitch = user?.role === "AGENT" && businesses.length > 0;
   const setMode = useCallback((next: AppMode) => {
-    if (!canSwitch || !userId) return;
+    if (!userId) return;
     setStoredChoice({ userId, mode: next });
     AsyncStorage.setItem(`${MODE_KEY}.${userId}`, next).catch(() => undefined);
-  }, [canSwitch, userId]);
+  }, [userId]);
   const value = useMemo(() => ({ mode, ready, canSwitch, setMode }), [mode, ready, canSwitch, setMode]);
 
   return <ModeContext.Provider value={value}>{children}</ModeContext.Provider>;

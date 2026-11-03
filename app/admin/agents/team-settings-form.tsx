@@ -74,6 +74,17 @@ export function TeamSettingsForm({ initial }: { initial: TeamProgramSettings }) 
         Auto-approve sub-agents
       </label>
       <div>
+        <Label htmlFor="application-rejection-cooldown">Days before a rejected reseller can reapply</Label>
+        <Input
+          id="application-rejection-cooldown"
+          type="number"
+          min={0}
+          max={365}
+          value={form.applicationRejectionCooldownDays}
+          onChange={(event) => setForm({ ...form, applicationRejectionCooldownDays: Number(event.target.value) })}
+        />
+      </div>
+      <div>
         <Label htmlFor="tds-percent">TDS percent</Label>
         <Input
           id="tds-percent"

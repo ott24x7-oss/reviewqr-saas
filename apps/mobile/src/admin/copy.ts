@@ -1,6 +1,7 @@
 import { useI18n } from "../i18n";
 
 const en = {
+  applicationsPending: "Reseller applications",
   appName: "QR24x7 Admin",
   home: "Home", inbox: "Inbox", search: "Search", money: "Money", more: "More",
   back: "Back", confirm: "Confirm", loadError: "Couldn’t load this information.", dashboardSubtitle: "Your business at a glance", dashboardRevenueCaption: "Revenue collected from real payments", inboxSubtitle: "Review important changes before they go live", searchSubtitle: "Find an account, payment or order", searchTip: "Search by name, business, phone, UTR or order number.", moneySubtitle: "Payments, commissions and payouts", thisMonth: "This month", shortcuts: "Shortcuts", swipeHint: "Swipe right to approve · left to reject", fromDate: "From date", toDate: "To date", allGateways: "All gateways", allPlans: "All plans",
@@ -33,6 +34,7 @@ const en = {
 export type AdminCopy = { [Key in keyof typeof en]: string };
 
 const hi: AdminCopy = {
+  applicationsPending: "रीसेलर आवेदन",
   appName: "QR24x7 एडमिन",
   home: "होम", inbox: "इनबॉक्स", search: "खोजें", money: "पैसा", more: "और",
   back: "वापस", confirm: "पुष्टि करें", loadError: "यह जानकारी लोड नहीं हो सकी।", dashboardSubtitle: "आपके कारोबार की एक झलक", dashboardRevenueCaption: "असली भुगतान से मिली कमाई", inboxSubtitle: "ज़रूरी बदलावों की समीक्षा करें", searchSubtitle: "खाता, भुगतान या ऑर्डर खोजें", searchTip: "नाम, दुकान, फ़ोन, UTR या ऑर्डर नंबर से खोजें।", moneySubtitle: "भुगतान, कमीशन और पेआउट", thisMonth: "इस महीने", shortcuts: "शॉर्टकट", swipeHint: "मंज़ूर करने के लिए दाएँ · नामंज़ूर करने के लिए बाएँ स्वाइप करें", fromDate: "शुरू तारीख", toDate: "आख़िरी तारीख", allGateways: "सभी भुगतान सेवा", allPlans: "सभी प्लान",

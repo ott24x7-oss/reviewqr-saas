@@ -9,6 +9,7 @@ const schema = z.object({
   minSharePercent: z.number().int().min(0).max(100),
   maxSharePercent: z.number().int().min(0).max(100),
   autoApproveSubAgents: z.boolean(),
+  applicationRejectionCooldownDays: z.number().int().min(0).max(365),
   tdsPercent: z.number().int().min(0).max(30),
   tdsYearlyThresholdPaise: z.number().int().min(0)
 });
