@@ -15,9 +15,12 @@ import {
   otpBrandName,
   otpGateError,
   otpWrongCodeError,
+  OTP_INVALID,
+  otpEmailHtml,
   phoneKeyFromRaw,
   type OtpChannel
 } from "./otp-message";
+import { EMAIL_OTP_PURPOSE, EMAIL_OTP_TTL_MS, emailOtpMessage, normalizeEmail } from "./email-otp";
 
 export type { OtpChannel };
 
@@ -170,6 +173,61 @@ export async function requestLoginOtp(rawPhone: string) {
   });
   const channel = await deliverCode({ phone: rawPhone, email: user.email, code });
   return { ok: true as const, issuedCode: code, channel };
+}
+
+/** Sends a private email login code. Unknown and inactive accounts are indistinguishable. */
+export async function requestEmailLoginOtp(rawEmail: string) {
+  const email = normalizeEmail(rawEmail);
+  const user = await prisma.user.findFirst({
+    where: { email, deletedAt: null, suspendedAt: null },
+    select: { id: true, email: true }
+  });
+  if (!user) return { ok: true as const, accountExists: false as const };
+
+  const code = randomOtpCode();
+  await prisma.emailOtp.deleteMany({ where: { identifier: email, purpose: EMAIL_OTP_PURPOSE } });
+  await prisma.emailOtp.create({
+    data: {
+      identifier: email,
+      tokenHash: hashToken(code),
+      channel: "email",
+      purpose: EMAIL_OTP_PURPOSE,
+      expires: new Date(Date.now() + EMAIL_OTP_TTL_MS),
+      attempts: 0
+    }
+  });
+
+  const brand = await platformBrand();
+  const message = emailOtpMessage(code, brand);
+  try {
+    await sendEmail({
+      to: user.email,
+      subject: `Your ${brand} email sign-in code`,
+      text: message.replace(/\*/g, ""),
+      html: `<p style="font-family:Arial,sans-serif;font-size:15px;line-height:1.6">${otpEmailHtml(message)}</p>`
+    });
+    await prisma.otpDelivery.create({ data: { channel: "email" } }).catch(() => {});
+  } catch (error) {
+    await prisma.emailOtp.deleteMany({ where: { identifier: email, purpose: EMAIL_OTP_PURPOSE } }).catch(() => {});
+    console.warn("[email-otp] delivery failed:", error instanceof Error ? error.message : "unknown error");
+  }
+  return { ok: true as const, accountExists: true as const };
+}
+
+/** Checks the email challenge with the same expiry and attempt messages as phone OTP. */
+export async function verifyEmailLoginOtp(rawEmail: string, code: string) {
+  const email = normalizeEmail(rawEmail);
+  if (!/^\d{6}$/.test(code)) return { ok: false as const, error: OTP_INVALID };
+
+  const user = await prisma.user.findFirst({
+    where: { email, deletedAt: null, suspendedAt: null },
+    select: { id: true, email: true, name: true, image: true, role: true, subscriptionTier: true, agencyId: true }
+  });
+  if (!user) return { ok: false as const, error: OTP_INVALID };
+
+  const checked = await verifyPurposeOtp(email, EMAIL_OTP_PURPOSE, code);
+  if (!checked.ok) return checked;
+  return { ok: true as const, user };
 }
 
 /** Returns a one-time session token the credentials provider can exchange. */

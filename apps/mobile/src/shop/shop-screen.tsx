@@ -1094,9 +1094,9 @@ function OrderDetailView({ detail, addresses, palette, t, lang, busy, proofNote,
       <Text style={[styles.sectionTitle, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.shopSummary}</Text>
       <SummaryRow label={t.shopSubtotal} amount={detail.subtotalPaise} palette={palette} />
       <SummaryRow label={t.shopDiscount} amount={-detail.discountPaise} palette={palette} />
-      <SummaryRow label={t.shopCgst} amount={detail.cgstPaise} palette={palette} />
-      <SummaryRow label={t.shopSgst} amount={detail.sgstPaise} palette={palette} />
-      <SummaryRow label={t.shopIgst} amount={detail.igstPaise} palette={palette} />
+      <SummaryRow label={t.shopCgst} amount={detail.cgstPaise ?? 0} palette={palette} />
+      <SummaryRow label={t.shopSgst} amount={detail.sgstPaise ?? 0} palette={palette} />
+      <SummaryRow label={t.shopIgst} amount={detail.igstPaise ?? 0} palette={palette} />
       <SummaryRow label={t.shopTotal} amount={detail.totalPaise} palette={palette} strong />
       {detail.invoiceNumber ? <View style={styles.invoiceRow}><Receipt size={19} color={palette.primary} /><Text style={[styles.bodyText, { color: palette.ink }]}>{t.shopInvoice}: {detail.invoiceNumber}</Text></View> : null}
       {detail.invoiceDownloadUrl ? <SecondaryButton label={t.shopDownloadInvoice} icon={ExternalLink} onPress={() => void onOpenExternal(detail.invoiceDownloadUrl!)} /> : null}

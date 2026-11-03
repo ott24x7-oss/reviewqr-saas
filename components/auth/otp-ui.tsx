@@ -5,8 +5,8 @@ export type AuthLang = "en" | "hi";
 
 const COPY = {
   en: {
-    loginTitle: "Login with WhatsApp",
-    loginSubtitle: "We will send a 6-digit code to your WhatsApp.",
+    loginTitle: "Sign in",
+    loginSubtitle: "Continue with WhatsApp or use your email and password.",
     registerTitle: "Start with WhatsApp",
     registerSubtitle: "14 days free. No password to remember.",
     phone: "Mobile number",
@@ -25,6 +25,23 @@ const COPY = {
     sentEmail: "Code sent by email.",
     sentDev: "Code sent.",
     notice: "If this number is registered, a code was sent.",
+    continueWhatsApp: "Continue with WhatsApp",
+    orSignInWithEmail: "or sign in with email",
+    email: "Email",
+    password: "Password",
+    signIn: "Sign in",
+    welcomeBack: "Welcome back!",
+    passwordMode: "Password",
+    emailCodeMode: "Email code",
+    sendEmailCode: "Send code",
+    verifyEmailCode: "Verify and sign in",
+    emailCodeLabel: "6-digit code",
+    sentEmailCode: "If your email is registered, a code was sent.",
+    resendEmailCode: "Resend code",
+    resendEmailIn: (n: number) => `Resend in ${n}s`,
+    changeEmail: "Change email",
+    requestEmailCodeFailed: "Could not send a code. Please try again.",
+    verifyEmailCodeFailed: "Could not verify the code. Please try again.",
     name: "Your name",
     business: "Business name",
     finish: "Create account",
@@ -32,8 +49,8 @@ const COPY = {
     langHi: "हिं"
   },
   hi: {
-    loginTitle: "WhatsApp से लॉगिन",
-    loginSubtitle: "हम आपके WhatsApp पर 6 अंकों का कोड भेजेंगे।",
+    loginTitle: "लॉगिन करें",
+    loginSubtitle: "WhatsApp से जारी रखें या ईमेल से लॉगिन करें।",
     registerTitle: "WhatsApp से शुरू करें",
     registerSubtitle: "14 दिन मुफ़्त। पासवर्ड याद रखने की ज़रूरत नहीं।",
     phone: "मोबाइल नंबर",
@@ -52,6 +69,23 @@ const COPY = {
     sentEmail: "कोड ईमेल पर भेजा गया।",
     sentDev: "कोड भेज दिया गया।",
     notice: "अगर यह नंबर रजिस्टर है, तो कोड भेज दिया गया है।",
+    continueWhatsApp: "WhatsApp से जारी रखें",
+    orSignInWithEmail: "या ईमेल से लॉगिन करें",
+    email: "ईमेल",
+    password: "पासवर्ड",
+    signIn: "लॉगिन करें",
+    welcomeBack: "वापसी पर स्वागत है!",
+    passwordMode: "पासवर्ड",
+    emailCodeMode: "ईमेल कोड",
+    sendEmailCode: "कोड भेजें",
+    verifyEmailCode: "पुष्टि करें और लॉगिन करें",
+    emailCodeLabel: "6 अंकों का कोड",
+    sentEmailCode: "अगर इस ईमेल पर खाता है, तो कोड भेज दिया गया है।",
+    resendEmailCode: "कोड फिर भेजें",
+    resendEmailIn: (n: number) => `${n} सेकंड में फिर भेजें`,
+    changeEmail: "ईमेल बदलें",
+    requestEmailCodeFailed: "कोड नहीं भेजा जा सका। फिर कोशिश करें।",
+    verifyEmailCodeFailed: "कोड की पुष्टि नहीं हो सकी। फिर कोशिश करें।",
     name: "आपका नाम",
     business: "व्यवसाय का नाम",
     finish: "खाता बनाएँ",
@@ -138,7 +172,7 @@ export function OtpCodeField({
   );
 }
 
-export function useResendCountdown(active: boolean, seconds: number) {
+export function useResendCountdown(active: boolean, seconds: number, resetKey?: number) {
   const [left, setLeft] = React.useState(seconds);
   React.useEffect(() => {
     if (!active) {
@@ -150,6 +184,6 @@ export function useResendCountdown(active: boolean, seconds: number) {
       setLeft((current) => (current > 0 ? current - 1 : 0));
     }, 1000);
     return () => window.clearInterval(id);
-  }, [active, seconds]);
+  }, [active, seconds, resetKey]);
   return left;
 }
