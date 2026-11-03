@@ -2,7 +2,7 @@ import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { Screen } from "../../src/ui/screen";
 import type { BillingSummary, ShopOrderDetail } from "@reviewqr/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { CreditCard, PackageOpen, ShoppingBag } from "lucide-react-native";
+import { ChevronRight, CreditCard, PackageOpen, ShoppingBag } from "lucide-react-native";
 import * as WebBrowser from "expo-web-browser";
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState , useMemo } from "react";
@@ -90,7 +90,7 @@ function ShopScreenContent() {
   });
   const orders = useQuery({
     queryKey: accountKey(userId, "shop-orders"),
-    enabled: !!user && tab === "orders",
+    enabled: !!user,
     queryFn: () => apiData<{ items: OrderRow[] }>("/api/v1/shop/orders")
   });
   const detail = useQuery({
@@ -206,9 +206,24 @@ function ShopScreenContent() {
 
   const plan = billing.data?.plan;
   const needsAddress = lines.some((line) => line.ships);
+  const activeOrder = (orders.data?.items ?? []).find((order) => !["DELIVERED", "CANCELLED", "REJECTED"].includes(order.status));
 
   return (
     <KeyboardAwareScrollView style={styles.screen} contentContainerStyle={styles.content}>
+      {activeOrder ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t.activeOrder + " " + (activeOrder.statusLabel || activeOrder.status)}
+          onPress={() => { setTab("orders"); setOpenId(activeOrder.id); }}
+          style={[styles.activeOrder, { backgroundColor: palette.card, borderColor: palette.line }]}
+        >
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.title, lang === "hi" && styles.hindi]}>{t.activeOrder}</Text>
+            <Text style={[styles.note, lang === "hi" && styles.hindi]}>{activeOrder.statusLabel || activeOrder.status}</Text>
+          </View>
+          <ChevronRight color={palette.deep} size={20} />
+        </Pressable>
+      ) : null}
       <View style={styles.row}>
         {(["catalogue", "orders", "plan"] as const).map((item) => (
           <Pressable key={item} accessibilityRole="button" accessibilityState={{ selected: tab === item }} accessibilityLabel={item === "catalogue" ? t.catalogue : item === "orders" ? t.orders : t.plans} onPress={() => setTab(item)} style={[styles.chip, tab === item && styles.chipOn]}>
@@ -357,6 +372,7 @@ function makeStyles(colors: Palette) {
   content: { padding: 16, gap: 12 },
   stack: { gap: 12 },
   row: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  activeOrder: { minHeight: 70, borderRadius: 18, borderWidth: 1, padding: 14, flexDirection: "row", alignItems: "center", gap: 10 },
   chip: { minHeight: 48, borderRadius: 999, paddingHorizontal: 14, justifyContent: "center", backgroundColor: colors.card },
   chipOn: { backgroundColor: colors.deep },
   chipText: { fontFamily: fonts.bodyStrong, color: colors.ink },

@@ -4,7 +4,7 @@ import type { TapLink, TapPage } from "@reviewqr/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
-import { Globe2, GripVertical, Link2, MessageCircle, Pencil, Phone, Plus, Star, UtensilsCrossed } from "lucide-react-native";
+import { Check, Download, Globe2, GripVertical, Link2, MessageCircle, Nfc, Pencil, Phone, Plus, Printer, Share2, Star, UtensilsCrossed } from "lucide-react-native";
 import type { LucideIcon } from "lucide-react-native";
 import { useEffect, useRef, useState, useMemo } from "react";
 import { PanResponder, Platform, Pressable, Share, StyleSheet, Switch, Text, View } from "react-native";
@@ -30,7 +30,7 @@ import { fonts } from "../../src/theme";
 import { useTheme } from "../../src/ui/theme";
 import { BLURHASH } from "../../src/ui/tokens";
 import type { Palette } from "../../src/ui/tokens";
-import { BottomSheet, LoadErrorCard, Skeleton } from "../../src/ui/bits";
+import { LoadErrorCard, Skeleton } from "../../src/ui/bits";
 import { Field, PillButton } from "../../src/ui/controls";
 import { Group, GroupRow, SectionHeader } from "../../src/ui/rows";
 
@@ -294,6 +294,7 @@ function TapScreenContent() {
                 >
                   <Text style={{ color: item.ink, fontFamily: fonts.bodyStrong }} numberOfLines={2}>{item.name}</Text>
                   <View style={[styles.swatchButton, { backgroundColor: item.buttonBg }]} />
+                  {selected ? <View style={[styles.themeCheck, { backgroundColor: palette.primary }]}><Check color={palette.onPrimary} size={15} strokeWidth={2.5} /></View> : null}
                 </Pressable>
               </View>
             );
@@ -329,8 +330,17 @@ function TapScreenContent() {
           palette={palette}
           dragLabel={t.dragButton}
           editLabel={t.editButton}
+          editing={editingLink === index}
+          labelEn={link.labelEn}
+          labelHi={link.labelHi}
+          customUrl={link.type === "custom"}
+          url={link.url}
           onToggle={(enabled) => edit(index, { enabled })}
-          onEdit={() => setEditingLink(index)}
+          onEdit={() => setEditingLink((current) => current === index ? null : index)}
+          onCloseEdit={() => setEditingLink(null)}
+          onLabelEn={(labelEn) => edit(index, { labelEn })}
+          onLabelHi={(labelHi) => edit(index, { labelHi })}
+          onUrl={(url) => edit(index, { url })}
           onReorder={reorderButton}
           targetRef={index === 0 ? buttonRowTarget : undefined}
         />
@@ -374,31 +384,37 @@ function TapScreenContent() {
             <Text style={[styles.section, lang === "hi" && styles.hindi]}>{t.shareQr}</Text>
             <HelpButton title={t.coachQrShow} body={t.coachQrShowBody} />
           </View>
-          <View ref={qrTarget} collapsable={false} style={[styles.frame, bright && { borderColor: palette.primary, borderWidth: 2 }]}>
-            {qrUri ? (
-              <>
-                {!lowRam ? <Animated.View style={[styles.glow, { backgroundColor: palette.primary }, glowStyle]} /> : null}
-                <Animated.View style={qrStyle}>
-                  <Image source={{ uri: qrUri }} placeholder={{ blurhash: BLURHASH }} style={[styles.qr, { backgroundColor: palette.card }]} contentFit="contain" accessibilityLabel={t.shareQr} />
-                  <QrModules reduceMotion={reduceMotion || lowRam} color={palette.card} />
-                </Animated.View>
-              </>
-            ) : <Text style={[styles.note, { color: palette.muted }, lang === "hi" && styles.hindi]}>{t.noQr}</Text>}
+          <View ref={qrTarget} collapsable={false} style={[styles.standCard, { backgroundColor: palette.card, borderColor: bright ? palette.primary : palette.line }]}>
+            <View style={styles.standBrand}>
+              {business.logo ? <Image source={{ uri: business.logo }} style={styles.standLogo} contentFit="contain" accessibilityLabel={business.name} /> : null}
+              <Text style={[styles.standName, { color: palette.ink }, lang === "hi" && styles.hindi]} numberOfLines={2}>{business.name}</Text>
+            </View>
+            <View style={styles.frame}>
+              {qrUri ? (
+                <>
+                  {!lowRam ? <Animated.View style={[styles.glow, { backgroundColor: palette.primary }, glowStyle]} /> : null}
+                  <Animated.View style={qrStyle}>
+                    <Image source={{ uri: qrUri }} placeholder={{ blurhash: BLURHASH }} style={[styles.qr, { backgroundColor: palette.card }]} contentFit="contain" accessibilityLabel={t.shareQr} />
+                    <QrModules reduceMotion={reduceMotion || lowRam} color={palette.card} />
+                  </Animated.View>
+                </>
+              ) : <Text style={[styles.note, { color: palette.muted }, lang === "hi" && styles.hindi]}>{t.noQr}</Text>}
+            </View>
           </View>
           {qrUri ? <PillButton label={bright ? t.showToCustomerOn : t.showToCustomer} onPress={() => { showToCustomer().catch(() => undefined); }} tone="dark" /> : null}
-          <View ref={qrShareTarget} collapsable={false} style={styles.row}>
-            <PillButton label={t.shareQr} onPress={share} tone="outline" />
-            <PillButton label={t.downloadQr} onPress={share} tone="outline" />
-            <PillButton label={t.printStand} onPress={() => qrUri && WebBrowser.openBrowserAsync(qrUri)} disabled={!qrUri} tone="outline" />
-          </View>
-          {section !== "qr" ? <>
-            <PillButton label={t.nfc} onPress={() => {
+          <View ref={qrShareTarget} collapsable={false} style={styles.iconActions}>
+            <QrIconAction label={t.shareQr} icon={Share2} onPress={share} palette={palette} />
+            <QrIconAction label={t.downloadQr} icon={Download} onPress={share} palette={palette} />
+            <QrIconAction label={t.printStand} icon={Printer} onPress={() => router.push("/(app)/shop")} palette={palette} />
+            <QrIconAction label={t.writeNfc} icon={Nfc} onPress={() => {
               if (locked("nfc")) {
                 openPlanLock("nfc");
                 return;
               }
               router.push("/(app)/nfc");
-            }} tone="dark" />
+            }} palette={palette} />
+          </View>
+          {section !== "qr" ? <>
             <SectionHeader label={t.directTitle} />
             <Group>
               <GroupRow
@@ -459,16 +475,6 @@ function TapScreenContent() {
           { title: t.coachQrNfc, body: t.coachQrNfcBody, top: 360 }
         ]}
       />
-      <BottomSheet visible={editingLink !== null} title={t.editButton} onClose={() => setEditingLink(null)}>
-        {editingLink !== null && shown[editingLink] ? (
-          <View style={styles.stack}>
-            <Field label={t.buttonLabel} tone="paper" value={shown[editingLink].labelEn} onChangeText={(labelEn) => edit(editingLink, { labelEn })} />
-            <Field label={t.buttonLabelHi} tone="paper" value={shown[editingLink].labelHi} onChangeText={(labelHi) => edit(editingLink, { labelHi })} />
-            <Field label={t.linkAddress} tone="paper" value={shown[editingLink].url} onChangeText={(url) => edit(editingLink, { url })} autoCapitalize="none" />
-            <PillButton label={t.save} onPress={() => setEditingLink(null)} tone="dark" />
-          </View>
-        ) : null}
-      </BottomSheet>
       <SetupWalkthrough step="link" screen="qr" targets={{ link: linkTarget, share: linkShareTarget }} steps={[
         { title: t.pageLink, body: t.setupCoachLink, top: 170, target: "link" },
         { title: t.sharePage, body: t.setupCoachLink, top: 320, target: "share" }
@@ -522,6 +528,16 @@ function QrModule({ index, color }: { index: number; color: string }) {
 
 type NativeView = ElementRef<typeof View>;
 
+function QrIconAction({ label, icon: Icon, onPress, palette }: { label: string; icon: LucideIcon; onPress: () => void; palette: Palette }) {
+  const { lang } = useI18n();
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={rowStyles.qrAction}>
+      <Icon color={palette.deep} size={20} strokeWidth={1.8} />
+      <Text style={[rowStyles.qrActionText, { color: palette.ink }, lang === "hi" && rowStyles.hindi]} numberOfLines={2}>{label}</Text>
+    </Pressable>
+  );
+}
+
 function PageButtonRow({
   icon: Icon,
   label,
@@ -531,8 +547,17 @@ function PageButtonRow({
   palette,
   dragLabel,
   editLabel,
+  editing,
+  labelEn,
+  labelHi,
+  customUrl,
+  url,
   onToggle,
   onEdit,
+  onCloseEdit,
+  onLabelEn,
+  onLabelHi,
+  onUrl,
   onReorder,
   targetRef
 }: {
@@ -544,12 +569,21 @@ function PageButtonRow({
   palette: Palette;
   dragLabel: string;
   editLabel: string;
+  editing: boolean;
+  labelEn: string;
+  labelHi: string;
+  customUrl: boolean;
+  url: string;
   onToggle: (enabled: boolean) => void;
   onEdit: () => void;
+  onCloseEdit: () => void;
+  onLabelEn: (value: string) => void;
+  onLabelHi: (value: string) => void;
+  onUrl: (value: string) => void;
   onReorder: (from: number, to: number) => void;
   targetRef?: RefObject<NativeView | null>;
 }) {
-  const { lang } = useI18n();
+  const { lang, t } = useI18n();
   const drag = useMemo(() => PanResponder.create({
     onMoveShouldSetPanResponder: (_event, gesture) => Math.abs(gesture.dy) > 6,
     onPanResponderTerminationRequest: () => false,
@@ -560,11 +594,25 @@ function PageButtonRow({
   }), [count, index, onReorder]);
   return (
     <View ref={targetRef} collapsable={false} style={[rowStyles.buttonRow, { backgroundColor: palette.card, borderColor: palette.line }]}>
-      <Pressable accessibilityRole="button" accessibilityLabel={`${label}, ${editLabel}`} onPress={onEdit} style={rowStyles.buttonEdit}>
-        <View style={[rowStyles.buttonIcon, { backgroundColor: palette.accentSoft }]}><Icon color={palette.deep} size={20} strokeWidth={1.8} /></View>
-        <Text style={[rowStyles.buttonName, { color: palette.ink }, lang === "hi" && rowStyles.hindi]} numberOfLines={2}>{label}</Text>
-        <Pencil color={palette.muted} size={16} />
-      </Pressable>
+      {editing ? (
+        <View style={[rowStyles.buttonEdit, rowStyles.inlineLabels]}>
+          <View style={rowStyles.inlineHeader}>
+            <Text style={[rowStyles.buttonName, { color: palette.ink }]} numberOfLines={1}>{label}</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel={t.save} onPress={onCloseEdit} style={rowStyles.doneEditing}>
+              <Check color={palette.deep} size={18} strokeWidth={2.4} />
+            </Pressable>
+          </View>
+          <Field label={t.buttonLabel} tone="paper" value={labelEn} onChangeText={onLabelEn} />
+          <Field label={t.buttonLabelHi} tone="paper" value={labelHi} onChangeText={onLabelHi} />
+          {customUrl ? <Field label={t.linkAddress} tone="paper" value={url} onChangeText={onUrl} autoCapitalize="none" /> : null}
+        </View>
+      ) : (
+        <Pressable accessibilityRole="button" accessibilityLabel={label + ", " + editLabel} onPress={onEdit} style={rowStyles.buttonEdit}>
+          <View style={[rowStyles.buttonIcon, { backgroundColor: palette.accentSoft }]}><Icon color={palette.deep} size={20} strokeWidth={1.8} /></View>
+          <Text style={[rowStyles.buttonName, { color: palette.ink }, lang === "hi" && rowStyles.hindi]} numberOfLines={2}>{label}</Text>
+          <Pencil color={palette.muted} size={16} />
+        </Pressable>
+      )}
       <Switch
         accessibilityLabel={label}
         accessibilityState={{ checked: enabled }}
@@ -583,9 +631,14 @@ function PageButtonRow({
 const rowStyles = StyleSheet.create({
   buttonRow: { minHeight: 72, borderRadius: 18, borderWidth: 1, paddingVertical: 6, paddingHorizontal: 8, flexDirection: "row", alignItems: "center", gap: 8 },
   buttonEdit: { minHeight: 56, flex: 1, flexDirection: "row", alignItems: "center", gap: 10 },
+  inlineLabels: { flexDirection: "column", alignItems: "stretch", gap: 6, paddingVertical: 4 },
+  inlineHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
+  doneEditing: { minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" },
   buttonIcon: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   buttonName: { flex: 1, fontFamily: fonts.bodyStrong, fontSize: 14 },
   dragHandle: { width: 42, height: 52, alignItems: "center", justifyContent: "center" },
+  qrAction: { flex: 1, minWidth: 64, minHeight: 52, alignItems: "center", justifyContent: "center", gap: 4 },
+  qrActionText: { fontFamily: fonts.bodyStrong, fontSize: 10, textAlign: "center" },
   hindi: { fontFamily: fonts.hindi }
 });
 
@@ -614,11 +667,17 @@ function makeStyles(colors: Palette) {
   swatchCell: { width: "50%", padding: 4 },
   swatch: { borderRadius: 18, borderWidth: 2, padding: 12, gap: 10, minHeight: 92 },
   swatchButton: { height: 28, borderRadius: 999 },
+  themeCheck: { position: "absolute", right: 8, top: 8, width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   note: { fontFamily: fonts.body, color: colors.inkSoft },
   error: { color: colors.danger, fontFamily: fonts.body },
   hindi: { fontFamily: fonts.hindi },
   titleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   frame: { alignItems: "center", justifyContent: "center", minHeight: 240 },
+  standCard: { borderRadius: 24, borderWidth: 1, padding: 18, gap: 12, alignItems: "center" },
+  standBrand: { minHeight: 48, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 },
+  standLogo: { width: 40, height: 40, borderRadius: 10 },
+  standName: { flexShrink: 1, fontFamily: fonts.title, fontSize: 18, textAlign: "center" },
+  iconActions: { flexDirection: "row", justifyContent: "space-around", alignItems: "center", marginTop: 2 },
   glow: { position: "absolute", width: 220, height: 220, borderRadius: 28 },
   qr: { width: 200, height: 200, borderRadius: 16 }
 });

@@ -41,6 +41,7 @@ async function getHandler(req: NextRequest) {
     status: user?.subscriptionStatus ?? "TRIALING",
     endsAt: subscription?.endsAt ?? user?.subscriptionEndsAt ?? null,
     trialEndsAt: user?.trialEndsAt ?? null,
+    startsAt: subscription?.startsAt ?? null,
     modules: entitlement.modules,
     limits: entitlement.limits,
     plan: subscription?.plan

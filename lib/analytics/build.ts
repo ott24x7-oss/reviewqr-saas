@@ -165,10 +165,10 @@ export async function rollupAllBusinesses(dayKey: string) {
   return businesses.length;
 }
 
-/** Missing days, plus yesterday, which may have received events after its first rollup. */
-export function daysNeedingRollup(wanted: string[], existing: string[], yesterday: string) {
+/** Missing days, plus today and yesterday, which may have received events after their first rollup. */
+export function daysNeedingRollup(wanted: string[], existing: string[], yesterday: string, today: string) {
   const have = new Set(existing);
-  return wanted.filter((day) => day === yesterday || !have.has(day));
+  return wanted.filter((day) => day === today || day === yesterday || !have.has(day));
 }
 
 /** Today, and at IST midnight also the day that just closed. */
@@ -189,8 +189,8 @@ export async function ensureRollups(businessId: string, fromKey: string, toKey: 
     select: { day: true }
   });
   const have = existing.map((row) => row.day.toISOString().slice(0, 10));
-  for (const day of daysNeedingRollup(wanted, have, yesterday)) {
-    await rollupBusinessDay(businessId, day);
+  for (const day of daysNeedingRollup(wanted, have, yesterday, today)) {
+    await rollupBusinessDay(businessId, day, now);
   }
   const rows = await prisma.analyticsDaily.findMany({
     where: { businessId, day: { gte: new Date(`${fromKey}T00:00:00.000Z`), lte: new Date(`${toKey}T00:00:00.000Z`) } },

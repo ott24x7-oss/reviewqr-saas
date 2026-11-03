@@ -2,12 +2,7 @@ import { prisma } from "../db";
 import { fail, ok } from "../api/result";
 import { countBookingsToday } from "../store/bookings";
 import { readableBusinessWhere, requireBusinessRole } from "../tenant";
-
-function startOfToday() {
-  const start = new Date();
-  start.setHours(0, 0, 0, 0);
-  return start;
-}
+import { istDayKey, istDayRange } from "../analytics/ist";
 
 /** Today's orders, feedback, and scans, plus the plan the app is allowed to show. */
 export async function ownerHome(userId: string, businessId: string | null) {
@@ -33,17 +28,17 @@ export async function ownerHome(userId: string, businessId: string | null) {
         select: { id: true }
       });
   const ids = businesses.map((row) => row.id);
-  const start = startOfToday();
+  const { start, end } = istDayRange(istDayKey(new Date()));
   const [ordersToday, feedbackToday, scansToday, bookings] = await Promise.all([
     ids.length
-      ? prisma.menuOrder.count({ where: { businessId: { in: ids }, createdAt: { gte: start } } })
+      ? prisma.menuOrder.count({ where: { businessId: { in: ids }, createdAt: { gte: start, lt: end } } })
       : Promise.resolve(0),
     ids.length
-      ? prisma.feedback.count({ where: { businessId: { in: ids }, createdAt: { gte: start } } })
+      ? prisma.feedback.count({ where: { businessId: { in: ids }, createdAt: { gte: start, lt: end } } })
       : Promise.resolve(0),
     ids.length
       ? prisma.qrScan.count({
-          where: { createdAt: { gte: start }, qrCode: { businessId: { in: ids } } }
+          where: { createdAt: { gte: start, lt: end }, qrCode: { businessId: { in: ids } } }
         })
       : Promise.resolve(0),
     countBookingsToday(ids)

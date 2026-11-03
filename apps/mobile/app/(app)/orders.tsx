@@ -4,9 +4,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createAudioPlayer, type AudioPlayer } from "expo-audio";
 import * as ImagePicker from "expo-image-picker";
 import { router, useLocalSearchParams } from "expo-router";
-import { ChevronRight, ClipboardList } from "lucide-react-native";
+import { CalendarDays, ChevronDown, ChevronRight, ClipboardList } from "lucide-react-native";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Linking, StyleSheet, Text, View } from "react-native";
+import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withDelay, withSpring, withTiming } from "react-native-reanimated";
@@ -25,7 +25,7 @@ import { hasModule, useEntitlement } from "../../src/state/entitlement";
 import { openPlanLock, useFeatures } from "../../src/state/plan-lock";
 import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
-import { Card, Chip, EmptyState, LoadErrorCard, Skeleton } from "../../src/ui/bits";
+import { BottomSheet, Card, Chip, EmptyState, LoadErrorCard, Skeleton } from "../../src/ui/bits";
 import { Field, PillButton } from "../../src/ui/controls";
 import { tapStrong } from "../../src/ui/haptics";
 import { LockedModuleCard } from "../../src/ui/locked-module";
@@ -58,6 +58,7 @@ type FeedbackRow = {
   status: string;
   review: { rating: number; customerName: string | null; customerPhone: string | null };
 };
+type StoreSettings = { layout?: string };
 
 const STATUSES = ["ACCEPTED", "PREPARING", "READY", "COMPLETED"] as const;
 
@@ -147,6 +148,7 @@ function OrdersScreenContent() {
   const [error, setError] = useState<string | null>(null);
   const [reply, setReply] = useState<string | null>(null);
   const [range, setRange] = useState<"all" | "today" | "week">("all");
+  const [dateOpen, setDateOpen] = useState(false);
   const [skeletonReady, setSkeletonReady] = useState(false);
   const entitlement = useEntitlement();
   const { locked: featureLocked } = useFeatures();
@@ -156,6 +158,13 @@ function OrdersScreenContent() {
   const known = useRef<Set<string> | null>(null);
   const fresh = useRef<Set<string>>(new Set());
   const player = useRef<AudioPlayer | null>(null);
+  const storeSettings = useQuery({
+    queryKey: accountKey(userId, "store", id),
+    enabled: !!user && !!id,
+    queryFn: () => apiData<StoreSettings>("/api/v1/businesses/" + id + "/store", {}, { planSheet: false }),
+    staleTime: 60_000
+  });
+  const isServiceBusiness = storeSettings.data?.layout === "SERVICES";
 
   const products = useQuery({
     queryKey: accountKey(userId, "menu", id),
@@ -343,6 +352,13 @@ function OrdersScreenContent() {
     openPlanLock(tab === "products" ? "menu" : tab === "orders" ? "orders" : "reviews-log");
   }, [locked, tab]);
   const orderRows = (orders.data?.items ?? []).filter((order) => order.status === filter);
+  const statusCounts: Record<Status, number> = {
+    ACCEPTED: (orders.data?.items ?? []).filter((order) => order.status === "ACCEPTED" || order.status === "NEW").length,
+    PREPARING: (orders.data?.items ?? []).filter((order) => order.status === "PREPARING").length,
+    READY: (orders.data?.items ?? []).filter((order) => order.status === "READY").length,
+    COMPLETED: (orders.data?.items ?? []).filter((order) => order.status === "COMPLETED").length
+  };
+  const rangeLabel = range === "today" ? t.dateToday : range === "week" ? t.dateWeek : t.dateAll;
   const listData: (Product | OrderCard | FeedbackRow)[] = locked
     ? []
     : tab === "products"
@@ -357,37 +373,59 @@ function OrdersScreenContent() {
         <Text style={[styles.screenTitle, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.orders}</Text>
         <HelpButton title={t.coachOrdersFilter} body={t.coachOrdersSwipeBody} />
       </View>
-      <View style={styles.row}>
-        {(["orders", "products", "feedback"] as const).map((item) => (
-          <Chip
-            key={item}
-            label={item === "products" ? t.products : item === "orders" ? t.orders : t.feedback}
-            selected={tab === item}
-            onPress={() => setTab(item)}
-          />
-        ))}
-        <Chip
-          label={t.bookings}
-          selected={false}
-          onPress={() => {
-            if (featureLocked("services-booking")) openPlanLock("services-booking");
-            else router.push("/(app)/bookings");
-          }}
-        />
-      </View>
-      {tab === "orders" && !locked ? (
+      {requested === "products" || requested === "feedback" ? (
         <View style={styles.row}>
-          {(["today", "week", "all"] as const).map((item) => (
+          {(["orders", "products", "feedback"] as const).map((item) => (
             <Chip
               key={item}
-              label={item === "today" ? t.dateToday : item === "week" ? t.dateWeek : t.dateAll}
-              selected={range === item}
-              onPress={() => setRange(item)}
+              label={item === "products" ? t.products : item === "orders" ? t.orders : t.feedback}
+              selected={tab === item}
+              onPress={() => setTab(item)}
             />
           ))}
+        </View>
+      ) : null}
+      {tab === "orders" && isServiceBusiness ? (
+        <View style={[styles.modeSegment, { backgroundColor: palette.chip, borderColor: palette.line }]}>
+          <Pressable accessibilityRole="tab" accessibilityState={{ selected: true }} style={[styles.modeOption, { backgroundColor: palette.primary }]}>
+            <Text style={[styles.modeText, { color: palette.onPrimary }, lang === "hi" && styles.hindi]}>{t.orders}</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="tab"
+            accessibilityState={{ selected: false }}
+            onPress={() => {
+              if (featureLocked("services-booking")) openPlanLock("services-booking");
+              else router.push("/(app)/bookings");
+            }}
+            style={styles.modeOption}
+          >
+            <Text style={[styles.modeText, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.bookings}</Text>
+          </Pressable>
+        </View>
+      ) : null}
+      {tab === "orders" && !locked ? (
+        <View style={styles.orderControls}>
+          <View style={[styles.statusSegment, { backgroundColor: palette.chip, borderColor: palette.line }]}>
           {STATUSES.map((status) => (
-            <Chip key={status} label={labelFor(status, t)} selected={filter === status} onPress={() => setFilter(status)} />
+            <Pressable
+              key={status}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: filter === status }}
+              accessibilityLabel={labelFor(status, t) + " " + statusCounts[status]}
+              onPress={() => setFilter(status)}
+              style={[styles.statusSegmentOption, filter === status && { backgroundColor: palette.primary }]}
+            >
+              <Text style={[styles.statusSegmentText, { color: filter === status ? palette.onPrimary : palette.ink }, lang === "hi" && styles.hindi]} numberOfLines={1}>
+                {labelFor(status, t)} · {statusCounts[status]}
+              </Text>
+            </Pressable>
           ))}
+          </View>
+          <Pressable accessibilityRole="button" accessibilityLabel={t.dateFilter + " " + rangeLabel} onPress={() => setDateOpen(true)} style={[styles.dateDropdown, { backgroundColor: palette.card, borderColor: palette.line }]}>
+            <CalendarDays color={palette.deep} size={18} />
+            <Text style={[styles.dateDropdownText, { color: palette.ink }, lang === "hi" && styles.hindi]}>{rangeLabel}</Text>
+            <ChevronDown color={palette.muted} size={16} />
+          </Pressable>
         </View>
       ) : null}
       {error ? <Text style={[styles.error, { color: palette.danger }]}>{error}</Text> : null}
@@ -519,6 +557,15 @@ function OrdersScreenContent() {
           );
         }}
       />
+      <BottomSheet visible={dateOpen} title={t.dateFilter} onClose={() => setDateOpen(false)}>
+        {(["today", "week", "all"] as const).map((item) => (
+          <Pressable key={item} accessibilityRole="button" accessibilityState={{ selected: range === item }} onPress={() => { setRange(item); setDateOpen(false); }} style={styles.dateChoice}>
+            <Text style={[styles.modeText, { color: range === item ? palette.deep : palette.ink }, lang === "hi" && styles.hindi]}>
+              {item === "today" ? t.dateToday : item === "week" ? t.dateWeek : t.dateAll}
+            </Text>
+          </Pressable>
+        ))}
+      </BottomSheet>
 
       {tab === "orders" ? (
         <CoachTour
@@ -540,6 +587,16 @@ const styles = StyleSheet.create({
   stack: { gap: 12 },
   inlineFormScroll: { flexGrow: 0, maxHeight: 280 },
   row: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  modeSegment: { flexDirection: "row", borderWidth: 1, borderRadius: 14, padding: 4, gap: 4 },
+  modeOption: { flex: 1, minHeight: 44, alignItems: "center", justifyContent: "center", borderRadius: 10 },
+  modeText: { fontFamily: fonts.bodyStrong, fontSize: 14 },
+  orderControls: { gap: 8 },
+  statusSegment: { flexDirection: "row", borderWidth: 1, borderRadius: 14, padding: 4, gap: 3 },
+  statusSegmentOption: { flex: 1, minHeight: 46, borderRadius: 10, alignItems: "center", justifyContent: "center", paddingHorizontal: 3 },
+  statusSegmentText: { fontFamily: fonts.bodyStrong, fontSize: 10, textAlign: "center" },
+  dateDropdown: { minHeight: 44, borderRadius: 12, borderWidth: 1, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", gap: 8, alignSelf: "flex-start" },
+  dateDropdownText: { fontFamily: fonts.bodyStrong, fontSize: 14 },
+  dateChoice: { minHeight: 48, justifyContent: "center", paddingHorizontal: 8 },
   titleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
   screenTitle: { fontFamily: fonts.display, fontSize: 28 },
   title: { fontFamily: fonts.title, fontSize: 17 },

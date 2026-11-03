@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams } from "expo-router";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
-import { Plus, UtensilsCrossed } from "lucide-react-native";
+import { Plus, Search, UtensilsCrossed } from "lucide-react-native";
 import { useRef, useState } from "react";
 import { Pressable, StyleSheet, Switch, Text, View } from "react-native";
 import type { ElementRef } from "react";
@@ -186,15 +186,20 @@ function MenuTabContent() {
           <View style={styles.header}>
             <View style={styles.titleRow}>
               <Text style={[styles.title, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.menuTab}</Text>
-              <HelpButton title={t.coachMenuAdd} body={t.coachMenuAddBody} />
+              <HelpButton title={t.help} body={t.coachMenuAddBody} />
             </View>
-            <View style={styles.row}>
-              <Chip label={t.gridView} selected={grid} onPress={() => setGrid(true)} />
-              <Chip label={t.listView} selected={!grid} onPress={() => setGrid(false)} />
-            </View>
+            {(items.data?.items.length ?? 0) >= 4 ? (
+              <View style={styles.row}>
+                <Chip label={t.gridView} selected={grid} onPress={() => setGrid(true)} />
+                <Chip label={t.listView} selected={!grid} onPress={() => setGrid(false)} />
+              </View>
+            ) : null}
             {!locked ? (
               <KeyboardAwareScrollView style={styles.searchScroll} contentContainerStyle={styles.searchContent} keyboardShouldPersistTaps="handled" bottomOffset={12}>
-                <Field label={t.search} tone="paper" value={search} onChangeText={setSearch} />
+                <View style={styles.searchWrap}>
+                  <Field label={t.search} tone="paper" value={search} onChangeText={setSearch} style={styles.searchInput} />
+                  <Search color={palette.muted} size={18} style={styles.searchIcon} />
+                </View>
               </KeyboardAwareScrollView>
             ) : null}
             {!locked ? (
@@ -476,6 +481,9 @@ const styles = StyleSheet.create({
   title: { fontFamily: fonts.display, fontSize: 28 },
   searchScroll: { flexGrow: 0 },
   searchContent: { flexGrow: 0 },
+  searchWrap: { position: "relative" },
+  searchInput: { paddingLeft: 40 },
+  searchIcon: { position: "absolute", left: 14, top: 33 },
   row: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
   stack: { gap: 12 },
   cell: { flex: 1, padding: 6 },

@@ -67,7 +67,8 @@ export async function readBusinessAnalytics(
         day: row.day,
         scans: row.scans,
         pageViews: row.pageViews,
-        orders: store ? row.orders : null
+        orders: store ? row.orders : null,
+        orderPaise: store ? row.orderPaise : null
       })),
       ratings: current.ratings,
       topItems: menu ? current.topItems : [],

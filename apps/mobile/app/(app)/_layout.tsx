@@ -60,7 +60,7 @@ function OwnerTabs() {
   const badges = useMemo(
     () => ({
       orders: (orders.data?.items ?? []).filter((row) => row.status === "NEW" || row.status === "ACCEPTED").length,
-      feedback: (feedback.data?.items ?? []).filter((row) => row.status !== "RESOLVED").length
+      reviews: (feedback.data?.items ?? []).filter((row) => row.status === "NEW").length
     }),
     [orders.data, feedback.data]
   );
@@ -88,34 +88,34 @@ function OwnerTabs() {
       }}
     >
       <Tabs.Screen name="index" options={{ title: t.home }} />
-      <Tabs.Screen name="analytics" options={{ title: t.analytics }} />
       <Tabs.Screen name="orders" options={{ title: t.orders }} />
-      <Tabs.Screen name="menu" options={{ title: t.menuTab }} />
-      <Tabs.Screen name="services" options={{ title: t.services }} />
-      <Tabs.Screen name="bookings" options={{ title: t.bookings }} />
-      <Tabs.Screen name="booking-detail" options={{ title: t.bookingDetail }} />
-      <Tabs.Screen name="feedback" options={{ title: t.feedbackTab }} />
-      <Tabs.Screen name="more" options={{ title: t.more }} />
-      <Tabs.Screen name="shop" options={{ title: t.shop }} />
-      <Tabs.Screen name="business-new" options={{ title: t.addBusiness }} />
-      <Tabs.Screen name="business-edit" options={{ title: t.businessDetails }} />
-      <Tabs.Screen name="tap" options={{ title: t.preview }} />
-      <Tabs.Screen name="nfc" options={{ title: t.nfc }} />
-      <Tabs.Screen name="delete-account" options={{ title: t.deleteAccount }} />
-      <Tabs.Screen name="help" options={{ title: t.help }} />
-      <Tabs.Screen name="plan" options={{ title: t.plans }} />
-      <Tabs.Screen name="staff" options={{ title: t.staff }} />
-      <Tabs.Screen name="store" options={{ title: t.storeSettings }} />
-      <Tabs.Screen name="order-detail" options={{ title: t.viewDetails }} />
       <Tabs.Screen name="reviews" options={{ title: t.reviews }} />
-      <Tabs.Screen name="customers" options={{ title: t.customers }} />
-      <Tabs.Screen name="offers" options={{ title: t.offers }} />
-      <Tabs.Screen name="campaigns" options={{ title: t.campaigns }} />
-      <Tabs.Screen name="refer" options={{ title: t.referEarn }} />
-      <Tabs.Screen name="qr-codes" options={{ title: t.qrList }} />
-      <Tabs.Screen name="inbox" options={{ title: t.inbox }} />
-      <Tabs.Screen name="account" options={{ title: t.account }} />
-      <Tabs.Screen name="theme" options={{ title: t.theme }} />
+      <Tabs.Screen name="shop" options={{ title: t.shop }} />
+      <Tabs.Screen name="more" options={{ title: t.meTab }} />
+      <Tabs.Screen name="analytics" options={{ title: t.analytics, href: null }} />
+      <Tabs.Screen name="menu" options={{ title: t.menuTab, href: null }} />
+      <Tabs.Screen name="services" options={{ title: t.services, href: null }} />
+      <Tabs.Screen name="bookings" options={{ title: t.bookings, href: null }} />
+      <Tabs.Screen name="booking-detail" options={{ title: t.bookingDetail, href: null }} />
+      <Tabs.Screen name="feedback" options={{ title: t.feedbackTab, href: null }} />
+      <Tabs.Screen name="business-new" options={{ title: t.addBusiness, href: null }} />
+      <Tabs.Screen name="business-edit" options={{ title: t.businessDetails, href: null }} />
+      <Tabs.Screen name="tap" options={{ title: t.preview, href: null }} />
+      <Tabs.Screen name="nfc" options={{ title: t.nfc, href: null }} />
+      <Tabs.Screen name="delete-account" options={{ title: t.deleteAccount, href: null }} />
+      <Tabs.Screen name="help" options={{ title: t.help, href: null }} />
+      <Tabs.Screen name="plan" options={{ title: t.plans, href: null }} />
+      <Tabs.Screen name="staff" options={{ title: t.staff, href: null }} />
+      <Tabs.Screen name="store" options={{ title: t.storeSettings, href: null }} />
+      <Tabs.Screen name="order-detail" options={{ title: t.viewDetails, href: null }} />
+      <Tabs.Screen name="customers" options={{ title: t.customers, href: null }} />
+      <Tabs.Screen name="offers" options={{ title: t.offers, href: null }} />
+      <Tabs.Screen name="campaigns" options={{ title: t.campaigns, href: null }} />
+      <Tabs.Screen name="refer" options={{ title: t.referEarn, href: null }} />
+      <Tabs.Screen name="qr-codes" options={{ title: t.qrList, href: null }} />
+      <Tabs.Screen name="inbox" options={{ title: t.inbox, href: null }} />
+      <Tabs.Screen name="account" options={{ title: t.account, href: null }} />
+      <Tabs.Screen name="theme" options={{ title: t.appLook, href: null }} />
       <Tabs.Screen name="agent" options={{ title: t.agentHome }} />
       <Tabs.Screen name="agent-join" options={{ title: t.agentJoin }} />
       <Tabs.Screen name="agent-pending" options={{ title: t.agentWaitingTitle }} />

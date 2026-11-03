@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { AppState, StyleSheet, useWindowDimensions, View, type AppStateStatus } from "react-native";
+import { AppState, Image, StyleSheet, useWindowDimensions, View, type AppStateStatus } from "react-native";
 import Animated, {
   Easing,
   runOnJS,
@@ -9,69 +9,22 @@ import Animated, {
   withDelay,
   withRepeat,
   withSequence,
-  withSpring,
   withTiming,
   type SharedValue
 } from "react-native-reanimated";
 import Svg, { Path } from "react-native-svg";
-import { Star } from "lucide-react-native";
 import * as SplashScreen from "expo-splash-screen";
 import { tapLight } from "./haptics";
 import { useTheme } from "./theme";
 import { fonts } from "../theme";
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
-const FINDER = 170;
 
 let leftForeground = false;
 if (typeof AppState.addEventListener === "function") {
   AppState.addEventListener("change", (state: AppStateStatus) => {
     if (state === "background") leftForeground = true;
   });
-}
-
-function finderPath(x: number, y: number) {
-  const size = 46;
-  const radius = 8;
-  const right = x + size;
-  const bottom = y + size;
-  return `M ${x + radius} ${y} H ${right - radius} A ${radius} ${radius} 0 0 1 ${right} ${y + radius} V ${bottom - radius} A ${radius} ${radius} 0 0 1 ${right - radius} ${bottom} H ${x + radius} A ${radius} ${radius} 0 0 1 ${x} ${bottom - radius} V ${y + radius} A ${radius} ${radius} 0 0 1 ${x + radius} ${y} Z`;
-}
-
-function Finder({ delay, x, y, skip, color }: { delay: number; x: number; y: number; skip: boolean; color: string }) {
-  const offset = useSharedValue(skip ? 0 : FINDER);
-  useEffect(() => {
-    if (skip) {
-      offset.value = 0;
-      return;
-    }
-    offset.value = withDelay(delay, withTiming(0, { duration: 150, easing: Easing.out(Easing.cubic) }));
-  }, [delay, offset, skip]);
-  const props = useAnimatedProps(() => ({ strokeDashoffset: offset.value }));
-  return (
-    <AnimatedPath
-      animatedProps={props}
-      d={finderPath(x, y)}
-      stroke={color}
-      strokeWidth={5}
-      fill="none"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeDasharray={`${FINDER} ${FINDER}`}
-    />
-  );
-}
-
-function Spark({ delay, right, bottom, size, color }: { delay: number; right: number; bottom: number; size: number; color: string }) {
-  const opacity = useSharedValue(0);
-  useEffect(() => {
-    opacity.value = withDelay(
-      delay,
-      withSequence(withTiming(1, { duration: 160 }), withTiming(0, { duration: 240 }))
-    );
-  }, [delay, opacity]);
-  const style = useAnimatedStyle(() => ({ opacity: opacity.value }));
-  return <Animated.View style={[styles.spark, { backgroundColor: color, right, bottom, width: size, height: size, borderRadius: size / 2 }, style]} />;
 }
 
 /** Cold-start launch. A resume from the background skips it. */
@@ -98,8 +51,6 @@ export function LaunchOverlay({
   }, []);
   const localContent = useSharedValue(1);
   const screen = content ?? localContent;
-  const star = useSharedValue(reduceMotion ? 1 : 0);
-  const spin = useSharedValue(reduceMotion ? 0 : -20);
   const word = useSharedValue(reduceMotion ? 1 : 0);
   const tag = useSharedValue(reduceMotion ? 0.7 : 0);
   const cover = useSharedValue(1);
@@ -107,33 +58,24 @@ export function LaunchOverlay({
   const pulse = useSharedValue(1);
   const logoOpacity = useSharedValue(1);
   const fadeMode = reduceMotion || lowRam;
-  const skipDraw = reduceMotion;
 
   useEffect(() => {
     if (!fontsReady) return;
     if ((warm && !demo) || sessionReady) {
       SplashScreen.hideAsync().catch(() => undefined);
-      return;
     }
-    const wait = Math.max(0, 1300 - (Date.now() - started.current));
-    const timer = setTimeout(() => SplashScreen.hideAsync().catch(() => undefined), wait);
-    return () => clearTimeout(timer);
   }, [demo, fontsReady, sessionReady, warm]);
 
   useEffect(() => {
     if (!fontsReady || (warm && !demo)) return;
     if (reduceMotion || Date.now() - started.current > 1300) {
-      star.value = 1;
-      spin.value = 0;
       word.value = 1;
       tag.value = 0.7;
       return;
     }
-    star.value = withDelay(350, withSequence(withSpring(1.15, { damping: 12, stiffness: 180 }), withTiming(1, { duration: 120 })));
-    spin.value = withDelay(350, withTiming(0, { duration: 300, easing: Easing.out(Easing.cubic) }));
     word.value = withDelay(550, withTiming(1, { duration: 350, easing: Easing.out(Easing.cubic) }));
     tag.value = withDelay(700, withTiming(0.7, { duration: 200 }));
-  }, [demo, fontsReady, reduceMotion, spin, star, tag, warm, word]);
+  }, [demo, fontsReady, reduceMotion, tag, warm, word]);
 
   useEffect(() => {
     if (!fontsReady || sessionReady || reduceMotion || (warm && !demo)) return;
@@ -184,9 +126,6 @@ export function LaunchOverlay({
     opacity: word.value,
     transform: [{ translateY: (1 - word.value) * 12 }]
   }));
-  const starStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${spin.value}deg` }, { scale: star.value }]
-  }));
   const tagStyle = useAnimatedStyle(() => ({ opacity: tag.value }));
   const fadeStyle = useAnimatedStyle(() => ({ opacity: cover.value }));
   const holdStyle = useAnimatedStyle(() => ({
@@ -212,23 +151,7 @@ export function LaunchOverlay({
         </Svg>
       )}
       <Animated.View style={[styles.center, holdStyle]} pointerEvents="none">
-        <View>
-          <Svg width={120} height={120} viewBox="0 0 120 120">
-            <Finder delay={0} x={8} y={8} skip={skipDraw} color={palette.headerInk} />
-            <Finder delay={150} x={66} y={8} skip={skipDraw} color={palette.headerInk} />
-            <Finder delay={300} x={8} y={66} skip={skipDraw} color={palette.headerInk} />
-          </Svg>
-          <Animated.View style={[styles.star, starStyle]}>
-            <Star color={palette.headerInk} size={34} fill={palette.headerInk} strokeWidth={1.5} />
-          </Animated.View>
-          {reduceMotion || lowRam ? null : (
-            <>
-              <Spark delay={420} right={4} bottom={52} size={5} color={palette.headerInk} />
-              <Spark delay={500} right={36} bottom={6} size={4} color={palette.headerInk} />
-              <Spark delay={560} right={-2} bottom={24} size={3} color={palette.headerInk} />
-            </>
-          )}
-        </View>
+        <Image source={require("../../assets/splash-mark.png")} resizeMode="contain" tintColor={palette.headerInk} style={styles.logo} />
         <Animated.Text style={[styles.word, { color: palette.headerInk }, wordStyle]}>QR24x7</Animated.Text>
         <Animated.Text style={[styles.tag, { color: palette.headerInk }, tagStyle]}>Scan. Tap. Grow.</Animated.Text>
       </Animated.View>
@@ -266,8 +189,7 @@ const styles = StyleSheet.create({
   layer: { ...StyleSheet.absoluteFill, zIndex: 50 },
   fill: StyleSheet.absoluteFill,
   center: { ...StyleSheet.absoluteFill, alignItems: "center", justifyContent: "center", gap: 8 },
-  star: { position: "absolute", right: 14, bottom: 16 },
-  spark: { position: "absolute" },
+  logo: { width: 120, height: 120 },
   word: { fontFamily: fonts.display, fontSize: 28 },
   tag: { fontFamily: fonts.body, fontSize: 15 }
 });

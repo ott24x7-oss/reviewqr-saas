@@ -2,7 +2,7 @@ import { Screen } from "../../src/ui/screen";
 import type { BillingSummary } from "@reviewqr/shared";
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
-import { CreditCard, Receipt } from "lucide-react-native";
+import { CreditCard, IndianRupee } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { apiData } from "../../src/api/data";
@@ -20,11 +20,11 @@ function rupees(paise: number) {
   return `₹${Math.round(paise / 100)}`;
 }
 
-function expiryProgress(when: string, now: number) {
+function expiryProgress(startsAt: string | null | undefined, when: string, now: number) {
+  const start = startsAt ? new Date(startsAt).getTime() : Number.NaN;
   const end = new Date(when).getTime();
-  if (Number.isNaN(end)) return 0;
-  const days = (end - now) / 86400000;
-  return Math.max(0, Math.min(1, 1 - days / 30));
+  if (Number.isNaN(start) || Number.isNaN(end) || end <= start) return 0;
+  return Math.max(0, Math.min(1, (end - now) / (end - start)));
 }
 
 function PlanScreenContent() {
@@ -40,7 +40,10 @@ function PlanScreenContent() {
   });
   const name = lang === "hi" ? plan.data?.plan?.nameHi || plan.data?.plan?.nameEn : plan.data?.plan?.nameEn;
   const when = plan.data?.endsAt || plan.data?.trialEndsAt || "";
-  const whenLabel = when.slice(0, 10);
+  const whenDate = when ? new Date(when) : null;
+  const whenLabel = whenDate && !Number.isNaN(whenDate.getTime())
+    ? t.activeTill.replace("{date}", new Intl.DateTimeFormat(lang === "hi" ? "hi-IN" : "en-IN", { day: "numeric", month: "short", year: "numeric" }).format(whenDate))
+    : "";
   const [now, setNow] = useState<number | null>(null);
   // The purity lint rejects Date.now() during render. A timeout keeps the read outside render.
   useEffect(() => {
@@ -48,7 +51,7 @@ function PlanScreenContent() {
     return () => clearTimeout(timer);
   }, [when]);
   const days = when && now != null ? Math.max(0, Math.ceil((new Date(when).getTime() - now) / 86400000)) : null;
-  const progress = when && now != null ? expiryProgress(when, now) : 0;
+  const progress = when && now != null ? expiryProgress(plan.data?.startsAt, when, now) : 0;
   const modules = plan.data?.modules ?? [];
 
   return (
@@ -89,7 +92,7 @@ function PlanScreenContent() {
         </View>
         <Text style={[styles.note, lang === "hi" && styles.hindi]}>
           {whenLabel
-            ? `${t.expires}: ${whenLabel}${days != null ? ` · ${t.daysLeft.replace("{days}", String(days))}` : ""}`
+            ? `${whenLabel}${days != null ? ` · ${t.daysLeft.replace("{days}", String(days))}` : ""}`
             : t.noExpiry}
         </Text>
         <Text style={[styles.note, lang === "hi" && styles.hindi]}>{t.plansWeb}</Text>
@@ -99,14 +102,14 @@ function PlanScreenContent() {
       {billing.isLoading ? <><Skeleton height={72} /><Skeleton height={72} /></> : null}
       {billing.isError ? <LoadErrorCard onRetry={() => billing.refetch().catch(() => undefined)} /> : null}
       {!billing.isLoading && !billing.isError && (billing.data?.history ?? []).length === 0 ? (
-        <EmptyState icon={Receipt} title={t.emptyBillingTitle} body={t.emptyBillingBody} action={t.helpCenter} onAction={() => router.push("/(app)/help")} />
+        <EmptyState icon={IndianRupee} title={t.emptyBillingTitle} body={t.emptyBillingBody} action={t.helpCenter} onAction={() => router.push("/(app)/help")} />
       ) : null}
       {!billing.isLoading && !billing.isError && (billing.data?.history ?? []).length > 0 ? (
         <Group>
           {(billing.data?.history ?? []).map((row) => (
             <GroupRow
               key={row.id}
-              icon={Receipt}
+              icon={IndianRupee}
               tint="blue"
               title={`${row.createdAt.slice(0, 10)} · ${row.tier}`}
               hint={`${rupees(row.amountPaise)} · ${row.status}`}

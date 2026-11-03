@@ -3,7 +3,7 @@ import { Screen } from "../../src/ui/screen";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Lock, MapPin } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
-import { Pressable, StyleSheet, Switch, Text, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Switch, Text, View } from "react-native";
 import type { ElementRef } from "react";
 import { apiData } from "../../src/api/data";
 import { ApiError } from "../../src/api/http";
@@ -14,13 +14,14 @@ import { hasModule, useEntitlement } from "../../src/state/entitlement";
 import { openPlanLock, useFeatures } from "../../src/state/plan-lock";
 import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
-import { BottomSheet, Card, EmptyState, LoadErrorCard, Skeleton } from "../../src/ui/bits";
+import { BottomSheet, EmptyState, LoadErrorCard, Skeleton } from "../../src/ui/bits";
 import { Field, PillButton, StickyAction } from "../../src/ui/controls";
 import { LockedModuleCard } from "../../src/ui/locked-module";
 import { useTheme } from "../../src/ui/theme";
 import { SetupWalkthrough } from "../../src/guide/setup-tour";
+import { formatStoreTime } from "../../src/store/hours";
 
-const DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
+const DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 type Day = (typeof DAYS)[number];
 type Slot = { open: string; close: string } | null;
 type Settings = {
@@ -101,6 +102,18 @@ function StoreScreenContent() {
     setDraft({ ...form, hours: { ...form.hours, [day]: slot } });
   }
 
+  function setHoliday(value: boolean) {
+    if (!form) return;
+    if (!value) {
+      setDraft({ ...form, holiday: false });
+      return;
+    }
+    Alert.alert(t.holidayConfirmTitle, t.holidayConfirmBody, [
+      { text: t.cancel, style: "cancel" },
+      { text: t.confirm, onPress: () => setDraft({ ...form, holiday: true }) }
+    ]);
+  }
+
   async function save() {
     if (!id || !form) return;
     setError(null);
@@ -138,48 +151,44 @@ function StoreScreenContent() {
       {settings.isError ? <LoadErrorCard onRetry={() => settings.refetch().catch(() => undefined)} /> : null}
       {form ? (
         <>
-          <SettingSwitch label={t.holidayMode} value={form.holiday} onChange={(holiday) => setDraft({ ...form, holiday })} />
+          <SettingSwitch label={t.holidayMode} value={form.holiday} onChange={setHoliday} />
           <View ref={upiTarget} collapsable={false}>
             <Field label={t.upiId} tone="paper" value={form.upiId || ""} onChangeText={(upiId) => setDraft({ ...form, upiId })} autoCapitalize="none" />
           </View>
+          <Pressable accessibilityRole="button" onPress={() => {
+            const monday = form.hours.mon;
+            const hours = Object.fromEntries(DAYS.map((item) => [item, monday])) as Record<Day, Slot>;
+            setDraft({ ...form, hours });
+          }} style={styles.copyHours}>
+            <Text style={[styles.copyText, { color: palette.deep }, lang === "hi" && styles.hindi]}>{t.copyHoursToAll}</Text>
+          </Pressable>
           {DAYS.map((day) => {
             const slot = form.hours[day];
             return (
-              <Card key={day} style={styles.card}>
-                <View ref={day === "sun" ? hoursTarget : undefined} collapsable={false} style={styles.dayHead}>
+              <View key={day} ref={day === "mon" ? hoursTarget : undefined} collapsable={false} style={[styles.weekRow, { backgroundColor: palette.card, borderColor: palette.line }]}>
+                <View style={styles.dayHead}>
                   <Text style={[styles.name, { color: palette.ink }, lang === "hi" && styles.hindi]}>{dayNames[day]}</Text>
-                  <View style={styles.openSwitch}>
-                    <Text style={[styles.note, { color: palette.muted }, lang === "hi" && styles.hindi]}>{slot ? t.storeOpen : t.storeClosed}</Text>
-                    <Switch
-                      accessibilityLabel={`${dayNames[day]} ${slot ? t.storeOpen : t.storeClosed}`}
-                      value={!!slot}
-                      onValueChange={(enabled) => setDay(day, enabled ? (slot ?? { open: "09:00", close: "21:00" }) : null)}
-                      trackColor={{ false: palette.line, true: palette.primary }}
-                      thumbColor={palette.card}
-                    />
-                  </View>
+                  <Switch
+                    accessibilityLabel={dayNames[day] + " " + (slot ? t.storeOpen : t.storeClosed)}
+                    value={!!slot}
+                    onValueChange={(enabled) => setDay(day, enabled ? (slot ?? { open: "09:00", close: "21:00" }) : null)}
+                    trackColor={{ false: palette.line, true: palette.primary }}
+                    thumbColor={palette.card}
+                  />
                 </View>
                 {slot ? (
-                  <View style={styles.row}>
-                    {(["open", "close"] as const).map((field) => (
-                      <View key={field} style={styles.timeCell}>
-                        <Text style={[styles.timeLabel, { color: palette.muted }, lang === "hi" && styles.hindi]}>{field === "open" ? t.opensAt : t.closesAt}</Text>
-                        <Pressable accessibilityRole="button" accessibilityLabel={`${dayNames[day]} ${field === "open" ? t.storeOpen : t.storeClosed}`} onPress={() => setTimeField({ day, field })} style={[styles.timeButton, { borderColor: palette.line, backgroundColor: palette.card }]}>
-                          <Text style={[styles.timeText, { color: palette.ink }]}>{slot[field]}</Text>
+                  <View style={styles.timeRow}>
+                    {(["open", "close"] as const).map((field) => {
+                      const label = field === "open" ? t.opensAt.replace(" at", "") : t.closesAt.replace(" at", "");
+                      return (
+                        <Pressable key={field} accessibilityRole="button" accessibilityLabel={dayNames[day] + " " + label} onPress={() => setTimeField({ day, field })} style={styles.timeInline}>
+                          <Text style={[styles.timeText, { color: palette.muted }, lang === "hi" && styles.hindi]}>{label} {formatStoreTime(slot[field])}</Text>
                         </Pressable>
-                      </View>
-                    ))}
+                      );
+                    })}
                   </View>
                 ) : null}
-                {day === "sun" ? (
-                  <Pressable accessibilityRole="button" onPress={() => {
-                    const hours = Object.fromEntries(DAYS.map((item) => [item, slot])) as Record<Day, Slot>;
-                    setDraft({ ...form, hours });
-                  }} style={styles.copyHours}>
-                    <Text style={[styles.copyText, { color: palette.deep }, lang === "hi" && styles.hindi]}>{t.copyHoursToAll}</Text>
-                  </Pressable>
-                ) : null}
-              </Card>
+              </View>
             );
           })}
           <SettingSwitch label={t.dineIn} value={form.dineIn} onChange={(dineIn) => setDraft({ ...form, dineIn })} />
@@ -266,12 +275,11 @@ const styles = StyleSheet.create({
   note: { fontFamily: fonts.body, fontSize: 14 },
   card: { gap: 10 },
   row: { flexDirection: "row", gap: 8 },
-  dayHead: { minHeight: 52, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
-  openSwitch: { flexDirection: "row", alignItems: "center", gap: 8 },
-  timeCell: { flex: 1, gap: 6 },
-  timeLabel: { fontFamily: fonts.body, fontSize: 12 },
-  timeButton: { minHeight: 48, borderWidth: 1, borderRadius: 14, justifyContent: "center", paddingHorizontal: 12 },
-  timeText: { fontFamily: fonts.bodyStrong, fontSize: 15 },
+  weekRow: { minHeight: 58, borderWidth: 1, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 6, gap: 2 },
+  dayHead: { minHeight: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
+  timeRow: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
+  timeInline: { minHeight: 44, minWidth: 132, justifyContent: "center" },
+  timeText: { fontFamily: fonts.bodyStrong, fontSize: 13 },
   copyHours: { minHeight: 44, justifyContent: "center", alignSelf: "flex-start" },
   copyText: { fontFamily: fonts.bodyStrong },
   settingRow: { minHeight: 58, borderWidth: 1, borderRadius: 16, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
