@@ -1,5 +1,5 @@
 import { Screen } from "../../src/ui/screen";
-import type { BillingSummary, OwnerReferralHome } from "@reviewqr/shared";
+import type { BillingSummary } from "@reviewqr/shared";
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { CreditCard, Gift, IndianRupee } from "lucide-react-native";
@@ -15,6 +15,8 @@ import { Group, GroupRow, SectionHeader } from "../../src/ui/rows";
 import { EmptyState, LoadErrorCard, Skeleton } from "../../src/ui/bits";
 import { usePalette } from "../../src/ui/theme";
 import type { Palette } from "../../src/ui/tokens";
+import { normalizeReferralHome } from "../../src/referral/presentation";
+import { isModuleList } from "../../src/state/plan-lock-logic";
 
 function rupees(paise: number) {
   return `₹${Math.round(paise / 100)}`;
@@ -41,7 +43,8 @@ function PlanScreenContent() {
   const referrals = useQuery({
     queryKey: accountKey(user?.id ?? "", "refer"),
     enabled: !!user,
-    queryFn: () => apiData<OwnerReferralHome>("/api/v1/refer")
+    queryFn: () => apiData<unknown>("/api/v1/refer"),
+    select: normalizeReferralHome
   });
   const name = lang === "hi" ? plan.data?.plan?.nameHi || plan.data?.plan?.nameEn : plan.data?.plan?.nameEn;
   const when = plan.data?.endsAt || plan.data?.trialEndsAt || "";
@@ -57,7 +60,7 @@ function PlanScreenContent() {
   }, [when]);
   const days = when && now != null ? Math.max(0, Math.ceil((new Date(when).getTime() - now) / 86400000)) : null;
   const progress = when && now != null ? expiryProgress(plan.data?.startsAt, when, now) : 0;
-  const modules = plan.data?.modules ?? [];
+  const modules = isModuleList(plan.data?.modules) ? plan.data.modules : null;
 
   return (
     <ScrollView
@@ -86,8 +89,8 @@ function PlanScreenContent() {
           </View>
         </View>
         <View style={styles.chips}>
-          {modules.length === 0 ? <Text style={styles.note}>{t.included}</Text> : null}
-          {modules.map((moduleId) => (
+          {modules?.length === 0 ? <Text style={styles.note}>{t.included}</Text> : null}
+          {(modules ?? []).map((moduleId) => (
             <View key={moduleId} style={styles.chip}>
               <Text style={styles.chipText}>{moduleId}</Text>
             </View>
@@ -108,7 +111,9 @@ function PlanScreenContent() {
         <GroupRow
           icon={Gift}
           tint="green"
-          title={t.referralPlanBonus.replace("{months}", String(referrals.data?.monthsEarnedThisYear ?? 0))}
+          title={referrals.data?.hasYearlyCap
+            ? t.referralPlanBonus.replace("{months}", String(referrals.data.monthsEarnedThisYear))
+            : t.referEarn}
           hint={t.referEarn}
           onPress={() => router.push("/(app)/refer")}
         />

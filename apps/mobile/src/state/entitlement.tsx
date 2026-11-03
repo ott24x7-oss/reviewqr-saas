@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { AppState } from "react-native";
 import { apiData } from "../api/data";
 import { accountKey } from "../query/keys";
+import { isModuleList } from "./plan-lock-logic";
 import { useBusiness } from "./business";
 import { useSession } from "./session";
 
@@ -12,7 +13,7 @@ export type SubscriptionView = {
   startsAt: string | null;
   endsAt: string | null;
   trialEndsAt: string | null;
-  modules: string[];
+  modules?: string[];
   plan: { slug: string; nameEn: string; nameHi: string; duration: string | null } | null;
 };
 
@@ -23,12 +24,17 @@ export function useEntitlement() {
   const query = useQuery({
     queryKey: accountKey(user?.id ?? "", "subscription", businessId),
     enabled: !!user,
-    queryFn: () =>
-      apiData<SubscriptionView>(
+    queryFn: async () => {
+      const response = await apiData<unknown>(
         businessId ? `/api/v1/subscription?businessId=${encodeURIComponent(businessId)}` : "/api/v1/subscription",
         {},
         { planSheet: false }
-      )
+      );
+      const value = response && typeof response === "object" && !Array.isArray(response)
+        ? response as Record<string, unknown>
+        : {};
+      return { ...value, modules: isModuleList(value.modules) ? value.modules : undefined } as SubscriptionView;
+    }
   });
 
   useEffect(() => {
@@ -43,6 +49,6 @@ export function useEntitlement() {
   return query;
 }
 
-export function hasModule(modules: string[] | undefined, id: string) {
-  return !!modules?.includes(id);
+export function hasModule(modules: unknown, id: string) {
+  return Array.isArray(modules) && modules.some((module) => typeof module === "string" && module === id);
 }

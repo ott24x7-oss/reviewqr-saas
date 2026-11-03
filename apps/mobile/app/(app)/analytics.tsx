@@ -38,7 +38,7 @@ type Analytics = {
   heatmap: number[][];
   topItems: { itemId: string; name: string; views: number }[];
   byQr: { qrId: string; label: string; scans: number }[];
-  modules: { store: boolean };
+  modules?: { store?: boolean };
 };
 
 const DAYS = ["S", "M", "T", "W", "T", "F", "S"];
@@ -115,7 +115,7 @@ function AnalyticsScreenContent() {
         <Card
           label={t.ordersValue}
           value={
-            query.data && !query.data.modules.store
+            query.data?.modules?.store === false
               ? "—"
               : summary?.orders == null
                 ? "…"

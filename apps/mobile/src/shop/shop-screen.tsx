@@ -52,6 +52,10 @@ function money(paise: number) {
   return `${paise < 0 ? "−" : ""}₹${new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2 }).format(rupees)}`;
 }
 
+function safePaise(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? Math.floor(value) : 0;
+}
+
 function offPercent(mrpPaise: number, salePaise: number) {
   return mrpPaise > salePaise && mrpPaise > 0 ? Math.round(((mrpPaise - salePaise) / mrpPaise) * 100) : 0;
 }
@@ -226,6 +230,8 @@ function ProductSheet({ product, businessName, qrPreviewUrl, palette, t, lang, r
   const [qty, setQty] = useState(product?.variants[0]?.minQty || 1);
   const [unbranded, setUnbranded] = useState(preselectUnbranded);
   if (!product || !variant) return null;
+  const unbrandedAddonPaise = safePaise(product.unbrandedAddonPaise);
+  const selectedUnbranded = unbranded && unbrandedAddonPaise > 0;
   const safeQty = normalizeShopQuantity(qty, variant.minQty, variant.stock);
   const description = lang === "hi" && product.descriptionHi ? product.descriptionHi : product.description;
   return (
@@ -274,7 +280,7 @@ function ProductSheet({ product, businessName, qrPreviewUrl, palette, t, lang, r
               {product.needsNfc ? <Text style={[styles.bodyText, { color: palette.primary }]}>{t.shopNfcIncluded}</Text> : null}
               {product.needsDesign ? <Text style={[styles.bodyText, { color: palette.muted }, lang === "hi" && styles.hindi]}>{t.shopDesignConfirm}</Text> : null}
             </View>
-            {product.unbrandedAddonPaise > 0 ? <View style={styles.brandingPreviewWrap} accessibilityLabel={`${t.shopUnbrandedBefore}; ${t.shopUnbrandedAfter}`}>
+            {unbrandedAddonPaise > 0 ? <View style={styles.brandingPreviewWrap} accessibilityLabel={`${t.shopUnbrandedBefore}; ${t.shopUnbrandedAfter}`}>
               <Text style={[styles.labelText, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.shopUnbrandedBadge}</Text>
               <Text style={[styles.caption, { color: palette.muted }, lang === "hi" && styles.hindi]}>{t.shopUnbrandedExplain}</Text>
               <View style={styles.brandingPreviewRow}>
@@ -285,14 +291,14 @@ function ProductSheet({ product, businessName, qrPreviewUrl, palette, t, lang, r
                   <Text style={[styles.miniPreviewCaption, { color: palette.muted }]}>{withMark ? t.shopUnbrandedBefore : t.shopUnbrandedAfter}</Text>
                 </View>)}
               </View>
-              <Pressable accessibilityRole="switch" accessibilityLabel={`${t.shopUnbrandedSwitch} ${money(product.unbrandedAddonPaise)}`} accessibilityState={{ checked: unbranded }} onPress={() => setUnbranded(toggleUnbrandedSwitch)} style={[styles.brandingToggle, { borderColor: unbranded ? palette.primary : palette.line, backgroundColor: palette.surface }]}>
-                <View style={{ flex: 1, gap: 3 }}><Text style={[styles.bodyStrong, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.shopUnbrandedSwitch} +{money(product.unbrandedAddonPaise)}</Text><Text style={[styles.caption, { color: palette.muted }, lang === "hi" && styles.hindi]}>{t.shopUnbrandedExplain}</Text></View>
-                <View style={[styles.switchTrack, { backgroundColor: unbranded ? palette.primary : palette.line }]}><View style={[styles.switchKnob, { backgroundColor: palette.card, transform: [{ translateX: unbranded ? 18 : 0 }] }]} /></View>
+              <Pressable accessibilityRole="switch" accessibilityLabel={`${t.shopUnbrandedSwitch} ${money(unbrandedAddonPaise)}`} accessibilityState={{ checked: selectedUnbranded }} onPress={() => setUnbranded(toggleUnbrandedSwitch)} style={[styles.brandingToggle, { borderColor: selectedUnbranded ? palette.primary : palette.line, backgroundColor: palette.surface }]}>
+                <View style={{ flex: 1, gap: 3 }}><Text style={[styles.bodyStrong, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.shopUnbrandedSwitch} +{money(unbrandedAddonPaise)}</Text><Text style={[styles.caption, { color: palette.muted }, lang === "hi" && styles.hindi]}>{t.shopUnbrandedExplain}</Text></View>
+                <View style={[styles.switchTrack, { backgroundColor: selectedUnbranded ? palette.primary : palette.line }]}><View style={[styles.switchKnob, { backgroundColor: palette.card, transform: [{ translateX: selectedUnbranded ? 18 : 0 }] }]} /></View>
               </Pressable>
             </View> : null}
           </ScrollView>
           <View style={[styles.sheetFooter, { borderTopColor: palette.line }]}>
-            <PrimaryButton label={`${t.shopAdd} · ${money(variant.salePaise * safeQty + (unbranded ? product.unbrandedAddonPaise * safeQty : 0))}`} disabled={busy || variant.stock < safeQty} onPress={() => onAdd(variant, safeQty, unbranded)} />
+            <PrimaryButton label={`${t.shopAdd} · ${money(variant.salePaise * safeQty + (selectedUnbranded ? unbrandedAddonPaise * safeQty : 0))}`} disabled={busy || variant.stock < safeQty} onPress={() => onAdd(variant, safeQty, selectedUnbranded)} />
           </View>
         </View>
       </View>
@@ -344,7 +350,7 @@ export function ShopScreen() {
   });
   useEffect(() => {
     if (params.unbranded !== "1" || promoOpened.current || !catalog.data?.items.length) return;
-    const product = catalog.data.items.find((item) => item.unbrandedAddonPaise > 0);
+    const product = catalog.data.items.find((item) => safePaise(item.unbrandedAddonPaise) > 0);
     if (!product) return;
     const frame = requestAnimationFrame(() => {
       promoOpened.current = true;
@@ -801,7 +807,7 @@ function ProductCard({ product, businessName, palette, t, lang, busy, added, onO
         <View style={[styles.productImage, { backgroundColor: palette.surface2 }]}>
           <ShopImage imageUrl={product.imageUrl} product={product} businessName={businessName} palette={palette} size={156} />
           {discount ? <View style={[styles.discountBadge, { backgroundColor: palette.success }]}><Text style={[styles.discountBadgeText, { color: palette.onPrimary }]}>{t.shopOff.replace("{percent}", String(discount))}</Text></View> : null}
-          {product.unbrandedAddonPaise > 0 ? <View style={[styles.unbrandedPill, { backgroundColor: palette.card }]}><Text style={[styles.unbrandedPillText, { color: palette.ink }]}>{t.shopUnbrandedBadge}</Text></View> : null}
+          {safePaise(product.unbrandedAddonPaise) > 0 ? <View style={[styles.unbrandedPill, { backgroundColor: palette.card }]}><Text style={[styles.unbrandedPillText, { color: palette.ink }]}>{t.shopUnbrandedBadge}</Text></View> : null}
         </View>
       </Pressable>
       <View style={styles.productCardBody}>
@@ -841,8 +847,8 @@ function CartLineCard({ line, index, cart, palette, t, lang, onQty, onRemove, on
         <Text style={[styles.labelText, { color: palette.ink }]}>{t.shopQty}</Text>
         <QuantityStepper value={line.qty} min={line.minQty} max={Math.max(line.minQty, line.stock)} onChange={onQty} decreaseLabel={t.shopDecreaseQty} increaseLabel={t.shopIncreaseQty} label={t.shopQty} palette={palette} />
       </View>
-      {line.unbrandedUnitPaise > 0 ? <Pressable accessibilityRole="switch" accessibilityLabel={`${t.shopUnbrandedSwitch} ${money(line.unbrandedUnitPaise)}`} accessibilityState={{ checked: line.unbranded }} onPress={onToggleUnbranded} style={[styles.brandingToggle, { borderColor: line.unbranded ? palette.primary : palette.line, backgroundColor: palette.surface }]}>
-        <View style={{ flex: 1, gap: 3 }}><Text style={[styles.bodyStrong, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.shopUnbrandedSwitch} +{money(line.unbrandedUnitPaise)} × {line.qty}</Text><Text style={[styles.caption, { color: palette.muted }, lang === "hi" && styles.hindi]}>{t.shopUnbrandedExplain}</Text></View>
+      {safePaise(line.unbrandedUnitPaise) > 0 ? <Pressable accessibilityRole="switch" accessibilityLabel={`${t.shopUnbrandedSwitch} ${money(safePaise(line.unbrandedUnitPaise))}`} accessibilityState={{ checked: line.unbranded === true }} onPress={onToggleUnbranded} style={[styles.brandingToggle, { borderColor: line.unbranded ? palette.primary : palette.line, backgroundColor: palette.surface }]}>
+        <View style={{ flex: 1, gap: 3 }}><Text style={[styles.bodyStrong, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.shopUnbrandedSwitch} +{money(safePaise(line.unbrandedUnitPaise))} × {line.qty}</Text><Text style={[styles.caption, { color: palette.muted }, lang === "hi" && styles.hindi]}>{t.shopUnbrandedExplain}</Text></View>
         <View style={[styles.switchTrack, { backgroundColor: line.unbranded ? palette.primary : palette.line }]}><View style={[styles.switchKnob, { backgroundColor: palette.card, transform: [{ translateX: line.unbranded ? 18 : 0 }] }]} /></View>
       </Pressable> : null}
       {line.needsDesign || line.needsNfc ? <View style={styles.designFields}>
@@ -953,10 +959,10 @@ function OrderDetailView({ detail, palette, t, lang, busy, proofNote, setProofNo
           <View style={styles.detailInfoRow}><Text style={[styles.bodyStrong, { color: palette.ink }]}>{t.shopAwb}: {detail.shipment.awb}</Text></View>
           <Pressable accessibilityRole="button" accessibilityLabel={copiedAwb === detail.shipment.awb ? t.shopAwbCopied : t.shopCopyAwb} onPress={() => { const awb = detail.shipment!.awb!; void onCopyAwb(awb).then(() => setCopiedAwb(awb)).catch(() => undefined); }} style={[styles.copyButton, { borderColor: palette.line }]}><Copy size={16} color={palette.ink} /><Text style={[styles.caption, { color: palette.ink }]}>{copiedAwb === detail.shipment.awb ? t.shopAwbCopied : t.shopCopyAwb}</Text></Pressable>
         </View> : null}
-        {detail.shipment.latestEvent ? <View style={[styles.ndrBox, { backgroundColor: `${palette.surface2}` }]}><Text style={[styles.labelText, { color: palette.primary }]}>{t.shopLatestEvent}</Text><Text style={[styles.bodyText, { color: palette.ink }]}>{timelineLabel(detail.shipment.latestEvent.status, t)}</Text><Text style={[styles.caption, { color: palette.muted }]}>{dateTime(detail.shipment.latestEvent.at, lang)}</Text></View> : null}
-        {detail.shipment.ndrNote ? <View style={[styles.ndrBox, { backgroundColor: `${palette.warning}18` }]}><Text style={[styles.labelText, { color: palette.warning }]}>{t.shopNdrNote}</Text><Text style={[styles.bodyText, { color: palette.ink }]}>{detail.shipment.ndrNote}</Text></View> : null}
-        {detail.shipment.etaDays != null ? <Text style={[styles.bodyText, { color: palette.muted }]}>{t.shopEta}: {t.shopEtaDays.replace("{days}", String(detail.shipment.etaDays))}</Text> : null}
-        <PrimaryButton label={t.shopTrackShipment} icon={ExternalLink} onPress={() => void onOpenExternal(detail.shipment?.trackingUrl || `https://qr24x7.in/dashboard/shop/orders/${detail.id}`)} />
+        {typeof detail.shipment.latestEvent?.status === "string" ? <View style={[styles.ndrBox, { backgroundColor: `${palette.surface2}` }]}><Text style={[styles.labelText, { color: palette.primary }]}>{t.shopLatestEvent}</Text><Text style={[styles.bodyText, { color: palette.ink }]}>{timelineLabel(detail.shipment.latestEvent.status, t)}</Text><Text style={[styles.caption, { color: palette.muted }]}>{typeof detail.shipment.latestEvent.at === "string" ? dateTime(detail.shipment.latestEvent.at, lang) : "—"}</Text></View> : null}
+        {typeof detail.shipment.ndrNote === "string" && detail.shipment.ndrNote ? <View style={[styles.ndrBox, { backgroundColor: `${palette.warning}18` }]}><Text style={[styles.labelText, { color: palette.warning }]}>{t.shopNdrNote}</Text><Text style={[styles.bodyText, { color: palette.ink }]}>{detail.shipment.ndrNote}</Text></View> : null}
+        {typeof detail.shipment.etaDays === "number" ? <Text style={[styles.bodyText, { color: palette.muted }]}>{t.shopEta}: {t.shopEtaDays.replace("{days}", String(detail.shipment.etaDays))}</Text> : null}
+        <PrimaryButton label={t.shopTrackShipment} icon={ExternalLink} onPress={() => void onOpenExternal(typeof detail.shipment?.trackingUrl === "string" ? detail.shipment.trackingUrl : `https://qr24x7.in/dashboard/shop/orders/${detail.id}`)} />
       </> : <Text style={[styles.bodyText, { color: palette.muted }]}>{t.shopTrackShipment}</Text>}
     </View>
 

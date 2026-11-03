@@ -15,7 +15,8 @@ import { HelpButton } from "../../src/guide/help-sheet";
 import { useI18n } from "../../src/i18n";
 import { accountKey } from "../../src/query/keys";
 import { useBusiness } from "../../src/state/business";
-import { hasModule, useEntitlement } from "../../src/state/entitlement";
+import { useEntitlement } from "../../src/state/entitlement";
+import { isFeatureLockedByModules } from "../../src/state/plan-lock-logic";
 import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
 import { Card, Chip, EmptyState, LoadErrorCard, Skeleton } from "../../src/ui/bits";
@@ -72,9 +73,8 @@ function FeedbackTabContent() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [tagText, setTagText] = useState("");
-  const modules = entitlement.data?.modules;
   const id = business?.id;
-  const locked = !!(modules && !hasModule(modules, "REVIEWS"));
+  const locked = isFeatureLockedByModules(entitlement.data?.modules, "REVIEWS", entitlement.isError);
   const rows = useQuery({
     queryKey: accountKey(user?.id ?? "", "feedback", id),
     enabled: !!user && !locked,

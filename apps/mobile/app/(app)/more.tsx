@@ -85,8 +85,13 @@ function MeScreenContent() {
 
   const serviceBusiness = settings.data?.layout === "SERVICES";
   const planCanHideBranding = business?.ownerId === user?.id && plan.data?.tier === "AGENCY";
-  const brandingHidden = Boolean(business?.hideBranding || (business?.hideBrandingSource == null && planCanHideBranding));
-  const canSwitchBranding = planCanHideBranding && business?.hideBrandingSource !== "ADMIN" && business?.hideBrandingSource !== "PURCHASE";
+  const hasBrandingState = typeof business?.hideBranding === "boolean"
+    || business?.hideBrandingSource === "PURCHASE"
+    || (business?.hideBrandingSource === null && planCanHideBranding);
+  const brandingHidden = business?.hideBrandingSource === "PURCHASE"
+    || business?.hideBranding === true
+    || (business?.hideBrandingSource === null && planCanHideBranding);
+  const canSwitchBranding = planCanHideBranding && hasBrandingState && business?.hideBrandingSource !== "ADMIN" && business?.hideBrandingSource !== "PURCHASE";
 
   async function setBrandingHidden(value: boolean) {
     if (!business || !canSwitchBranding) return;
@@ -120,7 +125,7 @@ function MeScreenContent() {
         <GroupRow icon={MessageSquareQuote} tint="amber" title={t.reviewsFeedback} hint={unreadFeedbackCount > 0 ? t.unreadCount.replace("{count}", String(unreadFeedbackCount)) : t.reviews} onPress={() => go("/(app)/reviews")} />
         <GroupRow icon={Store} tint="green" title={t.businessDetails} hint={t.hintBusinessRow} onPress={() => go("/(app)/business-edit")} />
         <GroupRow icon={QrCode} tint="ink" title={t.pageAndQr} hint={t.shareQr} onPress={() => go("/(app)/tap")} />
-        <View style={[styles.brandingRow, { backgroundColor: palette.card, borderColor: palette.line }]}>
+        {hasBrandingState ? <View style={[styles.brandingRow, { backgroundColor: palette.card, borderColor: palette.line }]}>
           <View style={{ flex: 1, gap: 3 }}>
             <Text style={[styles.settingTitle, { color: palette.ink }, lang === "hi" && styles.hindi]}>{brandingHidden ? t.brandingHidden : t.brandingShown}</Text>
           </View>
@@ -132,7 +137,7 @@ function MeScreenContent() {
             trackColor={{ false: palette.line, true: palette.primary }}
             thumbColor={palette.card}
           /> : null}
-        </View>
+        </View> : null}
         {serviceBusiness
           ? <GroupRow icon={Scissors} tint="amber" title={t.services} hint={t.addService} onPress={() => go("/(app)/services", "services-booking")} />
           : <GroupRow icon={ShoppingBag} tint="amber" title={t.menuTab} hint={t.menuItems} onPress={() => go("/(app)/menu", "menu")} />}

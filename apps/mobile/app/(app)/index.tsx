@@ -25,7 +25,7 @@ import { ownerShowQrTarget } from "../../src/nav/owner-tabs";
 type Analytics = {
   summary: { scans: number; orders: number | null; orderPaise: number | null; feedback: number };
   trend: { day: string; scans: number; orders?: number | null; orderPaise?: number | null }[];
-  modules: { store: boolean };
+  modules?: { store?: boolean };
 };
 type OrderCard = { id: string; number: string; status: string; customerName: string; totalPaise: number };
 type FeedbackRow = { id: string; message: string; status: string; review: { rating: number; customerName: string | null; customerPhone?: string | null } };
@@ -38,6 +38,16 @@ type Review = { id: string };
 
 const PROMOS = ["unbranded", "refer", "reseller"] as const;
 const CHECKLIST_KEYS: HomeChecklistKey[] = ["logo", "items", "stand", "review"];
+
+function hasUnbrandedProducts(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const items = (value as { items?: unknown }).items;
+  return Array.isArray(items) && items.some((item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return false;
+    const amount = (item as { unbrandedAddonPaise?: unknown }).unbrandedAddonPaise;
+    return typeof amount === "number" && Number.isFinite(amount) && amount > 0;
+  });
+}
 
 function HomeScreenContent() {
   const { t, lang } = useI18n();
@@ -82,6 +92,12 @@ function HomeScreenContent() {
     queryKey: accountKey(userId, "shop-orders"),
     enabled: !!user,
     queryFn: () => apiData<{ items: ShopOrder[] }>("/api/v1/shop/orders", {}, { planSheet: false }),
+    staleTime: 60_000
+  });
+  const shopCatalog = useQuery({
+    queryKey: accountKey(userId, "shop-catalog"),
+    enabled: !!user,
+    queryFn: () => apiData<unknown>("/api/v1/shop/catalog"),
     staleTime: 60_000
   });
   const reviews = useQuery({
@@ -131,7 +147,7 @@ function HomeScreenContent() {
 
   const points = useMemo(() => (analytics.data?.trend ?? []).map((row) => row.scans), [analytics.data?.trend]);
   const todayPoint = analytics.data?.trend.at(-1);
-  const salesToday = analytics.data?.modules.store === false ? null : todayPoint?.orderPaise ?? null;
+  const salesToday = analytics.data?.modules?.store === false ? null : todayPoint?.orderPaise ?? null;
   const unreadFeedbackCount = (feedback.data?.items ?? []).filter((row) => row.status === "NEW").length;
   const feedbackToReply = (feedback.data?.items ?? []).filter((row) => row.status === "NEW").slice(0, 3);
   const recentOrders = (orders.data?.items ?? []).slice(0, 3);
@@ -143,7 +159,8 @@ function HomeScreenContent() {
     hasReview: (reviews.data?.items.length ?? 0) > 0
   });
   const showChecklist = checklist.some((step) => !step.done);
-  const promo = PROMOS[promoDay ? homePromoIndex(promoDay) : 0];
+  const availablePromos = hasUnbrandedProducts(shopCatalog.data) ? PROMOS : PROMOS.filter((item) => item !== "unbranded");
+  const promo = availablePromos[(promoDay ? homePromoIndex(promoDay) : 0) % availablePromos.length];
   const hello = (hour ?? 12) < 12 ? t.greetMorning : (hour ?? 12) < 17 ? t.greetAfternoon : t.greetEvening;
 
   useEffect(() => {
@@ -151,7 +168,7 @@ function HomeScreenContent() {
     return () => clearTimeout(timer);
   }, []);
   function refresh() {
-    [home, analytics, notifications, menu, store, shopOrders, reviews, orders, feedback, bookings, tap].forEach((query) => {
+    [home, analytics, notifications, menu, store, shopOrders, shopCatalog, reviews, orders, feedback, bookings, tap].forEach((query) => {
       query.refetch().catch(() => undefined);
     });
   }

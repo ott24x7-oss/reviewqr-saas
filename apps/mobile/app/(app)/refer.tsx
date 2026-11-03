@@ -14,7 +14,7 @@ import { fonts } from "../../src/theme";
 import { Card, EmptyState, LoadErrorCard, Skeleton } from "../../src/ui/bits";
 import { PrimaryButton, SecondaryButton } from "../../src/ui/buttons";
 import { useTheme } from "../../src/ui/theme";
-import { buildReferralShareText, formatReferralDate, projectedExpiryDisplay, stageForReward } from "../../src/referral/presentation";
+import { buildReferralShareText, formatReferralDate, normalizeReferralHome, projectedExpiryDisplay, stageForReward } from "../../src/referral/presentation";
 import type { Palette } from "../../src/ui/tokens";
 
 function referralStageLabel(stage: OwnerReferralHome["referrals"][number]["stage"], t: ReturnType<typeof useI18n>["t"]) {
@@ -43,13 +43,14 @@ function ReferScreenContent() {
   const home = useQuery({
     queryKey: accountKey(user?.id ?? "", "refer"),
     enabled: !!user,
-    queryFn: () => apiData<OwnerReferralHome>("/api/v1/refer")
+    queryFn: () => apiData<unknown>("/api/v1/refer"),
+    select: normalizeReferralHome
   });
   const data = home.data;
   const link = data?.link || "";
-  const shareText = data ? buildReferralShareText(data.shareText, lang) : "";
+  const shareText = data ? buildReferralShareText(data.shareText, lang, data.code, link) : "";
   const pendingCount = data?.referrals.filter((row) => row.stage === "PAID").length ?? 0;
-  const capRatio = data && data.maxMonthsPerYear > 0
+  const capRatio = data?.hasYearlyCap && data.maxMonthsPerYear > 0
     ? Math.max(0, Math.min(1, data.monthsEarnedThisYear / data.maxMonthsPerYear))
     : 0;
 
@@ -86,13 +87,15 @@ function ReferScreenContent() {
               <Gift color={palette.deep} size={24} />
             </View>
             <Text accessibilityRole="header" style={[styles.heroTitle, { color: palette.ink }, lang === "hi" && styles.hindi]}>
-              {t.referralHero.replace("{days}", String(data.bonusDaysForFriend)).replace("{months}", String(data.monthsPerReferral))}
+              {data.hasRewardDetails
+                ? t.referralHero.replace("{days}", String(data.bonusDaysForFriend)).replace("{months}", String(data.monthsPerReferral))
+                : t.referralHeroFallback}
             </Text>
-            <Text style={[styles.note, { color: palette.muted }, lang === "hi" && styles.hindi]}>
+            {data.hasCurrentExpiry ? <Text style={[styles.note, { color: palette.muted }, lang === "hi" && styles.hindi]}>
               {data.currentEndsAt
                 ? t.referralCurrentExpiry.replace("{date}", formatReferralDate(data.currentEndsAt, lang))
                 : t.referralNoCurrentExpiry}
-            </Text>
+            </Text> : null}
             {pendingCount > 0 && data.projectedEndsAt ? (
               <Text style={[styles.projected, { color: palette.success }, lang === "hi" && styles.hindi]}>
                 {projectedExpiryDisplay(data.projectedEndsAt, lang)}
@@ -139,7 +142,7 @@ function ReferScreenContent() {
             </View>
           </Card>
 
-          <Card style={styles.capCard}>
+          {data.hasYearlyCap ? <Card style={styles.capCard}>
             <View style={styles.capHeading}>
               <Text style={[styles.sectionTitle, { color: palette.ink }, lang === "hi" && styles.hindi]}>
                 {t.referralYearlyCap.replace("{earned}", String(data.monthsEarnedThisYear)).replace("{max}", String(data.maxMonthsPerYear))}
@@ -148,10 +151,10 @@ function ReferScreenContent() {
             <View accessible accessibilityLabel={t.referralYearlyCap.replace("{earned}", String(data.monthsEarnedThisYear)).replace("{max}", String(data.maxMonthsPerYear))} style={[styles.track, { backgroundColor: palette.line }]}>
               <View style={[styles.fill, { width: `${Math.round(capRatio * 100)}%`, backgroundColor: palette.primary }]} />
             </View>
-          </Card>
+          </Card> : null}
 
           <Text style={[styles.sectionTitle, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.referralProgressTitle}</Text>
-          {data.referrals.length === 0 ? (
+          {data.referrals.length === 0 && data.legacyRewards.length === 0 ? (
             <EmptyState
               icon={Gift}
               title={t.emptyReferralRewardsTitle}
@@ -159,13 +162,14 @@ function ReferScreenContent() {
               action={t.referralShareWhatsapp}
               onAction={() => void shareWhatsApp()}
             />
-          ) : data.referrals.map((row) => {
+          ) : null}
+          {data.referrals.map((row) => {
             const stage = stageForReward(row.stage);
             const tone = stageTone(stage, palette);
             return (
               <Card key={row.id} style={styles.referralRow}>
                 <View style={styles.rowHeading}>
-                  <Text style={[styles.name, { color: palette.ink }]} numberOfLines={1}>{row.displayName}</Text>
+                  <Text style={[styles.name, { color: palette.ink }]} numberOfLines={1}>{row.displayName || t.referralFallbackName}</Text>
                   <View accessible accessibilityLabel={referralStageLabel(stage, t)} style={[styles.stage, { backgroundColor: tone.backgroundColor }]}>
                     <Text style={[styles.stageText, { color: tone.color }, lang === "hi" && styles.hindi]}>{labels[stage]}</Text>
                   </View>
@@ -181,6 +185,13 @@ function ReferScreenContent() {
               </Card>
             );
           })}
+          {data.legacyRewards.map((reward) => (
+            <Card key={reward.id} style={styles.referralRow}>
+              <Text style={[styles.name, { color: palette.ink }]}>{t.referralLegacyReward}</Text>
+              {reward.at ? <Text style={[styles.note, { color: palette.muted }, lang === "hi" && styles.hindi]}>{formatReferralDate(reward.at, lang)}</Text> : null}
+              {reward.months > 0 ? <Text style={[styles.rewardMonths, { color: palette.deep }]}>{t.referralMonths.replace("{months}", String(reward.months))}</Text> : null}
+            </Card>
+          ))}
 
           <Card style={styles.howCard}>
             <Text style={[styles.sectionTitle, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.referralHowTitle}</Text>
@@ -194,9 +205,9 @@ function ReferScreenContent() {
             ))}
             <View style={[styles.termsDivider, { backgroundColor: palette.line }]} />
             <Text style={[styles.sectionTitle, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.referralTermsTitle}</Text>
-            <Text style={[styles.note, { color: palette.muted }, lang === "hi" && styles.hindi]}>
+            {data.hasHoldDays ? <Text style={[styles.note, { color: palette.muted }, lang === "hi" && styles.hindi]}>
               {t.referralHoldTerms.replace("{days}", String(data.holdDays))}
-            </Text>
+            </Text> : null}
             <Text style={[styles.note, { color: palette.muted }, lang === "hi" && styles.hindi]}>{t.referralReversalTerms}</Text>
           </Card>
         </>

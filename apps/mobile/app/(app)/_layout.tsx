@@ -2,9 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Redirect, router, Tabs, usePathname } from "expo-router";
 import { useEffect, useMemo, type ReactNode } from "react";
-import { ActivityIndicator, View } from "react-native";
+import * as Sentry from "@sentry/react-native";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { apiData } from "../../src/api/data";
 import { useI18n } from "../../src/i18n";
+import { PrimaryButton, SecondaryButton } from "../../src/ui/buttons";
+import { Screen } from "../../src/ui/screen";
 import { PushBridge } from "../../src/push/register";
 import { accountKey } from "../../src/query/keys";
 import { BusinessProvider, useBusiness } from "../../src/state/business";
@@ -17,6 +20,38 @@ import { PENDING_AGENT_JOIN_KEY } from "../../src/agent/join-code";
 import { fonts } from "../../src/theme";
 import { PremiumTabBar } from "../../src/ui/tab-bar";
 import { usePalette } from "../../src/ui/theme";
+import { routeErrorCopy } from "../../src/ui/route-error-copy";
+
+export function ErrorBoundary({ error, retry }: { error: Error; retry: () => void }) {
+  const { lang } = useI18n();
+  const palette = usePalette();
+  const copy = routeErrorCopy(lang);
+
+  useEffect(() => {
+    Sentry.captureException(error);
+  }, [error]);
+
+  return (
+    <Screen>
+      <View style={[errorStyles.content, { backgroundColor: palette.paper }]}>
+        <View style={[errorStyles.card, { backgroundColor: palette.card, borderColor: palette.line }]}>
+          <Text accessibilityRole="header" style={[errorStyles.title, { color: palette.ink }, lang === "hi" && errorStyles.hindi]}>{copy.title}</Text>
+          <Text style={[errorStyles.body, { color: palette.muted }, lang === "hi" && errorStyles.hindi]}>{copy.body}</Text>
+          <PrimaryButton label={copy.retry} onPress={retry} />
+          <SecondaryButton label={copy.home} onPress={() => router.replace("/(app)/index")} />
+        </View>
+      </View>
+    </Screen>
+  );
+}
+
+const errorStyles = StyleSheet.create({
+  content: { flex: 1, justifyContent: "center", padding: 20 },
+  card: { gap: 14, borderWidth: 1, borderRadius: 22, padding: 22 },
+  title: { fontFamily: fonts.title, fontSize: 22, lineHeight: 28 },
+  body: { fontFamily: fonts.body, fontSize: 15, lineHeight: 22 },
+  hindi: { fontFamily: fonts.hindi }
+});
 
 function PanelGate({ children }: { children: ReactNode }) {
   const { user } = useSession();

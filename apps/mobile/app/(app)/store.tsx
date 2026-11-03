@@ -10,7 +10,8 @@ import { ApiError } from "../../src/api/http";
 import { useI18n } from "../../src/i18n";
 import { accountKey } from "../../src/query/keys";
 import { useBusiness } from "../../src/state/business";
-import { hasModule, useEntitlement } from "../../src/state/entitlement";
+import { useEntitlement } from "../../src/state/entitlement";
+import { isFeatureLockedByModules } from "../../src/state/plan-lock-logic";
 import { openPlanLock, useFeatures } from "../../src/state/plan-lock";
 import { useSession } from "../../src/state/session";
 import { fonts } from "../../src/theme";
@@ -65,9 +66,8 @@ function StoreScreenContent() {
   const { locked } = useFeatures();
   const hoursTarget = useRef<ElementRef<typeof View>>(null);
   const upiTarget = useRef<ElementRef<typeof View>>(null);
-  const modules = entitlement.data?.modules;
-  const open = !!business && (!modules || hasModule(modules, "STORE"));
-  const storeLocked = !!(modules && !hasModule(modules, "STORE"));
+  const storeLocked = isFeatureLockedByModules(entitlement.data?.modules, "STORE", entitlement.isError);
+  const open = !!business && !storeLocked;
   useEffect(() => {
     if (storeLocked) openPlanLock("store");
   }, [storeLocked]);
@@ -146,7 +146,7 @@ function StoreScreenContent() {
     <View style={{ flex: 1, backgroundColor: palette.paper }}>
       <KeyboardAwareScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" bottomOffset={12}>
       <Text style={[styles.title, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.storeSettings}</Text>
-      {modules && !hasModule(modules, "STORE") ? <LockedModuleCard moduleId="STORE" /> : null}
+      {storeLocked ? <LockedModuleCard moduleId="STORE" /> : null}
       {settings.isLoading ? <View style={styles.loading}><Skeleton height={64} /><Skeleton height={64} /></View> : null}
       {settings.isError ? <LoadErrorCard onRetry={() => settings.refetch().catch(() => undefined)} /> : null}
       {form ? (

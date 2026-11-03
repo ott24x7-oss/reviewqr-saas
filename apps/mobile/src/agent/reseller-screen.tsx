@@ -13,7 +13,16 @@ import { Screen } from "../ui/screen";
 import { useTheme } from "../ui/theme";
 
 function rupees(paise: number, lang: "en" | "hi") {
+  if (!Number.isFinite(paise)) return "…";
   return new Intl.NumberFormat(lang === "hi" ? "hi-IN" : "en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(paise / 100);
+}
+
+function commissionRate(value: unknown, lang: "en" | "hi") {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const commission = value as { basis?: unknown; percent?: unknown; flatPaise?: unknown };
+  if (commission.basis === "PERCENT" && typeof commission.percent === "number" && Number.isFinite(commission.percent)) return `${commission.percent}%`;
+  if (commission.basis === "FLAT" && typeof commission.flatPaise === "number" && Number.isFinite(commission.flatPaise)) return rupees(commission.flatPaise, lang);
+  return null;
 }
 
 function ResellerContent() {
@@ -38,14 +47,15 @@ function ResellerContent() {
   async function openAgent() {
     router.push("/(app)/agent-home");
   }
-  const formattedExample = pitch.data ? rupees(pitch.data.growthExampleMonthlyPaise, lang) : "…";
-  const plan = pitch.data ? (lang === "hi" ? pitch.data.growthPlanNameHi : pitch.data.growthPlanName) : t.resellerGrowthPlan;
-  const planRate = pitch.data
-    ? pitch.data.planCommission.basis === "PERCENT" ? `${pitch.data.planCommission.percent}%` : rupees(pitch.data.planCommission.flatPaise, lang)
-    : "…";
-  const shopRate = pitch.data
-    ? pitch.data.shopCommission.basis === "PERCENT" ? `${pitch.data.shopCommission.percent}%` : rupees(pitch.data.shopCommission.flatPaise, lang)
-    : "…";
+  const formattedExample = typeof pitch.data?.growthExampleMonthlyPaise === "number" && Number.isFinite(pitch.data.growthExampleMonthlyPaise)
+    ? rupees(pitch.data.growthExampleMonthlyPaise, lang)
+    : null;
+  const localizedPlan = lang === "hi" ? pitch.data?.growthPlanNameHi : pitch.data?.growthPlanName;
+  const plan = typeof localizedPlan === "string" && localizedPlan.trim() ? localizedPlan : t.resellerGrowthPlan;
+  const planRate = commissionRate(pitch.data?.planCommission, lang);
+  const shopRate = commissionRate(pitch.data?.shopCommission, lang);
+  const hasPitchDetails = !!formattedExample && !!planRate && !!shopRate;
+  const applicationUnavailable = status.isError;
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: palette.paper }} contentContainerStyle={styles.content}>
@@ -53,14 +63,16 @@ function ResellerContent() {
       <Text style={[styles.intro, { color: palette.muted }, lang === "hi" && styles.hindiBody]}>{t.resellerPitch}</Text>
       <Card style={styles.earnCard}>
         <View style={styles.row}><BadgeIndianRupee color={palette.deep} size={21} /><Text style={[styles.section, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.sectionEarn}</Text></View>
-        <Text style={[styles.body, { color: palette.ink }, lang === "hi" && styles.hindiBody]}>{t.resellerPlanRate.replace("{rate}", planRate)}</Text>
-        <Text style={[styles.body, { color: palette.ink }, lang === "hi" && styles.hindiBody]}>{t.resellerShopRate.replace("{rate}", shopRate)}</Text>
-        <View style={[styles.example, { backgroundColor: palette.accentSoft }]}>
-          <Text style={[styles.exampleText, { color: palette.deep }, lang === "hi" && styles.hindiStrong]}>{t.resellerExample.replace("{plan}", plan).replace("{amount}", formattedExample)}</Text>
-        </View>
+        {hasPitchDetails ? <>
+          <Text style={[styles.body, { color: palette.ink }, lang === "hi" && styles.hindiBody]}>{t.resellerPlanRate.replace("{rate}", planRate)}</Text>
+          <Text style={[styles.body, { color: palette.ink }, lang === "hi" && styles.hindiBody]}>{t.resellerShopRate.replace("{rate}", shopRate)}</Text>
+          <View style={[styles.example, { backgroundColor: palette.accentSoft }]}>
+            <Text style={[styles.exampleText, { color: palette.deep }, lang === "hi" && styles.hindiStrong]}>{t.resellerExample.replace("{plan}", plan).replace("{amount}", formattedExample)}</Text>
+          </View>
+        </> : pitch.isError || pitch.data ? <Text style={[styles.note, { color: palette.muted }, lang === "hi" && styles.hindiBody]}>{t.resellerUnavailable}</Text> : null}
         <Text style={[styles.note, { color: palette.muted }, lang === "hi" && styles.hindiBody]}>{t.resellerPayout}</Text>
-        {pitch.isError ? <Text style={[styles.note, { color: palette.danger }]}>{t.resellerErrorGeneric}</Text> : null}
       </Card>
+      {applicationUnavailable ? <Card style={styles.statusCard}><Text style={[styles.body, { color: palette.muted }, lang === "hi" && styles.hindiBody]}>{t.resellerUnavailable}</Text></Card> : null}
       <Card style={styles.stepsCard}>
         <Text style={[styles.section, { color: palette.ink }, lang === "hi" && styles.hindi]}>{t.resellerHowTitle}</Text>
         {[t.resellerStepOne, t.resellerStepTwo, t.resellerStepThree].map((step, index) => (
@@ -72,7 +84,7 @@ function ResellerContent() {
       </Card>
       {hasAgentAccess ? <PillButton label={t.resellerOpenAgent} tone="dark" onPress={() => openAgent().catch(() => undefined)} /> : status.data?.status === "pending" || (status.data?.status === "rejected" && !status.data.canReapply)
         ? <PillButton label={t.resellerApplicationTitle} tone="dark" onPress={() => router.push("/(app)/agent-application")} />
-        : <PillButton label={t.resellerApply} tone="dark" onPress={startApplication} />}
+        : <PillButton label={t.resellerApply} tone="dark" disabled={applicationUnavailable || status.isLoading} hint={applicationUnavailable ? t.resellerUnavailable : status.isLoading ? t.resellerLoading : undefined} onPress={startApplication} />}
       <View style={styles.codeRow}>
         <UsersRound color={palette.muted} size={18} />
         <Text style={[styles.codeText, { color: palette.muted }, lang === "hi" && styles.hindiBody]}>{t.resellerHaveTeamCode}</Text>
@@ -99,6 +111,7 @@ const styles = StyleSheet.create({
   intro: { fontFamily: fonts.body, fontSize: 16, lineHeight: 23 },
   earnCard: { gap: 12, padding: 18 },
   stepsCard: { gap: 14, padding: 18 },
+  statusCard: { padding: 16, gap: 10 },
   row: { flexDirection: "row", alignItems: "center", gap: 9 },
   section: { fontFamily: fonts.bodyStrong, fontSize: 19 },
   body: { fontFamily: fonts.body, fontSize: 15, lineHeight: 22 },
