@@ -8,6 +8,7 @@ describe("push routes", () => {
     expect(routeForPush({ url: "https://reviewqr.example/dashboard/sell/bookings" })).toBe("/(app)/bookings");
     expect(routeForPush({ type: "plan_reminder", kind: "expiry" })).toBe("/(app)/plan");
     expect(routeForPush({ type: "plan_active" })).toBe("/(app)/plan");
+    expect(routeForPush({ type: "referral_reward", url: "/dashboard/refer" })).toBe("/(app)/refer");
     expect(routeForPush({ url: "https://reviewqr.example/dashboard/shop/orders/ord_1" })).toBe("/(app)/shop?order=ord_1");
     expect(routeForPush({ type: "order_status", url: "https://reviewqr.example/dashboard/shop/orders/ord_2?source=push" })).toBe("/(app)/shop?order=ord_2");
     expect(routeForPush({ type: "shop_order_status", order: "ord_3", url: "https://reviewqr.example/dashboard/shop/orders/ord_3" })).toBe("/(app)/shop?order=ord_3");

@@ -9,6 +9,9 @@ import { sendWhatsApp } from "../whatsapp";
 import { hashToken, randomToken } from "../tokens";
 import { absoluteUrl, slugify } from "../utils";
 import { escapeHtml, sendEmail } from "../email";
+import { cappedRewardMonths, hasActivePaidPlan } from "../plans/referral";
+import { getPlanProgramSettings } from "../plans/settings";
+import { extendByReward } from "../plans/quote";
 
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -246,19 +249,120 @@ export async function sendCampaign(userId: string, businessId: string, campaignI
 
 export async function ownerReferHome(userId: string) {
   const { ensureOwnerReferral } = await import("../plans/owner-referral");
-  const row = await ensureOwnerReferral(userId);
-  const rewards = await prisma.referralReward.findMany({
-    where: { referrerUserId: userId },
-    orderBy: { createdAt: "desc" },
-    take: 20,
-    select: { id: true, months: true, createdAt: true }
-  });
-  const code = row.code;
+  const referral = await ensureOwnerReferral(userId);
+  const now = new Date();
+  const yearStart = new Date(now.getFullYear(), 0, 1);
+  const nextYear = new Date(now.getFullYear() + 1, 0, 1);
+  const [settings, user, subscription, credit, earned, referrals] = await Promise.all([
+    getPlanProgramSettings(),
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { subscriptionTier: true, subscriptionStatus: true, subscriptionEndsAt: true }
+    }),
+    prisma.subscription.findFirst({
+      where: { userId, status: { in: ["ACTIVE", "TRIALING", "PAST_DUE"] } },
+      orderBy: { createdAt: "desc" },
+      select: { endsAt: true }
+    }),
+    prisma.referralCredit.findUnique({ where: { userId }, select: { months: true, days: true } }),
+    prisma.referralReward.aggregate({
+      where: { referrerUserId: userId, status: "APPLIED", appliedAt: { gte: yearStart, lt: nextYear } },
+      _sum: { months: true }
+    }),
+    prisma.signupAttribution.findMany({
+      where: { referrerUserId: userId },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        createdAt: true,
+        user: {
+          select: {
+            name: true,
+            phone: true,
+            businesses: { select: { name: true }, orderBy: { createdAt: "asc" }, take: 1 },
+            referralRewardReceived: {
+              select: { status: true, months: true, holdUntil: true, appliedAt: true }
+            }
+          }
+        }
+      }
+    })
+  ]);
+  const currentEndsAt = subscription?.endsAt ?? user?.subscriptionEndsAt ?? null;
+  const monthsEarnedThisYear = earned._sum.months || 0;
+  const activePaidPlan = Boolean(user && hasActivePaidPlan({
+    tier: user.subscriptionTier,
+    status: user.subscriptionStatus,
+    endsAt: currentEndsAt,
+    now
+  }));
+  const pending = referrals
+    .map((row) => row.user.referralRewardReceived)
+    .filter((reward) => reward?.status === "PENDING")
+    .sort((a, b) => (a?.holdUntil.getTime() ?? 0) - (b?.holdUntil.getTime() ?? 0));
+  let usedMonths = monthsEarnedThisYear;
+  let pendingMonths = 0;
+  for (const reward of pending) {
+    if (!reward) continue;
+    const applied = cappedRewardMonths(reward.months, usedMonths, settings.maxMonthsPerYear);
+    pendingMonths += applied;
+    usedMonths += applied;
+  }
+  const projected = activePaidPlan && currentEndsAt && pendingMonths > 0
+    ? extendByReward(currentEndsAt, pendingMonths, 0)
+    : null;
+  const code = referral.code;
+  const link = absoluteUrl(`/refer/${code}`);
+  // The promotional amount is the largest configured reward. Each referred plan's actual amount appears in its progress row.
+  const monthsPerReferral = Math.max(...Object.values(settings.monthsByDuration));
+  const bonusDaysForFriend = settings.newBusinessDays;
   return ok({
     code,
-    link: absoluteUrl(`/refer/${code}`),
-    rewards: rewards.map((reward) => ({ id: reward.id, months: reward.months, at: reward.createdAt.toISOString() }))
+    link,
+    shareText: {
+      en: `Join QR24x7 with my link. When your business buys a plan, you get ${bonusDaysForFriend} bonus days and I get up to ${monthsPerReferral} free months: ${link}`,
+      hi: `मेरे लिंक से QR24x7 से जुड़ें। आपका बिज़नेस प्लान लेने पर आपको ${bonusDaysForFriend} बोनस दिन मिलेंगे और मुझे ${monthsPerReferral} महीने तक मुफ़्त मिलेंगे: ${link}`
+    },
+    monthsPerReferral,
+    bonusDaysForFriend,
+    holdDays: settings.holdDays,
+    maxMonthsPerYear: settings.maxMonthsPerYear,
+    monthsEarnedThisYear,
+    currentEndsAt: currentEndsAt?.toISOString() ?? null,
+    projectedEndsAt: projected?.toISOString() ?? null,
+    creditMonths: credit?.months ?? 0,
+    creditDays: credit?.days ?? 0,
+    referrals: referrals.map((row) => {
+      const reward = row.user.referralRewardReceived;
+      const businessName = row.user.businesses[0]?.name || "";
+      return {
+        id: row.id,
+        displayName: safeReferralDisplay(businessName, row.user.phone),
+        stage: reward?.status === "PENDING"
+          ? "PAID"
+          : reward?.status === "APPLIED"
+            ? "REWARD_ADDED"
+            : reward?.status === "REVERSED"
+              ? "REVERSED"
+              : "SIGNED_UP",
+        months: reward?.months ?? 0,
+        signedUpAt: row.createdAt.toISOString(),
+        availableOn: reward?.status === "PENDING" ? reward.holdUntil.toISOString() : null,
+        appliedAt: reward?.appliedAt?.toISOString() ?? null
+      };
+    })
   });
+}
+
+function safeReferralDisplay(businessName: string, phone: string | null) {
+  const phoneDigits = phone?.replace(/\D/g, "") || "";
+  const maskedPhone = phoneDigits.length > 4 ? `•••• ${phoneDigits.slice(-4)}` : "New business";
+  const safeName = businessName
+    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "")
+    .replace(/\+?\d[\d\s().-]{7,}\d/g, (value) => (value.replace(/\D/g, "").length >= 10 ? "" : value))
+    .replace(/\s{2,}/g, " ")
+    .trim();
+  return safeName && !/^[\d\s+().-]+$/.test(safeName) ? safeName : maskedPhone;
 }
 
 export async function readAiSettings(userId: string, businessId: string) {

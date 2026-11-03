@@ -1,8 +1,8 @@
 import { Screen } from "../../src/ui/screen";
-import type { BillingSummary } from "@reviewqr/shared";
+import type { BillingSummary, OwnerReferralHome } from "@reviewqr/shared";
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
-import { CreditCard, IndianRupee } from "lucide-react-native";
+import { CreditCard, Gift, IndianRupee } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { apiData } from "../../src/api/data";
@@ -38,6 +38,11 @@ function PlanScreenContent() {
     enabled: !!user,
     queryFn: () => apiData<BillingSummary>("/api/v1/billing/summary")
   });
+  const referrals = useQuery({
+    queryKey: accountKey(user?.id ?? "", "refer"),
+    enabled: !!user,
+    queryFn: () => apiData<OwnerReferralHome>("/api/v1/refer")
+  });
   const name = lang === "hi" ? plan.data?.plan?.nameHi || plan.data?.plan?.nameEn : plan.data?.plan?.nameEn;
   const when = plan.data?.endsAt || plan.data?.trialEndsAt || "";
   const whenDate = when ? new Date(when) : null;
@@ -64,6 +69,7 @@ function PlanScreenContent() {
           onRefresh={() => {
             plan.refetch().catch(() => undefined);
             billing.refetch().catch(() => undefined);
+            referrals.refetch().catch(() => undefined);
           }}
         />
       }
@@ -97,6 +103,16 @@ function PlanScreenContent() {
         </Text>
         <Text style={[styles.note, lang === "hi" && styles.hindi]}>{t.plansWeb}</Text>
       </View>
+
+      <Group>
+        <GroupRow
+          icon={Gift}
+          tint="green"
+          title={t.referralPlanBonus.replace("{months}", String(referrals.data?.monthsEarnedThisYear ?? 0))}
+          hint={t.referEarn}
+          onPress={() => router.push("/(app)/refer")}
+        />
+      </Group>
 
       <SectionHeader label={t.planHistory} />
       {billing.isLoading ? <><Skeleton height={72} /><Skeleton height={72} /></> : null}

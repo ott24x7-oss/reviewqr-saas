@@ -137,7 +137,7 @@ function MeScreenContent() {
 
       <SectionHeader label={t.sectionGrow} />
       <Group>
-        <GroupRow icon={Share2} tint="green" title={t.referEarn} hint={t.shareLink} onPress={() => go("/(app)/refer")} />
+        <GroupRow icon={Share2} tint="green" title={t.referEarn} hint={t.referEarnHint} onPress={() => go("/(app)/refer")} />
         <GroupRow icon={Share2} tint="amber" title={t.offers} hint={t.couponCode} onPress={() => go("/(app)/offers", "offers")} />
         <GroupRow icon={Megaphone} tint="pink" title={t.campaigns} hint={t.sendCampaign} onPress={() => go("/(app)/campaigns", "campaigns")} />
         <GroupRow icon={Users} tint="blue" title={t.customers} hint={t.exportCsv} onPress={() => go("/(app)/customers", "customers")} />

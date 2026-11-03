@@ -6,6 +6,7 @@ export type PendingOtp = {
   devCode: string | null;
   sentAt: number;
   signupToken?: string;
+  referralCode?: string;
 };
 
 let pending: PendingOtp | null = null;

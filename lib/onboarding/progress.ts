@@ -28,8 +28,12 @@ function viewOf(row: {
 }
 
 export async function readOnboarding(userId: string) {
-  const row = await prisma.onboardingDraft.findUnique({ where: { userId } });
-  return ok(viewOf(row));
+  const [row, attribution] = await Promise.all([
+    prisma.onboardingDraft.findUnique({ where: { userId } }),
+    prisma.signupAttribution.findUnique({ where: { userId }, select: { id: true } })
+  ]);
+  const view = viewOf(row);
+  return ok({ ...view, referralAsked: view.referralAsked || Boolean(attribution) });
 }
 
 export async function saveOnboarding(

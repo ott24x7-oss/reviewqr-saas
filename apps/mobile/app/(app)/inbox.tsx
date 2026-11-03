@@ -2,7 +2,7 @@ import { Screen } from "../../src/ui/screen";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell } from "lucide-react-native";
 import { router } from "expo-router";
-import { ScrollView, StyleSheet, Text } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { apiData } from "../../src/api/data";
 import { useI18n } from "../../src/i18n";
 import { accountKey } from "../../src/query/keys";
@@ -11,8 +11,9 @@ import { fonts } from "../../src/theme";
 import { Card, EmptyState, LoadErrorCard, Skeleton } from "../../src/ui/bits";
 import { PillButton } from "../../src/ui/controls";
 import { useTheme } from "../../src/ui/theme";
+import { routeForPush } from "../../src/push/routes";
 
-type Note = { id: string; title: string; message: string; isRead: boolean; createdAt: string };
+type Note = { id: string; type: string; title: string; message: string; link: string | null; isRead: boolean; createdAt: string };
 
 function InboxScreenContent() {
   const { t, lang } = useI18n();
@@ -39,13 +40,27 @@ function InboxScreenContent() {
       {!rows.isLoading && !rows.isError && (rows.data?.items ?? []).length === 0 ? (
         <EmptyState icon={Bell} title={t.emptyInboxTitle} body={t.emptyInboxBody} action={t.home} onAction={() => router.replace("/(app)")} />
       ) : null}
-      {!rows.isLoading && !rows.isError ? (rows.data?.items ?? []).map((row) => (
-        <Card key={row.id} style={styles.card}>
-          <Text style={[styles.name, { color: palette.ink }]}>{row.title}</Text>
-          <Text style={[styles.note, { color: palette.muted }]}>{row.message}</Text>
-          <Text style={[styles.note, { color: palette.inkSoft }]}>{String(row.createdAt).slice(0, 16).replace("T", " ")}{row.isRead ? "" : " · •"}</Text>
-        </Card>
-      )) : null}
+      {!rows.isLoading && !rows.isError ? (rows.data?.items ?? []).map((row) => {
+        const content = (
+          <Card style={styles.card}>
+            <Text style={[styles.name, { color: palette.ink }]}>{row.title}</Text>
+            <Text style={[styles.note, { color: palette.muted }]}>{row.message}</Text>
+            <Text style={[styles.note, { color: palette.inkSoft }]}>{String(row.createdAt).slice(0, 16).replace("T", " ")}{row.isRead ? "" : " · •"}</Text>
+          </Card>
+        );
+        if (row.type !== "referral_reward") return <View key={row.id}>{content}</View>;
+        return (
+          <Pressable
+            key={row.id}
+            accessibilityRole="button"
+            accessibilityLabel={`${row.title}. ${row.message}`}
+            onPress={() => router.push(routeForPush({ type: row.type, url: row.link || "" }))}
+            style={styles.noticeButton}
+          >
+            {content}
+          </Pressable>
+        );
+      }) : null}
     </ScrollView>
   );
 }
@@ -56,6 +71,7 @@ const styles = StyleSheet.create({
   name: { fontFamily: fonts.bodyStrong, fontSize: 16 },
   note: { fontFamily: fonts.body, fontSize: 14 },
   card: { gap: 4 },
+  noticeButton: { minHeight: 44 },
   hindi: { fontFamily: fonts.hindi }
 });
 

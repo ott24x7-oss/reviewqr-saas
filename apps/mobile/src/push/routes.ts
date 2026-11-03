@@ -40,6 +40,7 @@ export function routeForPush(data: Record<string, unknown> | null | undefined) {
   const type = typeof data?.type === "string" ? data.type : "";
   const url = typeof data?.url === "string" ? data.url : "";
   if (/^(?:qr24x7|reviewqr):\/\/qr\/?$/.test(url)) return "/(app)/tap";
+  if (type === "referral_reward" || url.includes("/dashboard/refer")) return "/(app)/refer";
   if (type === "negative_feedback" || url.includes("/feedback")) return "/(app)/orders?tab=feedback";
   if (type === "booking_request" || url.includes("/sell/bookings")) return "/(app)/bookings";
   if (type === "shop_order_status") {

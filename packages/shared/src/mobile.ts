@@ -156,9 +156,34 @@ export const billingSummarySchema = z.object({
   )
 });
 
+export const ownerReferralHomeSchema = z.object({
+  code: z.string(),
+  link: z.string().url(),
+  shareText: z.object({ en: z.string(), hi: z.string() }),
+  monthsPerReferral: z.number().int().nonnegative(),
+  bonusDaysForFriend: z.number().int().nonnegative(),
+  holdDays: z.number().int().nonnegative(),
+  maxMonthsPerYear: z.number().int().nonnegative(),
+  monthsEarnedThisYear: z.number().int().nonnegative(),
+  currentEndsAt: z.string().nullable(),
+  projectedEndsAt: z.string().nullable(),
+  creditMonths: z.number().int().nonnegative(),
+  creditDays: z.number().int().nonnegative(),
+  referrals: z.array(z.object({
+    id: z.string(),
+    displayName: z.string(),
+    stage: z.enum(["INVITED", "SIGNED_UP", "PAID", "REWARD_ADDED", "REVERSED"]),
+    months: z.number().int().nonnegative(),
+    signedUpAt: z.string(),
+    availableOn: z.string().nullable(),
+    appliedAt: z.string().nullable()
+  }))
+});
+
 export type Dashboard = z.infer<typeof dashboardSchema>;
 export type ShopOrderDetail = z.infer<typeof shopOrderDetailSchema>;
 export type BillingSummary = z.infer<typeof billingSummarySchema>;
+export type OwnerReferralHome = z.infer<typeof ownerReferralHomeSchema>;
 export type PlacesSearch = z.infer<typeof placesSearchSchema>;
 export type PlaceDetails = z.infer<typeof placeDetailsSchema>;
 export type TapPage = z.infer<typeof tapPageSchema>;

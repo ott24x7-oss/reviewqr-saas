@@ -12,7 +12,7 @@ import { attachTapDraft } from "@/lib/tap/new-business";
 import { markOnboarding } from "@/lib/tap/onboarding-mark";
 import { isReservedSlug } from "@/lib/tap/reserved-slugs";
 import { cookies } from "next/headers";
-import { JOIN_COOKIE, applySignupAttribution } from "@/lib/plans/attribution";
+import { JOIN_COOKIE, applyManualReferralCode, applySignupAttribution } from "@/lib/plans/attribution";
 import { queueAdminPush } from "@/lib/admin/push";
 
 export async function POST(req: NextRequest) {
@@ -103,6 +103,9 @@ export async function POST(req: NextRequest) {
     phone: data.phone,
     email
   });
+  if (data.referralCode) {
+    await applyManualReferralCode({ userId: user.id, code: data.referralCode, phone: data.phone, email, businessId });
+  }
 
   await markOnboarding(user.id, "start");
 

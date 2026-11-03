@@ -21,7 +21,8 @@ export const registerSchema = z.object({
   email: emailSchema,
   phone: phoneSchema.optional().or(z.literal("")),
   password: passwordSchema,
-  businessName: z.string().min(2).max(80).optional()
+  businessName: z.string().min(2).max(80).optional(),
+  referralCode: z.string().max(40).optional()
 });
 
 export const loginSchema = z.object({

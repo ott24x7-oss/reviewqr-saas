@@ -30,6 +30,15 @@ export default ({ config }: ConfigContext): ExpoConfig => applyAppVariant(({
         autoVerify: true,
         data: [{ scheme: "https", host: "qr24x7.in", pathPrefix: "/agent/join" }],
         category: ["BROWSABLE", "DEFAULT"]
+      },
+      {
+        action: "VIEW",
+        autoVerify: true,
+        data: [
+          { scheme: "https", host: "qr24x7.in", pathPrefix: "/refer" },
+          { scheme: "https", host: "qr24x7.in", pathPrefix: "/register" }
+        ],
+        category: ["BROWSABLE", "DEFAULT"]
       }
     ],
     adaptiveIcon: {
