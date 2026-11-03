@@ -42,13 +42,17 @@ export function routeForPush(data: Record<string, unknown> | null | undefined) {
   if (/^(?:qr24x7|reviewqr):\/\/qr\/?$/.test(url)) return "/(app)/tap";
   if (type === "negative_feedback" || url.includes("/feedback")) return "/(app)/orders?tab=feedback";
   if (type === "booking_request" || url.includes("/sell/bookings")) return "/(app)/bookings";
-  if (type === "store_order" || type === "order_status" || url.includes("/dashboard/orders")) return "/(app)/orders?tab=orders";
-  if (type === "plan_active") return "/(app)/plan";
-  if (type === "plan_reminder" || type === "tap_expired" || url.includes("/billing")) return "/(app)/plan";
+  if (type === "shop_order_status") {
+    const id = typeof data?.order === "string" ? data.order : orderFromShopPath(url);
+    return id ? shopOrderRoute(id) ?? "/(app)" : "/(app)/shop";
+  }
   const explicit = orderFromDeepLink(url) ?? (typeof data?.order === "string" ? data.order : null);
   if (explicit !== null) return shopOrderRoute(explicit) ?? "/(app)";
   const pathId = orderFromShopPath(url);
   if (pathId !== null) return shopOrderRoute(pathId) ?? "/(app)";
+  if (type === "store_order" || type === "order_status" || url.includes("/dashboard/orders")) return "/(app)/orders?tab=orders";
+  if (type === "plan_active") return "/(app)/plan";
+  if (type === "plan_reminder" || type === "tap_expired" || url.includes("/billing")) return "/(app)/plan";
   if (url.includes("/shop")) return "/(app)/shop";
   return "/(app)";
 }

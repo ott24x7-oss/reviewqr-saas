@@ -117,9 +117,21 @@ export const shopOrderDetailSchema = z.object({
   paymentStatus: z.string(),
   totalPaise: z.number().int(),
   invoiceNumber: z.string().nullable(),
+  invoiceDownloadUrl: z.string().nullable(),
   checkoutUrl: z.string().nullable(),
   createdAt: z.string(),
-  lines: z.array(z.object({ sku: z.string(), name: z.string(), qty: z.number().int(), unitPaise: z.number().int() })),
+  subtotalPaise: z.number().int(),
+  discountPaise: z.number().int(),
+  taxablePaise: z.number().int(),
+  cgstPaise: z.number().int(),
+  sgstPaise: z.number().int(),
+  igstPaise: z.number().int(),
+  lines: z.array(z.object({
+    sku: z.string(), name: z.string(), qty: z.number().int(), unitPaise: z.number().int(), imageUrl: z.string().nullable(),
+    proof: z.object({ proofUrl: z.string().nullable(), proofContentType: z.string().nullable() }).nullable()
+  })),
+  address: z.object({ name: z.string(), phone: z.string(), line1: z.string(), line2: z.string().nullable(), city: z.string(), state: z.string(), pincode: z.string() }).nullable(),
+  shipment: z.object({ provider: z.string(), courierName: z.string().nullable(), awb: z.string().nullable(), trackingUrl: z.string().nullable(), ndrNote: z.string().nullable(), latestEvent: z.object({ status: z.string(), at: z.string() }).nullable(), etaDays: z.number().int().nullable() }).nullable(),
   timeline: z.array(z.object({ label: z.string(), at: z.string() })),
   reprints: z.array(z.object({ id: z.string(), reason: z.string(), status: z.string(), createdAt: z.string() }))
 });

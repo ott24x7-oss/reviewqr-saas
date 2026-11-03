@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 async function getHandler(req: NextRequest) {
   const auth = await requireV1User(req);
   if (!auth.ok) return auth.response;
-  return v1Data(await shopCartView(auth.user.id, "app"));
+  return v1Data(await shopCartView(auth.user.id, "app", req.nextUrl.searchParams.get("businessId")));
 }
 
 async function putHandler(req: NextRequest) {
