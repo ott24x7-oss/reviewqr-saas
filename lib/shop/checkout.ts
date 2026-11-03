@@ -8,8 +8,6 @@ import { requireBusinessAccess } from "@/lib/access";
 import { prisma } from "@/lib/db";
 import { rateLimitDb } from "@/lib/rate-limit";
 import { getPaymentsConfig, getShopCheckoutConfig } from "@/lib/settings";
-import { absoluteUrl } from "@/lib/utils";
-import { getYoupiConfig, youpiConfigured, youpiCreatePayment } from "@/lib/payments/youpi";
 import { appCartSellsDigital, shopCartView } from "./cart-store";
 import { chargeForOrder } from "./charge";
 import { hardwareCommissionSnapshot } from "../plans/hardware";
@@ -202,8 +200,7 @@ export async function checkoutShop(userId: string, env: EnvLike = process.env, a
       return ok({ orderId, paid: true, checkoutUrl: null as string | null, invoiceNumber: settled.invoiceNumber });
     }
 
-    // Production ignores SHOP_PAYMENT_STUB. The stub path is the only one that
-    // can confirm without YouPI, and it refuses to run when NODE_ENV is production.
+    // Production ignores SHOP_PAYMENT_STUB; it refuses to run when NODE_ENV is production.
     if (shopStubHonoured(env)) {
       const settled = await confirmStubbedShopOrder(orderId, {
         env,
@@ -221,6 +218,9 @@ export async function checkoutShop(userId: string, env: EnvLike = process.env, a
       return ok({ orderId, paid: true, checkoutUrl: null, invoiceNumber: settled.invoiceNumber });
     }
 
+    // Reuse a checkout session created before YouPI was removed.
+    if (checkoutUrl) return ok({ orderId, paid: false, checkoutUrl, invoiceNumber: null });
+
     if (payments.upiGateway === "manual") {
       if (!payments.upiEnabled || !payments.upiId) return fail(400, "Manual UPI checkout is not available right now.");
       const expiresAt = new Date(Date.now() + 15 * 60_000);
@@ -229,40 +229,7 @@ export async function checkoutShop(userId: string, env: EnvLike = process.env, a
     }
     if (payments.upiGateway === "razorpay") return fail(400, "Razorpay is not configured for shop checkout.");
 
-    if (checkoutUrl) {
-      return ok({ orderId, paid: false, checkoutUrl, invoiceNumber: null });
-    }
-
-    const cfg = await getYoupiConfig();
-    if (!youpiConfigured(cfg)) return fail(400, "UPI checkout is not available right now.");
-    try {
-      const remote = await youpiCreatePayment({
-        orderId,
-        amountPaise: advancePaise,
-        returnUrl: absoluteUrl(`/dashboard/shop/orders/${orderId}`),
-        idempotencyKey: orderId
-      });
-      await prisma.shopOrder.update({
-        where: { id: orderId },
-        data: {
-          providerPaymentId: remote.paymentId || undefined,
-          checkoutUrl: remote.checkoutUrl || undefined
-        }
-      });
-      return ok({
-        orderId,
-        paid: false,
-        checkoutUrl: remote.checkoutUrl || null,
-        invoiceNumber: null
-      });
-    } catch (error) {
-      await prisma.shopOrder.update({
-        where: { id: orderId },
-        data: { status: "CANCELLED", paymentStatus: "FAILED" }
-      });
-      const message = error instanceof Error ? error.message : "Could not start payment";
-      return fail(502, message);
-    }
+    return fail(400, "No supported shop payment method is available right now.");
   }
 
   const order = pending ?? (await createOrder());

@@ -28,7 +28,7 @@ export default function PrivacyPage() {
         <li><strong>Business data:</strong> business names, locations, staff names, logos, and Google review links you add.</li>
         <li><strong>Review &amp; feedback data:</strong> star ratings and written feedback. Name, mobile, and email are stored only when the customer ticks the consent box on the review form.</li>
         <li><strong>Usage data:</strong> pages visited, device type, and a hashed IP address used to count QR scans and limit abuse. The scan hash cannot be turned back into an IP address.</li>
-        <li><strong>Payment data:</strong> plan checkouts go through our self-hosted YouPI gateway or a manual UPI or USDT transfer. We store the amount, status, UTR when we have one, and the GST invoice. We do not store card numbers.</li>
+        <li><strong>Payment data:</strong> plan checkouts use the UPI or USDT options shown on the billing page. We store the amount, status, UTR when we have one, and the invoice or receipt. We do not store card numbers.</li>
       </ul>
 
       <h2>2. How we use information</h2>
@@ -58,8 +58,8 @@ export default function PrivacyPage() {
       <p>
         Signed-in owners can download a JSON copy of their account, businesses, reviews, and feedback
         from Settings. Deleting the account removes the businesses, reviews, feedback, and profile
-        details, and replaces the login email so the account cannot be used again. Payment rows and GST
-        invoices are kept. Indian tax rules require us to retain those records. The invoice is a snapshot
+        details, and replaces the login email so the account cannot be used again. Payment rows and
+        invoices or receipts are kept. The invoice is a snapshot
         taken when it was issued, so later changes to the profile do not rewrite it.
       </p>
       <p>
@@ -86,7 +86,7 @@ export default function PrivacyPage() {
       <p>
         Under the Digital Personal Data Protection Act, 2023, you can access, correct, export, or ask us
         to erase your personal data. Use Settings while signed in, or contact the email in the site
-        footer. Tax invoices are the exception described above.
+        footer. Payment invoices and receipts are the exception described above.
       </p>
 
       <h2>8. Changes to this policy</h2>

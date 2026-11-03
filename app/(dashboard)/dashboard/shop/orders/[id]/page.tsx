@@ -42,6 +42,7 @@ export default async function ShopOrderPage({ params }: { params: { id: string }
   const cancelDecision = shopCancelDecision(order.status, order.paymentStatus, order.totalPaise, order.cod ? order.advancePaise : order.totalPaise);
   const canCancel = order.userId === user.id && cancelDecision.allowed && !order.cancellationRequest;
   const canPay = order.status === "PENDING_PAYMENT" && order.paymentStatus === "PENDING";
+  const gstRegistered = Boolean(order.sellerGstin?.trim());
   const manualUpi = canPay && payments.upiGateway === "manual" && payments.upiEnabled && !!payments.upiId && !!order.expiresAt;
   const amountRupees = (order.advancePaise / 100).toFixed(2);
   const upiLink = manualUpi
@@ -60,17 +61,17 @@ export default async function ShopOrderPage({ params }: { params: { id: string }
         </p>
       )}
       <section className="space-y-2 rounded-[20px] bg-white p-4 shadow-sm">
-        <h2 className="font-semibold">Tax invoice</h2>
+        <h2 className="font-semibold">{gstRegistered ? "Tax invoice" : "Bill of supply"}</h2>
         <p className="text-sm">{order.invoiceNumber || "Invoice number is issued after payment."}</p>
-        <p className="text-sm">{order.sellerName}{order.sellerGstin ? ` · ${order.sellerGstin}` : ""}</p>
+        <p className="text-sm">{order.sellerName}{gstRegistered ? ` · ${order.sellerGstin}` : ""}</p>
         {order.buyerLegalName && <p className="text-sm">{order.buyerLegalName}</p>}
-        {order.buyerGstin && <p className="text-sm">GSTIN {order.buyerGstin}</p>}
-        <p className="text-sm">Place of supply {order.buyerState || order.sellerState || "Same as seller"}</p>
+        {gstRegistered && order.buyerGstin && <p className="text-sm">GSTIN {order.buyerGstin}</p>}
+        {gstRegistered && <p className="text-sm">Place of supply {order.buyerState || order.sellerState || "Same as seller"}</p>}
         <ul className="space-y-2 pt-2 text-sm">
           {order.lines.map((line) => (
             <li key={line.id}>
               <p className="font-medium">{line.name} × {line.qty}</p>
-              <p>HSN {line.hsn} · {line.gstPercent}% · {formatINR(line.netPaise)}</p>
+              <p>{gstRegistered ? `HSN ${line.hsn} · ${line.gstPercent}% · ` : ""}{formatINR(line.netPaise)}</p>
               {line.proofUrl && (
                 <p>
                   <a className="font-semibold underline" href={`/api/v1/shop/orders/${order.id}/proof?line=${line.id}`}>{copy.proof}</a>
@@ -80,8 +81,10 @@ export default async function ShopOrderPage({ params }: { params: { id: string }
             </li>
           ))}
         </ul>
-        <p className="text-sm">Taxable {formatINR(order.taxablePaise)}</p>
-        <p className="text-sm">CGST {formatINR(order.cgstPaise)} · SGST {formatINR(order.sgstPaise)} · IGST {formatINR(order.igstPaise)}</p>
+        {gstRegistered && <>
+          <p className="text-sm">Taxable {formatINR(order.taxablePaise)}</p>
+          <p className="text-sm">CGST {formatINR(order.cgstPaise)} · SGST {formatINR(order.sgstPaise)} · IGST {formatINR(order.igstPaise)}</p>
+        </>}
         <p className="text-lg font-semibold">{copy.total} {formatINR(order.totalPaise)}</p>
         {order.balancePaise > 0 && <p className="text-sm">Paid now {formatINR(order.advancePaise)} · Balance {formatINR(order.balancePaise)}</p>}
         {order.creditNotes.length > 0 && (

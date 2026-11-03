@@ -108,7 +108,7 @@ export type PaymentsConfig = {
   upiId: string;
   upiPayeeName: string;
   upiQrDataUrl: string;
-  upiGateway: "manual" | "youpi" | "razorpay";
+  upiGateway: "manual" | "razorpay";
   // USDT (crypto)
   usdtEnabled: boolean;
   usdtNetwork: string; // e.g. TRC20 / BEP20
@@ -126,7 +126,7 @@ export type PaymentsConfig = {
   gmailClientId: string;
   gmailClientSecret: string;
   gmailRefreshToken: string;
-  // YouPI (default checkout). Razorpay stays in the fields above and is off unless enabled by env.
+  // Legacy YouPI settings are retained for existing payments; new checkouts use the active gateway below.
   youpiBaseUrl: string;
   youpiMerchantId: string;
   youpiWebhookSecret: string;
@@ -356,7 +356,7 @@ export const DEFAULT_PAYMENTS: PaymentsConfig = {
   upiId: "",
   upiPayeeName: DEFAULT_BRAND_NAME,
   upiQrDataUrl: "",
-  upiGateway: "youpi",
+  upiGateway: "manual",
   usdtEnabled: false,
   usdtNetwork: "TRC20",
   usdtAddress: "",
@@ -475,6 +475,11 @@ async function writeKey(key: string, value: unknown, updatedBy?: string) {
 }
 
 /* ============== Payments ============== */
+/** Map legacy or unknown stored gateways to the owner's own UPI checkout. */
+export function normalizeUpiGateway(value: unknown): PaymentsConfig["upiGateway"] {
+  return value === "razorpay" ? "razorpay" : "manual";
+}
+
 export async function getPaymentsConfig(): Promise<PaymentsConfig> {
   const stored = await readKey<Partial<PaymentsConfig>>(SETTING_KEYS.payments, {});
   return {
@@ -491,7 +496,7 @@ export async function getPaymentsConfig(): Promise<PaymentsConfig> {
     upiId: stored.upiId || "",
     upiPayeeName: brandNameOrDefault(stored.upiPayeeName, DEFAULT_PAYMENTS.upiPayeeName),
     upiQrDataUrl: stored.upiQrDataUrl || "",
-    upiGateway: stored.upiGateway === "manual" || stored.upiGateway === "razorpay" ? stored.upiGateway : "youpi",
+    upiGateway: normalizeUpiGateway(stored.upiGateway),
     usdtEnabled: stored.usdtEnabled ?? false,
     usdtNetwork: stored.usdtNetwork || DEFAULT_PAYMENTS.usdtNetwork,
     usdtAddress: stored.usdtAddress || "",
@@ -511,7 +516,7 @@ export async function getPaymentsConfig(): Promise<PaymentsConfig> {
     youpiMerchantId: stored.youpiMerchantId || process.env.YOUPI_MERCHANT_ID || "",
     youpiWebhookSecret: stored.youpiWebhookSecret || process.env.YOUPI_WEBHOOK_SECRET || "",
     sellerLegalName: brandNameOrDefault(stored.sellerLegalName, DEFAULT_PAYMENTS.sellerLegalName),
-    sellerGstin: stored.sellerGstin || process.env.SELLER_GSTIN || "",
+    sellerGstin: process.env.SELLER_GSTIN?.trim() || "",
     sellerState: stored.sellerState || "",
     gstRate: stored.gstRate && stored.gstRate > 0 ? stored.gstRate : DEFAULT_PAYMENTS.gstRate
   };

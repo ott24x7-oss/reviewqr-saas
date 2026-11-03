@@ -42,6 +42,15 @@ export function PaymentsConfigForm({ initial }: { initial: PaymentsConfig }) {
       // otherwise shows a masked placeholder and the server keeps the stored value.
       if (!keyTouched) delete body.mailImapPass;
       if (!gmailSecretTouched) delete body.gmailClientSecret;
+      // These settings are retained server-side for compatibility, but are no
+      // longer editable from the admin payment form.
+      delete body.youpiBaseUrl;
+      delete body.youpiMerchantId;
+      delete body.youpiWebhookSecret;
+      delete body.sellerLegalName;
+      delete body.sellerGstin;
+      delete body.sellerState;
+      delete body.gstRate;
       // The OAuth refresh token is written only by the Google callback.
       delete body.gmailRefreshToken;
       const res = await fetch("/api/admin/settings/payments", {
@@ -96,52 +105,6 @@ export function PaymentsConfigForm({ initial }: { initial: PaymentsConfig }) {
 
       <Card>
         <CardHeader>
-          <CardTitle>YouPI and GST</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <Label className="text-xs">YouPI base URL</Label>
-              <Input value={cfg.youpiBaseUrl} onChange={(e) => update("youpiBaseUrl", e.target.value)} placeholder="https://pay.example.com" />
-            </div>
-            <div>
-              <Label className="text-xs">Merchant id</Label>
-              <Input value={cfg.youpiMerchantId} onChange={(e) => update("youpiMerchantId", e.target.value)} />
-            </div>
-            <div className="sm:col-span-2">
-              <Label className="text-xs">Webhook secret</Label>
-              <Input
-                value={cfg.youpiWebhookSecret}
-                onChange={(e) => update("youpiWebhookSecret", e.target.value)}
-                placeholder="Leave masked to keep the saved secret"
-              />
-            </div>
-            <div>
-              <Label className="text-xs">Seller legal name</Label>
-              <Input value={cfg.sellerLegalName} onChange={(e) => update("sellerLegalName", e.target.value)} />
-            </div>
-            <div>
-              <Label className="text-xs">Seller GSTIN</Label>
-              <Input value={cfg.sellerGstin} onChange={(e) => update("sellerGstin", e.target.value)} />
-            </div>
-            <div>
-              <Label className="text-xs">Seller state</Label>
-              <Input value={cfg.sellerState} onChange={(e) => update("sellerState", e.target.value)} placeholder="Karnataka" />
-            </div>
-            <div>
-              <Label className="text-xs">GST rate %</Label>
-              <Input
-                type="number"
-                value={cfg.gstRate}
-                onChange={(e) => update("gstRate", Number(e.target.value) || 18)}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <IndianRupee className="h-4 w-4" />
             UPI (INR)
@@ -180,11 +143,10 @@ export function PaymentsConfigForm({ initial }: { initial: PaymentsConfig }) {
                 onChange={(e) => update("upiGateway", e.target.value as PaymentsConfig["upiGateway"])}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               >
-                <option value="youpi">YouPI</option>
                 <option value="manual">Own UPI gateway (SMS + email)</option>
                 <option value="razorpay">Razorpay (when enabled)</option>
               </select>
-              <p className="mt-1 text-[11px] text-muted-foreground">This selection controls which UPI checkout the billing page offers. USDT remains separate.</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">This selection controls which UPI checkout billing offers. USDT remains separate.</p>
             </div>
           </div>
           <div>

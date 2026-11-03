@@ -33,8 +33,14 @@ export function extendSubscriptionEnd(
   return addMonths(base, Math.max(1, Math.floor(months) || 1));
 }
 
-/** Amount is GST-inclusive. Unknown buyer state is treated as the seller's state. */
-export function splitGst(amountPaise: number, ratePercent: number, sameState: boolean) {
+/** Prices are GST-inclusive only when a seller GSTIN is configured. */
+export function splitGst(
+  amountPaise: number,
+  ratePercent: number,
+  sameState: boolean,
+  sellerGstin?: string | null
+) {
+  if (!sellerGstin?.trim()) return { taxable: amountPaise, cgst: 0, sgst: 0, igst: 0 };
   const rate = ratePercent > 0 ? ratePercent : 18;
   const taxable = Math.round((amountPaise * 100) / (100 + rate));
   const tax = Math.max(0, amountPaise - taxable);
@@ -186,7 +192,7 @@ export async function activateCompletedPayment(input: ActivateInput): Promise<Ac
       await tx.referralCredit.update({ where: { userId: user.id }, data: { months: 0, days: 0 } });
     }
     const invoiceNumber = row.invoiceNumber ?? (await nextInvoiceNumber(tx, now));
-    const split = splitGst(row.amount, cfg.gstRate || 18, true);
+    const split = splitGst(row.amount, cfg.gstRate || 18, true, cfg.sellerGstin);
 
     await tx.payment.update({
       where: { id: row.id },

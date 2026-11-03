@@ -1,4 +1,4 @@
-/** QR24x7 hardware catalogue rules. Prices are GST-inclusive paise. */
+/** QR24x7 hardware catalogue rules. Prices are listed in paise. */
 
 export const BUNDLE_TIERS = ["STARTER", "GROWTH", "AGENCY", "FOUNDER"] as const;
 export type BundleTier = (typeof BUNDLE_TIERS)[number];

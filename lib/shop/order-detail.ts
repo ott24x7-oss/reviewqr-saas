@@ -41,6 +41,7 @@ export async function readShopOrder(userId: string, orderId: string) {
     }
   });
   if (!order || !(await canManageShopOrder(userId, order))) return fail(404, "Not found");
+  const gstRegistered = Boolean(order.sellerGstin?.trim());
   const [moves, latestCarrierEvent, site] = await Promise.all([
     prisma.auditLog.findMany({
       where: { entity: "ShopOrder", entityId: order.id, action: { in: ["shop.order.move", "shop.order.cancel.request", "shop.order.address.change"] } },
@@ -72,10 +73,13 @@ export async function readShopOrder(userId: string, orderId: string) {
     createdAt: order.createdAt.toISOString(),
     subtotalPaise: order.subtotalPaise,
     discountPaise: order.discountPaise,
-    taxablePaise: order.taxablePaise,
-    cgstPaise: order.cgstPaise,
-    sgstPaise: order.sgstPaise,
-    igstPaise: order.igstPaise,
+    invoiceTitle: gstRegistered ? "Tax invoice" : "Bill of supply",
+    ...(gstRegistered ? {
+      taxablePaise: order.taxablePaise,
+      cgstPaise: order.cgstPaise,
+      sgstPaise: order.sgstPaise,
+      igstPaise: order.igstPaise
+    } : {}),
     lines: order.lines.map((line) => ({
       sku: line.sku,
       name: line.name,

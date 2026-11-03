@@ -6,7 +6,7 @@ import { bundleGrant, founderCapAllows } from "../../lib/shop/bundle";
 import { quoteShop } from "../../lib/shop/quote";
 import { extendSubscriptionEnd } from "../../lib/subscription";
 import { effectiveTier } from "../../lib/payments";
-import { DEFAULT_PLANS } from "../../lib/settings";
+import { DEFAULT_PLANS, normalizeUpiGateway } from "../../lib/settings";
 
 const line = {
   sku: "STAND-QR",
@@ -19,7 +19,7 @@ const line = {
 
 describe("shop GST quote", () => {
   it("splits an inclusive price into CGST and SGST in the seller state", () => {
-    const quote = quoteShop({ lines: [line], sameState: true });
+    const quote = quoteShop({ lines: [line], sameState: true, sellerGstin: "29AABCU9603R1ZM" });
     expect(quote.ok).toBe(true);
     if (!quote.ok) return;
     expect(quote.totalPaise).toBe(11800);
@@ -30,12 +30,23 @@ describe("shop GST quote", () => {
   });
 
   it("uses IGST when the buyer is in another state", () => {
-    const quote = quoteShop({ lines: [line], sameState: false });
+    const quote = quoteShop({ lines: [line], sameState: false, sellerGstin: "29AABCU9603R1ZM" });
     expect(quote.ok).toBe(true);
     if (!quote.ok) return;
     expect(quote.igstPaise).toBe(1800);
     expect(quote.cgstPaise).toBe(0);
     expect(quote.sgstPaise).toBe(0);
+  });
+
+  it("keeps the full listed amount taxable-free when the seller has no GSTIN", () => {
+    const quote = quoteShop({ lines: [line], sameState: true });
+    expect(quote.ok).toBe(true);
+    if (!quote.ok) return;
+    expect(quote.totalPaise).toBe(11800);
+    expect(quote.taxablePaise).toBe(11800);
+    expect(quote.cgstPaise).toBe(0);
+    expect(quote.sgstPaise).toBe(0);
+    expect(quote.igstPaise).toBe(0);
   });
 
   it("applies a coupon, then a referral on the remainder, and shares the discount", () => {
@@ -46,7 +57,8 @@ describe("shop GST quote", () => {
       ],
       coupon: { percentOff: 10, flatPaise: 500, active: true },
       referral: { flatPaise: 1000, active: true },
-      sameState: true
+      sameState: true,
+      sellerGstin: "29AABCU9603R1ZM"
     });
     expect(quote.ok).toBe(true);
     if (!quote.ok) return;
@@ -98,6 +110,14 @@ describe("shop GST quote", () => {
     expect(founderCapAllows(FOUNDER_CAP, 1)).toBe(true);
     expect(founderCapAllows(FOUNDER_CAP, FOUNDER_CAP + 1)).toBe(false);
     expect(founderCapAllows(0, 1)).toBe(false);
+  });
+});
+
+describe("UPI gateway settings", () => {
+  it("maps a stored YouPI gateway to the owner's UPI gateway", () => {
+    expect(normalizeUpiGateway("youpi")).toBe("manual");
+    expect(normalizeUpiGateway("manual")).toBe("manual");
+    expect(normalizeUpiGateway("razorpay")).toBe("razorpay");
   });
 });
 

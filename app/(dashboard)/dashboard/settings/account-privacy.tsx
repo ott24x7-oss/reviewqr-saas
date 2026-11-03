@@ -64,7 +64,7 @@ export function AccountPrivacy() {
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
           Download a copy of your account, businesses, reviews, and feedback. Deleting the account
-          removes those businesses and your profile. Tax invoices are kept, as described in the{" "}
+          removes those businesses and your profile. Payment invoices and receipts are kept, as described in the{" "}
           <a href="/privacy" className="underline">
             privacy notice
           </a>

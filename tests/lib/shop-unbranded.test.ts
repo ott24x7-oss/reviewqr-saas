@@ -16,7 +16,8 @@ describe("unbranded shop quotes", () => {
   it("quotes the add-on separately with the product GST and totals the lines", () => {
     const quote = quoteShop({
       lines: [{ sku: "stand", qty: 2, unitPaise: 50000, gstPercent: 18, stock: 10, minQty: 1, unbranded: true, unbrandedUnitPaise: 9900 }],
-      sameState: true
+      sameState: true,
+      sellerGstin: "29AABCU9603R1ZM"
     });
 
     expect(quote.ok).toBe(true);

@@ -2,9 +2,8 @@ import { shopDesignSchema } from "@reviewqr/shared";
 import { prisma } from "@/lib/db";
 import { rateLimitDb } from "@/lib/rate-limit";
 import type { ServiceResult } from "@/lib/api/result";
-import { absoluteUrl } from "@/lib/utils";
 import {
-  getYoupiConfig, youpiAmountsMatch, youpiConfigured, youpiConfirmed, youpiCreatePayment,
+  youpiAmountsMatch, youpiConfirmed,
   youpiGetPayment, youpiMatchesOrder, youpiStatusFailed
 } from "@/lib/payments/youpi";
 import { enqueueJob } from "@/lib/jobs/store";
@@ -222,37 +221,14 @@ export async function buyAgainShopOrder(userId: string, orderId: string, ip?: st
   return { ok: true as const, data: { cart, skipped } };
 }
 
-export async function resumeShopPayment(userId: string, orderId: string, ip?: string | null) {
+export async function resumeShopPayment(userId: string, orderId: string, _ip?: string | null) {
   const order = await prisma.shopOrder.findUnique({ where: { id: orderId }, select: { id: true, userId: true, businessId: true, status: true, paymentStatus: true, advancePaise: true, checkoutUrl: true } });
   if (!order || !(await canManageShopOrder(userId, order))) return { ok: false as const, status: 404, error: "Order not found" };
   if (order.status !== "PENDING_PAYMENT" || order.paymentStatus !== "PENDING") return { ok: false as const, status: 409, error: "This order no longer needs payment" };
   if (order.checkoutUrl) return { ok: true as const, data: { checkoutUrl: order.checkoutUrl } };
   const limited = await rateLimitDb({ key: `shop-order-payment:${userId}`, limit: 8, windowSeconds: 3600 });
   if (!limited.ok) return makeRateLimitError();
-  const config = await getYoupiConfig();
-  if (!youpiConfigured(config)) return { ok: false as const, status: 400, error: "UPI checkout is not available right now" };
-  try {
-    const remote = await youpiCreatePayment({
-      orderId: order.id, amountPaise: order.advancePaise,
-      returnUrl: absoluteUrl(`/dashboard/shop/orders/${order.id}`), idempotencyKey: order.id
-    });
-    const updated = await prisma.shopOrder.updateMany({
-      where: { id: order.id, status: "PENDING_PAYMENT", paymentStatus: "PENDING" },
-      data: { providerPaymentId: remote.paymentId || undefined, checkoutUrl: remote.checkoutUrl || undefined }
-    });
-    if (!updated.count) return { ok: false as const, status: 409, error: "This order changed while payment was starting. Refresh the order." };
-    await prisma.auditLog.create({
-      data: {
-        userId, action: "shop.order.payment.resume", entity: "ShopOrder", entityId: order.id, ip: ip || undefined,
-        metadata: { provider: "youpi", paymentId: remote.paymentId || null }
-      }
-    });
-    return remote.checkoutUrl
-      ? { ok: true as const, data: { checkoutUrl: remote.checkoutUrl } }
-      : { ok: false as const, status: 502, error: "The payment provider did not return a checkout link" };
-  } catch (error) {
-    return { ok: false as const, status: 502, error: error instanceof Error ? error.message : "Could not resume payment" };
-  }
+  return { ok: false as const, status: 410, error: "A new payment session cannot be started for this order." };
 }
 
 export async function reviewShopCancellationRequest(ticketId: string, adminId: string, action: "approve-cancel" | "reject-cancel", reason: string, ip?: string | null) {

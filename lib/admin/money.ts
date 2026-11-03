@@ -8,7 +8,7 @@ import { approveDueCommissions, outstandingClawbackByAgent, reverseCommissionsFo
 import { payApprovedCommissions } from "@/lib/plans/payout";
 import { reverseReferralForPayment } from "@/lib/plans/rewards";
 import { notifyUser } from "@/lib/plans/notify";
-import { absoluteUrl } from "@/lib/utils";
+import { absoluteUrl, formatINR } from "@/lib/utils";
 import { indiaDate } from "./range";
 import { maskPhone } from "./mask";
 import { queueAdminPush } from "./push";
@@ -179,11 +179,17 @@ export async function reconcileAdminPayment(id: string) {
 export async function resendAdminInvoice(id: string) {
   const payment = await prisma.payment.findUnique({
     where: { id },
-    select: { id: true, userId: true, invoiceNumber: true, amount: true }
+    select: { id: true, userId: true, invoiceNumber: true, amount: true, invoiceSellerGstin: true }
   });
   if (!payment) return fail(404, "Payment not found");
   const link = absoluteUrl(`/api/billing/invoices/${payment.id}`);
-  await notifyUser(payment.userId, "Your QR24x7 invoice", `Invoice ${payment.invoiceNumber || payment.id}: ${link}`);
+  const gstRegistered = Boolean(payment.invoiceSellerGstin?.trim());
+  const documentName = gstRegistered ? "Tax invoice" : "Bill of supply";
+  await notifyUser(
+    payment.userId,
+    gstRegistered ? "Your QR24x7 tax invoice" : "Your QR24x7 receipt",
+    `${documentName} ${payment.invoiceNumber || payment.id} · Total ${formatINR(payment.amount)}: ${link}`
+  );
   return ok({ link });
 }
 

@@ -48,6 +48,11 @@ export default async function BillingPage({
   const trialDays = user.trialEndsAt
     ? Math.max(0, Math.ceil((user.trialEndsAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
     : 0;
+  const pendingInvoices = payments.filter((payment) =>
+    (payment.status === "PENDING" || payment.status === "QUEUED") &&
+    payment.amount > 0 &&
+    (payment.provider === "YOUPI" || (payment.provider === "UPI" && payment.planId != null))
+  );
 
   return (
     <div className="space-y-5">
@@ -100,7 +105,6 @@ export default async function BillingPage({
         plans={plans}
         upiEnabled={cfg.upiGateway === "manual" && cfg.upiEnabled && !!cfg.upiId}
         usdtEnabled={cfg.usdtEnabled && !!cfg.usdtAddress}
-        youpiEnabled={cfg.upiGateway === "youpi" && !!(cfg.youpiBaseUrl && cfg.youpiMerchantId)}
         initialSlug={searchParams?.plan || ""}
         initialDuration={searchParams?.duration || ""}
         catalog={catalog.map((plan) => ({
@@ -118,15 +122,13 @@ export default async function BillingPage({
         }))}
       />
 
-      {payments.some((payment) => (payment.status === "PENDING" || payment.status === "QUEUED") && payment.provider === "YOUPI" && payment.amount > 0) ? (
+      {pendingInvoices.length > 0 ? (
         <Card>
           <CardHeader>
             <CardTitle>Invoice to pay</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {payments
-              .filter((payment) => (payment.status === "PENDING" || payment.status === "QUEUED") && payment.provider === "YOUPI" && payment.amount > 0)
-              .map((payment) => (
+            {pendingInvoices.map((payment) => (
                 <div key={payment.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3" data-testid="pending-invoice">
                   <div>
                     <p className="font-medium">{formatINR(payment.amount)}</p>

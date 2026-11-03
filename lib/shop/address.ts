@@ -25,7 +25,7 @@ export function addressError(input: AddressInput): string | null {
   return null;
 }
 
-/** A blank state is treated as the seller's state, so the split stays CGST and SGST. */
+/** A blank state is treated as the seller's state for registered-seller tax splits. */
 export function sameSupplyState(buyerState: string | null | undefined, sellerState: string | null | undefined) {
   const buyer = (buyerState || "").trim().toLowerCase();
   const seller = (sellerState || "").trim().toLowerCase();

@@ -93,7 +93,8 @@ describe("scheduled downgrade", () => {
     ).toBeNull();
 
     const invoice = await prisma.payment.findFirst({ where: { userId: user.id, status: "PENDING" } });
-    expect(invoice?.provider).toBe("YOUPI");
+    expect(invoice?.provider).toBe("UPI");
+    expect(invoice?.method).toBe("upi");
     expect(invoice?.amount).toBe(499900);
     expect(invoice?.planId).toBe("plan_legacy_starter");
     expect(invoice?.duration).toBe("YEAR_1");

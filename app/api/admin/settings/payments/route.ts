@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminApi, logAudit } from "@/lib/admin";
-import { getPaymentsConfig, setPaymentsConfig } from "@/lib/settings";
+import { getPaymentsConfig, normalizeUpiGateway, setPaymentsConfig } from "@/lib/settings";
 import { getClientIp } from "@/lib/utils";
 
 export async function PUT(req: NextRequest) {
@@ -29,8 +29,8 @@ export async function PUT(req: NextRequest) {
     upiId: String(incoming.upiId ?? current.upiId).trim(),
     upiPayeeName: String(incoming.upiPayeeName ?? current.upiPayeeName).trim() || "QR24x7",
     upiQrDataUrl: String(incoming.upiQrDataUrl ?? current.upiQrDataUrl),
-    upiGateway: ["manual", "youpi", "razorpay"].includes(String(incoming.upiGateway))
-      ? incoming.upiGateway as "manual" | "youpi" | "razorpay"
+    upiGateway: ["manual", "razorpay"].includes(String(incoming.upiGateway))
+      ? normalizeUpiGateway(incoming.upiGateway)
       : current.upiGateway,
     // USDT
     usdtEnabled: typeof incoming.usdtEnabled === "boolean" ? incoming.usdtEnabled : current.usdtEnabled,
@@ -50,13 +50,14 @@ export async function PUT(req: NextRequest) {
     gmailClientId: String(incoming.gmailClientId ?? current.gmailClientId).trim(),
     gmailClientSecret: secret(incoming.gmailClientSecret, current.gmailClientSecret),
     gmailRefreshToken: secret(incoming.gmailRefreshToken, current.gmailRefreshToken),
-    youpiBaseUrl: String(incoming.youpiBaseUrl ?? current.youpiBaseUrl).trim().replace(/\/$/, ""),
-    youpiMerchantId: String(incoming.youpiMerchantId ?? current.youpiMerchantId).trim(),
-    youpiWebhookSecret: secret(incoming.youpiWebhookSecret, current.youpiWebhookSecret),
-    sellerLegalName: String(incoming.sellerLegalName ?? current.sellerLegalName).trim() || "QR24x7",
-    sellerGstin: String(incoming.sellerGstin ?? current.sellerGstin).trim(),
-    sellerState: String(incoming.sellerState ?? current.sellerState).trim(),
-    gstRate: Number(incoming.gstRate) > 0 ? Number(incoming.gstRate) : current.gstRate
+    // Preserve legacy values without accepting edits from the removed UI.
+    youpiBaseUrl: current.youpiBaseUrl,
+    youpiMerchantId: current.youpiMerchantId,
+    youpiWebhookSecret: current.youpiWebhookSecret,
+    sellerLegalName: current.sellerLegalName,
+    sellerGstin: current.sellerGstin,
+    sellerState: current.sellerState,
+    gstRate: current.gstRate
   };
 
   await setPaymentsConfig(next, guard.user.id);
