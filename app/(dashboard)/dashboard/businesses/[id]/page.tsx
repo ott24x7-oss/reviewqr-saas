@@ -7,9 +7,11 @@ import { TeamPanel } from "@/components/dashboard/team-panel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { absoluteUrl } from "@/lib/utils";
-import { ExternalLink, QrCode, MapPin, Users, Edit3, Star, FileText, Sparkles, Quote, Palette, ShoppingBag, Ticket, Printer, Nfc } from "lucide-react";
+import { ExternalLink, QrCode, MapPin, Users, Edit3, Star, FileText, Sparkles, Quote, Palette, ShoppingBag, Ticket, Printer, Nfc, LockKeyhole } from "lucide-react";
 import { getReviewUrl } from "@/lib/qr";
 import { BusinessActions } from "./business-actions";
+import { getBusinessLockedFeatureIds, requireFeatureForRoute } from "@/lib/plans/dashboard-gate";
+import { LockedFeature } from "@/components/app-ui/locked-feature";
 
 export const dynamic = "force-dynamic";
 
@@ -19,27 +21,32 @@ export default async function BusinessDetailPage({ params }: { params: { id: str
 
   const access = await requireBusinessRole(user.id, params.id, "read");
   if (!access) notFound();
+  const [reviewLock, lockedFeatureIds] = await Promise.all([
+    requireFeatureForRoute(access.ownerId, "/dashboard/businesses/:id", "reviews-log"),
+    getBusinessLockedFeatureIds(access.ownerId, ["locations", "staff", "multiple-qrs", "nfc", "store", "whatsapp-orders", "offers", "menu", "page-themes", "testimonials", "ai-replies", "direct-link"])
+  ]);
+  const locked = new Set(lockedFeatureIds);
   const business = await prisma.business.findFirst({
     where: { id: params.id, archived: false },
     include: {
       _count: {
         select: {
-          reviews: true,
-          locations: true,
-          staffMembers: true,
-          qrCodes: true,
-          feedbacks: true,
-          reviewTemplates: true
+          reviews: !reviewLock,
+          locations: !locked.has("locations"),
+          staffMembers: !locked.has("staff"),
+          qrCodes: !locked.has("multiple-qrs"),
+          feedbacks: !reviewLock,
+          reviewTemplates: !reviewLock
         }
       },
-      reviews: { select: { rating: true, redirected: true }, take: 1000, orderBy: { createdAt: "desc" } }
+      ...(!reviewLock ? { reviews: { select: { rating: true, redirected: true }, take: 1000, orderBy: { createdAt: "desc" } } } : {})
     }
   });
   if (!business) notFound();
 
-  const ratings = business.reviews.map((r) => r.rating);
+  const ratings = (business.reviews || []).map((r) => r.rating);
   const avg = ratings.length ? ratings.reduce((a, c) => a + c, 0) / ratings.length : 0;
-  const redirectedCount = business.reviews.filter((r) => r.redirected).length;
+  const redirectedCount = (business.reviews || []).filter((r) => r.redirected).length;
   const reviewUrl = getReviewUrl({ businessSlug: business.slug });
 
   return (
@@ -88,7 +95,7 @@ export default async function BusinessDetailPage({ params }: { params: { id: str
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      {reviewLock ? <LockedFeature state={reviewLock} compact /> : <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Card className="p-4">
           <div className="text-xs text-muted-foreground">Reviews</div>
           <div className="text-2xl font-bold mt-0.5">{business._count.reviews}</div>
@@ -108,10 +115,10 @@ export default async function BusinessDetailPage({ params }: { params: { id: str
           <div className="text-xs text-muted-foreground">Open feedback</div>
           <div className="text-2xl font-bold mt-0.5">{business._count.feedbacks}</div>
         </Card>
-      </div>
+      </div>}
 
       {/* Quick actions */}
-      <BusinessActions business={business} reviewUrl={reviewUrl} />
+      {reviewLock ? null : <BusinessActions business={business} reviewUrl={reviewUrl} />}
 
       {/* Sub-resources nav */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -124,8 +131,8 @@ export default async function BusinessDetailPage({ params }: { params: { id: str
                 <MapPin className="h-5 w-5" />
               </span>
               <div>
-                <div className="font-semibold">Locations</div>
-                <div className="text-xs text-muted-foreground">{business._count.locations} added</div>
+                <div className="flex items-center gap-2 font-semibold">Locations{locked.has("locations") ? <LockKeyhole className="h-3.5 w-3.5 text-muted-foreground" /> : null}</div>
+                <div className="text-xs text-muted-foreground">{locked.has("locations") ? "Plan required" : `${business._count.locations} added`}</div>
               </div>
             </CardContent>
           </Card>
@@ -137,8 +144,8 @@ export default async function BusinessDetailPage({ params }: { params: { id: str
                 <Users className="h-5 w-5" />
               </span>
               <div>
-                <div className="font-semibold">Staff</div>
-                <div className="text-xs text-muted-foreground">{business._count.staffMembers} added</div>
+                <div className="flex items-center gap-2 font-semibold">Staff{locked.has("staff") ? <LockKeyhole className="h-3.5 w-3.5 text-muted-foreground" /> : null}</div>
+                <div className="text-xs text-muted-foreground">{locked.has("staff") ? "Plan required" : `${business._count.staffMembers} added`}</div>
               </div>
             </CardContent>
           </Card>
@@ -150,8 +157,8 @@ export default async function BusinessDetailPage({ params }: { params: { id: str
                 <QrCode className="h-5 w-5" />
               </span>
               <div>
-                <div className="font-semibold">QR codes</div>
-                <div className="text-xs text-muted-foreground">{business._count.qrCodes} active</div>
+                <div className="flex items-center gap-2 font-semibold">QR codes{locked.has("multiple-qrs") ? <LockKeyhole className="h-3.5 w-3.5 text-muted-foreground" /> : null}</div>
+                <div className="text-xs text-muted-foreground">{locked.has("multiple-qrs") ? "Plan required" : `${business._count.qrCodes} active`}</div>
               </div>
             </CardContent>
           </Card>
@@ -163,8 +170,8 @@ export default async function BusinessDetailPage({ params }: { params: { id: str
                 <Printer className="h-5 w-5" />
               </span>
               <div>
-                <div className="font-semibold">Print tables</div>
-                <div className="text-xs text-muted-foreground">One design, one code per table</div>
+                <div className="flex items-center gap-2 font-semibold">Print tables{locked.has("multiple-qrs") ? <LockKeyhole className="h-3.5 w-3.5 text-muted-foreground" /> : null}</div>
+                <div className="text-xs text-muted-foreground">{locked.has("multiple-qrs") ? "Plan required" : "One design, one code per table"}</div>
               </div>
             </CardContent>
           </Card>
@@ -176,7 +183,7 @@ export default async function BusinessDetailPage({ params }: { params: { id: str
                 <Nfc className="h-5 w-5" />
               </span>
               <div>
-                <div className="font-semibold">Activate a tag</div>
+                <div className="flex items-center gap-2 font-semibold">Activate a tag{locked.has("nfc") ? <LockKeyhole className="h-3.5 w-3.5 text-muted-foreground" /> : null}</div>
                 <div className="text-xs text-muted-foreground">Scan a printed QR or open an NFC tag</div>
               </div>
             </CardContent>
@@ -189,7 +196,7 @@ export default async function BusinessDetailPage({ params }: { params: { id: str
                 <ShoppingBag className="h-5 w-5" />
               </span>
               <div>
-                <div className="font-semibold">Store settings</div>
+                <div className="flex items-center gap-2 font-semibold">Store settings{locked.has("store") || locked.has("whatsapp-orders") ? <LockKeyhole className="h-3.5 w-3.5 text-muted-foreground" /> : null}</div>
                 <div className="text-xs text-muted-foreground">Hours, delivery, packing, and GST</div>
               </div>
             </CardContent>
@@ -202,7 +209,7 @@ export default async function BusinessDetailPage({ params }: { params: { id: str
                 <Ticket className="h-5 w-5" />
               </span>
               <div>
-                <div className="font-semibold">Offers</div>
+                <div className="flex items-center gap-2 font-semibold">Offers{locked.has("offers") ? <LockKeyhole className="h-3.5 w-3.5 text-muted-foreground" /> : null}</div>
                 <div className="text-xs text-muted-foreground">Coupons and banners for this store</div>
               </div>
             </CardContent>
@@ -215,7 +222,7 @@ export default async function BusinessDetailPage({ params }: { params: { id: str
                 <FileText className="h-5 w-5" />
               </span>
               <div>
-                <div className="font-semibold">Menu</div>
+                <div className="flex items-center gap-2 font-semibold">Menu{locked.has("menu") ? <LockKeyhole className="h-3.5 w-3.5 text-muted-foreground" /> : null}</div>
                 <div className="text-xs text-muted-foreground">Items, prices, and the café template</div>
               </div>
             </CardContent>
@@ -228,8 +235,8 @@ export default async function BusinessDetailPage({ params }: { params: { id: str
                 <ExternalLink className="h-5 w-5" />
               </span>
               <div>
-                <div className="font-semibold">Customer page</div>
-                <div className="text-xs text-muted-foreground">Buttons, bio, and hours</div>
+                <div className="flex items-center gap-2 font-semibold">Customer page{locked.has("direct-link") ? <LockKeyhole className="h-3.5 w-3.5 text-muted-foreground" /> : null}</div>
+                <div className="text-xs text-muted-foreground">{locked.has("direct-link") ? "Plan required for direct link" : "Buttons, bio, and hours"}</div>
               </div>
             </CardContent>
           </Card>
@@ -241,7 +248,7 @@ export default async function BusinessDetailPage({ params }: { params: { id: str
                 <Palette className="h-5 w-5" />
               </span>
               <div>
-                <div className="font-semibold">Page theme</div>
+                <div className="flex items-center gap-2 font-semibold">Page theme{locked.has("page-themes") ? <LockKeyhole className="h-3.5 w-3.5 text-muted-foreground" /> : null}</div>
                 <div className="text-xs text-muted-foreground">Colours, type, and buttons</div>
               </div>
             </CardContent>
@@ -254,9 +261,9 @@ export default async function BusinessDetailPage({ params }: { params: { id: str
                 <FileText className="h-5 w-5" />
               </span>
               <div>
-                <div className="font-semibold">Topic hints</div>
+                <div className="flex items-center gap-2 font-semibold">Topic hints{reviewLock ? <LockKeyhole className="h-3.5 w-3.5 text-muted-foreground" /> : null}</div>
                 <div className="text-xs text-muted-foreground">
-                  {business._count.reviewTemplates} hints
+                  {reviewLock ? "Plan required" : `${business._count.reviewTemplates} hints`}
                 </div>
               </div>
             </CardContent>
@@ -270,7 +277,7 @@ export default async function BusinessDetailPage({ params }: { params: { id: str
                 <Quote className="h-5 w-5" />
               </span>
               <div>
-                <div className="font-semibold">Testimonials</div>
+                <div className="flex items-center gap-2 font-semibold">Testimonials{locked.has("testimonials") ? <LockKeyhole className="h-3.5 w-3.5 text-muted-foreground" /> : null}</div>
                 <div className="text-xs text-muted-foreground">
                   Publish reviews to your widget
                 </div>
@@ -289,7 +296,7 @@ export default async function BusinessDetailPage({ params }: { params: { id: str
                 <Sparkles className="h-5 w-5" />
               </span>
               <div>
-                <div className="font-semibold">AI Reviews</div>
+                <div className="flex items-center gap-2 font-semibold">AI Reviews{locked.has("ai-replies") ? <LockKeyhole className="h-3.5 w-3.5 text-muted-foreground" /> : null}</div>
                 <div className="text-xs text-muted-foreground">
                   Smart questions + review suggestions
                 </div>

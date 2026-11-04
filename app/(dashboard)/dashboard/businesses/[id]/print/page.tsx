@@ -4,6 +4,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { requireBusinessRole } from "@/lib/tenant";
 import { PrintEditor } from "@/app/admin/print/editor";
 import { HelpLink } from "@/components/help/help-link";
+import { requireFeatureForRoute } from "@/lib/plans/dashboard-gate";
+import { LockedFeature } from "@/components/app-ui/locked-feature";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +14,8 @@ export default async function BusinessPrintPage({ params }: { params: { id: stri
   if (!user) redirect(`/login?callbackUrl=/dashboard/businesses/${params.id}/print`);
   const access = await requireBusinessRole(user.id, params.id, "manage");
   if (!access) notFound();
+  const locked = await requireFeatureForRoute(access.ownerId, "/dashboard/businesses/:id/print", "multiple-qrs");
+  if (locked) return <LockedFeature state={locked} />;
   const business = await prisma.business.findFirst({
     where: { id: params.id, archived: false },
     select: { id: true, name: true }

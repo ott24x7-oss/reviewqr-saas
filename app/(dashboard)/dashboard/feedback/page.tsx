@@ -8,6 +8,8 @@ import { MessageSquare } from "lucide-react";
 import { FeedbackFilter } from "./feedback-filter";
 import { FeedbackItem } from "./feedback-item";
 import { LoadMore, shownCount } from "@/components/dashboard/load-more";
+import { requireAccountFeatureForRoute } from "@/lib/plans/dashboard-gate";
+import { LockedFeature } from "@/components/app-ui/locked-feature";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +20,8 @@ export default async function FeedbackPage({
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  const locked = await requireAccountFeatureForRoute(user.id, "/dashboard/feedback", "reviews-log");
+  if (locked) return <LockedFeature state={locked} />;
 
   const businesses = await prisma.business.findMany({
     where: readableBusinessWhere(user.id),

@@ -3,6 +3,8 @@
 import * as React from "react";
 import { formatINR } from "@/lib/utils";
 import { GrowthCard } from "./growth-card";
+import { LockedFeature } from "@/components/app-ui/locked-feature";
+import type { LockedFeatureState } from "@/lib/plans/dashboard-gate";
 
 type Business = { id: string; name: string };
 type Payload = {
@@ -105,7 +107,7 @@ function changeText(value: number | null | undefined) {
   return `${value > 0 ? "+" : ""}${value}%`;
 }
 
-export function AnalyticsBoard({ businesses }: { businesses: Business[] }) {
+export function AnalyticsBoard({ businesses, pdfReportLock }: { businesses: Business[]; pdfReportLock: LockedFeatureState | null }) {
   const [lang, setLang] = React.useState<"en" | "hi">("en");
   const [businessId, setBusinessId] = React.useState(businesses[0]?.id || "");
   const [range, setRange] = React.useState("7d");
@@ -393,9 +395,9 @@ export function AnalyticsBoard({ businesses }: { businesses: Business[] }) {
           <input type="checkbox" checked={whatsappOn} onChange={(event) => savePrefs(emailOn, event.target.checked)} />
           {text.whatsapp}
         </label>
-        <a className="mt-2 inline-flex min-h-11 items-center font-medium underline" href={`/api/v1/reports/monthly?businessId=${encodeURIComponent(businessId)}`}>
+        {pdfReportLock ? <div className="mt-2"><LockedFeature state={pdfReportLock} compact /></div> : <a className="mt-2 inline-flex min-h-11 items-center font-medium underline" href={`/api/v1/reports/monthly?businessId=${encodeURIComponent(businessId)}`}>
           {text.pdf}
-        </a>
+        </a>}
       </section>
     </div>
   );

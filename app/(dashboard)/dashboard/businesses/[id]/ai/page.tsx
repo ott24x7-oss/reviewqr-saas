@@ -6,12 +6,19 @@ import { getAiConfig } from "@/lib/settings";
 import { ownedOrAssignedWhere } from "@/lib/tenant";
 import { AiReviewsClient } from "./ai-client";
 import { ArrowLeft } from "lucide-react";
+import { requireBusinessRole } from "@/lib/tenant";
+import { requireFeatureForRoute } from "@/lib/plans/dashboard-gate";
+import { LockedFeature } from "@/components/app-ui/locked-feature";
 
 export const dynamic = "force-dynamic";
 
 export default async function BusinessAiPage({ params }: { params: { id: string } }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  const access = await requireBusinessRole(user.id, params.id, "read");
+  if (!access) notFound();
+  const locked = await requireFeatureForRoute(access.ownerId, "/dashboard/businesses/:id/ai", "ai-replies");
+  if (locked) return <LockedFeature state={locked} />;
 
   const business = await prisma.business.findFirst({
     where: { id: params.id, ...ownedOrAssignedWhere(user.id) },

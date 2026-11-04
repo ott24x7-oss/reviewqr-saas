@@ -8,12 +8,22 @@ import { Button } from "@/components/ui/button";
 import { Download, Printer, ExternalLink, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { QrPosterActions } from "./poster-actions";
+import { requireFeatureForRoute } from "@/lib/plans/dashboard-gate";
+import { LockedFeature } from "@/components/app-ui/locked-feature";
 
 export const dynamic = "force-dynamic";
 
 export default async function QrDetailPage({ params }: { params: { code: string } }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+
+  const access = await prisma.qRCode.findFirst({
+    where: { shortCode: params.code, business: readableBusinessWhere(user.id) },
+    select: { business: { select: { ownerId: true } } }
+  });
+  if (!access?.business) notFound();
+  const locked = await requireFeatureForRoute(access.business.ownerId, "/dashboard/qr-codes/:code", "multiple-qrs");
+  if (locked) return <LockedFeature state={locked} />;
 
   const qr = await prisma.qRCode.findFirst({
     where: { shortCode: params.code, business: readableBusinessWhere(user.id) },

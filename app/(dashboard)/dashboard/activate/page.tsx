@@ -3,6 +3,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { accessRole, allows, readableBusinessWhere } from "@/lib/tenant";
 import { ActivateForm } from "./activate-form";
+import { requireAccountFeatureForRoute } from "@/lib/plans/dashboard-gate";
+import { LockedFeature } from "@/components/app-ui/locked-feature";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +15,8 @@ export default async function ActivatePage({
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login?callbackUrl=/dashboard/activate");
+  const locked = await requireAccountFeatureForRoute(user.id, "/dashboard/activate", "nfc");
+  if (locked) return <LockedFeature state={locked} />;
   const rows = await prisma.business.findMany({
     where: readableBusinessWhere(user.id),
     include: { members: { where: { userId: user.id }, select: { role: true }, take: 1 } },

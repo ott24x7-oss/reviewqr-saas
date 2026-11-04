@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Building2, Plus } from "lucide-react";
 import { directBoard } from "@/lib/tap/direct-board";
 import { QrBoard } from "./qr-board";
+import { requireAccountFeatureForRoute } from "@/lib/plans/dashboard-gate";
+import { LockedFeature } from "@/components/app-ui/locked-feature";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +20,8 @@ export default async function QrCodesPage({
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  const locked = await requireAccountFeatureForRoute(user.id, "/dashboard/qr-codes", "multiple-qrs");
+  if (locked) return <LockedFeature state={locked} />;
 
   const status = searchParams.status === "ACTIVE" || searchParams.status === "DISABLED" ? searchParams.status : "";
   const businessId = searchParams.business || "";

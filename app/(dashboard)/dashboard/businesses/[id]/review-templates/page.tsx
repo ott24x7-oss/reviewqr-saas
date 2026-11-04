@@ -5,6 +5,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { requireBusinessRole } from "@/lib/tenant";
 import { ReviewTemplatesClient } from "./templates-client";
 import { ArrowLeft } from "lucide-react";
+import { requireFeatureForRoute } from "@/lib/plans/dashboard-gate";
+import { LockedFeature } from "@/components/app-ui/locked-feature";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +20,8 @@ export default async function ReviewTemplatesPage({
 
   const access = await requireBusinessRole(user.id, params.id, "manage");
   if (!access) notFound();
+  const locked = await requireFeatureForRoute(access.ownerId, "/dashboard/businesses/:id/review-templates", "reviews-log");
+  if (locked) return <LockedFeature state={locked} />;
   const business = await prisma.business.findFirst({
     where: { id: params.id, archived: false },
     select: { id: true, name: true, slug: true }

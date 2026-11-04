@@ -129,7 +129,15 @@ describe("service booking", () => {
 
   it("saves service fields through the menu action and the salon template", async () => {
     const stamp = Date.now().toString(36);
-    const owner = await prisma.user.create({ data: { email: `svc-menu-${stamp}@example.test`, role: "USER" } });
+    const owner = await prisma.user.create({
+      data: {
+        email: `svc-menu-${stamp}@example.test`,
+        role: "USER",
+        subscriptionTier: "STARTER",
+        subscriptionStatus: "ACTIVE",
+        subscriptionEndsAt: new Date("2027-08-01T00:00:00.000Z")
+      }
+    });
     userIds.push(owner.id);
     const business = await prisma.business.create({
       data: { ownerId: owner.id, name: "Menu", slug: `svc-menu-${stamp}` }
@@ -334,7 +342,15 @@ describe("service booking", () => {
     const stamp = Date.now().toString(36);
     const ip = `203.0.113.${(stamp.length % 200) + 1}`;
     ips.push(ip);
-    const owner = await prisma.user.create({ data: { email: `svc-guard-${stamp}@example.test`, role: "USER" } });
+    const owner = await prisma.user.create({
+      data: {
+        email: `svc-guard-${stamp}@example.test`,
+        role: "USER",
+        subscriptionTier: "STARTER",
+        subscriptionStatus: "ACTIVE",
+        subscriptionEndsAt: new Date("2027-08-01T00:00:00.000Z")
+      }
+    });
     userIds.push(owner.id);
     const business = await prisma.business.create({
       data: { ownerId: owner.id, name: "Guard", slug: `svc-guard-${stamp}`, whatsappNumber: "9876543210" }
@@ -399,7 +415,15 @@ describe("service booking", () => {
 
   it("rate-limits one business even when every request uses a new IP and phone", async () => {
     const stamp = Date.now().toString(36);
-    const owner = await prisma.user.create({ data: { email: `svc-biz-${stamp}@example.test`, role: "USER" } });
+    const owner = await prisma.user.create({
+      data: {
+        email: `svc-biz-${stamp}@example.test`,
+        role: "USER",
+        subscriptionTier: "STARTER",
+        subscriptionStatus: "ACTIVE",
+        subscriptionEndsAt: new Date("2027-08-01T00:00:00.000Z")
+      }
+    });
     userIds.push(owner.id);
     const business = await prisma.business.create({
       data: { ownerId: owner.id, name: "Busy", slug: `svc-biz-${stamp}`, whatsappNumber: "9876543210" }

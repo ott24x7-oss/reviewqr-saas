@@ -2130,7 +2130,7 @@ model PlanPrice {
   @@unique([planId, duration])
 }
 
-// Purchase record. A catalogue plan's access follows the current plan row, so an admin edit applies without a new checkout.
+// Purchase record. Access follows the linked Plan row, so an admin edit applies without a new checkout.
 model Subscription {
   id              String             @id @default(cuid())
   userId          String

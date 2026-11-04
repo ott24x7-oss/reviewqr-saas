@@ -9,6 +9,8 @@ import { absoluteUrl } from "@/lib/utils";
 import { directBoard } from "@/lib/tap/direct-board";
 import { DirectDevice } from "@/components/dashboard/direct-device";
 import { QrCreateClient } from "./qr-create-client";
+import { requireFeatureForRoute } from "@/lib/plans/dashboard-gate";
+import { LockedFeature } from "@/components/app-ui/locked-feature";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +19,8 @@ export default async function BusinessQrPage({ params }: { params: { id: string 
   if (!user) redirect("/login");
   const access = await requireBusinessRole(user.id, params.id, "manage");
   if (!access) notFound();
+  const locked = await requireFeatureForRoute(access.ownerId, "/dashboard/businesses/:id/qr", "multiple-qrs");
+  if (locked) return <LockedFeature state={locked} />;
   const business = await prisma.business.findFirst({
     where: { id: params.id, archived: false },
     include: {

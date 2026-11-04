@@ -8,7 +8,7 @@ import { Prisma, type PaymentStatus, type PlanDuration, type SubscriptionTier } 
 import { prisma } from "./db";
 import { getPaymentsConfig } from "./settings";
 import { absoluteUrl } from "./utils";
-import { limitsForTier, modulesForTier } from "./plans/legacy";
+import { planAccessForTier } from "./plans/legacy";
 import { bonusCarry, paidEndsAt, remainingBonusDays, upgradeEndsAt } from "./plans/quote";
 import { clearUserPending, grantPlanAccess } from "./plans/snapshot";
 
@@ -220,7 +220,11 @@ export async function activateCompletedPayment(input: ActivateInput): Promise<Ac
       }
     });
 
-    const modules = row.modules && row.modules.length ? row.modules : modulesForTier(row.tier);
+    const access =
+      row.modules?.length && row.limits && typeof row.limits === "object"
+        ? null
+        : await planAccessForTier(row.tier);
+    const modules = row.modules && row.modules.length ? row.modules : access!.modules;
     let rawLimits: unknown = row.limits;
     if (typeof rawLimits === "string") {
       try {
@@ -229,7 +233,7 @@ export async function activateCompletedPayment(input: ActivateInput): Promise<Ac
         rawLimits = null;
       }
     }
-    const limits = rawLimits && typeof rawLimits === "object" ? rawLimits : await limitsForTier(row.tier);
+    const limits = rawLimits && typeof rawLimits === "object" ? rawLimits : access!.limits;
     await grantPlanAccess(tx, {
       userId: user.id,
       tier: row.tier,

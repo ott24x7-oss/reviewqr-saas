@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Building2, ExternalLink, Plus, Star, MessageSquare, MapPin, QrCode } from "lucide-react";
+import { Building2, ExternalLink, LockKeyhole, Plus, Star, MessageSquare, MapPin, QrCode } from "lucide-react";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { absoluteUrl, formatNumber } from "@/lib/utils";
 import { ownedOrAssignedWhere } from "@/lib/tenant";
+import { getBusinessLockedFeatureIds } from "@/lib/plans/dashboard-gate";
 
 export const dynamic = "force-dynamic";
 
@@ -16,12 +17,33 @@ export default async function BusinessesPage() {
 
   const businesses = await prisma.business.findMany({
     where: ownedOrAssignedWhere(user.id),
-    include: {
-      _count: { select: { reviews: true, locations: true, qrCodes: true } },
-      reviews: { select: { rating: true } }
-    },
+    select: { id: true, ownerId: true, name: true, slug: true, logo: true, primaryColor: true, industry: true },
     orderBy: { createdAt: "desc" }
   });
+  const ownerIds = Array.from(new Set(businesses.map((business) => business.ownerId)));
+  const lockEntries = await Promise.all(ownerIds.map(async (ownerId) => [
+    ownerId,
+    new Set(await getBusinessLockedFeatureIds(ownerId, ["reviews-log", "multiple-qrs"]))
+  ] as const));
+  const lockedByOwner = new Map(lockEntries);
+  const businessCards = await Promise.all(businesses.map(async (business) => {
+    const locked = lockedByOwner.get(business.ownerId) || new Set();
+    const [reviewStats, qrCount] = await Promise.all([
+      locked.has("reviews-log")
+        ? Promise.resolve(null)
+        : prisma.review.aggregate({ where: { businessId: business.id }, _avg: { rating: true }, _count: { _all: true } }),
+      locked.has("multiple-qrs")
+        ? Promise.resolve(null)
+        : prisma.qRCode.count({ where: { businessId: business.id } })
+    ]);
+    return {
+      ...business,
+      locked,
+      averageRating: reviewStats?._avg.rating || 0,
+      reviewCount: reviewStats?._count._all || 0,
+      qrCount
+    };
+  }));
 
   return (
     <div className="space-y-5">
@@ -56,9 +78,7 @@ export default async function BusinessesPage() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {businesses.map((b) => {
-            const ratings = b.reviews.map((r) => r.rating);
-            const avg = ratings.length ? ratings.reduce((a, c) => a + c, 0) / ratings.length : 0;
+          {businessCards.map((b) => {
             return (
               <Card key={b.id} className="hover:shadow-card transition-shadow flex flex-col">
                 <CardContent className="p-5 flex-1">
@@ -84,17 +104,17 @@ export default async function BusinessesPage() {
                   <div className="mt-4 grid grid-cols-3 gap-2 text-center">
                     <div className="rounded-lg bg-secondary p-2">
                       <div className="text-base font-bold inline-flex items-center gap-0.5">
-                        {avg > 0 ? avg.toFixed(1) : "—"}
-                        {avg > 0 && <Star className="h-3 w-3 fill-amber-400 text-amber-400" />}
+                        {b.locked.has("reviews-log") ? <LockKeyhole className="h-3.5 w-3.5" /> : b.averageRating > 0 ? b.averageRating.toFixed(1) : "—"}
+                        {!b.locked.has("reviews-log") && b.averageRating > 0 && <Star className="h-3 w-3 fill-amber-400 text-amber-400" />}
                       </div>
                       <div className="text-xs text-muted-foreground">Rating</div>
                     </div>
                     <div className="rounded-lg bg-secondary p-2">
-                      <div className="text-base font-bold">{formatNumber(b._count.reviews)}</div>
+                      <div className="text-base font-bold">{b.locked.has("reviews-log") ? <LockKeyhole className="mx-auto h-3.5 w-3.5" /> : formatNumber(b.reviewCount)}</div>
                       <div className="text-xs text-muted-foreground">Reviews</div>
                     </div>
                     <div className="rounded-lg bg-secondary p-2">
-                      <div className="text-base font-bold">{b._count.qrCodes}</div>
+                      <div className="text-base font-bold">{b.locked.has("multiple-qrs") || b.qrCount === null ? <LockKeyhole className="mx-auto h-3.5 w-3.5" /> : b.qrCount}</div>
                       <div className="text-xs text-muted-foreground">QR codes</div>
                     </div>
                   </div>

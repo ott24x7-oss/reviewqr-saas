@@ -1,10 +1,9 @@
 /**
- * Old SubscriptionTier rows keep today's access.
- * FREE keeps reviews, the menu, and the store at today's free limits.
- * Every paid tier, including an active trial, keeps all modules.
- * A plan bought from the catalogue can omit a module. Legacy plan ids cannot.
+ * Legacy tier modules and limits are fallback defaults only. When a matching
+ * Plan row exists, its current modules and limits define the tier's access.
  */
 import type { SubscriptionStatus, SubscriptionTier } from "@prisma/client";
+import { prisma } from "../db";
 import { getPlan } from "../payments";
 import { parseLimits, type PlanLimits } from "./catalog";
 
@@ -16,17 +15,8 @@ const TODAY_MODULES: Record<SubscriptionTier, string[]> = {
   FOUNDER: ["REVIEWS", "MENU", "STORE"]
 };
 
-export function modulesForTier(tier: SubscriptionTier): string[] {
-  return TODAY_MODULES[tier];
-}
-
-/** True when this subscription was bought from a plan that is not a legacy tier mirror. */
-export function isCataloguePlan(planId: string | null | undefined) {
-  return !!planId && !planId.startsWith("plan_legacy_");
-}
-
-/** Admin pricing limits when they are stored, otherwise today's catalogue defaults. */
-export async function limitsForTier(tier: SubscriptionTier): Promise<PlanLimits> {
+/** Defaults used only when no matching Plan row is available. */
+export async function defaultLimitsForTier(tier: SubscriptionTier): Promise<PlanLimits> {
   const limits = (await getPlan(tier)).limits;
   return parseLimits(
     {
@@ -49,6 +39,46 @@ export async function limitsForTier(tier: SubscriptionTier): Promise<PlanLimits>
       aiCallsPerMonth: limits.aiCallsPerMonth
     }
   );
+}
+
+/**
+ * Resolve the editable tier row. Older databases may not have the canonical
+ * id, so an active plan with the same legacy tier is the fallback.
+ */
+export async function findPlanForTier(tier: SubscriptionTier) {
+  const legacy = await prisma.plan.findUnique({
+    where: { id: legacyPlanId(tier) },
+    select: { id: true, slug: true, nameEn: true, nameHi: true, modules: true, limits: true }
+  });
+  if (legacy) return legacy;
+  return prisma.plan.findFirst({
+    where: { active: true, legacyTier: tier },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    select: { id: true, slug: true, nameEn: true, nameHi: true, modules: true, limits: true }
+  });
+}
+
+/** Current module and limit values for a tier, with old defaults as fallback. */
+export async function planAccessForTier(tier: SubscriptionTier) {
+  const [plan, defaults] = await Promise.all([findPlanForTier(tier), defaultLimitsForTier(tier)]);
+  return {
+    plan,
+    modules: plan?.modules ?? TODAY_MODULES[tier],
+    limits: plan ? parseLimits(plan.limits, defaults) : defaults
+  };
+}
+
+export async function modulesForTier(tier: SubscriptionTier): Promise<string[]> {
+  return (await planAccessForTier(tier)).modules;
+}
+
+export async function limitsForTier(tier: SubscriptionTier): Promise<PlanLimits> {
+  return (await planAccessForTier(tier)).limits;
+}
+
+/** A missing catalogue row keeps its saved subscription snapshot as fallback. */
+export function isCataloguePlan(planId: string | null | undefined) {
+  return !!planId && !planId.startsWith("plan_legacy_");
 }
 
 export function legacyPlanId(tier: SubscriptionTier) {

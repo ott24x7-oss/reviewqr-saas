@@ -1,6 +1,6 @@
 import type { SubscriptionTier } from "@prisma/client";
 import { prisma } from "../db";
-import { legacyEndsAt, legacyPlanId, limitsForTier, modulesForTier } from "./legacy";
+import { legacyEndsAt, legacyPlanId, planAccessForTier } from "./legacy";
 
 /**
  * Write the tier snapshot for an account that still has only the old columns.
@@ -24,13 +24,14 @@ export async function ensureLegacySubscription(userId: string) {
   });
   if (!user) return null;
   const tier = user.subscriptionTier as SubscriptionTier;
+  const access = await planAccessForTier(tier);
   return prisma.subscription.create({
     data: {
       id: `legacy_${user.id}`,
       userId: user.id,
       planId: legacyPlanId(tier),
-      modules: modulesForTier(tier),
-      limits: await limitsForTier(tier),
+      modules: access.modules,
+      limits: access.limits,
       tier,
       duration: tier === "FOUNDER" && user.subscriptionStatus === "ACTIVE" ? "LIFETIME" : null,
       status: user.subscriptionStatus,

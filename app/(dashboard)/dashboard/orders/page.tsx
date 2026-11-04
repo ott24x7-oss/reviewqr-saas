@@ -1,9 +1,8 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { loadOrderCardPage } from "@/lib/store/order-feed";
-import { moduleBlock, upsellOffer } from "@/lib/plans/entitlements";
-import { ModuleUpsell } from "@/components/plans/module-upsell";
-import { prisma } from "@/lib/db";
+import { requireAccountFeatureForRoute } from "@/lib/plans/dashboard-gate";
+import { LockedFeature } from "@/components/app-ui/locked-feature";
 import { OrdersBoard } from "./orders-board";
 import { decodeCursor } from "@/lib/api/cursor";
 import Link from "next/link";
@@ -16,14 +15,8 @@ export const dynamic = "force-dynamic";
 export default async function OrdersPage({ searchParams }: { searchParams: { status?: string; q?: string; cursor?: string } }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  const owned = await prisma.business.findFirst({ where: { ownerId: user.id, archived: false }, select: { id: true } });
-  if (owned) {
-    const locked = await moduleBlock(user.id, "STORE");
-    if (locked) {
-      const offer = await upsellOffer("STORE");
-      return <ModuleUpsell title={offer.title} body={locked} href={offer.href} />;
-    }
-  }
+  const locked = await requireAccountFeatureForRoute(user.id, "/dashboard/orders", "orders");
+  if (locked) return <LockedFeature state={locked} />;
   const cursor = decodeCursor(searchParams.cursor);
   if (cursor === "bad") return <InlineError title={<AppText en="This page link is invalid. Start from the first page." hi="यह पेज लिंक सही नहीं है। पहले पेज से शुरू करें।" />} />;
   const status = searchParams.status || null;

@@ -5,6 +5,8 @@ import { prisma } from "@/lib/db";
 import { readableBusinessWhere } from "@/lib/tenant";
 import { PageHeader, EmptyState } from "@/components/app-ui/primitives";
 import { AppText } from "@/components/app-ui/i18n";
+import { LockKeyhole } from "lucide-react";
+import { getAccountLockedFeatureIds } from "@/lib/plans/dashboard-gate";
 import QrCodesPage from "@/app/(dashboard)/dashboard/qr-codes/page";
 import QrDetailPage from "@/app/(dashboard)/dashboard/qr-codes/[code]/page";
 import BusinessQrPage from "@/app/(dashboard)/dashboard/businesses/[id]/qr/page";
@@ -17,6 +19,7 @@ export default async function QrAndNfcPage({ searchParams }: { searchParams: { t
   if (!user) redirect("/login");
   const businesses = await prisma.business.findMany({ where: readableBusinessWhere(user.id), select: { id: true, name: true }, orderBy: { createdAt: "asc" } });
   const selected = businesses.find((business) => business.id === searchParams.businessId) || businesses[0];
+  const locked = new Set(await getAccountLockedFeatureIds(user.id, ["multiple-qrs", "nfc"]));
   const tab = searchParams.tab || (searchParams.code ? "detail" : "codes");
   const tabs = [
     ["codes", "QR codes", "QR कोड"],
@@ -30,7 +33,10 @@ export default async function QrAndNfcPage({ searchParams }: { searchParams: { t
   return <div className="space-y-5">
     <PageHeader title={<AppText en="QR codes & NFC" hi="QR कोड और NFC" />} description={selected?.name} actions={businesses.length > 1 ? <BusinessLinks businesses={businesses} selected={selected?.id || ""} /> : undefined} />
     <nav className="flex gap-2 overflow-x-auto border-b" aria-label="QR and NFC tools">
-      {tabs.map(([key, en, hi]) => <Link key={key} href={`/dashboard/page/qr?tab=${key}${selected ? `&businessId=${selected.id}` : ""}`} aria-current={tab === key ? "page" : undefined} className={`inline-flex min-h-10 items-center border-b-2 px-3 text-sm font-medium ${tab === key ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}><AppText en={en} hi={hi} /></Link>)}
+      {tabs.map(([key, en, hi]) => {
+        const featureId = key === "activate" ? "nfc" : "multiple-qrs";
+        return <Link key={key} href={`/dashboard/page/qr?tab=${key}${selected ? `&businessId=${selected.id}` : ""}`} aria-current={tab === key ? "page" : undefined} className={`inline-flex min-h-10 items-center gap-2 border-b-2 px-3 text-sm font-medium ${tab === key ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}><AppText en={en} hi={hi} />{locked.has(featureId) ? <LockKeyhole className="h-3.5 w-3.5" aria-hidden="true" /> : null}</Link>;
+      })}
     </nav>
     {businesses.length ? content : <EmptyState title={<AppText en="Add a business first" hi="पहले कारोबार जोड़ें" />} description={<AppText en="Your QR codes will appear here." hi="आपके QR कोड यहाँ दिखेंगे।" />} action={<Link href="/dashboard/businesses/new" className="rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground"><AppText en="Add business" hi="कारोबार जोड़ें" /></Link>} />}
   </div>;

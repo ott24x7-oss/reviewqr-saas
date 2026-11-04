@@ -13,6 +13,8 @@ import { directCopy, directTypeAllowed, storedDirectOptions } from "@/lib/tap/di
 import { presentBusiness } from "@/lib/tap/links";
 import { WEEK_DAYS, type WeekHours } from "@/lib/tap/hours";
 import type { StoredLink } from "@/lib/tap/presets";
+import type { LockedFeatureState } from "@/lib/plans/dashboard-gate";
+import { LockedFeature } from "@/components/app-ui/locked-feature";
 
 export function TapEditor({
   businessId,
@@ -31,7 +33,8 @@ export function TapEditor({
   modules,
   limited,
   directMode: initialDirectMode,
-  directTarget: initialDirectTarget
+  directTarget: initialDirectTarget,
+  directLinkLock
 }: {
   businessId: string;
   businessName: string;
@@ -50,6 +53,7 @@ export function TapEditor({
   limited: boolean;
   directMode: "TAP_PAGE" | "DIRECT";
   directTarget: string;
+  directLinkLock: LockedFeatureState | null;
 }) {
   const router = useRouter();
   const [bio, setBio] = React.useState(initialBio);
@@ -133,7 +137,7 @@ export function TapEditor({
           {publishedAt ? `Live since ${new Date(publishedAt).toLocaleDateString("en-IN")}` : "Not published yet. Visitors still see the automatic buttons."}
         </p>
       </div>
-      <Card>
+      {directLinkLock ? <LockedFeature state={directLinkLock} compact /> : <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
           <CardTitle>{copy.target}</CardTitle>
           <div className="flex gap-2">
@@ -182,7 +186,7 @@ export function TapEditor({
             <p className="text-sm text-muted-foreground">{copy.hint}</p>
           ) : null}
         </CardContent>
-      </Card>
+      </Card>}
       <div className="grid grid-cols-1 lg:grid-cols-[360px_minmax(0,1fr)] gap-4 items-start">
         <div className={`${tapFontClass} tap-page tap-preview`}>
           <div className="tap-card">

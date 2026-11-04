@@ -7,12 +7,16 @@ import { DEFAULT_TEMPLATES } from "@/lib/whatsapp";
 import { ownedOrAssignedWhere } from "@/lib/tenant";
 import { AppText } from "@/components/app-ui/i18n";
 import { CampaignsClient } from "./campaigns-client";
+import { requireAccountFeatureForRoute } from "@/lib/plans/dashboard-gate";
+import { LockedFeature } from "@/components/app-ui/locked-feature";
 
 export const dynamic = "force-dynamic";
 
 export default async function CampaignsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  const locked = await requireAccountFeatureForRoute(user.id, "/dashboard/campaigns", "campaigns");
+  if (locked) return <LockedFeature state={locked} />;
 
   const businesses = await prisma.business.findMany({
     where: ownedOrAssignedWhere(user.id),

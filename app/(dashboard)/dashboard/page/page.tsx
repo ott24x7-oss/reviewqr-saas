@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowUpRight, ExternalLink, Link2, Palette, Quote, Settings2 } from "lucide-react";
+import { ArrowUpRight, ExternalLink, Link2, LockKeyhole, Palette, Quote, Settings2 } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { readableBusinessWhere } from "@/lib/tenant";
@@ -9,6 +9,7 @@ import { AppText } from "@/components/app-ui/i18n";
 import TapEditorPage from "@/app/(dashboard)/dashboard/businesses/[id]/tap/page";
 import ThemeEditorPage from "@/app/(dashboard)/dashboard/businesses/[id]/theme/page";
 import TestimonialsPage from "@/app/(dashboard)/dashboard/businesses/[id]/testimonials/page";
+import { getBusinessLockedFeatureIds } from "@/lib/plans/dashboard-gate";
 
 export const dynamic = "force-dynamic";
 
@@ -17,11 +18,18 @@ export default async function MyPage({ searchParams }: { searchParams: { busines
   if (!user) redirect("/login");
   const businesses = await prisma.business.findMany({
     where: readableBusinessWhere(user.id),
-    select: { id: true, name: true, slug: true, description: true, logo: true, _count: { select: { qrCodes: true, menuItems: true, reviews: true } } },
+    select: { id: true, ownerId: true, name: true, slug: true, description: true, logo: true },
     orderBy: { createdAt: "asc" }
   });
   const business = businesses.find((item) => item.id === searchParams.businessId) || businesses[0];
   if (!business) return <EmptyState title={<AppText en="Add a business first" hi="पहले कारोबार जोड़ें" />} action={<Link href="/dashboard/businesses/new" className="rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground"><AppText en="Add business" hi="कारोबार जोड़ें" /></Link>} />;
+
+  const locked = new Set(await getBusinessLockedFeatureIds(business.ownerId, ["multiple-qrs", "menu", "reviews-log", "page-themes", "testimonials", "direct-link"]));
+  const [qrCount, menuCount, reviewCount] = await Promise.all([
+    locked.has("multiple-qrs") ? Promise.resolve(null) : prisma.qRCode.count({ where: { businessId: business.id } }),
+    locked.has("menu") ? Promise.resolve(null) : prisma.menuItem.count({ where: { businessId: business.id } }),
+    locked.has("reviews-log") ? Promise.resolve(null) : prisma.review.count({ where: { businessId: business.id } })
+  ]);
 
   const tab = searchParams.tab || "overview";
   const tabs = [
@@ -40,7 +48,10 @@ export default async function MyPage({ searchParams }: { searchParams: { busines
     <div className="space-y-5">
       <PageHeader title={<AppText en="My page" hi="मेरा पेज" />} description={business.name} actions={businesses.length > 1 ? <div className="flex flex-wrap gap-2">{businesses.map((item) => <Link key={item.id} href={`/dashboard/page?businessId=${item.id}&tab=${tab}`} aria-current={item.id === business.id ? "page" : undefined} className={`inline-flex min-h-9 items-center rounded-md border px-3 text-sm ${item.id === business.id ? "border-primary bg-primary/10 font-medium" : "hover:bg-muted"}`}>{item.name}</Link>)}</div> : undefined} />
       <nav className="flex gap-1 overflow-x-auto border-b" aria-label="My page sections">
-        {tabs.map(([key, en, hi, Icon]) => <Link key={key} href={`/dashboard/page?businessId=${business.id}&tab=${key}`} aria-current={tab === key ? "page" : undefined} className={`inline-flex min-h-10 shrink-0 items-center gap-2 border-b-2 px-3 text-sm font-medium ${tab === key ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}><Icon className="h-4 w-4" /><AppText en={en} hi={hi} /></Link>)}
+        {tabs.map(([key, en, hi, Icon]) => {
+          const featureId = key === "buttons" ? "direct-link" : key === "theme" ? "page-themes" : key === "testimonials" ? "testimonials" : null;
+          return <Link key={key} href={`/dashboard/page?businessId=${business.id}&tab=${key}`} aria-current={tab === key ? "page" : undefined} className={`inline-flex min-h-10 shrink-0 items-center gap-2 border-b-2 px-3 text-sm font-medium ${tab === key ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}><Icon className="h-4 w-4" /><AppText en={en} hi={hi} />{featureId && locked.has(featureId) ? <LockKeyhole className="h-3.5 w-3.5" aria-label="Plan required" /> : null}</Link>;
+        })}
       </nav>
       {tab === "overview" || tab === "link" ? (
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)]">
@@ -55,9 +66,9 @@ export default async function MyPage({ searchParams }: { searchParams: { busines
               </div>
             </div>
             <div className="grid grid-cols-3 gap-3">
-              <Metric label={<AppText en="QR codes" hi="QR कोड" />} value={business._count.qrCodes} />
-              <Metric label={<AppText en="Menu items" hi="मेन्यू आइटम" />} value={business._count.menuItems} />
-              <Metric label={<AppText en="Reviews" hi="रिव्यू" />} value={business._count.reviews} />
+              <Metric label={<AppText en="QR codes" hi="QR कोड" />} value={qrCount ?? <FeatureLockLink href={`/dashboard/page/qr?businessId=${business.id}`} />} />
+              <Metric label={<AppText en="Menu items" hi="मेन्यू आइटम" />} value={menuCount ?? <FeatureLockLink href={`/dashboard/sell/menu?businessId=${business.id}`} />} />
+              <Metric label={<AppText en="Reviews" hi="रिव्यू" />} value={reviewCount ?? <FeatureLockLink href={`/dashboard/reviews?business=${business.id}`} />} />
             </div>
           </section>
           <aside className="app-ui-panel mx-auto w-full max-w-[360px] overflow-hidden p-3">
@@ -73,6 +84,10 @@ export default async function MyPage({ searchParams }: { searchParams: { busines
   );
 }
 
-function Metric({ label, value }: { label: React.ReactNode; value: number }) {
+function Metric({ label, value }: { label: React.ReactNode; value: React.ReactNode }) {
   return <div className="app-ui-panel p-4"><p className="text-xs text-muted-foreground">{label}</p><p className="mt-1 text-xl font-semibold tabular-nums">{value}</p></div>;
+}
+
+function FeatureLockLink({ href }: { href: string }) {
+  return <Link href={href} aria-label="Plan required. Open feature details" className="inline-flex h-9 w-9 items-center justify-center rounded-md border hover:bg-muted"><LockKeyhole className="h-4 w-4" /></Link>;
 }

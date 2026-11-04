@@ -7,6 +7,8 @@ import { effectiveTier } from "@/lib/payments";
 import { readAdminThemes } from "@/lib/tap/theme-store";
 import { THEME_PRESETS, type ThemePreset } from "@/lib/tap/themes";
 import { ThemeEditor, type PublishedTheme } from "./theme-editor";
+import { requireFeatureForRoute } from "@/lib/plans/dashboard-gate";
+import { LockedFeature } from "@/components/app-ui/locked-feature";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +17,8 @@ export default async function BusinessThemePage({ params }: { params: { id: stri
   if (!user) redirect("/login");
   const access = await requireBusinessRole(user.id, params.id, "read");
   if (!access) notFound();
+  const locked = await requireFeatureForRoute(access.ownerId, "/dashboard/businesses/:id/theme", "page-themes");
+  if (locked) return <LockedFeature state={locked} />;
   const owner = await planOwner(user, access.ownerId);
   const [page, extra] = await Promise.all([
     prisma.tapPage.findUnique({ where: { businessId: access.id } }),

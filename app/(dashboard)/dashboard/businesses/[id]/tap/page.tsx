@@ -11,6 +11,7 @@ import type { StoredLink } from "@/lib/tap/presets";
 import { WEEK_DAYS, type WeekHours } from "@/lib/tap/hours";
 import { TapEditor } from "./tap-editor";
 import { HelpLink } from "@/components/help/help-link";
+import { requireFeatureForRoute } from "@/lib/plans/dashboard-gate";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +20,7 @@ export default async function TapEditorPage({ params }: { params: { id: string }
   if (!user) redirect("/login");
   const access = await requireBusinessRole(user.id, params.id, "read");
   if (!access) notFound();
-  const [page, qr, owner, entitlement] = await Promise.all([
+  const [page, qr, owner, entitlement, directLinkLock] = await Promise.all([
     prisma.tapPage.findUnique({ where: { businessId: access.id } }),
     prisma.qRCode.findFirst({
       where: { businessId: access.id, status: "ACTIVE" },
@@ -30,7 +31,8 @@ export default async function TapEditorPage({ params }: { params: { id: string }
       where: { id: access.ownerId },
       select: { subscriptionTier: true, subscriptionStatus: true, trialEndsAt: true, subscriptionEndsAt: true }
     }),
-    loadEntitlement(access.ownerId)
+    loadEntitlement(access.ownerId),
+    requireFeatureForRoute(access.ownerId, "/dashboard/businesses/:id/tap", "direct-link")
   ]);
   const draft = page?.draft && typeof page.draft === "object" && !Array.isArray(page.draft) ? page.draft : null;
   const storedLinks = draft && Array.isArray(draft.links) ? draft.links : null;
@@ -60,6 +62,7 @@ export default async function TapEditorPage({ params }: { params: { id: string }
       limited={owner ? tapAccess(owner).limited : false}
       directMode={access.directMode === "DIRECT" ? "DIRECT" : "TAP_PAGE"}
       directTarget={access.directTarget || ""}
+      directLinkLock={directLinkLock}
     />
     </div>
   );

@@ -60,15 +60,16 @@ describe("menu and store module gates", () => {
       }
     });
     users.push(user.id);
-    if (kind === "reviews") {
+    if (kind === "reviews" || kind === "free") {
+      const modules = kind === "reviews" ? ["REVIEWS"] : ["REVIEWS", "MENU", "STORE"];
       const plan = await prisma.plan.create({
         data: {
-          nameEn: "Reviews only",
-          nameHi: "सिर्फ़ रिव्यू",
-          slug: `reviews-only-${stamp}`,
-          modules: ["REVIEWS"],
+          nameEn: kind === "reviews" ? "Reviews only" : "All modules test plan",
+          nameHi: kind === "reviews" ? "सिर्फ़ रिव्यू" : "सभी मॉड्यूल टेस्ट प्लान",
+          slug: `module-gate-${kind}-${stamp}`,
+          modules,
           limits: { businesses: 1, qrCodes: 4, products: 12 },
-          legacyTier: "STARTER"
+          legacyTier: kind === "free" ? "FREE" : "STARTER"
         }
       });
       plans.push(plan.id);
@@ -76,9 +77,9 @@ describe("menu and store module gates", () => {
         data: {
           userId: user.id,
           planId: plan.id,
-          modules: ["REVIEWS"],
+          modules,
           limits: { businesses: 1, qrCodes: 4, products: 12, aiCalls: 5, aiCallsPerMonth: 5 },
-          tier: "STARTER",
+          tier: kind === "free" ? "FREE" : "STARTER",
           status: "ACTIVE",
           endsAt: user.subscriptionEndsAt
         }
@@ -159,7 +160,7 @@ describe("menu and store module gates", () => {
     expect(poster.status).toBe(403);
   });
 
-  it("still lets a free owner past the menu and store gates", async () => {
+  it("uses the modules on a free account's linked test plan", async () => {
     const { user, business, code } = await owner("free");
     sessionUser.id = user.id;
     const params = { params: { id: business.id } };
