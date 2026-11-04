@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Input } from "@/components/ui/input";
+import { useAuthLang } from "@/components/auth/otp-ui";
 
 export function PasswordField({
   id,
@@ -21,6 +22,7 @@ export function PasswordField({
   required?: boolean;
 }) {
   const [show, setShow] = React.useState(false);
+  const { t } = useAuthLang();
   return (
     <div className="relative">
       <Input
@@ -38,9 +40,10 @@ export function PasswordField({
         type="button"
         className="auth-eye"
         onClick={() => setShow((v) => !v)}
-        aria-label={show ? "Hide characters" : "Show characters"}
+        aria-label={show ? t.hidePassword : t.showPassword}
+        aria-pressed={show}
       >
-        {show ? "Hide" : "Show"}
+        {show ? t.hidePassword : t.showPassword}
       </button>
     </div>
   );
