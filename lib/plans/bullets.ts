@@ -1,4 +1,5 @@
 import { FEATURES } from "@reviewqr/shared";
+import { isMarketingFeature } from "./comparison";
 
 export type PlanBullet = { en: string; hi: string; compare: boolean };
 
@@ -18,7 +19,7 @@ export function parseBullets(value: unknown): PlanBullet[] {
 
 /** Used when a plan has no bullets of its own. */
 export function bulletsFromModules(modules: readonly string[]): PlanBullet[] {
-  return FEATURES.filter((feature) => modules.includes(feature.module)).map((feature) => ({
+  return FEATURES.filter((feature) => modules.includes(feature.module) && isMarketingFeature(feature.labelEn)).map((feature) => ({
     en: feature.labelEn,
     hi: feature.labelHi,
     compare: true
@@ -27,5 +28,5 @@ export function bulletsFromModules(modules: readonly string[]): PlanBullet[] {
 
 export function resolveBullets(value: unknown, modules: readonly string[]): PlanBullet[] {
   const written = parseBullets(value);
-  return written.length ? written : bulletsFromModules(modules);
+  return (written.length ? written : bulletsFromModules(modules)).filter((bullet) => isMarketingFeature(bullet.en));
 }

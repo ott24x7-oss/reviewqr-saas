@@ -12,6 +12,14 @@ describe("plan bullets", () => {
     );
   });
 
+  it("filters custom domain from generated and written marketing bullets", () => {
+    expect(resolveBullets([], ["REVIEWS"]).some((bullet) => bullet.en === "Custom domain")).toBe(false);
+    expect(resolveBullets([
+      { en: "Custom domain", hi: "कस्टम डोमेन", compare: true },
+      { en: "Reviews log", hi: "रिव्यू लॉग", compare: true }
+    ], ["REVIEWS"]).map((bullet) => bullet.en)).toEqual(["Reviews log"]);
+  });
+
   it("keeps written bullets, including ones hidden from the comparison", () => {
     const written = [{ en: "Counter QR", hi: "काउंटर QR", compare: false }];
     expect(resolveBullets(written, ["REVIEWS", "MENU"])).toEqual(written);

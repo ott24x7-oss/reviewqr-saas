@@ -12,6 +12,7 @@ import { DURATION_LABELS } from "@/lib/plans/catalog";
 import { buyHref, fallbackImageName } from "@/lib/plans/categories";
 import { formatRupees } from "@/lib/landing/money";
 import { formatINR } from "@/lib/utils";
+import { isPlanFeatureAvailable } from "@/lib/plans/comparison";
 import { Eyebrow, SectionHeading } from "./primitives";
 
 function planImage(plan: PublicPlan) {
@@ -54,7 +55,7 @@ function PublicPlanCard({ plan }: { plan: PublicPlan }) {
           </div>
         ) : null}
         <ul className="qr-plan-includes">
-          {plan.bullets.slice(0, 4).map((item) => (
+          {plan.bullets.filter((item) => isPlanFeatureAvailable(item.en, plan)).slice(0, 4).map((item) => (
             <li key={item.en}><Check size={16} aria-hidden="true" /><span>{item.en}</span></li>
           ))}
         </ul>
