@@ -12,7 +12,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { PasswordField } from "@/components/brand/password-field";
 import {
   channelLine,
-  LangToggle,
   OtpCodeField,
   useAuthLang,
   useResendCountdown,
@@ -37,7 +36,7 @@ function referralCodeFromUrl() {
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { lang, choose, t } = useAuthLang();
+  const { t } = useAuthLang();
   const [method, setMethod] = React.useState<"whatsapp" | "email">("whatsapp");
   const [form, setForm] = React.useState({
     name: "",
@@ -65,7 +64,7 @@ export default function RegisterPage() {
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (!form.name || !form.email || !form.password) {
-      toast.error("Please fill all required fields");
+      toast.error(t.registrationRequired);
       return;
     }
     setLoading(true);
@@ -76,10 +75,9 @@ export default function RegisterPage() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ ...form, referralCode: referralCodeFromUrl() })
       });
-      const json = await res.json();
       if (!res.ok) {
-        toast.error(json.error || "Registration failed");
-        setError(json.error || "Registration failed");
+        toast.error(t.registrationFailed);
+        setError(t.registrationFailed);
         setLoading(false);
         return;
       }
@@ -88,14 +86,14 @@ export default function RegisterPage() {
         planCheckoutPath() || "/dashboard"
       );
       if (!entered.ok) {
-        toast.error("Account created — please log in");
+        toast.error(t.accountCreatedLogin);
         router.push("/login");
         return;
       }
-      toast.success("Welcome to QR24x7!");
+      toast.success(t.welcome);
       window.location.assign(entered.path);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Something went wrong");
+    } catch {
+      toast.error(t.somethingWrong);
     } finally {
       setLoading(false);
     }
@@ -111,13 +109,13 @@ export default function RegisterPage() {
         body: JSON.stringify({ action: "request", phone })
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error || "Could not send a code");
+      if (!res.ok) throw new Error(t.sendCodeFailed);
       setStep("code");
       setCode("");
       setChannel(json.channel);
       setResendAfter(typeof json.resendAfterSec === "number" ? json.resendAfterSec : 30);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not send a code");
+    } catch {
+      setError(t.sendCodeFailed);
     } finally {
       setLoading(false);
     }
@@ -134,11 +132,11 @@ export default function RegisterPage() {
         body: JSON.stringify({ action: "confirm", phone, code })
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error || "Invalid code");
+      if (!res.ok) throw new Error(t.invalidCode);
       setSignupToken(json.signupToken);
       setStep("business");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Invalid code");
+    } catch {
+      setError(t.invalidCode);
     } finally {
       setLoading(false);
     }
@@ -162,7 +160,7 @@ export default function RegisterPage() {
         })
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error || "Could not create the account");
+      if (!res.ok) throw new Error(t.createAccountFailed);
       const entered = await enterSession(
         {
           otpToken: String(json.otpToken || ""),
@@ -171,10 +169,10 @@ export default function RegisterPage() {
         },
         planCheckoutPath() || "/dashboard/onboarding"
       );
-      if (!entered.ok) throw new Error("Account created — please sign in");
+      if (!entered.ok) throw new Error(t.accountCreatedLogin);
       window.location.assign(entered.path);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not create the account");
+    } catch (cause) {
+      setError(cause instanceof Error && cause.message === t.accountCreatedLogin ? t.accountCreatedLogin : t.createAccountFailed);
     } finally {
       setLoading(false);
     }
@@ -182,22 +180,20 @@ export default function RegisterPage() {
 
   return (
     <Card className="shadow-card">
-      <CardHeader className="text-center">
-        <LangToggle lang={lang} choose={choose} />
+      <CardHeader className="auth-card-header">
         <CardTitle className="text-2xl font-display">
-          {method === "whatsapp" ? t.registerTitle : "Start your free trial"}
+          {method === "whatsapp" ? t.registerTitle : t.startTrialTitle}
         </CardTitle>
         <CardDescription>
-          {method === "whatsapp" ? t.registerSubtitle : "14 days free · no credit card needed"}
+          {method === "whatsapp" ? t.registerSubtitle : t.startTrialSubtitle}
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="auth-card-content">
         {method === "whatsapp" ? (
           <form
             className="space-y-4"
             onSubmit={step === "code" ? confirmCode : step === "business" ? finish : (event) => { event.preventDefault(); void sendCode(); }}
           >
-            {error ? <p role="alert" className="auth-error text-sm">{error}</p> : null}
             {step === "phone" ? (
               <div className="space-y-1.5">
                 <Label htmlFor="wa-phone">{t.phone}</Label>
@@ -232,6 +228,7 @@ export default function RegisterPage() {
                 </div>
               </>
             ) : null}
+            {error ? <p role="alert" className="auth-error text-sm">{error}</p> : null}
             <Button
               type="submit"
               className="auth-whatsapp w-full"
@@ -250,49 +247,48 @@ export default function RegisterPage() {
                 </button>
               </div>
             ) : null}
-            <button type="button" className="w-full text-sm" onClick={() => { setMethod("email"); setError(""); }}>
+            <button type="button" className="auth-method-switch" onClick={() => { setMethod("email"); setError(""); }}>
               {t.emailInstead}
             </button>
           </form>
         ) : (
           <form onSubmit={onSubmit} className="space-y-3.5">
-            {error ? <p role="alert" className="auth-error text-sm">{error}</p> : null}
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="name">Your name *</Label>
+                <Label htmlFor="name">{t.yourNameRequired}</Label>
                 <Input
                   id="name"
                   required
                   value={form.name}
                   onChange={(event) => update("name", event.target.value)}
-                  placeholder="Rakesh Sharma"
+                  placeholder={t.namePlaceholder}
                   className="h-11"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="phone">Mobile</Label>
+                <Label htmlFor="phone">{t.mobile}</Label>
                 <Input
                   id="phone"
                   type="tel"
                   value={form.phone}
                   onChange={(event) => update("phone", event.target.value)}
-                  placeholder="98xxxxxxxx"
+                  placeholder={t.phonePlaceholder}
                   className="h-11"
                 />
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="businessName">Business name</Label>
+                <Label htmlFor="businessName">{t.business}</Label>
               <Input
                 id="businessName"
                 value={form.businessName}
                 onChange={(event) => update("businessName", event.target.value)}
-                placeholder="Spice Junction Café"
+                placeholder={t.businessPlaceholder}
                 className="h-11"
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="email">Email *</Label>
+              <Label htmlFor="email">{t.emailRequired}</Label>
               <Input
                 id="email"
                 type="email"
@@ -300,12 +296,12 @@ export default function RegisterPage() {
                 required
                 value={form.email}
                 onChange={(event) => update("email", event.target.value)}
-                placeholder="you@business.com"
+                placeholder={t.emailPlaceholder}
                 className="h-11"
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="password">Password *</Label>
+              <Label htmlFor="password">{t.passwordRequired}</Label>
               <PasswordField
                 id="password"
                 autoComplete="new-password"
@@ -313,34 +309,35 @@ export default function RegisterPage() {
                 minLength={8}
                 value={form.password}
                 onChange={(value) => update("password", value)}
-                placeholder="At least 8 characters"
+                placeholder={t.passwordHint}
               />
-              <p className="text-xs text-muted-foreground">Min 8 chars, 1 uppercase, 1 number</p>
+              <p className="auth-field-hint">{t.passwordRequirement}</p>
             </div>
-            <Button type="submit" variant="gradient" size="lg" className="w-full" disabled={loading}>
+            {error ? <p role="alert" className="auth-error text-sm">{error}</p> : null}
+            <Button type="submit" size="lg" className="auth-primary-button w-full" disabled={loading}>
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
-              Create account
+              {t.createAccount}
             </Button>
             <ul className="mt-4 grid gap-1.5 text-xs text-muted-foreground">
               <li className="inline-flex items-center gap-1.5">
-                <Check className="h-3.5 w-3.5 text-accent" /> 14-day free trial of Growth plan
+                <Check className="h-3.5 w-3.5 text-accent" aria-hidden="true" /> {t.trialBenefit}
               </li>
               <li className="inline-flex items-center gap-1.5">
-                <Check className="h-3.5 w-3.5 text-accent" /> No credit card required to start
+                <Check className="h-3.5 w-3.5 text-accent" aria-hidden="true" /> {t.noCardBenefit}
               </li>
               <li className="inline-flex items-center gap-1.5">
-                <Check className="h-3.5 w-3.5 text-accent" /> Cancel anytime, downgrade to Free
+                <Check className="h-3.5 w-3.5 text-accent" aria-hidden="true" /> {t.freePlanBenefit}
               </li>
             </ul>
-            <button type="button" className="w-full text-sm" onClick={() => { setMethod("whatsapp"); setError(""); }}>
+            <button type="button" className="auth-method-switch" onClick={() => { setMethod("whatsapp"); setError(""); }}>
               {t.whatsappInstead}
             </button>
           </form>
         )}
-        <div className="mt-6 text-center text-sm text-muted-foreground">
-          Already have an account?{" "}
-          <Link href="/login" className="font-medium text-primary hover:underline">
-            Sign in
+        <div className="auth-form-footer text-center text-sm text-muted-foreground">
+          {t.alreadyHaveAccount}{" "}
+          <Link href="/login" className="auth-link-emphasis">
+            {t.signIn}
           </Link>
         </div>
       </CardContent>

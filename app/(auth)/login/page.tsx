@@ -11,7 +11,6 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PasswordField } from "@/components/brand/password-field";
 import {
-  LangToggle,
   OtpCodeField,
   useAuthLang,
   useResendCountdown,
@@ -22,7 +21,7 @@ type MagicConfig = { enabled: boolean; waUrl: string };
 
 function LoginForm() {
   const search = useSearchParams();
-  const { lang, choose, t } = useAuthLang();
+  const { t } = useAuthLang();
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [mode, setMode] = React.useState<"password" | "email-code">("password");
@@ -50,9 +49,9 @@ function LoginForm() {
   }, []);
 
   React.useEffect(() => {
-    if (search.get("verified") === "1") toast.success("Email confirmed. You can sign in.");
-    if (search.get("verify") === "failed") toast.error("That confirmation link is invalid or expired.");
-  }, [search]);
+    if (search.get("verified") === "1") toast.success(t.emailConfirmed);
+    if (search.get("verify") === "failed") toast.error(t.confirmationExpired);
+  }, [search, t]);
 
   async function signInWithPassword(event: React.FormEvent) {
     event.preventDefault();
@@ -65,8 +64,8 @@ function LoginForm() {
     );
     setLoading(false);
     if (!entered.ok) {
-      setError("Invalid email or password");
-      toast.error("Invalid email or password");
+      setError(t.invalidCredentials);
+      toast.error(t.invalidCredentials);
       return;
     }
     toast.success(t.welcomeBack);
@@ -84,14 +83,13 @@ function LoginForm() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ email: email.trim().toLowerCase() })
       });
-      const json = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(json?.error?.message || t.requestEmailCodeFailed);
+      if (!response.ok) throw new Error(t.requestEmailCodeFailed);
       setCodeSent(true);
       setCode("");
       setResendCycle((value) => value + 1);
       toast.success(t.sentEmailCode);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t.requestEmailCodeFailed);
+    } catch {
+      setError(t.requestEmailCodeFailed);
     } finally {
       setLoading(false);
     }
@@ -109,15 +107,13 @@ function LoginForm() {
         body: JSON.stringify({ email: email.trim().toLowerCase(), code, mode: "web" })
       });
       const json = await response.json().catch(() => ({}));
-      if (!response.ok || !json?.data?.otpToken) {
-        throw new Error(json?.error?.message || t.verifyEmailCodeFailed);
-      }
+      if (!response.ok || !json?.data?.otpToken) throw new Error(t.verifyEmailCodeFailed);
       const entered = await enterSession({ otpToken: String(json.data.otpToken) }, search.get("callbackUrl") || json.data.path);
       if (!entered.ok) throw new Error(t.verifyEmailCodeFailed);
       toast.success(t.welcomeBack);
       window.location.assign(entered.path);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t.verifyEmailCodeFailed);
+    } catch {
+      setError(t.verifyEmailCodeFailed);
     } finally {
       setLoading(false);
     }
@@ -128,15 +124,21 @@ function LoginForm() {
     setError("");
   }
 
+  function moveTab(event: React.KeyboardEvent<HTMLButtonElement>) {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const next = event.key === "Home" ? "password" : event.key === "End" ? "email-code" : mode === "password" ? "email-code" : "password";
+    changeMode(next);
+    window.requestAnimationFrame(() => document.getElementById(`login-tab-${next}`)?.focus());
+  }
+
   return (
     <Card className="shadow-card">
-      <CardHeader className="text-center">
-        <LangToggle lang={lang} choose={choose} />
+      <CardHeader className="auth-card-header">
         <CardTitle className="text-2xl font-display">{t.loginTitle}</CardTitle>
         <CardDescription>{t.loginSubtitle}</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
-        {error ? <p role="alert" className="auth-error text-sm">{error}</p> : null}
+      <CardContent className="auth-card-content space-y-6">
         {magic?.enabled && magic.waUrl ? (
           <>
             <Button asChild type="button" className="auth-whatsapp w-full" size="lg">
@@ -145,98 +147,122 @@ function LoginForm() {
                 {t.continueWhatsApp}
               </a>
             </Button>
-            <div className="flex items-center gap-3 text-xs text-muted-foreground" aria-hidden="true">
+            <div className="auth-divider" aria-hidden="true">
               <span className="h-px flex-1 bg-border" />
-              <span>{t.orSignInWithEmail}</span>
+              <span>{t.orUseEmail}</span>
               <span className="h-px flex-1 bg-border" />
             </div>
           </>
         ) : null}
-        <div className="grid grid-cols-2 gap-2 rounded-lg bg-muted p-1">
-          <Button type="button" variant={mode === "password" ? "default" : "ghost"} onClick={() => changeMode("password")}>
+        <div className="auth-segmented" role="tablist" aria-label={t.loginMethod}>
+          <Button
+            id="login-tab-password"
+            type="button"
+            role="tab"
+            aria-selected={mode === "password"}
+            aria-controls="login-panel"
+            tabIndex={mode === "password" ? 0 : -1}
+            className="auth-mode-tab"
+            onKeyDown={moveTab}
+            onClick={() => changeMode("password")}
+          >
             {t.passwordMode}
           </Button>
-          <Button type="button" variant={mode === "email-code" ? "default" : "ghost"} onClick={() => changeMode("email-code")}>
+          <Button
+            id="login-tab-email-code"
+            type="button"
+            role="tab"
+            aria-selected={mode === "email-code"}
+            aria-controls="login-panel"
+            tabIndex={mode === "email-code" ? 0 : -1}
+            className="auth-mode-tab"
+            onKeyDown={moveTab}
+            onClick={() => changeMode("email-code")}
+          >
             {t.emailCodeMode}
           </Button>
         </div>
-        <form onSubmit={mode === "password" ? signInWithPassword : codeSent ? signInWithEmailCode : sendEmailCode} className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="email">{t.email}</Label>
-            <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(event) => {
-                setEmail(event.target.value);
-                setCodeSent(false);
-                setCode("");
-              }}
-              placeholder="you@business.com"
-              className="h-11"
-            />
-          </div>
-          {mode === "password" ? <div className="space-y-1.5">
-            <div className="flex justify-between">
-              <Label htmlFor="password">{t.password}</Label>
-              <Link href="/forgot-password" className="text-sm text-primary hover:underline">
-                Forgot?
-              </Link>
-            </div>
-            <PasswordField
-              id="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={setPassword}
-              placeholder="••••••••"
-            />
-          </div> : null}
-          {mode === "email-code" && codeSent ? (
-            <div className="space-y-2">
-              <OtpCodeField id="email-otp-code" label={t.emailCodeLabel} value={code} onChange={setCode} />
-              <button
-                type="button"
-                className="text-sm text-primary hover:underline disabled:text-muted-foreground disabled:no-underline"
-                disabled={loading || resendLeft > 0}
-                onClick={() => void sendEmailCode()}
-              >
-                {resendLeft > 0 ? t.resendEmailIn(resendLeft) : t.resendEmailCode}
-              </button>
-              <button
-                type="button"
-                className="ml-4 text-sm text-primary hover:underline"
-                onClick={() => {
+        <div id="login-panel" role="tabpanel" aria-labelledby={`login-tab-${mode}`} tabIndex={0}>
+          <form onSubmit={mode === "password" ? signInWithPassword : codeSent ? signInWithEmailCode : sendEmailCode} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="email">{t.email}</Label>
+              <Input
+                id="email"
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(event) => {
+                  setEmail(event.target.value);
                   setCodeSent(false);
                   setCode("");
                 }}
-              >
-                {t.changeEmail}
-              </button>
+                placeholder={t.emailPlaceholder}
+                className="h-11"
+              />
             </div>
-          ) : null}
-          <Button
-            type="submit"
-            variant="gradient"
-            size="lg"
-            className="w-full"
-            disabled={loading || (mode === "email-code" && codeSent && code.length !== 6)}
-          >
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
-            {mode === "password" ? t.signIn : codeSent ? t.verifyEmailCode : t.sendEmailCode}
-          </Button>
-        </form>
+            {mode === "password" ? <div className="space-y-1.5">
+              <div className="auth-label-row">
+                <Label htmlFor="password">{t.password}</Label>
+                <Link href="/forgot-password" className="auth-forgot-link">
+                  {t.forgot}
+                </Link>
+              </div>
+              <PasswordField
+                id="password"
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={setPassword}
+                placeholder="••••••••"
+              />
+            </div> : null}
+            {mode === "email-code" && codeSent ? (
+              <div className="space-y-2">
+                <OtpCodeField id="email-otp-code" label={t.emailCodeLabel} value={code} onChange={setCode} />
+                <div className="auth-inline-actions">
+                  <button
+                    type="button"
+                    className="auth-text-button"
+                    disabled={loading || resendLeft > 0}
+                    onClick={() => void sendEmailCode()}
+                  >
+                    {resendLeft > 0 ? t.resendEmailIn(resendLeft) : t.resendEmailCode}
+                  </button>
+                  <button
+                    type="button"
+                    className="auth-text-button"
+                    onClick={() => {
+                      setCodeSent(false);
+                      setCode("");
+                    }}
+                  >
+                    {t.changeEmail}
+                  </button>
+                </div>
+              </div>
+            ) : null}
+            {error ? <p role="alert" className="auth-error text-sm">{error}</p> : null}
+            <Button
+              type="submit"
+              size="lg"
+              className="auth-primary-button w-full"
+              disabled={loading || (mode === "email-code" && codeSent && code.length !== 6)}
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <LogIn className="h-4 w-4" aria-hidden="true" />}
+              {mode === "password" ? t.signIn : codeSent ? t.verifyEmailCode : t.sendEmailCode}
+            </Button>
+          </form>
+        </div>
         <div className="text-center text-sm text-muted-foreground">
-          New to QR24x7?{" "}
-          <Link href="/register" className="font-medium text-primary hover:underline">
-            Create an account
+          {t.newTo}{" "}
+          <Link href="/register" className="auth-link-emphasis">
+            {t.createAccount}
           </Link>
         </div>
         {process.env.NODE_ENV !== "production" ? (
-          <div className="rounded-lg bg-secondary p-3 text-xs text-muted-foreground">
-            <strong>Demo:</strong> demo@reviewqr.in / Demo@123
+          <div className="auth-demo-hint">
+            <strong>{t.demo}:</strong> demo@reviewqr.in / Demo@123
           </div>
         ) : null}
       </CardContent>

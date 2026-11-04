@@ -7,15 +7,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuthLang } from "@/components/auth/otp-ui";
 
 export default function ForgotPasswordPage() {
+  const { t } = useAuthLang();
   const [email, setEmail] = React.useState("");
   const [sent, setSent] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState("");
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    setError("");
     try {
       const res = await fetch("/api/auth/forgot-password", {
         method: "POST",
@@ -25,8 +29,11 @@ export default function ForgotPasswordPage() {
       if (res.ok) {
         setSent(true);
       } else {
-        toast.error("Something went wrong, try again.");
+        setError(t.forgotRequestFailed);
+        toast.error(t.forgotRequestFailed);
       }
+    } catch {
+      setError(t.forgotRequestFailed);
     } finally {
       setLoading(false);
     }
@@ -34,42 +41,44 @@ export default function ForgotPasswordPage() {
 
   return (
     <Card className="shadow-card">
-      <CardHeader className="text-center">
-        <CardTitle className="text-2xl font-display">Reset your password</CardTitle>
+      <CardHeader className="auth-card-header">
+        <CardTitle className="text-2xl font-display">{t.loginTitleForgot}</CardTitle>
         <CardDescription>
           {sent
-            ? "If an account exists, we've sent a reset link to your email."
-            : "Enter your email and we'll send you a reset link."}
+            ? t.forgotSentDescription
+            : t.forgotDescription}
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="auth-card-content">
         {!sent ? (
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t.email}</Label>
               <Input
                 id="email"
                 type="email"
+                autoComplete="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@business.com"
+                placeholder={t.emailPlaceholder}
                 className="h-11"
               />
             </div>
-            <Button type="submit" variant="gradient" size="lg" className="w-full" disabled={loading}>
+            {error ? <p role="alert" className="auth-error text-sm">{error}</p> : null}
+            <Button type="submit" size="lg" className="auth-primary-button w-full" disabled={loading}>
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-              Send reset link
+              {t.sendResetLink}
             </Button>
           </form>
         ) : (
-          <div className="rounded-lg bg-accent-50 border border-accent-200 p-4 text-sm">
-            Check your inbox at <b>{email}</b>. The link expires in 30 minutes.
+          <div className="auth-success-message" role="status">
+            {t.inboxCheck} <b>{email}</b>. {t.linkExpires}
           </div>
         )}
-        <div className="mt-6 text-center text-sm text-muted-foreground">
-          <Link href="/login" className="font-medium text-primary hover:underline">
-            ← Back to login
+        <div className="auth-form-footer text-center text-sm text-muted-foreground">
+          <Link href="/login" className="auth-link-emphasis">
+            ← {t.backToLogin}
           </Link>
         </div>
       </CardContent>
