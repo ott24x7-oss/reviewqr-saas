@@ -57,6 +57,13 @@ enum PlanDuration {
   LIFETIME
 }
 
+enum BlogPostStatus {
+  DRAFT     @map("draft")
+  PUBLISHED @map("published")
+
+  @@map("BlogPostStatus")
+}
+
 enum CommissionStatus {
   PENDING
   APPROVED
@@ -348,7 +355,7 @@ model Business {
   trustpilotUrl     String?  @db.Text
   reviewPlatform    String   @default("google") // google | trustpilot — preferred public link order
   ratingThreshold   Int      @default(4) // used only when reviewGating is on
-  reviewGating      Boolean  @default(true) // true routes below-threshold ratings to private feedback
+  reviewGating      Boolean  @default(false) // enabled only after an owner confirms the review policy warning
   // TAP_PAGE keeps today's page. DIRECT opens one published button. Existing rows stay TAP_PAGE.
   directMode        String   @default("TAP_PAGE")
   directTarget      String   @default("")
@@ -1508,6 +1515,27 @@ model AuditLog {
   @@index([deviceId])
   @@index([createdAt])
   @@index([action])
+}
+
+model BlogPost {
+  id             String         @id @default(cuid())
+  slug           String
+  locale         String
+  title          String
+  description    String         @db.Text
+  bodyMarkdown   String         @db.Text
+  coverImageUrl  String?
+  tags           String[]       @default([])
+  status         BlogPostStatus @default(DRAFT)
+  publishedAt    DateTime?
+  updatedAt      DateTime       @updatedAt
+  authorName     String         @default("QR24x7")
+  translationKey String?
+  createdAt      DateTime       @default(now())
+
+  @@unique([locale, slug])
+  @@index([locale, status, publishedAt])
+  @@index([translationKey])
 }
 
 // Per-business stock of pre-written positive reviews. After a happy

@@ -19,7 +19,7 @@ import { DEFAULT_LOCAL_PAGES_CONFIG } from "@/lib/settings";
 const sample: DirectoryBusiness = {
   id: "biz-1", name: "Pune Kitchen", slug: "pune-kitchen", industry: "Restaurant", city: "Pune", state: "Maharashtra",
   address: "FC Road", pincode: "411004", logo: null, coverImage: null, whatsappNumber: null, storeEnabled: false,
-  ratingAverage: 4.5, reviewCount: 2, category: normalizeIndustry("restaurant")!, normalizedCity: normalizeCity("Pune")!
+  ratingAverage: 4.5, reviewCount: 2, updatedAt: new Date("2026-11-04"), category: normalizeIndustry("restaurant")!, normalizedCity: normalizeCity("Pune")!
 };
 
 describe("local SEO normalization", () => {

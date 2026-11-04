@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { FeaturesMarketing } from "@/components/marketing/qr-site/marketing-pages";
+import { FeaturesMarketing } from "@/components/marketing/qr-site/features-marketing";
 import { SiteShell } from "@/components/marketing/qr-site/ui";
 import { getBrand } from "@/lib/brand";
 import { listPublicPlans } from "@/lib/plans/public";

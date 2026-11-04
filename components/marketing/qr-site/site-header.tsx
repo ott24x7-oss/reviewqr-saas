@@ -15,6 +15,12 @@ const links = [
   { href: "/dashboard/shop", label: "Shop / Stands" }
 ];
 
+const industryLinks = [
+  ["restaurants", "Restaurants", "रेस्तराँ"], ["cafes", "Cafes", "कैफ़े"], ["bakeries", "Bakeries", "बेकरी"],
+  ["salons", "Salons", "सैलून"], ["clinics", "Clinics", "क्लिनिक"], ["kirana-stores", "Kirana stores", "किराना दुकानें"],
+  ["hotels", "Hotels", "होटल"], ["gyms", "Gyms", "जिम"]
+] as const;
+
 export function SiteHeader({ brand, startHref, locale = "en", path = "/" }: { brand: Brand; startHref: string; locale?: SeoLocale; path?: string }) {
   const [open, setOpen] = React.useState(false);
   const homeHref = locale === "hi" ? "/hi" : "/";
@@ -33,12 +39,13 @@ export function SiteHeader({ brand, startHref, locale = "en", path = "/" }: { br
   return (
     <header className="qr-header">
       <div className="qr-header-inner">
-        <Link href={homeHref} className="qr-brand" aria-label={`${brand.name} home`} onClick={() => setOpen(false)}>
-          <Image src="/brand/logo-mark.png" width={34} height={34} alt="" priority />
+          <Link href={homeHref} className="qr-brand" onClick={() => setOpen(false)}>
+          <Image src="/brand/logo-mark.png" width={34} height={34} alt="" />
           <span>{brand.name}</span>
         </Link>
         <nav className="qr-nav" aria-label="Main navigation">
           {links.map((link) => <Link key={link.href} href={link.href.startsWith("/dashboard") ? link.href : locale === "hi" ? `/hi${link.href}` : link.href}>{marketingText(link.label, locale)}</Link>)}
+          <details className="qr-nav-menu"><summary>{marketingText("For your business", locale)}</summary><div>{industryLinks.map(([slug, en, hi]) => <Link key={slug} href={`${locale === "hi" ? "/hi" : ""}/for/${slug}`}>{locale === "hi" ? hi : en}</Link>)}</div></details>
         </nav>
         <div className="qr-header-actions">
           <Link className="qr-login" href="/login">{marketingText("Login", locale)}</Link>
@@ -59,6 +66,8 @@ export function SiteHeader({ brand, startHref, locale = "en", path = "/" }: { br
       {open ? (
         <nav id="qr-mobile-nav" className="qr-mobile-nav" aria-label="Mobile navigation">
           {links.map((link) => <Link key={link.href} href={link.href.startsWith("/dashboard") ? link.href : locale === "hi" ? `/hi${link.href}` : link.href} onClick={() => setOpen(false)}>{marketingText(link.label, locale)}</Link>)}
+          <strong>{marketingText("For your business", locale)}</strong>
+          {industryLinks.map(([slug, en, hi]) => <Link key={slug} href={`${locale === "hi" ? "/hi" : ""}/for/${slug}`} onClick={() => setOpen(false)}>{locale === "hi" ? hi : en}</Link>)}
           <Link href="/login" onClick={() => setOpen(false)}>{marketingText("Login", locale)}</Link>
           <Link href={localeHref} onClick={() => setOpen(false)} lang={locale === "hi" ? "en" : "hi"}>{switchLabel}</Link>
           <Link className="qr-button qr-button-dark" href={startHref} onClick={() => setOpen(false)}>{marketingText("Start free", locale)} <span aria-hidden="true">↗</span></Link>

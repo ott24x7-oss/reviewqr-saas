@@ -5,7 +5,7 @@
   "workspaces": [
     "packages/*"
   ],
-  "description": "QR24x7 - Turn happy customers into Google reviews. Indian SMB focused review management SaaS.",
+  "description": "QR24x7 helps Indian local businesses collect Google reviews, share digital menus and take WhatsApp orders.",
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
@@ -17,6 +17,7 @@
     "db:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
+    "db:seed:blog": "tsx prisma/seed-blog.ts",
     "db:reset": "prisma migrate reset --force",
     "seed:admin": "tsx prisma/seed-admin.ts",
     "worker": "tsx scripts/worker.ts",

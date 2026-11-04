@@ -1,7 +1,9 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
-import ShapeGrid from "@/components/ui/shape-grid";
+
+const ShapeGrid = dynamic(() => import("@/components/ui/shape-grid"));
 
 /** The grid only shows through transparent shells. Public pages cover it, so they skip the canvas. */
 export function ShapeGridGate() {

@@ -14,6 +14,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     name?: string;
     isActive?: boolean;
     reviewGating?: boolean;
+    reviewGatingConfirmed?: boolean;
     ratingThreshold?: number;
     hideBranding?: boolean;
   };
@@ -29,6 +30,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (typeof body.hideBranding === "boolean") {
     data.hideBranding = body.hideBranding;
     data.hideBrandingSource = "ADMIN";
+  }
+  if (body.reviewGating === true && !existing.reviewGating && body.reviewGatingConfirmed !== true) {
+    return NextResponse.json({ error: "Confirm the Google review policy risk before enabling review gating" }, { status: 400 });
   }
   if (typeof body.reviewGating === "boolean") data.reviewGating = body.reviewGating;
   if (typeof body.ratingThreshold === "number" && body.ratingThreshold >= 4 && body.ratingThreshold <= 5) {

@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: { params: { city: string } })
   const result = await data(params.city);
   if (!result) return { title: "Not found", robots: { index: false, follow: false } };
   const title = serviceSeoTitle(result.city, "en");
-  return buildSeoMetadata({ path: `/qr-code-for-google-reviews/${result.city.slug}`, title, description: `Help your ${result.city.en} business collect Google reviews, share a QR menu and receive WhatsApp orders with QR24x7.` });
+  return buildSeoMetadata({ path: `/qr-code-for-google-reviews/${result.city.slug}`, title, description: `Help your ${result.city.en} business collect Google reviews, share a QR menu and receive WhatsApp orders with QR24x7.`, ogContext: `${result.city.en} · ${result.businesses.length} local businesses` });
 }
 export default async function ReviewQrCityPage({ params }: { params: { city: string } }) {
   const result = await data(params.city);

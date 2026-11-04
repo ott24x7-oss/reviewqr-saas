@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const { page } = await data(params);
   if (!page || page.businesses.length === 0) return { title: "पेज नहीं मिला", robots: { index: false, follow: false } };
   const title = directorySeoTitle(page.category, page.city, "hi");
-  const metadata = await buildSeoMetadata({ path: `/in/${params.category}/${params.city}`, locale: "hi", title, description: `${page.city.hi} में ${page.category.hi} देखें। स्थानीय कारोबार के पेज, ग्राहक रेटिंग, मेनू और WhatsApp ऑर्डर की जानकारी पाएँ।` });
+  const metadata = await buildSeoMetadata({ path: `/in/${params.category}/${params.city}`, locale: "hi", title, description: `${page.city.hi} में ${page.category.hi} देखें। स्थानीय कारोबार के पेज, ग्राहक रेटिंग, मेनू और WhatsApp ऑर्डर की जानकारी पाएँ।`, ogContext: `${page.city.hi} · ${page.businesses.length} ${page.category.hi}` });
   return page.indexable ? metadata : { ...metadata, robots: { index: false, follow: true } };
 }
 

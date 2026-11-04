@@ -1,27 +1,10 @@
 export type ReviewPlatform = "google" | "trustpilot";
 
-export const DEFAULT_REVIEW_GATING = true;
-export const REVIEW_GATING_OFF_MIGRATION_AT = new Date("2026-10-21T12:00:00.000Z");
+export const DEFAULT_REVIEW_GATING = false;
 
-/** Ratings below four always stay in the private feedback path when gating is on. */
+/** The public-link threshold is clamped to at least four when an owner enables gating. */
 export function publicReviewThreshold(ratingThreshold: number): number {
   return Math.max(4, ratingThreshold);
-}
-
-/**
- * Mirrors the one-time backfill predicate. A row edited after the forced-off
- * migration is left alone because that edit may have been an owner's choice.
- */
-export function shouldRestoreReviewGatingDefault(input: {
-  reviewGating: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}): boolean {
-  if (input.reviewGating) return false;
-  const cutoff = REVIEW_GATING_OFF_MIGRATION_AT.getTime();
-  const createdAt = input.createdAt.getTime();
-  const updatedAt = input.updatedAt.getTime();
-  return updatedAt <= cutoff || (createdAt > cutoff && updatedAt === createdAt);
 }
 
 export function shouldOfferAiReviewDrafts(input: {

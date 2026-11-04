@@ -59,7 +59,12 @@ export async function createBusiness(user: { id: string; role: string }, raw: un
   const limitError = await ownerLimitError(actor, "businesses", count);
   if (limitError) return fail(402, limitError);
 
-  const parsed = businessSchema.safeParse(raw);
+  if (raw && typeof raw === "object" && !Array.isArray(raw) && (raw as Record<string, unknown>).reviewGating === true && (raw as Record<string, unknown>).reviewGatingConfirmed !== true) {
+    return fail(400, "Confirm that review gating can lead to removal of gated reviews before enabling it.");
+  }
+  const input = raw && typeof raw === "object" && !Array.isArray(raw) ? { ...(raw as Record<string, unknown>) } : raw;
+  if (input && typeof input === "object") delete (input as Record<string, unknown>).reviewGatingConfirmed;
+  const parsed = businessSchema.safeParse(input);
   if (!parsed.success) {
     return fail(400, parsed.error.issues[0]?.message || "Invalid input");
   }
@@ -131,6 +136,9 @@ export async function createBusiness(user: { id: string; role: string }, raw: un
 export async function updateBusiness(userId: string, businessId: string, raw: unknown) {
   const existing = await requireBusinessRole(userId, businessId, "manage");
   if (!existing) return fail(404, "Not found");
+  if (raw && typeof raw === "object" && !Array.isArray(raw) && (raw as Record<string, unknown>).reviewGating === true && !existing.reviewGating && (raw as Record<string, unknown>).reviewGatingConfirmed !== true) {
+    return fail(400, "Confirm that review gating can lead to removal of gated reviews before enabling it.");
+  }
   if (raw && typeof raw === "object" && !Array.isArray(raw) && "listedInDirectory" in raw && existing.accessRole !== "OWNER") {
     return fail(403, "Only the business owner can change directory listing");
   }
@@ -142,6 +150,7 @@ export async function updateBusiness(userId: string, businessId: string, raw: un
           ["logo", "coverImage"]
         )
       : {};
+  delete (body as Record<string, unknown>).reviewGatingConfirmed;
   const parsed = businessSchema.partial().safeParse(body);
   if (!parsed.success) return fail(400, parsed.error.issues[0]?.message || "Invalid input");
   const business = await prisma.business.update({

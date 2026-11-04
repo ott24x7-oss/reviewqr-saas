@@ -44,7 +44,16 @@ export function PhoneScreenshot({
   return (
     <div className={`qr-phone${crop ? ` qr-phone-crop-${crop}` : ""}`}>
       <div className="qr-phone-screen">
-        <Image src={src} alt={alt} width={540} height={1120} sizes={sizes} priority={priority} />
+        <Image
+          src={src}
+          alt={alt}
+          width={540}
+          height={1120}
+          sizes={sizes}
+          priority={priority}
+          fetchPriority={priority ? "high" : undefined}
+          unoptimized={priority}
+        />
       </div>
     </div>
   );

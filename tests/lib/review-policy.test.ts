@@ -8,8 +8,6 @@ import {
   showPublicReviewLinks,
   shouldOfferAiReviewDrafts,
   publicReviewThreshold,
-  shouldRestoreReviewGatingDefault,
-  REVIEW_GATING_OFF_MIGRATION_AT
 } from "../../lib/review-policy";
 import { businessSchema } from "../../lib/validations";
 
@@ -19,51 +17,18 @@ const urls = {
 };
 
 describe("review gating defaults", () => {
-  it("defaults new business API payloads and Prisma-created rows to enabled", () => {
-    expect(DEFAULT_REVIEW_GATING).toBe(true);
-    expect(businessSchema.parse({ name: "New business" }).reviewGating).toBe(true);
+  it("defaults new businesses to public review links being available", () => {
+    expect(DEFAULT_REVIEW_GATING).toBe(false);
+    expect(businessSchema.parse({ name: "New business" }).reviewGating).toBe(false);
   });
 
-  it("backfills only false rows that still match the forced-off default", () => {
-    const cutoff = REVIEW_GATING_OFF_MIGRATION_AT;
-    expect(
-      shouldRestoreReviewGatingDefault({
-        reviewGating: false,
-        createdAt: new Date("2026-01-01T00:00:00.000Z"),
-        updatedAt: cutoff
-      })
-    ).toBe(true);
-    expect(
-      shouldRestoreReviewGatingDefault({
-        reviewGating: false,
-        createdAt: new Date("2026-10-22T00:00:00.000Z"),
-        updatedAt: new Date("2026-10-22T00:00:00.000Z")
-      })
-    ).toBe(true);
-    expect(
-      shouldRestoreReviewGatingDefault({
-        reviewGating: false,
-        createdAt: new Date("2026-01-01T00:00:00.000Z"),
-        updatedAt: new Date("2026-10-22T00:00:00.000Z")
-      })
-    ).toBe(false);
-    expect(
-      shouldRestoreReviewGatingDefault({
-        reviewGating: true,
-        createdAt: new Date("2026-01-01T00:00:00.000Z"),
-        updatedAt: new Date("2026-01-01T00:00:00.000Z")
-      })
-    ).toBe(false);
-  });
-
-  it("keeps the SQL migration backfill constrained to untouched rows", () => {
+  it("turns gating off for every existing business and changes the database default", () => {
     const migration = readFileSync(
-      path.join(process.cwd(), "prisma/migrations/20261110120000_restore_review_gating_default/migration.sql"),
+      path.join(process.cwd(), "prisma/migrations/20261116120000_review_gating_off_default/migration.sql"),
       "utf8"
     ).replace(/\s+/g, " ");
-    expect(migration).toContain('WHERE "reviewGating" = false');
-    expect(migration).toContain('"updatedAt" <= TIMESTAMP \'2026-10-21 12:00:00\'');
-    expect(migration).toContain('"createdAt" > TIMESTAMP \'2026-10-21 12:00:00\' AND "updatedAt" = "createdAt"');
+    expect(migration).toContain('UPDATE "Business" SET "reviewGating" = false WHERE "reviewGating" = true');
+    expect(migration).toContain('ALTER TABLE "Business" ALTER COLUMN "reviewGating" SET DEFAULT false');
   });
 });
 

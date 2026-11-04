@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: { params: { city: string } })
   const result = await data(params.city);
   if (!result?.rows.length) return { title: "Not found", robots: { index: false, follow: false } };
   const { city } = result;
-  return buildSeoMetadata({ path: `/in/city/${city.slug}`, title: `Local Businesses in ${city.en}`, description: `Browse local businesses in ${city.en} by category. Compare QR24x7 pages, digital menus and customer review details.` });
+  return buildSeoMetadata({ path: `/in/city/${city.slug}`, title: `Local Businesses in ${city.en}`, description: `Browse local businesses in ${city.en} by category. Compare QR24x7 pages, digital menus and customer review details.`, ogContext: `${city.en} · ${result.rows.reduce((sum, row) => sum + row.count, 0)} businesses` });
 }
 
 export default async function CityHubPage({ params }: { params: { city: string } }) {

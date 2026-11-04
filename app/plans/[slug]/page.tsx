@@ -8,6 +8,7 @@ import { listPublicPlans } from "@/lib/plans/public";
 import { getPricingCopy } from "@/lib/plans/pricing-copy";
 import { fallbackImageName } from "@/lib/plans/categories";
 import { DURATION_LABELS } from "@/lib/plans/catalog";
+import { formatRupees } from "@/lib/landing/money";
 import { buildSeoMetadata, planSeoDescription, planSeoTitle } from "@/lib/seo";
 import { getRequestLocale } from "@/lib/locale";
 
@@ -29,7 +30,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const imagePath = plan.imageUrl && !plan.imageUrl.startsWith("data:")
     ? plan.imageUrl
     : `/landing/${fallbackImageName(plan.category)}-1600.webp`;
-  return buildSeoMetadata({ path: `/plans/${plan.slug}`, title: planSeoTitle(plan.nameEn, plan.modules, "en"), description, image: imagePath });
+  return buildSeoMetadata({ path: `/plans/${plan.slug}`, title: planSeoTitle(plan.nameEn, plan.modules, "en"), description, image: imagePath, ogContext: plan.prices[0] ? `${formatRupees(plan.prices[0].pricePaise)} · ${plan.nameEn}` : plan.nameEn });
 }
 
 export default async function PlanPage({ params, searchParams }: { params: Params; searchParams: Search }) {

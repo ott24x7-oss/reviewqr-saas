@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: { params: { city: string } })
   const result = await data(params.city);
   if (!result) return { title: "पेज नहीं मिला", robots: { index: false, follow: false } };
   const title = serviceSeoTitle(result.city, "hi");
-  return buildSeoMetadata({ path: `/qr-code-for-google-reviews/${result.city.slug}`, locale: "hi", title, description: `${result.city.hi} के कारोबार QR24x7 से Google समीक्षा पाएँ, QR मेनू साझा करें और WhatsApp ऑर्डर लें।` });
+  return buildSeoMetadata({ path: `/qr-code-for-google-reviews/${result.city.slug}`, locale: "hi", title, description: `${result.city.hi} के कारोबार QR24x7 से Google समीक्षा पाएँ, QR मेनू साझा करें और WhatsApp ऑर्डर लें।`, ogContext: `${result.city.hi} · ${result.businesses.length} कारोबार` });
 }
 export default async function ReviewQrCityPage({ params }: { params: { city: string } }) {
   const result = await data(params.city);

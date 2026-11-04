@@ -13,6 +13,7 @@ import RefundPage from "@/app/refund/page";
 import { LegalPage } from "@/components/marketing/legal-page";
 import { SEO_STATIC_ROUTES, buildSeoMetadata, planSeoDescription, planSeoTitle, routeDescription } from "@/lib/seo";
 import { listPublicPlans } from "@/lib/plans/public";
+import { formatRupees } from "@/lib/landing/money";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +34,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   if (planMatch) {
     const plan = (await listPublicPlans().catch(() => [])).find((item) => item.slug === planMatch[1]);
     if (!plan) return { title: "प्लान नहीं मिला", robots: { index: false, follow: false } };
-    return buildSeoMetadata({ path, locale: "hi", title: planSeoTitle(plan.nameHi, plan.modules, "hi"), description: planSeoDescription(plan.nameHi, plan.descriptionHi, "hi"), image: plan.imageUrl });
+    return buildSeoMetadata({ path, locale: "hi", title: planSeoTitle(plan.nameHi, plan.modules, "hi"), description: planSeoDescription(plan.nameHi, plan.descriptionHi, "hi"), image: plan.imageUrl, ogContext: plan.prices[0] ? `${formatRupees(plan.prices[0].pricePaise)} · ${plan.nameHi}` : plan.nameHi });
   }
   return { title: "पेज नहीं मिला", robots: { index: false, follow: false } };
 }

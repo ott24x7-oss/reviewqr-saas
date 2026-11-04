@@ -399,7 +399,7 @@ const en = {
   introSkip: "Skip",
   introStart: "Get started",
   introReviews: "Get Google reviews",
-  introReviewsBody: "A tap page that asks happy customers for a public review.",
+  introReviewsBody: "Every customer can leave a public review, and anyone can also send private feedback.",
   introMenu: "Show your menu / services",
   introMenuBody: "Put your menu or service list on the page people open.",
   introOrders: "Take orders on WhatsApp",

@@ -9,6 +9,9 @@ export type SeoPageInput = {
   description?: string;
   image?: string;
   translated?: boolean;
+  lastModified?: Date;
+  ogContext?: string;
+  alternatePaths?: { en: string; hi: string };
 };
 
 export type SeoChecklistInput = {
@@ -32,16 +35,16 @@ export type SeoChecklistResult = {
 export type SeoChecklistRoute = Pick<SeoChecklistInput, "path" | "locale" | "hreflangExpected">;
 
 export const SEO_STATIC_ROUTES = [
-  { path: "/", translated: true, titleEn: "Google Review QR, Menu & WhatsApp Orders", titleHi: "Google रिव्यू, मेनू और WhatsApp ऑर्डर" },
-  { path: "/features", translated: true, titleEn: "QR Code Features for Reviews, Menus & Orders", titleHi: "QR Code की रिव्यू, मेनू और ऑर्डर सुविधाएँ" },
-  { path: "/how-it-works", translated: true, titleEn: "How QR Code Reviews, Menus & Orders Work", titleHi: "QR Code से रिव्यू, मेनू और ऑर्डर" },
-  { path: "/pricing", translated: true, titleEn: "QR Code Plans for Reviews, Menus & WhatsApp Orders", titleHi: "QR Code प्लान: रिव्यू, मेनू और WhatsApp" },
-  { path: "/about", translated: true, titleEn: "About QR24x7 and Our QR Review Platform", titleHi: "QR24x7 के बारे में" },
-  { path: "/demo", translated: true, titleEn: "Try the QR24x7 Review Page Demo", titleHi: "QR24x7 रिव्यू पेज का डेमो देखें" },
-  { path: "/privacy", translated: false, titleEn: "QR24x7 Privacy Policy", titleHi: "QR24x7 गोपनीयता नीति" },
-  { path: "/terms", translated: false, titleEn: "QR24x7 Terms of Service", titleHi: "QR24x7 सेवा की शर्तें" },
-  { path: "/refund", translated: false, titleEn: "QR24x7 Refund & Cancellation Policy", titleHi: "QR24x7 रिफंड और रद्दीकरण नीति" },
-  { path: "/reseller-terms", translated: true, titleEn: "QR24x7 Reseller Terms", titleHi: "QR24x7 रीसेलर की शर्तें" }
+  { path: "/", translated: true, updatedAt: "2026-11-04", titleEn: "Google Review QR, Menu & WhatsApp Orders", titleHi: "Google रिव्यू, मेनू और WhatsApp ऑर्डर" },
+  { path: "/features", translated: true, updatedAt: "2026-11-04", titleEn: "QR Code Features for Reviews, Menus & Orders", titleHi: "QR Code की रिव्यू, मेनू और ऑर्डर सुविधाएँ" },
+  { path: "/how-it-works", translated: true, updatedAt: "2026-11-04", titleEn: "How QR Code Reviews, Menus & Orders Work", titleHi: "QR Code से रिव्यू, मेनू और ऑर्डर" },
+  { path: "/pricing", translated: true, updatedAt: "2026-11-04", titleEn: "QR Code Plans for Reviews, Menus & WhatsApp Orders", titleHi: "QR Code प्लान: रिव्यू, मेनू और WhatsApp" },
+  { path: "/about", translated: true, updatedAt: "2026-10-25", titleEn: "About QR24x7 and Our QR Review Platform", titleHi: "QR24x7 के बारे में" },
+  { path: "/demo", translated: true, updatedAt: "2026-10-25", titleEn: "Try the QR24x7 Review Page Demo", titleHi: "QR24x7 रिव्यू पेज का डेमो देखें" },
+  { path: "/privacy", translated: false, updatedAt: "2026-10-22", titleEn: "QR24x7 Privacy Policy", titleHi: "QR24x7 गोपनीयता नीति" },
+  { path: "/terms", translated: false, updatedAt: "2026-10-21", titleEn: "QR24x7 Terms of Service", titleHi: "QR24x7 सेवा की शर्तें" },
+  { path: "/refund", translated: false, updatedAt: "2026-08-02", titleEn: "QR24x7 Refund & Cancellation Policy", titleHi: "QR24x7 रिफंड और रद्दीकरण नीति" },
+  { path: "/reseller-terms", translated: true, updatedAt: "2026-10-25", titleEn: "QR24x7 Reseller Terms", titleHi: "QR24x7 रीसेलर की शर्तें" }
 ] as const;
 
 const ROUTE_DESCRIPTIONS: Record<string, { en: string; hi: string }> = {
@@ -103,6 +106,12 @@ function absolute(path: string) {
   return new URL(path, `${siteOrigin()}/`).toString();
 }
 
+export function buildOgImageUrl(input: { path: string; locale: SeoLocale; title: string; context?: string }) {
+  const params = new URLSearchParams({ path: input.path, locale: input.locale, title: input.title });
+  if (input.context) params.set("context", input.context);
+  return absolute(`/api/og?${params.toString()}`);
+}
+
 function applyTitleTemplate(title: string, template: string) {
   const normalizedTitle = title.replace(/\s+/g, " ").trim();
   const effectiveTemplate = template.includes("%s") ? template : "%s | QR24x7";
@@ -126,13 +135,13 @@ export async function buildSeoMetadata(input: SeoPageInput, config?: SeoConfig):
   const pageTitle = override?.title || input.title;
   const title = applyTitleTemplate(pageTitle, seo.defaultTitleTemplate);
   const description = override?.description || input.description || (locale === "hi" ? seo.defaultDescriptionHi : seo.defaultDescriptionEn);
-  const image = override?.ogImageUrl || input.image || seo.defaultOgImageUrl;
+  const image = override?.ogImageUrl || buildOgImageUrl({ path, locale, title: pageTitle, context: input.ogContext });
   const canonicalUrl = absolute(path);
   const alternateEnabled = input.translated !== false;
   const languages = alternateEnabled ? {
-    "en-IN": absolute(publicLocalePath(input.path, "en")),
-    "hi-IN": absolute(publicLocalePath(input.path, "hi")),
-    "x-default": absolute(publicLocalePath(input.path, "en"))
+    "en-IN": absolute(input.alternatePaths?.en || publicLocalePath(input.path, "en")),
+    "hi-IN": absolute(input.alternatePaths?.hi || publicLocalePath(input.path, "hi")),
+    "x-default": absolute(input.alternatePaths?.en || publicLocalePath(input.path, "en"))
   } : undefined;
   const twitterHandle = seo.twitterHandle ? (seo.twitterHandle.startsWith("@") ? seo.twitterHandle : `@${seo.twitterHandle}`) : undefined;
   return {
@@ -305,6 +314,28 @@ export function buildSoftwareApplicationJsonLd(lowestPricePaise: number | null, 
 
 export function jsonLdString(value: unknown) {
   return JSON.stringify(value).replace(/</g, "\\u003c");
+}
+
+export function buildBreadcrumbJsonLd(items: Array<{ name: string; path: string }>, locale: SeoLocale = "en") {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    inLanguage: locale === "hi" ? "hi-IN" : "en-IN",
+    itemListElement: items.map((item, index) => ({
+      "@type": "ListItem", position: index + 1, name: item.name, item: absolute(publicLocalePath(item.path, locale))
+    }))
+  };
+}
+
+export function buildFaqJsonLd(faqs: readonly { question: string; answer: string }[]) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqs.map((faq) => ({
+      "@type": "Question", name: faq.question,
+      acceptedAnswer: { "@type": "Answer", text: faq.answer }
+    }))
+  };
 }
 
 export function routeDescription(path: string, locale: SeoLocale) {

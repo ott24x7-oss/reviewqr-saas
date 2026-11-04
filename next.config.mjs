@@ -4,9 +4,6 @@ const nextConfig = {
   // overwrite the production build that the owner smoke test runs against.
   distDir: process.env.NEXT_DIST_DIR || ".next",
   reactStrictMode: true,
-  outputFileTracingExcludes: {
-    "/*": ["./apps/sms-gateway/**"]
-  },
   transpilePackages: ["@reviewqr/shared"],
   images: {
     remotePatterns: [
@@ -17,6 +14,9 @@ const nextConfig = {
     ]
   },
   experimental: {
+    outputFileTracingExcludes: {
+      "/*": ["./apps/sms-gateway/**"]
+    },
     instrumentationHook: true,
     serverActions: {
       allowedOrigins: ["localhost:3000", "*.up.railway.app", "*.railway.app"]
@@ -109,7 +109,11 @@ const nextConfig = {
           { key: "Access-Control-Allow-Origin", value: "*" },
           { key: "Access-Control-Allow-Methods", value: "GET" }
         ]
-      }
+      },
+      ...["/_next/static/:path*", "/landing/:path*", "/brand/:path*", "/fonts/:path*"].map((source) => ({
+        source,
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }]
+      }))
     ];
   }
 };

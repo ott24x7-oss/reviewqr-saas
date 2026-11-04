@@ -14,6 +14,13 @@ export { Eyebrow, PageIntro, PhoneScreenshot, SectionHeading, TextLink } from ".
 
 const footerGroups = [
   {
+    title: "For your business",
+    links: [
+      ["Restaurants", "/for/restaurants"], ["Cafes", "/for/cafes"], ["Bakeries", "/for/bakeries"], ["Salons", "/for/salons"],
+      ["Clinics", "/for/clinics"], ["Kirana stores", "/for/kirana-stores"], ["Hotels", "/for/hotels"], ["Gyms", "/for/gyms"]
+    ]
+  },
+  {
     title: "Explore",
     links: [
       ["Features", "/features"],
