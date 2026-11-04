@@ -459,6 +459,38 @@ export function invalidateSettingsCache(key?: string) {
   else cache.clear();
 }
 
+function normalizeSupportWhatsApp(value: unknown): string {
+  if (typeof value !== "string") return "";
+  const digits = value.replace(/\D/g, "").slice(0, 15);
+  return digits.length >= 8 ? digits : "";
+}
+
+/**
+ * The site setting is the canonical support number. The old support setting is
+ * read only as a migration fallback; when present, it is copied into `site`.
+ */
+export async function getSupportWhatsApp(): Promise<string> {
+  const site = await readKey<Partial<SiteConfig>>(SETTING_KEYS.site, {});
+  const configured = normalizeSupportWhatsApp(site.supportWhatsappNumber);
+  if (configured) return configured;
+
+  const legacy = await readKey<{ whatsappNumber?: string }>("support", {});
+  const legacyNumber = normalizeSupportWhatsApp(legacy.whatsappNumber);
+  if (legacyNumber) {
+    try {
+      await writeKey(SETTING_KEYS.site, { ...site, supportWhatsappNumber: legacyNumber });
+    } catch {
+      // Keep serving the legacy value if the best-effort migration cannot write.
+    }
+    return legacyNumber;
+  }
+
+  return (
+    normalizeSupportWhatsApp(process.env.SUPPORT_WHATSAPP_NUMBER) ||
+    normalizeSupportWhatsApp(process.env.SUPPORT_WHATSAPP)
+  );
+}
+
 async function writeKey(key: string, value: unknown, updatedBy?: string) {
   // Encrypt secret fields at rest (deep-clone first so callers keep plaintext).
   const toStore =
@@ -659,7 +691,7 @@ export async function getSiteConfig(): Promise<SiteConfig> {
       stored.supportEmail && stored.supportEmail !== "hello@reviewqr.in"
         ? stored.supportEmail
         : DEFAULT_SITE.supportEmail,
-    supportWhatsappNumber: stored.supportWhatsappNumber?.trim() || process.env.SUPPORT_WHATSAPP_NUMBER || DEFAULT_SITE.supportWhatsappNumber,
+    supportWhatsappNumber: await getSupportWhatsApp(),
     appUrl: stored.appUrl || process.env.NEXT_PUBLIC_APP_URL || "",
     marketingTagline: brandTaglineOrDefault(stored.marketingTagline, DEFAULT_SITE.marketingTagline),
     signupsEnabled: stored.signupsEnabled ?? true,

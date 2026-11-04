@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { Button } from "@/components/admin/ui/controls";
 import { Input } from "@/components/admin/ui/controls";
@@ -32,7 +33,7 @@ type Announcement = {
   published: boolean;
 };
 
-type Settings = { whatsappNumber: string; reportHourIst: number; reportMinuteIst: number; reportMaxPerMinute: number };
+type Settings = { reportHourIst: number; reportMinuteIst: number; reportMaxPerMinute: number };
 
 const emptyArticle = {
   slug: "",
@@ -50,7 +51,6 @@ export function HelpManager() {
   const [articles, setArticles] = React.useState<Article[]>([]);
   const [announcements, setAnnouncements] = React.useState<Announcement[]>([]);
   const [settings, setSettings] = React.useState<Settings>({
-    whatsappNumber: "",
     reportHourIst: 9,
     reportMinuteIst: 0,
     reportMaxPerMinute: 20
@@ -154,13 +154,12 @@ export function HelpManager() {
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold">Help</h1>
-        <p className="text-sm text-muted-foreground">Articles, announcements, and the support number.</p>
+        <p className="text-sm text-muted-foreground">Articles, announcements, and report scheduling.</p>
       </div>
       <form onSubmit={saveSettings} className="grid gap-3 rounded-2xl border p-4 sm:grid-cols-2">
-        <label className="text-sm">
-          Support WhatsApp number
-          <Input value={settings.whatsappNumber} onChange={(event) => setSettings({ ...settings, whatsappNumber: event.target.value })} placeholder="91…" />
-        </label>
+        <p className="text-sm text-muted-foreground sm:col-span-2">
+          Support WhatsApp number is managed in <Link className="underline" href="/admin/site">Site settings</Link>.
+        </p>
         <label className="text-sm">
           Weekly report hour (IST, Monday)
           <Input type="number" min={0} max={23} value={settings.reportHourIst} onChange={(event) => setSettings({ ...settings, reportHourIst: Number(event.target.value) })} />
@@ -173,7 +172,7 @@ export function HelpManager() {
           Max reports per minute
           <Input type="number" min={1} max={60} value={settings.reportMaxPerMinute} onChange={(event) => setSettings({ ...settings, reportMaxPerMinute: Number(event.target.value) })} />
         </label>
-        <Button type="submit" className="sm:col-span-2">Save support settings</Button>
+        <Button type="submit" className="sm:col-span-2">Save report settings</Button>
       </form>
       <form onSubmit={saveArticle} className="grid gap-3 rounded-2xl border p-4">
         <h2 className="font-semibold">{editingId ? "Edit article" : "New article"}</h2>

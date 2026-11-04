@@ -1,14 +1,12 @@
 import { prisma } from "../db";
 
 export type InsightSettings = {
-  whatsappNumber: string;
   reportHourIst: number;
   reportMinuteIst: number;
   reportMaxPerMinute: number;
 };
 
 export const INSIGHT_DEFAULTS: InsightSettings = {
-  whatsappNumber: "",
   reportHourIst: 9,
   reportMinuteIst: 0,
   reportMaxPerMinute: 20
@@ -22,9 +20,7 @@ function clamp(value: unknown, min: number, max: number, fallback: number) {
 
 export function normalizeInsightSettings(value: unknown): InsightSettings {
   const row = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
-  const digits = String(row.whatsappNumber || "").replace(/[^\d]/g, "").slice(0, 15);
   return {
-    whatsappNumber: digits,
     reportHourIst: clamp(row.reportHourIst, 0, 23, INSIGHT_DEFAULTS.reportHourIst),
     reportMinuteIst: clamp(row.reportMinuteIst, 0, 59, INSIGHT_DEFAULTS.reportMinuteIst),
     reportMaxPerMinute: clamp(row.reportMaxPerMinute, 1, 60, INSIGHT_DEFAULTS.reportMaxPerMinute)
