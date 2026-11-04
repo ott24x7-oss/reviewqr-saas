@@ -58,7 +58,7 @@ npm run db:seed       # demo café. Set ADMIN_EMAIL and ADMIN_PASSWORD first.
 npm run dev
 ```
 
-Background work (notifications, WhatsApp, push, renewal reminders, print files) is stored in the `Job` table. The web process runs a due job itself when no worker heartbeat is newer than 30 seconds. On Railway, keep the web start command as `npm run start` and add a second service from this repo with start command `npm run worker`. `tsx` is a devDependency, so that service needs dev dependencies installed. Set `WORKER_ID` when more than one worker is running. Print and ZIP downloads still return the file in the same request: the row is claimed before the file is built, so the worker cannot take it.
+Background work (notifications, WhatsApp, push, renewal reminders, print files, billing expiry and reminders, analytics rollups, and weekly/monthly reports) is stored in the `Job` table. In production, the web process enqueues scheduled billing and insight jobs every five minutes and drains a small batch of due jobs every 30 seconds. It backs off while a separate worker heartbeat is fresh. Set `INPROCESS_JOBS=0` to disable the web scheduler. A separate `npm run worker` service remains optional; if used, set `WORKER_ID` when more than one worker is running. Print and ZIP downloads still return the file in the same request: the row is claimed before the file is built, so the worker cannot take it.
 
 Take a daily Postgres dump of the production database and store it off the app server. Railway disk does not survive a new deploy. Restore from that dump. Keep using `prisma migrate deploy`. Do not use `prisma db push`.
 
