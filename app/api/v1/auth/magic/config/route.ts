@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { MAGIC_LINK_KEYWORD } from "@/lib/auth/magic-link";
+import { MAGIC_LINK_KEYWORD, SIGNUP_MAGIC_LINK_KEYWORD } from "@/lib/auth/magic-link";
 import { getSiteConfig } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
@@ -30,8 +30,11 @@ export async function GET() {
   const waUrl = validNumber
     ? `https://wa.me/${digits}?text=${encodeURIComponent(MAGIC_LINK_KEYWORD)}`
     : "";
+  const signupWaUrl = validNumber
+    ? `https://wa.me/${digits}?text=${encodeURIComponent(SIGNUP_MAGIC_LINK_KEYWORD)}`
+    : "";
   return NextResponse.json(
-    { enabled: connected && validNumber, waUrl },
+    { enabled: connected && validNumber, waUrl, signupWaUrl },
     { headers: { "Cache-Control": "no-store" } }
   );
 }

@@ -445,6 +445,23 @@ export async function consumeSignupProof(rawPhone: string, proof: string) {
   return key;
 }
 
+/** Atomically claims a signup proof without trusting a phone supplied by the client. */
+export async function consumeSignupProofToken(proof: string) {
+  if (!/^[a-f0-9]{64}$/i.test(proof)) return null;
+  const tokenHash = hashToken(proof);
+  const row = await prisma.emailOtp.findFirst({
+    where: { purpose: "signup-proof", tokenHash },
+    select: { id: true, identifier: true, expires: true }
+  });
+  if (!row || row.expires.getTime() <= Date.now()) return null;
+  const claimed = await prisma.emailOtp.deleteMany({
+    where: { id: row.id, purpose: "signup-proof", tokenHash, expires: { gt: new Date() } }
+  });
+  if (claimed.count !== 1) return null;
+  const phone = phoneKey(row.identifier);
+  return phone || null;
+}
+
 export async function otpDeliveryStats() {
   const start = new Date();
   start.setHours(0, 0, 0, 0);

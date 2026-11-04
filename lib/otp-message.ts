@@ -62,6 +62,11 @@ export function otpPhoneLimits(phoneKey: string): OtpLimit[] {
   ];
 }
 
+/** Legacy signup OTP endpoints are retained for installed builds: three sends per phone per hour. */
+export function legacySignupOtpPhoneLimits(phoneKey: string): OtpLimit[] {
+  return [{ key: `otp-signup-phone:${phoneKey}`, limit: 3, windowSeconds: 3600 }];
+}
+
 export async function enforceOtpLimits(
   limits: OtpLimit[],
   limiter: (limit: OtpLimit) => Promise<{ ok: boolean }>
