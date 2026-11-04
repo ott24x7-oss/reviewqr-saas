@@ -6,20 +6,30 @@ import { Save, SearchCheck } from "lucide-react";
 import { Button, Card, CardContent, CardHeader, CardTitle, Input, Label, Textarea } from "@/components/admin/ui/controls";
 import type { SeoChecklistResult } from "@/lib/seo";
 import type { SeoConfig } from "@/lib/settings";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { LOCAL_CATEGORIES, LOCAL_CITIES } from "@/lib/local-seo";
 
 export type SeoRouteRow = { path: string; label: string };
+export type GeneratedLocalPage = { path: string; count: number; indexable: boolean; kind: string };
 
 function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
   return <div className="space-y-1.5"><Label className="text-xs">{label}</Label>{children}{hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}</div>;
 }
 
-export function SeoForm({ initial, routes, checklist }: { initial: SeoConfig; routes: SeoRouteRow[]; checklist: SeoChecklistResult[] }) {
+export function SeoForm({ initial, routes, checklist, generatedPages }: { initial: SeoConfig; routes: SeoRouteRow[]; checklist: SeoChecklistResult[]; generatedPages: GeneratedLocalPage[] }) {
   const [config, setConfig] = React.useState(initial);
   const [saving, setSaving] = React.useState(false);
+  const [introKey, setIntroKey] = React.useState("");
   const setValue = (key: keyof SeoConfig, value: SeoConfig[keyof SeoConfig]) => setConfig((prev) => ({ ...prev, [key]: value }));
   const setOrg = (key: keyof SeoConfig["organization"], value: SeoConfig["organization"][typeof key]) => setConfig((prev) => ({ ...prev, organization: { ...prev.organization, [key]: value } }));
   const setVerification = (key: keyof SeoConfig["verification"], value: string) => setConfig((prev) => ({ ...prev, verification: { ...prev.verification, [key]: value } }));
   const setAnalytics = (key: keyof SeoConfig["analytics"], value: string | boolean) => setConfig((prev) => ({ ...prev, analytics: { ...prev.analytics, [key]: value } }));
+  const setLocalPages = (patch: Partial<SeoConfig["localPages"]>) => setConfig((prev) => ({ ...prev, localPages: { ...prev.localPages, ...patch } }));
+  const setLocalIntro = (locale: "en" | "hi", value: string) => {
+    if (!introKey) return;
+    const current = config.localPages.intros[introKey] || { en: "", hi: "" };
+    setLocalPages({ intros: { ...config.localPages.intros, [introKey]: { ...current, [locale]: value } } });
+  };
   const setOverride = (path: string, key: keyof SeoConfig["overrides"][string], value: string | boolean) => setConfig((prev) => {
     const current = prev.overrides[path] || { title: "", description: "", ogImageUrl: "", noindex: false };
     return { ...prev, overrides: { ...prev.overrides, [path]: { ...current, [key]: value } } };
@@ -47,7 +57,12 @@ export function SeoForm({ initial, routes, checklist }: { initial: SeoConfig; ro
   const passes = checks.filter((check) => check.status === "pass").length;
   const warnings = checks.length - passes;
 
+  const localPageOptions = LOCAL_CATEGORIES.flatMap((category) => LOCAL_CITIES.map((city) => ({ key: `${category.slug}/${city.slug}`, label: `${category.en} · ${city.en}` })));
+
   return <div className="space-y-5">
+    <Tabs defaultValue="general" className="space-y-5">
+      <TabsList><TabsTrigger value="general">SEO settings</TabsTrigger><TabsTrigger value="local">Local pages</TabsTrigger></TabsList>
+      <TabsContent value="general" className="space-y-5">
     <div className="grid gap-4 xl:grid-cols-2">
       <Card><CardHeader><CardTitle>Site-wide metadata</CardTitle></CardHeader><CardContent className="grid gap-4 sm:grid-cols-2">
         <Field label="Default title template" hint="Use %s for the page title. Keep the rendered title under 60 characters."><Input value={config.defaultTitleTemplate} onChange={(e) => setValue("defaultTitleTemplate", e.target.value)} /></Field>
@@ -108,6 +123,21 @@ export function SeoForm({ initial, routes, checklist }: { initial: SeoConfig; ro
       </table></div>
     </CardContent></Card>
 
+      </TabsContent>
+      <TabsContent value="local" className="space-y-5">
+        <Card><CardHeader><CardTitle>Local pages controls</CardTitle></CardHeader><CardContent className="space-y-5">
+          <label className="flex items-start gap-3"><input type="checkbox" checked={config.localPages.enabled} onChange={(e) => setLocalPages({ enabled: e.target.checked })} className="mt-1" /><span><strong>Enable local directory and service pages</strong><span className="mt-1 block text-sm text-muted-foreground">Disabling removes local pages and business directory links from the sitemap.</span></span></label>
+          <Field label="Minimum listed businesses for an indexable category and city page"><Input type="number" min={1} max={100} value={config.localPages.minBusinessesPerPage} onChange={(e) => setLocalPages({ minBusinessesPerPage: Math.min(100, Math.max(1, Number(e.target.value) || 1)) })} /></Field>
+          <Field label="Target cities for service landing pages" hint="Enter known city names or aliases separated by commas, for example Pune, Bengaluru, Gurgaon."><Textarea rows={3} value={config.localPages.targetCities.join(", ")} onChange={(e) => setLocalPages({ targetCities: e.target.value.split(",").map((value) => value.trim()).filter(Boolean) })} /></Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Category / city for the intro override"><select value={introKey} onChange={(e) => setIntroKey(e.target.value)} className="flex h-10 w-full rounded-md border bg-background px-3 text-sm"><option value="">Choose a category and city</option>{LOCAL_CATEGORIES.map((category) => <optgroup key={category.slug} label={category.en}>{localPageOptions.filter((option) => option.key.startsWith(`${category.slug}/`)).map((option) => <option key={option.key} value={option.key}>{option.label}</option>)}</optgroup>)}</select></Field>
+            {introKey ? <div className="text-xs text-muted-foreground self-end">Leave blank to use the localized page template.</div> : null}
+          </div>
+          {introKey ? <div className="grid gap-4 sm:grid-cols-2"><Field label="English intro override"><Textarea rows={5} maxLength={2000} value={config.localPages.intros[introKey]?.en || ""} onChange={(e) => setLocalIntro("en", e.target.value)} /></Field><Field label="Hindi intro override"><Textarea rows={5} maxLength={2000} value={config.localPages.intros[introKey]?.hi || ""} onChange={(e) => setLocalIntro("hi", e.target.value)} /></Field></div> : null}
+        </CardContent></Card>
+        <Card><CardHeader><CardTitle>Generated local pages</CardTitle></CardHeader><CardContent><div className="max-h-[520px] overflow-auto"><table className="w-full text-left text-sm"><thead className="sticky top-0 bg-card"><tr className="border-b text-xs text-muted-foreground"><th className="p-2">Type</th><th className="p-2">Route</th><th className="p-2">Businesses</th><th className="p-2">Indexable</th></tr></thead><tbody>{generatedPages.map((row) => <tr key={`${row.kind}:${row.path}`} className="border-b"><td className="p-2">{row.kind}</td><td className="p-2"><code>{row.path}</code></td><td className="p-2">{row.count}</td><td className="p-2">{row.indexable ? "Yes" : "No"}</td></tr>)}{generatedPages.length === 0 ? <tr><td colSpan={4} className="p-4 text-center text-muted-foreground">No eligible or target city pages yet.</td></tr> : null}</tbody></table></div></CardContent></Card>
+      </TabsContent>
+    </Tabs>
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div className="flex gap-2"><a className="text-sm underline" href="/sitemap.xml" target="_blank" rel="noreferrer">View sitemap</a><a className="text-sm underline" href="/robots.txt" target="_blank" rel="noreferrer">View robots.txt</a></div>
       <Button onClick={save} disabled={saving} variant="gradient" size="lg"><Save className="h-4 w-4" />{saving ? "Saving…" : "Save SEO settings"}</Button>

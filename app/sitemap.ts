@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { listPublicPlans } from "@/lib/plans/public";
 import { SEO_STATIC_ROUTES, publicLocalePath } from "@/lib/seo";
 import { getSeoConfig } from "@/lib/settings";
+import { directoryPagePaths, getDirectoryInventory, getListedBusinessSitemapRows } from "@/lib/local-seo";
 
 const baseUrl = (() => {
   try {
@@ -59,5 +60,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       });
     }
   }
+  const inventory = await getDirectoryInventory(seo.localPages);
+  const listedBusinessRows = await getListedBusinessSitemapRows();
+  const localPaths = directoryPagePaths(seo.localPages, inventory);
+  const translatedPaths = [
+    ...localPaths.categoryPages.map((key) => `/in/${key}`),
+    ...localPaths.categoryHubs.map((category) => `/in/${category}`),
+    ...localPaths.cityHubs.map((city) => `/in/city/${city}`),
+    ...localPaths.serviceCities.map((city) => `/qr-code-for-google-reviews/${city}`)
+  ];
+  for (const path of translatedPaths) {
+    const enPath = publicLocalePath(path, "en");
+    const hiPath = publicLocalePath(path, "hi");
+    const languages = { "en-IN": absolutePath(enPath), "hi-IN": absolutePath(hiPath), "x-default": absolutePath(enPath) };
+    for (const localizedPath of [enPath, hiPath]) entries.push({ url: absolutePath(localizedPath), changeFrequency: "weekly", priority: 0.65, alternates: { languages } });
+  }
+  for (const business of listedBusinessRows) entries.push({ url: absolutePath(`/${business.slug}`), changeFrequency: "weekly", priority: 0.6 });
   return entries;
 }

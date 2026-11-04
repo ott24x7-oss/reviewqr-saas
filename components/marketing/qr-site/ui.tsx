@@ -52,7 +52,8 @@ export async function SiteShell({
   credits = [],
   locale = "en",
   path = "/",
-  breadcrumbName
+  breadcrumbName,
+  includeBreadcrumb = true
 }: {
   brand: Brand;
   children: ReactNode;
@@ -64,6 +65,7 @@ export async function SiteShell({
   /** English-equivalent path, used to keep the language switcher on the matching page. */
   path?: string;
   breadcrumbName?: string;
+  includeBreadcrumb?: boolean;
 }) {
   const [supportWhatsApp, seo] = await Promise.all([whatsapp === undefined ? talkToUsHref() : whatsapp, getSeoConfig()]);
   const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://qr24x7.in").replace(/\/$/, "");
@@ -76,7 +78,7 @@ export async function SiteShell({
     "/reseller-terms": { en: "Reseller terms", hi: "रीसेलर की शर्तें" }
   };
   const currentLabel = breadcrumbName || labels[path]?.[locale] || (path.startsWith("/plans/") ? path.split("/").pop() : "") || "QR24x7";
-  const breadcrumb = path === "/" ? null : {
+  const breadcrumb = path === "/" || !includeBreadcrumb ? null : {
     "@context": "https://schema.org", "@type": "BreadcrumbList", inLanguage: locale === "hi" ? "hi-IN" : "en-IN",
     itemListElement: [
       { "@type": "ListItem", position: 1, name: locale === "hi" ? "होम" : "Home", item: `${baseUrl}${publicLocalePath("/", locale)}` },

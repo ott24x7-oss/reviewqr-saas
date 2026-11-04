@@ -18,6 +18,7 @@ export type BusinessCard = {
   googleReviewUrl: string | null;
   whatsappNumber: string | null;
   logo?: string | null;
+  listedInDirectory?: boolean;
   ownerId?: string;
   hideBranding?: boolean;
   hideBrandingSource?: "PURCHASE" | "PLAN" | "ADMIN" | null;

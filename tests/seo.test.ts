@@ -13,6 +13,12 @@ vi.mock("@/lib/plans/public", () => ({
   listPublicPlans: vi.fn(async () => [{ slug: "reviews" }])
 }));
 
+vi.mock("@/lib/local-seo", () => ({
+  getDirectoryInventory: vi.fn(async () => ({ businesses: [{ slug: "pune-kitchen" }], pages: new Map(), byCity: new Map(), targets: [] })),
+  getListedBusinessSitemapRows: vi.fn(async () => [{ slug: "pune-kitchen" }]),
+  directoryPagePaths: vi.fn(() => ({ categoryPages: ["restaurants/pune"], categoryHubs: ["restaurants"], cityHubs: ["pune"], serviceCities: ["pune"] }))
+}));
+
 import { buildSeoMetadata, evaluateSeoChecklist, planSeoTitle } from "@/lib/seo";
 import { DEFAULT_SEO_CONFIG, getSeoConfig, normalizeSeoConfig, seoConfigSchema, setSeoConfig } from "@/lib/settings";
 import sitemap from "@/app/sitemap";
@@ -74,6 +80,29 @@ describe("SEO metadata builder", () => {
     const metadata = await buildSeoMetadata({ path: "/plans/growth", title: englishTitle, description: "Plan description." }, config);
     expect(metadata.title).toEqual({ absolute: "Admin title | QR24x7" });
   });
+
+  it("keeps local titles within the limit and does not append a duplicate brand suffix", async () => {
+    const directory = await buildSeoMetadata({ path: "/in/restaurants/pune", title: "Best Restaurants in Pune: QR Menu & Reviews" }, DEFAULT_SEO_CONFIG);
+    expect(directory.title).toEqual({ absolute: "Best Restaurants in Pune: QR Menu & Reviews | QR24x7" });
+    expect((directory.title as { absolute: string }).absolute.length).toBeLessThanOrEqual(60);
+
+    const categoryHub = await buildSeoMetadata({ path: "/in/restaurants", title: "Restaurants by City | QR24x7" }, DEFAULT_SEO_CONFIG);
+    expect(categoryHub.title).toEqual({ absolute: "Restaurants by City | QR24x7" });
+    expect((categoryHub.title as { absolute: string }).absolute.match(/\| QR24x7/g)).toHaveLength(1);
+    const oldDuplicate = await buildSeoMetadata({ path: "/in/city/pune", title: "Local Businesses in Pune | QR24x7 | QR24x7" }, DEFAULT_SEO_CONFIG);
+    expect(oldDuplicate.title).toEqual({ absolute: "Local Businesses in Pune | QR24x7" });
+  });
+
+  it("keeps a supplied title intact instead of truncating it with an ellipsis", async () => {
+    const title = "A deliberately long title that the metadata helper must never cut with an ellipsis";
+    const metadata = await buildSeoMetadata({ path: "/pricing", title }, DEFAULT_SEO_CONFIG);
+    expect(metadata.title).toEqual({ absolute: `${title} | QR24x7` });
+    expect((metadata.title as { absolute: string }).absolute).not.toContain("…");
+    const longPlanTitle = planSeoTitle("VeryLongPlanName".repeat(10), ["REVIEWS", "MENU", "STORE"], "en");
+    expect(longPlanTitle).not.toContain("…");
+    expect(longPlanTitle).toBe("Plan: Reviews, Menu & WA Orders");
+    expect(longPlanTitle.length).toBeLessThanOrEqual(51);
+  });
 });
 
 describe("SEO settings", () => {
@@ -114,6 +143,19 @@ describe("sitemap", () => {
     expect(hindi?.alternates?.languages).toBeDefined();
     expect(entries.some((entry) => /\/(login|register|account\/delete)$/.test(entry.url))).toBe(false);
     expect(entries.some((entry) => entry.url === `${origin}/reseller-terms`)).toBe(true);
+  });
+
+  it("includes indexable local pages with locale alternates and listed business pages", async () => {
+    const entries = await sitemap();
+    const origin = new URL(entries[0].url).origin;
+    const english = entries.find((entry) => entry.url === `${origin}/in/restaurants/pune`);
+    const hindi = entries.find((entry) => entry.url === `${origin}/hi/in/restaurants/pune`);
+    expect(english?.alternates?.languages).toEqual({
+      "en-IN": `${origin}/in/restaurants/pune`, "hi-IN": `${origin}/hi/in/restaurants/pune`, "x-default": `${origin}/in/restaurants/pune`
+    });
+    expect(hindi?.alternates?.languages).toBeDefined();
+    expect(entries.some((entry) => entry.url === `${origin}/qr-code-for-google-reviews/pune`)).toBe(true);
+    expect(entries.some((entry) => entry.url === `${origin}/pune-kitchen`)).toBe(true);
   });
 });
 

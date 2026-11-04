@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client";
+import { revalidateTag } from "next/cache";
 import { prisma } from "../db";
 import { ownerLimitError } from "../entitlements";
 import { omitUnchangedImages } from "../images";
@@ -130,6 +131,9 @@ export async function createBusiness(user: { id: string; role: string }, raw: un
 export async function updateBusiness(userId: string, businessId: string, raw: unknown) {
   const existing = await requireBusinessRole(userId, businessId, "manage");
   if (!existing) return fail(404, "Not found");
+  if (raw && typeof raw === "object" && !Array.isArray(raw) && "listedInDirectory" in raw && existing.accessRole !== "OWNER") {
+    return fail(403, "Only the business owner can change directory listing");
+  }
   const body =
     raw && typeof raw === "object" && !Array.isArray(raw)
       ? omitUnchangedImages(
@@ -144,6 +148,7 @@ export async function updateBusiness(userId: string, businessId: string, raw: un
     where: { id: existing.id },
     data: parsed.data as Prisma.BusinessUpdateInput
   });
+  revalidateTag("local-directory");
   return ok({ business });
 }
 

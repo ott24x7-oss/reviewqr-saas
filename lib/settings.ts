@@ -182,6 +182,14 @@ export type SeoPageOverride = {
   noindex: boolean;
 };
 
+export type LocalPageIntro = { en: string; hi: string };
+export type LocalPagesConfig = {
+  enabled: boolean;
+  minBusinessesPerPage: number;
+  targetCities: string[];
+  intros: Record<string, LocalPageIntro>;
+};
+
 export type SeoConfig = {
   defaultTitleTemplate: string;
   defaultDescriptionEn: string;
@@ -201,6 +209,14 @@ export type SeoConfig = {
   verification: { google: string; bing: string; yandex: string };
   analytics: { ga4MeasurementId: string; gtmId: string; respectDnt: boolean };
   overrides: Record<string, SeoPageOverride>;
+  localPages: LocalPagesConfig;
+};
+
+export const DEFAULT_LOCAL_PAGES_CONFIG: LocalPagesConfig = {
+  enabled: true,
+  minBusinessesPerPage: 3,
+  targetCities: [],
+  intros: {}
 };
 
 export const DEFAULT_SEO_CONFIG: SeoConfig = {
@@ -221,7 +237,8 @@ export const DEFAULT_SEO_CONFIG: SeoConfig = {
   },
   verification: { google: "", bing: "", yandex: "" },
   analytics: { ga4MeasurementId: "", gtmId: "", respectDnt: false },
-  overrides: {}
+  overrides: {},
+  localPages: DEFAULT_LOCAL_PAGES_CONFIG
 };
 
 const optionalUrl = z.string().trim().max(500).refine((value) => !value || value.startsWith("/") || /^https:\/\//i.test(value), "Use an https URL or a site-relative path");
@@ -254,7 +271,13 @@ export const seoConfigSchema = z.object({
     gtmId: z.string().trim().max(40).regex(/^$|^GTM-[A-Z0-9]+$/i),
     respectDnt: z.boolean()
   }),
-  overrides: z.record(z.string().regex(/^\/(?:hi(?:\/|$))?(?:features|how-it-works|pricing|plans\/[a-z0-9-]+|about|demo|privacy|terms|refund|reseller-terms)?$/), seoOverrideSchema)
+  overrides: z.record(z.string().regex(/^\/(?:hi(?:\/|$))?(?:features|how-it-works|pricing|plans\/[a-z0-9-]+|about|demo|privacy|terms|refund|reseller-terms)?$/), seoOverrideSchema),
+  localPages: z.object({
+    enabled: z.boolean(),
+    minBusinessesPerPage: z.number().int().min(1).max(100),
+    targetCities: z.array(z.string().trim().min(1).max(60)).max(200),
+    intros: z.record(z.string().regex(/^[a-z0-9-]+\/[a-z0-9-]+$/), z.object({ en: z.string().trim().max(2000), hi: z.string().trim().max(2000) }))
+  })
 });
 
 export function normalizeSeoConfig(value: unknown): SeoConfig {
@@ -265,10 +288,11 @@ export function normalizeSeoConfig(value: unknown): SeoConfig {
     organization: { ...DEFAULT_SEO_CONFIG.organization, ...(stored.organization || {}) },
     verification: { ...DEFAULT_SEO_CONFIG.verification, ...(stored.verification || {}) },
     analytics: { ...DEFAULT_SEO_CONFIG.analytics, ...(stored.analytics || {}) },
-    overrides: stored.overrides || {}
+    overrides: stored.overrides || {},
+    localPages: { ...DEFAULT_LOCAL_PAGES_CONFIG, ...(stored.localPages || {}), intros: (stored.localPages as LocalPagesConfig | undefined)?.intros || {} }
   };
   const parsed = seoConfigSchema.safeParse(candidate);
-  if (!parsed.success) return { ...DEFAULT_SEO_CONFIG, organization: { ...DEFAULT_SEO_CONFIG.organization }, verification: { ...DEFAULT_SEO_CONFIG.verification }, analytics: { ...DEFAULT_SEO_CONFIG.analytics }, overrides: {} };
+  if (!parsed.success) return { ...DEFAULT_SEO_CONFIG, organization: { ...DEFAULT_SEO_CONFIG.organization }, verification: { ...DEFAULT_SEO_CONFIG.verification }, analytics: { ...DEFAULT_SEO_CONFIG.analytics }, overrides: {}, localPages: DEFAULT_LOCAL_PAGES_CONFIG };
   return {
     ...DEFAULT_SEO_CONFIG,
     ...parsed.data,

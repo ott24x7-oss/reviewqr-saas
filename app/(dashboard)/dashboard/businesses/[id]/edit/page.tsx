@@ -49,7 +49,9 @@ export default async function EditBusinessPage({ params }: { params: { id: strin
           reviewQaAtmosphere: business.reviewQaAtmosphere || "",
           primaryColor: business.primaryColor,
           customThankYou: business.customThankYou || "",
-          catalogMode: business.catalogMode || "MENU"
+          catalogMode: business.catalogMode || "MENU",
+          listedInDirectory: business.listedInDirectory,
+          canEditDirectory: access.accessRole === "OWNER"
         }}
       />
     </div>

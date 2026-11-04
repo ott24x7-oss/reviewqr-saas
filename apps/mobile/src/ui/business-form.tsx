@@ -4,7 +4,7 @@ import { router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { Image } from "expo-image";
 import { useMemo, useRef, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Switch, Text, View } from "react-native";
 import type { ElementRef } from "react";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { apiData } from "../api/data";
@@ -30,6 +30,7 @@ type Draft = {
   googlePlaceId: string;
   whatsappNumber: string;
   logo: string;
+  listedInDirectory: boolean;
 };
 
 const empty: Draft = {
@@ -40,7 +41,8 @@ const empty: Draft = {
   googleReviewUrl: "",
   googlePlaceId: "",
   whatsappNumber: "",
-  logo: ""
+  logo: "",
+  listedInDirectory: false
 };
 
 export function BusinessForm({ initial, businessId }: { initial?: BusinessCard | null; businessId?: string }) {
@@ -59,7 +61,8 @@ export function BusinessForm({ initial, businessId }: { initial?: BusinessCard |
     googleReviewUrl: initial?.googleReviewUrl || "",
     googlePlaceId: initial?.googlePlaceId || "",
     whatsappNumber: initial?.whatsappNumber || "",
-    logo: initial?.logo || ""
+    logo: initial?.logo || "",
+    listedInDirectory: initial?.listedInDirectory || false
   });
   const [query, setQuery] = useState("");
   const [places, setPlaces] = useState<PlacesSearch | null>(null);
@@ -147,7 +150,8 @@ export function BusinessForm({ initial, businessId }: { initial?: BusinessCard |
         googleReviewUrl: draft.googleReviewUrl.trim(),
         googlePlaceId: draft.googlePlaceId.trim(),
         whatsappNumber: draft.whatsappNumber.trim(),
-        logo: draft.logo || null
+        logo: draft.logo || null,
+        ...(businessId && initial?.ownerId === user?.id ? { listedInDirectory: draft.listedInDirectory } : {})
       };
       const saved = businessId
         ? await apiData<{ business: { id: string } }>(`/api/v1/businesses/${businessId}`, {
@@ -203,6 +207,10 @@ export function BusinessForm({ initial, businessId }: { initial?: BusinessCard |
         <View style={styles.card}>
           <FilledField label={t.reviewUrl} value={draft.googleReviewUrl} onChangeText={(googleReviewUrl) => patch({ googleReviewUrl })} autoCapitalize="none" />
         </View>
+        {businessId && initial?.ownerId === user?.id ? <View style={[styles.directoryRow, { backgroundColor: palette.card }]}>
+          <View style={{ flex: 1 }}><Text style={[styles.directoryTitle, lang === "hi" && styles.hindi]}>{t.showBusinessDirectory}</Text><Text style={[styles.directoryHint, lang === "hi" && styles.hindi]}>{t.showBusinessDirectoryHint}</Text></View>
+          <Switch value={draft.listedInDirectory} onValueChange={(listedInDirectory) => patch({ listedInDirectory })} disabled={busy} trackColor={{ true: palette.primary }} />
+        </View> : null}
         {error ? <Text style={styles.error}>{error}</Text> : null}
       </KeyboardAwareScrollView>
       <StickyAction>
@@ -238,6 +246,9 @@ function makeStyles(colors: Palette) {
   photoPreview: { height: 150, borderRadius: 16, backgroundColor: colors.paper },
   note: { fontFamily: fonts.body, color: colors.inkSoft, lineHeight: 22 },
   error: { color: colors.danger, fontFamily: fonts.body },
+  directoryRow: { borderRadius: 18, padding: 14, flexDirection: "row", alignItems: "center", gap: 12 },
+  directoryTitle: { color: colors.ink, fontFamily: fonts.body, fontWeight: "600" },
+  directoryHint: { color: colors.inkSoft, fontFamily: fonts.body, fontSize: 12, lineHeight: 18, marginTop: 3 },
   hindi: { fontFamily: fonts.hindi }
 });
 }

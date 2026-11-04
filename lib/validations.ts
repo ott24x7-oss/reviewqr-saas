@@ -83,7 +83,8 @@ export const businessSchema = z.object({
   reviewQaSpecialty: z.string().max(240).optional().or(z.literal("")),
   reviewQaBestKnown: z.string().max(240).optional().or(z.literal("")),
   reviewQaAtmosphere: z.string().max(240).optional().or(z.literal("")),
-  catalogMode: z.enum(["MENU", "SERVICES", "BOTH"]).optional()
+    catalogMode: z.enum(["MENU", "SERVICES", "BOTH"]).optional(),
+    listedInDirectory: z.boolean().optional()
 });
 
 export const locationSchema = z.object({
