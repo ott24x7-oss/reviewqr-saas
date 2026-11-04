@@ -94,7 +94,7 @@ export function SiteForm({
               inputMode="tel"
               value={site.supportWhatsappNumber}
               onChange={(e) => setSite({ ...site, supportWhatsappNumber: e.target.value })}
-              placeholder="919876543210"
+              placeholder="International format, 8 to 15 digits"
             />
           </div>
           <div>

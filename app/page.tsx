@@ -39,7 +39,7 @@ export default async function HomePage() {
   ]);
   const free = freePlanOffer(priced);
   const startHref = free ? buyHref(free.slug, free.duration) : "/register";
-  const whatsapp = talkToUsHref();
+  const whatsapp = await talkToUsHref();
 
   return (
     <SiteShell brand={brand} startHref={startHref} whatsapp={whatsapp} credits={landingPhotoCredits()}>

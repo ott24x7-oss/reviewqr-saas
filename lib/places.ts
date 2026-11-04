@@ -1,4 +1,5 @@
 /** Google Places is optional. The wizard still works when the key is unset. */
+import { getSupportWhatsApp } from "@/lib/settings";
 
 export function placesEnabled() {
   return Boolean(process.env.GOOGLE_PLACES_API_KEY);
@@ -8,8 +9,8 @@ export function googleReviewLink(placeId: string) {
   return `https://search.google.com/local/writereview?placeid=${encodeURIComponent(placeId)}`;
 }
 
-export function supportWhatsAppLink(businessName: string) {
-  const digits = (process.env.SUPPORT_WHATSAPP || "").replace(/\D/g, "");
+export async function supportWhatsAppLink(businessName: string) {
+  const digits = await getSupportWhatsApp();
   if (!digits) return null;
   const text = `I'd like to order a printed QR/NFC for ${businessName}`;
   return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;

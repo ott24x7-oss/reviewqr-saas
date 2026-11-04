@@ -3,6 +3,7 @@ import { requireAdminApi } from "@/lib/admin";
 import { prisma } from "@/lib/db";
 import { announcementLinkToStore, helpVideoToStore } from "@/lib/help/video";
 import { getInsightSettings, saveInsightSettings } from "@/lib/reports/settings";
+import { getSupportWhatsApp } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,8 @@ function allowedAudience(value: unknown) {
 export async function GET() {
   const auth = await requireAdminApi();
   if ("error" in auth) return auth.error;
+  // Migrate the legacy help setting before a later report-settings save can overwrite it.
+  await getSupportWhatsApp();
   const [articles, announcements, settings] = await Promise.all([
     prisma.helpArticle.findMany({ orderBy: [{ language: "asc" }, { sortOrder: "asc" }, { title: "asc" }] }),
     prisma.announcement.findMany({ orderBy: { startsAt: "desc" }, take: 50 }),

@@ -39,7 +39,7 @@ const footerGroups = [
   }
 ];
 
-export function SiteShell({
+export async function SiteShell({
   brand,
   children,
   startHref = "/register",
@@ -54,7 +54,7 @@ export function SiteShell({
   whatsapp?: string | null;
   credits?: PhotoCredit[];
 }) {
-  const supportWhatsApp = whatsapp === undefined ? talkToUsHref() : whatsapp;
+  const supportWhatsApp = whatsapp === undefined ? await talkToUsHref() : whatsapp;
   return (
     <div className={`${qrMarketingFonts} qr-site`}>
       <a className="qr-skip-link" href="#main-content">Skip to content</a>

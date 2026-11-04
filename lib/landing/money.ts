@@ -1,3 +1,5 @@
+import { getSupportWhatsApp } from "@/lib/settings";
+
 export function formatRupees(paise: number) {
   const rupees = paise / 100;
   const fraction = paise % 100 !== 0;
@@ -9,9 +11,9 @@ export function formatRupees(paise: number) {
   }).format(rupees);
 }
 
-/** wa.me link from SUPPORT_WHATSAPP. Null when the number is not configured. */
-export function talkToUsHref() {
-  const digits = (process.env.SUPPORT_WHATSAPP || "").replace(/\D/g, "");
+/** wa.me link for platform support. Null when no number is configured. */
+export async function talkToUsHref() {
+  const digits = await getSupportWhatsApp();
   if (digits.length < 8) return null;
   const text = "Hi, I want a QR and NFC stand for my business.";
   return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
