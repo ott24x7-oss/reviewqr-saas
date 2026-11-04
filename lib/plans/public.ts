@@ -22,6 +22,7 @@ const ZERO_LIMITS: PlanLimits = {
 
 export type PublicPlan = {
   slug: string;
+  updatedAt: Date;
   nameEn: string;
   nameHi: string;
   descriptionEn: string;
@@ -64,6 +65,7 @@ export async function listPublicPlans(): Promise<PublicPlan[]> {
     const limits = parseLimits(plan.limits, ZERO_LIMITS);
     return {
       slug: plan.slug,
+      updatedAt: plan.updatedAt,
       nameEn: plan.nameEn,
       nameHi: plan.nameHi,
       descriptionEn: planDescriptionOrDefault(plan.descriptionEn),

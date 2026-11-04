@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: { params: { city: string } })
   const result = await data(params.city);
   if (!result?.rows.length) return { title: "पेज नहीं मिला", robots: { index: false, follow: false } };
   const { city } = result;
-  return buildSeoMetadata({ path: `/in/city/${city.slug}`, locale: "hi", title: `${city.hi} में स्थानीय कारोबार`, description: `${city.hi} में श्रेणी के अनुसार स्थानीय कारोबार देखें। QR24x7 पेज, डिजिटल मेनू और ग्राहक समीक्षा की जानकारी पाएँ।` });
+  return buildSeoMetadata({ path: `/in/city/${city.slug}`, locale: "hi", title: `${city.hi} में स्थानीय कारोबार`, description: `${city.hi} में श्रेणी के अनुसार स्थानीय कारोबार देखें। QR24x7 पेज, डिजिटल मेनू और ग्राहक समीक्षा की जानकारी पाएँ।`, ogContext: `${city.hi} · ${result.rows.reduce((sum, row) => sum + row.count, 0)} कारोबार` });
 }
 
 export default async function CityHubPage({ params }: { params: { city: string } }) {

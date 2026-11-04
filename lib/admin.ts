@@ -107,7 +107,8 @@ export type AuditAction =
   | "item-image.approve"
   | "item-image.reject"
   | "item-image.regenerate"
-  | "settings.seo.update";
+  | "settings.seo.update"
+  | "settings.blog.update";
 
 export async function logAudit(opts: {
   userId?: string;

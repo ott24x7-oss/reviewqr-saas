@@ -15,6 +15,7 @@ export const LOCAL_CATEGORIES = [
   { slug: "dentists", en: "Dentists", hi: "दंत चिकित्सक", aliases: ["dentist", "dentists", "dental", "dental clinic"] },
   { slug: "hotels", en: "Hotels", hi: "होटल", aliases: ["hotel", "hotels", "resort", "resorts", "lodging"] },
   { slug: "retail-shops", en: "Retail shops", hi: "रिटेल दुकानें", aliases: ["retail", "retail shop", "retail shops", "shop", "shops", "store", "stores"] },
+  { slug: "kirana-stores", en: "Kirana stores", hi: "किराना दुकानें", aliases: ["kirana", "kirana store", "kirana stores", "grocery shop", "grocery stores"] },
   { slug: "pharmacies", en: "Pharmacies", hi: "फ़ार्मेसी", aliases: ["pharmacy", "pharmacies", "chemist", "chemists", "medical store", "medical stores"] },
   { slug: "coaching", en: "Coaching centres", hi: "कोचिंग सेंटर", aliases: ["coaching", "coaching centre", "coaching center", "tuition", "tutoring", "education"] }
 ] as const;
@@ -107,21 +108,21 @@ export function serviceSeoTitle(city: LocalCity, locale: SeoLocale) {
 }
 
 export type DirectoryBusiness = {
-  id: string; name: string; slug: string; industry: string; city: string; state: string | null;
+  id: string; name: string; slug: string; industry: string; city: string; state: string | null; updatedAt: Date;
   address: string | null; pincode: string | null; logo: string | null; coverImage: string | null; whatsappNumber: string | null;
   storeEnabled: boolean; ratingAverage: number | null; reviewCount: number;
   category: LocalCategory; normalizedCity: LocalCity;
 };
 
 export type ListedBusinessSeo = {
-  id: string; name: string; slug: string; industry: string | null; city: string | null; state: string | null;
+  id: string; name: string; slug: string; industry: string | null; city: string | null; state: string | null; updatedAt: Date;
   address: string | null; pincode: string | null; logo: string | null; coverImage: string | null; whatsappNumber: string | null;
   storeEnabled: boolean; isPublished: boolean; ratingAverage: number | null; reviewCount: number;
 };
 
 const loadListedBusinessRows = unstable_cache(async (): Promise<ListedBusinessSeo[]> => {
   return prisma.$queryRaw<ListedBusinessSeo[]>`
-    SELECT b."id", b."name", b."slug", b."industry", b."city", b."state", b."address", b."pincode",
+    SELECT b."id", b."name", b."slug", b."industry", b."city", b."state", b."updatedAt", b."address", b."pincode",
       b."logo", b."coverImage", b."whatsappNumber", (ss."businessId" IS NOT NULL) AS "storeEnabled", (tp."publishedAt" IS NOT NULL) AS "isPublished",
       COALESCE(r."reviewCount", 0)::int AS "reviewCount", r."ratingAverage"::float8 AS "ratingAverage"
     FROM "Business" b

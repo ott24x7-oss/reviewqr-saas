@@ -30,7 +30,7 @@ function PublicPlanCard({ plan, locale }: { plan: PublicPlan; locale: SeoLocale 
 
   return (
     <article className="qr-plan-card">
-      <Link className="qr-plan-image" href={`${locale === "hi" ? "/hi" : ""}/plans/${plan.slug}`} aria-label={`View ${locale === "hi" ? plan.nameHi : plan.nameEn} plan`}>
+      <Link className="qr-plan-image" href={`${locale === "hi" ? "/hi" : ""}/plans/${plan.slug}`}>
         <Image src={image} alt={`${locale === "hi" ? plan.nameHi : plan.nameEn} plan`} width={800} height={600} sizes="(max-width: 760px) 80vw, (max-width: 1100px) 44vw, 320px" unoptimized />
         {plan.badge ? <span className="qr-plan-badge">{plan.badge}</span> : null}
       </Link>

@@ -11,9 +11,8 @@ import { formatRupees } from "@/lib/landing/money";
 import { landingStats } from "@/lib/landing/stats";
 import { Eyebrow, PageIntro, PhoneScreenshot, SectionHeading, TextLink } from "./primitives";
 import { Reveal, HeroWordReveal } from "./reveal";
-import { FAQList, PricingCards } from "./pricing";
-import { PlanComparison } from "./plan-comparison";
 import { LocalizedCopy } from "./i18n";
+import { HomePricing } from "./home-pricing";
 import type { SeoLocale } from "@/lib/seo";
 
 const featureRows: Array<{
@@ -29,12 +28,12 @@ const featureRows: Array<{
   {
     number: "01",
     id: "reviews",
-    title: "A QR code for Google reviews, with smart feedback routing",
-    body: "Every rating sees the public review link and a private feedback form on the same screen. A low rating with a note can alert you by WhatsApp and email.",
+    title: "A QR code for Google reviews and private feedback",
+    body: "Every customer can open your public review link. Anyone can also share private feedback, which can alert you by WhatsApp and email.",
     image: "/landing/app/reviews.webp",
     alt: "QR24x7 Android app screen for review requests",
     points: [
-      "Every rating sees a public review link and a private feedback form.",
+      "Every customer can leave a public review and can also share private feedback.",
       "A low rating with a note can alert you on WhatsApp and email.",
       "Ask for reviews shares your public review link on WhatsApp."
     ]
@@ -129,9 +128,9 @@ const homeFaqs = [
   },
   {
     q: "Is this allowed by Google?",
-    a: "Every customer sees the public Google link and a private note on the same screen, at any star rating. Nothing is posted for them. Rewards are never offered in exchange for a public review.",
+    a: "Every customer can open the public Google link, and anyone can also share a private note at any star rating. Nothing is posted for them. Rewards are never offered in exchange for a public review.",
     qHi: "क्या Google इसकी अनुमति देता है?",
-    aHi: "हर ग्राहक को हर स्टार रेटिंग पर एक ही स्क्रीन में सार्वजनिक Google लिंक और निजी नोट का विकल्प दिखता है। ग्राहक की ओर से कुछ पोस्ट नहीं होता। सार्वजनिक रिव्यू के बदले कोई इनाम नहीं दिया जाता।"
+    aHi: "हर ग्राहक सार्वजनिक Google लिंक खोल सकता है और कोई भी ग्राहक हर स्टार रेटिंग पर निजी संदेश भी भेज सकता है। ग्राहक की ओर से कुछ पोस्ट नहीं होता। सार्वजनिक रिव्यू के बदले कोई इनाम नहीं दिया जाता।"
   },
   {
     q: "Do you deliver the stands?",
@@ -147,14 +146,14 @@ const homeFaqs = [
   }
 ];
 
-const steps = [
+export const HOME_STEPS = [
   { number: "01", title: "Order a stand", body: "Pick a QR or QR + NFC stand from the shop, or download your QR and print it yourself." },
   { number: "02", title: "Set up in 10 minutes", body: "Add your review link, menu, WhatsApp number, and business details from the Android app." },
   { number: "03", title: "Customers scan or tap", body: "Their phone opens your business page in the browser. Customers do not need to install an app." },
   { number: "04", title: "Track and grow", body: "Follow reviews, scans, enquiries, and orders from the app, then keep improving your page." }
 ];
 
-function FeatureRows({ locale = "en" }: { locale?: SeoLocale }) {
+export function FeatureRows({ locale = "en" }: { locale?: SeoLocale }) {
   return (
     <LocalizedCopy locale={locale}>
     <div className="qr-feature-list">
@@ -316,7 +315,7 @@ export function HomeMarketing({
 }) {
   const contactHref = whatsapp || `mailto:${brand.supportEmail || "hello@qr24x7.in"}`;
   return (
-    <LocalizedCopy locale={locale}><>
+    <LocalizedCopy locale={locale}><div className="qr-home-content">
       <section className="qr-hero">
         <div className="qr-hero-glow" aria-hidden="true" />
         <svg className="qr-hero-lines" viewBox="0 0 1440 640" aria-hidden="true" preserveAspectRatio="none">
@@ -327,7 +326,7 @@ export function HomeMarketing({
             <Eyebrow>REVIEWS · MENU · ORDERS</Eyebrow>
             <HeroWordReveal text={brand.name || "QR24x7"} />
             <p className="qr-hero-tagline">{brand.tagline || "Scan. Tap. Grow."}</p>
-            <p className="qr-hero-lead">One QR stand. More Google reviews, a live menu and WhatsApp orders.</p>
+            <h1 className="qr-hero-lead">Get more Google reviews with one QR + NFC stand</h1>
             <p className="qr-hero-description">Give your customers one simple place to review, browse, message, or order — from the QR or a tap.</p>
             <div className="qr-hero-actions">
               <Link className="qr-button qr-button-dark" href={startHref}>Start free <ArrowUpRight size={16} /></Link>
@@ -335,14 +334,14 @@ export function HomeMarketing({
             </div>
             <a className="qr-scroll-cue" href="#discover"><span aria-hidden="true" />Scroll to discover</a>
           </div>
-          <Reveal className="qr-hero-visual">
-            <div className="qr-hero-phone-wrap"><PhoneScreenshot src="/landing/app/home.webp" alt="QR24x7 Android app home showing today’s stats and setup checklist" sizes="(max-width: 760px) 224px, 284px" priority /></div>
+          <div className="qr-hero-visual">
+            <div className="qr-hero-phone-wrap"><PhoneScreenshot src="/landing/app/home.webp" alt="QR24x7 Android app home showing today’s stats and setup checklist" priority sizes="(max-width: 760px) min(235px, 57vw), 284px" /></div>
             <figure className="qr-hero-product">
-              <Image src="/landing/photos/stand-hero-640.webp" alt="QR24x7 QR and NFC stand on a business counter" width={640} height={480} priority sizes="(max-width: 760px) 46vw, 340px" />
+              <Image src="/landing/photos/stand-hero-640.webp" alt="QR24x7 QR and NFC stand on a business counter" width={640} height={480} sizes="(max-width: 760px) min(290px, 58vw), 340px" />
               <figcaption>One stand. Many ways to grow.</figcaption>
             </figure>
             <span className="qr-hero-spark" aria-hidden="true">✳</span>
-          </Reveal>
+          </div>
         </div>
       </section>
 
@@ -377,62 +376,19 @@ export function HomeMarketing({
             <p>LEAVES YOU WITH</p>
           </div>
           <ol className="qr-process-grid">
-            {steps.map((step) => <li key={step.number}><span>{step.number}</span><h3>{step.title}</h3><p>{step.body}</p></li>)}
+            {HOME_STEPS.map((step) => <li key={step.number}><span>{step.number}</span><h3>{step.title}</h3><p>{step.body}</p></li>)}
           </ol>
           <div className="qr-process-link"><TextLink href="/how-it-works">See how it works</TextLink></div>
         </div>
       </section>
 
       <StandCards hardware={hardware} locale={locale} />
-      <PricingCards plans={plans} locale={locale} title="Pick your plan" description="Choose the active plan and duration that suit your business. Every price comes from the current plan catalog." />
-      <FAQList faqs={faqs} locale={locale} />
+      <HomePricing plans={plans} faqs={faqs} locale={locale} />
       <FinalCTA brand={brand} startHref={startHref} whatsapp={whatsapp} locale={locale} />
-    </></LocalizedCopy>
+    </div></LocalizedCopy>
   );
 }
 
-export function FeaturesMarketing({
-  plans,
-  legacy,
-  locale = "en"
-}: {
-  plans: PublicPlan[];
-  legacy: import("@/lib/settings").PricingConfig;
-  locale?: SeoLocale;
-}) {
-  return (
-    <LocalizedCopy locale={locale}><>
-      <PageIntro id="story" eyebrow="A product for the whole customer journey" title={<>A QR code for Google reviews, a digital menu, and WhatsApp orders.</>} description="Give customers a useful page to land on, then follow scans, reviews, menus and orders from the QR24x7 Android app." />
-      <section id="features" className="qr-section qr-features-section qr-feature-page-section">
-        <div className="qr-wrap">
-          <SectionHeading number="01" eyebrow="Product features" title="Set up once. Keep the page useful." />
-          <FeatureRows locale={locale} />
-          <div className="qr-app-facts">
-            <article><Eyebrow>IN THE ANDROID APP</Eyebrow><h3>Your page and plan settings</h3><p>Manage your page, plan and setup checklist from the app.</p><PhoneScreenshot src="/landing/app/me.webp" alt="QR24x7 Android app page and plan settings" sizes="(max-width: 760px) 220px, 270px" /></article>
-            <article><Eyebrow>IN THE ANDROID APP</Eyebrow><h3>Review requests</h3><p>Use the review page to invite feedback and open your public review link.</p><PhoneScreenshot src="/landing/app/reviews.webp" alt="QR24x7 Android app review requests" sizes="(max-width: 760px) 220px, 270px" /></article>
-          </div>
-          <div id="growth" className="qr-feature-links">
-            <article><h3>Refer and earn free months</h3><p>Eligible referrals can earn free plan months after a paid purchase.</p><TextLink href="/dashboard/refer">Referral details</TextLink></article>
-            <article><h3>Reseller program</h3><p>Apply to resell QR24x7 plans and stands. Commission depends on current rules and approval.</p><TextLink href="/dashboard/agent-apply">Apply as a reseller</TextLink></article>
-          </div>
-          <section id="industries" className="qr-industry-note">
-            <Eyebrow>MADE FOR LOCAL BUSINESS</Eyebrow>
-            <p>Cafés, salons, clinics, restaurants, gyms and shops can keep their customer page, reviews and orders together.</p>
-          </section>
-        </div>
-      </section>
-      <PricingCards id="plans-list" plans={plans} legacy={legacy} locale={locale} title="Choose what to use" description="Plans and current prices are loaded from the QR24x7 catalog." />
-      <PlanComparison plans={plans} locale={locale} />
-      <section id="how" className="qr-section qr-process-section">
-        <div className="qr-wrap">
-          <div className="qr-section-heading qr-heading-split"><div><Eyebrow>03 / HOW IT WORKS</Eyebrow><h2>Order a stand, set up, then let customers scan or tap.</h2></div><p>LEAVES YOU WITH</p></div>
-          <ol className="qr-process-grid">{steps.map((step) => <li key={step.number}><span>{step.number}</span><h3>{step.title}</h3><p>{step.body}</p></li>)}</ol>
-          <div className="qr-process-link"><TextLink href="/how-it-works#demo">Watch the demo</TextLink><span className="qr-link-gap" /><TextLink href="/#pricing">See pricing</TextLink></div>
-        </div>
-      </section>
-    </></LocalizedCopy>
-  );
-}
 
 export function HowItWorksMarketing({ brand, startHref, locale = "en" }: { brand: Brand; startHref: string; locale?: SeoLocale }) {
   return (
@@ -445,7 +401,7 @@ export function HowItWorksMarketing({ brand, startHref, locale = "en" }: { brand
             <p>LEAVES YOU WITH</p>
           </div>
           <ol className="qr-how-timeline">
-            {steps.map((step) => (
+            {HOME_STEPS.map((step) => (
               <li key={step.number}>
                 <div className="qr-how-number">{step.number}</div>
                 <div><h3>{step.title}</h3><p>{step.body}</p></div>

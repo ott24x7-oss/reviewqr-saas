@@ -4,6 +4,8 @@ import type { SeoLocale } from "@/lib/seo";
 /** Shared English/Hindi marketing copy. Product names and technical terms stay in Latin script. */
 export const MARKETING_COPY: Record<string, string> = Object.fromEntries([
   ["Features", "सुविधाएँ"],
+  ["For your business", "आपके कारोबार के लिए"],
+  ["Restaurants", "रेस्तराँ"], ["Cafes", "कैफ़े"], ["Bakeries", "बेकरी"], ["Salons", "सैलून"], ["Clinics", "क्लिनिक"], ["Kirana stores", "किराना दुकानें"], ["Hotels", "होटल"], ["Gyms", "जिम"],
   ["How it works", "कैसे काम करता है"],
   ["Pricing", "कीमतें"],
   ["Shop / Stands", "शॉप / स्टैंड"],
@@ -32,6 +34,7 @@ export const MARKETING_COPY: Record<string, string> = Object.fromEntries([
   ["Made in India.", "भारत में बना।"],
   ["REVIEWS · MENU · ORDERS", "रिव्यू · मेनू · ऑर्डर"],
   ["One QR stand. More Google reviews, a live menu and WhatsApp orders.", "एक QR स्टैंड। ज़्यादा Google रिव्यू, लाइव मेनू और WhatsApp ऑर्डर।"],
+  ["Get more Google reviews with one QR + NFC stand", "एक QR + NFC स्टैंड से Google पर ज़्यादा रिव्यू पाएँ"],
   ["Give your customers one simple place to review, browse, message, or order — from the QR or a tap.", "ग्राहकों को रिव्यू देने, मेनू देखने, संदेश भेजने या ऑर्डर करने की एक आसान जगह दें — QR स्कैन करके या टैप करके।"],
   ["See how it works", "जानें कैसे काम करता है"],
   ["Scroll to discover", "और जानने के लिए नीचे जाएँ"],
@@ -165,7 +168,7 @@ export const MARKETING_COPY: Record<string, string> = Object.fromEntries([
   ["Refund & Cancellation Policy", "रिफंड और रद्दीकरण नीति"],
   ["Reseller terms", "रीसेलर की शर्तें"],
   ["Legal", "कानूनी जानकारी"],
-  ["A QR code for Google reviews, with smart feedback routing", "Google रिव्यू के लिए QR Code और आसान फ़ीडबैक व्यवस्था"],
+  ["A QR code for Google reviews and private feedback", "Google रिव्यू और निजी फ़ीडबैक के लिए QR Code"],
   ["Every rating sees the public review link and a private feedback form on the same screen. A low rating with a note can alert you by WhatsApp and email.", "हर रेटिंग पर एक ही स्क्रीन में सार्वजनिक रिव्यू लिंक और निजी फ़ीडबैक फ़ॉर्म दिखता है। कम रेटिंग के साथ नोट मिलने पर WhatsApp और ईमेल से सूचना मिल सकती है।"],
   ["Every rating sees a public review link and a private feedback form.", "हर रेटिंग पर सार्वजनिक रिव्यू लिंक और निजी फ़ीडबैक फ़ॉर्म दिखता है।"],
   ["A low rating with a note can alert you on WhatsApp and email.", "कम रेटिंग के साथ नोट मिलने पर WhatsApp और ईमेल से सूचना मिल सकती है।"],

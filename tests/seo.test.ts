@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/db", () => ({
   prisma: {
+    blogPost: { findMany: vi.fn(async () => []) },
     appSetting: {
       findUnique: vi.fn(async () => null),
       upsert: vi.fn(async () => undefined)
@@ -10,13 +11,18 @@ vi.mock("@/lib/db", () => ({
 }));
 
 vi.mock("@/lib/plans/public", () => ({
-  listPublicPlans: vi.fn(async () => [{ slug: "reviews" }])
+  listPublicPlans: vi.fn(async () => [{ slug: "reviews", updatedAt: new Date("2026-11-04T00:00:00.000Z") }])
 }));
 
 vi.mock("@/lib/local-seo", () => ({
-  getDirectoryInventory: vi.fn(async () => ({ businesses: [{ slug: "pune-kitchen" }], pages: new Map(), byCity: new Map(), targets: [] })),
-  getListedBusinessSitemapRows: vi.fn(async () => [{ slug: "pune-kitchen" }]),
-  directoryPagePaths: vi.fn(() => ({ categoryPages: ["restaurants/pune"], categoryHubs: ["restaurants"], cityHubs: ["pune"], serviceCities: ["pune"] }))
+  LOCAL_CATEGORIES: ["restaurants", "cafes", "bakeries", "salons", "clinics", "kirana-stores", "hotels", "gyms"].map((slug) => ({ slug })),
+  getDirectoryInventory: vi.fn(async () => {
+    const business = { slug: "pune-kitchen", category: { slug: "restaurants" }, updatedAt: new Date("2026-11-03T00:00:00.000Z") };
+    return { businesses: [business], pages: new Map([["restaurants/pune", [business]]]), byCity: new Map([["pune", [business]]]), targets: [] };
+  }),
+  getListedBusinessSitemapRows: vi.fn(async () => [{ slug: "pune-kitchen", city: "Pune", updatedAt: new Date("2026-11-03T00:00:00.000Z") }]),
+  directoryPagePaths: vi.fn(() => ({ categoryPages: ["restaurants/pune"], categoryHubs: ["restaurants"], cityHubs: ["pune"], serviceCities: ["pune"] })),
+  normalizeCity: vi.fn((city: string | undefined) => city ? ({ slug: city.toLowerCase() }) : null)
 }));
 
 import { buildSeoMetadata, evaluateSeoChecklist, planSeoTitle } from "@/lib/seo";
@@ -143,6 +149,7 @@ describe("sitemap", () => {
     expect(hindi?.alternates?.languages).toBeDefined();
     expect(entries.some((entry) => /\/(login|register|account\/delete)$/.test(entry.url))).toBe(false);
     expect(entries.some((entry) => entry.url === `${origin}/reseller-terms`)).toBe(true);
+    expect(entries.every((entry) => entry.lastModified instanceof Date)).toBe(true);
   });
 
   it("includes indexable local pages with locale alternates and listed business pages", async () => {
@@ -154,7 +161,9 @@ describe("sitemap", () => {
       "en-IN": `${origin}/in/restaurants/pune`, "hi-IN": `${origin}/hi/in/restaurants/pune`, "x-default": `${origin}/in/restaurants/pune`
     });
     expect(hindi?.alternates?.languages).toBeDefined();
+    expect(english?.lastModified).toEqual(new Date("2026-11-03T00:00:00.000Z"));
     expect(entries.some((entry) => entry.url === `${origin}/qr-code-for-google-reviews/pune`)).toBe(true);
+    expect(entries.find((entry) => entry.url === `${origin}/qr-code-for-google-reviews/pune`)?.lastModified).toEqual(new Date("2026-11-03T00:00:00.000Z"));
     expect(entries.some((entry) => entry.url === `${origin}/pune-kitchen`)).toBe(true);
   });
 });

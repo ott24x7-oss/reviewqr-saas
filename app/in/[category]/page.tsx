@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: { params: { category: string 
   const result = await data(params.category);
   if (!result?.rows.length) return { title: "Not found", robots: { index: false, follow: false } };
   const { category } = result;
-  return buildSeoMetadata({ path: `/in/${category.slug}`, title: `${category.en} by City`, description: `Browse ${category.en.toLowerCase()} by city. Find local business pages, QR menus and customer review details on QR24x7.` });
+  return buildSeoMetadata({ path: `/in/${category.slug}`, title: `${category.en} by City`, description: `Browse ${category.en.toLowerCase()} by city. Find local business pages, QR menus and customer review details on QR24x7.`, ogContext: `${result.rows.reduce((sum, row) => sum + row.count, 0)} ${category.en.toLowerCase()} across ${result.rows.length} cities` });
 }
 
 export default async function CategoryHubPage({ params }: { params: { category: string } }) {

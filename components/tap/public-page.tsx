@@ -131,7 +131,7 @@ export async function PublicTap({
             </div>
           </div>
           {showPlatformBranding(record.hideBranding) ? <p className="tap-footer">
-            Powered by <a href="/">QR24x7</a>
+            Powered by <a href={`${(process.env.NEXT_PUBLIC_APP_URL || "https://qr24x7.in").replace(/\/$/, "")}/?utm_source=business_page`}>QR24x7</a>
           </p> : null}
         </div>
       </div>

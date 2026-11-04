@@ -29,6 +29,7 @@ export function AdminBusinessForm({
   const [active, setActive] = React.useState(isActive);
   const [hideBrand, setHideBrand] = React.useState(hideBranding);
   const [gating, setGating] = React.useState(reviewGating);
+  const [gatingConfirmed, setGatingConfirmed] = React.useState(false);
   const [threshold, setThreshold] = React.useState(Math.max(4, ratingThreshold));
   const [busy, setBusy] = React.useState(false);
 
@@ -44,6 +45,7 @@ export function AdminBusinessForm({
           isActive: active,
           hideBranding: hideBrand,
           reviewGating: gating,
+          reviewGatingConfirmed: gatingConfirmed,
           ratingThreshold: threshold
         })
       });
@@ -77,15 +79,22 @@ export function AdminBusinessForm({
         Hide QR24x7 branding for this business (admin override)
       </label>
       <label className="flex items-start gap-2 text-sm">
-        <input type="checkbox" checked={gating} onChange={(e) => setGating(e.target.checked)} />
-        <span>Hide the public review link below a rating</span>
+        <input type="checkbox" checked={gating} onChange={(e) => {
+          const enabled = e.target.checked;
+          if (enabled && !gating) {
+            const confirmed = window.confirm("Review gating can violate Google’s review policy and may lead to reviews being removed.\n\nसमीक्षा गेटिंग Google की समीक्षा नीति का उल्लंघन कर सकती है और समीक्षाएँ हटाई जा सकती हैं।\n\nEnable review gating anyway?");
+            if (!confirmed) return;
+            setGatingConfirmed(true);
+          }
+          setGating(enabled);
+        }} />
+        <span>Enable rating based review routing (Google may remove gated reviews)</span>
       </label>
       {gating && (
         <>
           <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950" role="alert">
-            Review gating is on for this business. Customers below the threshold will not see the
-            public review link. Google’s review policy does not allow asking only some customers
-            for a public review.
+            Review gating can violate Google’s policy and Google may remove reviews from gated flows.
+            समीक्षा गेटिंग Google की नीति का उल्लंघन कर सकती है और Google ऐसी प्रक्रिया से मिली समीक्षाएँ हटा सकता है।
           </p>
           <div className="space-y-1.5">
             <Label htmlFor="threshold">Only show public links at</Label>

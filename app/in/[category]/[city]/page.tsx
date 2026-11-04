@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const { page } = await data(params);
   if (!page || page.businesses.length === 0) return { title: "Not found", robots: { index: false, follow: false } };
   const title = directorySeoTitle(page.category, page.city, "en");
-  const metadata = await buildSeoMetadata({ path: `/in/${params.category}/${params.city}`, title, description: `Compare ${page.category.en.toLowerCase()} in ${page.city.en}. View local business pages, customer ratings, menus and WhatsApp ordering details.` });
+  const metadata = await buildSeoMetadata({ path: `/in/${params.category}/${params.city}`, title, description: `Compare ${page.category.en.toLowerCase()} in ${page.city.en}. View local business pages, customer ratings, menus and WhatsApp ordering details.`, ogContext: `${page.city.en} · ${page.businesses.length} ${page.category.en.toLowerCase()}` });
   return page.indexable ? metadata : { ...metadata, robots: { index: false, follow: true } };
 }
 

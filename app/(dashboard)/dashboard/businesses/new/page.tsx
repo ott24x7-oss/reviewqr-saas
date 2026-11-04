@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 export default function NewBusinessPage() {
   const router = useRouter();
   const [loading, setLoading] = React.useState(false);
+  const [reviewGatingConfirmed, setReviewGatingConfirmed] = React.useState(false);
   const [form, setForm] = React.useState({
     name: "",
     industry: "",
@@ -27,7 +28,7 @@ export default function NewBusinessPage() {
     pincode: "",
     primaryColor: "#1a73e8",
     ratingThreshold: 4,
-    reviewGating: true,
+    reviewGating: false,
     reviewQaSpecialty: "",
     reviewQaBestKnown: "",
     reviewQaAtmosphere: ""
@@ -44,7 +45,7 @@ export default function NewBusinessPage() {
       const res = await fetch("/api/businesses", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(form)
+        body: JSON.stringify({ ...form, reviewGatingConfirmed })
       });
       const json = await res.json();
       if (!res.ok) {
@@ -214,19 +215,24 @@ export default function NewBusinessPage() {
                 type="checkbox"
                 className="mt-1"
                 checked={form.reviewGating}
-                onChange={(e) => update("reviewGating", e.target.checked)}
+                onChange={(e) => {
+                  const enabled = e.target.checked;
+                  if (enabled && !window.confirm("Review gating can violate Google’s review policy and may lead to reviews being removed.\n\nसमीक्षा गेटिंग Google की समीक्षा नीति का उल्लंघन कर सकती है और समीक्षाएँ हटाई जा सकती हैं।\n\nEnable review gating anyway?")) return;
+                  if (enabled) setReviewGatingConfirmed(true);
+                  update("reviewGating", enabled);
+                }}
               />
               <span>
-                <span className="font-medium">Route low ratings to private feedback</span>
+                <span className="font-medium">Enable rating based review routing (Google may remove gated reviews)</span>
                 <span className="block text-xs text-muted-foreground">
-                  Customers below the threshold see the private feedback form. Turn this off to show public review links for every rating.
+                  When enabled, customers below the threshold will not see the public review link. Keep this off so every customer can leave a public review.
                 </span>
               </span>
             </label>
             {form.reviewGating && (
               <>
                 <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950" role="alert">
-                  Customers below this rating will be invited to share feedback privately. Customers at or above it can continue to a public review link.
+                  Review gating can violate Google’s policy and Google may remove reviews from gated flows. समीक्षा गेटिंग Google की नीति का उल्लंघन कर सकती है और Google ऐसी प्रक्रिया से मिली समीक्षाएँ हटा सकता है।
                 </p>
                 <div className="space-y-1.5">
                   <Label htmlFor="ratingThreshold">Only show public links at</Label>

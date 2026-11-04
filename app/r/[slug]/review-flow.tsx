@@ -264,8 +264,8 @@ export function ReviewFlow(props: Props) {
   const accent = business.primaryColor || "#1a73e8";
   const reviewTargets = orderedReviewTargets(business);
   const copy = lang === "hi"
-    ? { publicTitle: "सार्वजनिक रिव्यू लिखें", privateTitle: "मालिक को निजी में बताएं" }
-    : { publicTitle: "Leave a public review", privateTitle: "Tell the owner privately" };
+    ? { publicTitle: "सार्वजनिक रिव्यू लिखें", privateTitle: "हमें निजी तौर पर बताएं" }
+    : { publicTitle: "Leave a public review", privateTitle: "Tell us privately" };
 
   React.useEffect(() => {
     const stored = window.localStorage.getItem("rq-lang");
@@ -783,7 +783,7 @@ export function ReviewFlow(props: Props) {
 
       {!props.hideBranding ? <footer className="py-6 text-center text-xs rv-sub">
         <a
-          href={props.brand?.appUrl || process.env.NEXT_PUBLIC_APP_URL || "/"}
+          href={`${(props.brand?.appUrl || process.env.NEXT_PUBLIC_APP_URL || "https://qr24x7.in").replace(/\/$/, "")}/?utm_source=review_page&utm_medium=referral`}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1 hover:rv-body"
