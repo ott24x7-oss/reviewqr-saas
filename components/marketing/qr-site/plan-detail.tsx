@@ -10,6 +10,7 @@ import type { StandAddon } from "@/lib/landing/hardware";
 import type { PricingFaq } from "@/lib/plans/pricing-copy";
 import { MODULES, DURATION_LABELS } from "@/lib/plans/catalog";
 import { buyHref, fallbackImageName, planAudience } from "@/lib/plans/categories";
+import { isPlanFeatureAvailable, isPlanModuleUsable } from "@/lib/plans/comparison";
 import { formatRupees } from "@/lib/landing/money";
 import { Eyebrow, SectionHeading, TextLink } from "./primitives";
 
@@ -33,7 +34,7 @@ export function PlanDetail({
     ? plan.imageUrl
     : `/landing/${fallbackImageName(plan.category)}-1600.webp`;
   const audience = planAudience(plan.category);
-  const modules = plan.modules.map((id) => MODULES.find((item) => item.id === id)).filter((item): item is (typeof MODULES)[number] => Boolean(item));
+  const modules = plan.modules.map((id) => MODULES.find((item) => item.id === id)).filter((item): item is (typeof MODULES)[number] => item !== undefined && isPlanModuleUsable(item.id, plan));
 
   return (
     <>
@@ -59,7 +60,7 @@ export function PlanDetail({
               <div className="qr-includes">
                 <h2>What’s included</h2>
                 <ul>
-                  {plan.bullets.map((bullet) => <li key={bullet.en}><Check size={17} aria-hidden="true" /><span>{bullet.en}</span></li>)}
+                  {plan.bullets.filter((bullet) => isPlanFeatureAvailable(bullet.en, plan)).map((bullet) => <li key={bullet.en}><Check size={17} aria-hidden="true" /><span>{bullet.en}</span></li>)}
                   {modules.map((module) => <li key={module.id}><Check size={17} aria-hidden="true" /><span>{module.blurbEn}</span></li>)}
                 </ul>
               </div>
