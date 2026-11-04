@@ -318,6 +318,17 @@ describe("PLAN_REQUIRED feature gates", () => {
     await expectOpen(await storePut(json(`/api/businesses/${store.businessId}/store`, {}, "PUT"), biz(store.businessId)), "store owner settings");
     useSession("reviews");
     await expectOpen(await campaignsPost(json(`/api/businesses/${reviews.businessId}/campaigns`, {}), biz(reviews.businessId)), "reviews owner campaigns");
+    const campaign = await campaignsPost(
+      json(`/api/businesses/${reviews.businessId}/campaigns`, { name: "Spring", template: "Hi {name}, welcome back." }),
+      biz(reviews.businessId)
+    );
+    expect(campaign.status).toBe(200);
+    expect((await campaign.json()).campaign.id).toBeTruthy();
+    const invalidCampaign = await campaignsPost(
+      json(`/api/businesses/${reviews.businessId}/campaigns`, { name: "x", template: "" }),
+      biz(reviews.businessId)
+    );
+    expect(invalidCampaign.status).toBe(400);
     await expectOpen(await customersExport(), "reviews owner customers");
     await expectOpen(await locationsGet(new NextRequest("http://127.0.0.1/api/locations"), biz(reviews.businessId)), "reviews owner locations");
     await expectOpen(await membersGet(new NextRequest("http://127.0.0.1/api/members"), biz(reviews.businessId)), "reviews owner staff");

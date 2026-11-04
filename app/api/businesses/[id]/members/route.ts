@@ -9,6 +9,7 @@ import { absoluteUrl } from "@/lib/utils";
 import { escapeHtml, sendEmail } from "@/lib/email";
 import { denyFeatureResponse } from "@/lib/plans/feature-gate";
 import { rateLimitDb } from "@/lib/rate-limit";
+import { ownerLimitError } from "@/lib/entitlements";
 
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -49,6 +50,16 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (!business) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const denied = await denyFeatureResponse(business.ownerId, "staff");
   if (denied) return denied;
+
+  const now = new Date();
+  const [staffCount, pendingInviteCount] = await Promise.all([
+    prisma.staff.count({ where: { business: { ownerId: business.ownerId }, isActive: true } }),
+    prisma.businessInvite.count({
+      where: { business: { ownerId: business.ownerId }, acceptedAt: null, expiresAt: { gt: now } }
+    })
+  ]);
+  const limitError = await ownerLimitError(user, "staff", staffCount + pendingInviteCount);
+  if (limitError) return NextResponse.json({ error: limitError }, { status: 402 });
 
   const rl = await rateLimitDb({ key: `invite:${user.id}`, limit: 20, windowSeconds: 3600 });
   if (!rl.ok) return NextResponse.json({ error: "Too many invites" }, { status: 429 });

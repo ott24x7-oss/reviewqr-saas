@@ -5,7 +5,7 @@ import { featureBlock } from "../plans/feature-gate";
 import { rateLimitDb } from "../rate-limit";
 import { planOwner, requireBusinessRole } from "../tenant";
 import { ownerLimitError } from "../entitlements";
-import { sendWhatsApp } from "../whatsapp";
+import { isAutomatedWhatsAppReady, sendWhatsApp } from "../whatsapp";
 import { hashToken, randomToken } from "../tokens";
 import { absoluteUrl, slugify } from "../utils";
 import { escapeHtml, sendEmail } from "../email";
@@ -27,11 +27,6 @@ async function limitFor(userId: string, ownerId: string, key: LimitKey, used: nu
   const owner = actor ? await planOwner(actor, ownerId) : null;
   if (!owner) return "Not found";
   return ownerLimitError(owner, key, used);
-}
-
-/** Free-text WhatsApp sends from the platform number stay off until template-only sending ships. */
-export function campaignSendEnabled() {
-  return process.env.CAMPAIGN_SEND_ENABLED === "1";
 }
 
 export function campaignMessage(template: string, name: string) {
@@ -198,7 +193,7 @@ export async function createCampaign(userId: string, businessId: string, name: s
 export async function sendCampaign(userId: string, businessId: string, campaignId: string) {
   const access = await openFeature(userId, businessId, "manage", "campaigns");
   if (!("id" in access)) return access;
-  if (!campaignSendEnabled()) return fail(403, "Sending campaigns from the app is not available yet");
+  if (!(await isAutomatedWhatsAppReady())) return fail(403, "Connect WhatsApp in admin first");
   const gate = await rateLimitDb({ key: `campaign-send:${access.id}`, limit: 3, windowSeconds: 3600 });
   if (!gate.ok) return fail(429, "Too many campaign sends. Try again later.");
   const campaign = await prisma.campaign.findFirst({ where: { id: campaignId, businessId: access.id } });
@@ -413,6 +408,15 @@ export async function inviteStaff(userId: string, businessId: string, email: str
   const access = await openFeature(userId, businessId, "manage", "staff");
   if (!("id" in access)) return access;
   if (access.ownerId !== userId) return fail(404, "Not found");
+  const now = new Date();
+  const [staffCount, pendingInviteCount] = await Promise.all([
+    prisma.staff.count({ where: { business: { ownerId: access.ownerId }, isActive: true } }),
+    prisma.businessInvite.count({
+      where: { business: { ownerId: access.ownerId }, acceptedAt: null, expiresAt: { gt: now } }
+    })
+  ]);
+  const limit = await limitFor(userId, access.ownerId, "staff", staffCount + pendingInviteCount);
+  if (limit) return fail(402, limit);
   const gate = await rateLimitDb({ key: `invite:${userId}`, limit: 20, windowSeconds: 3600 });
   if (!gate.ok) return fail(429, "Too many invites");
   const to = email.trim().toLowerCase();

@@ -31,19 +31,12 @@ describe("owner app guards", () => {
     return user;
   }
 
-  it("keeps campaign sending off unless CAMPAIGN_SEND_ENABLED is 1", async () => {
+  it("asks the owner to connect WhatsApp before sending campaigns", async () => {
     const { owner, business } = await freeOwner();
     const made = await createCampaign(owner.id, business.id, "Diwali", "Hi {name}");
     expect(made.ok).toBe(true);
-    const previous = process.env.CAMPAIGN_SEND_ENABLED;
-    delete process.env.CAMPAIGN_SEND_ENABLED;
-    try {
-      const sent = await sendCampaign(owner.id, business.id, made.ok ? made.data.id : "");
-      expect(sent).toMatchObject({ ok: false, status: 403 });
-    } finally {
-      if (previous === undefined) delete process.env.CAMPAIGN_SEND_ENABLED;
-      else process.env.CAMPAIGN_SEND_ENABLED = previous;
-    }
+    const sent = await sendCampaign(owner.id, business.id, made.ok ? made.data.id : "");
+    expect(sent).toMatchObject({ ok: false, status: 403, error: "Connect WhatsApp in admin first" });
   });
 
   it("applies the plan's location cap like the web route", async () => {

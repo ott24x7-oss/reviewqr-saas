@@ -1,14 +1,12 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Send, MessageCircle, Mail, Plus } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 import { DEFAULT_TEMPLATES } from "@/lib/whatsapp";
-import { absoluteUrl, formatDate } from "@/lib/utils";
 import { ownedOrAssignedWhere } from "@/lib/tenant";
+import { AppText } from "@/components/app-ui/i18n";
+import { CampaignsClient } from "./campaigns-client";
 
 export const dynamic = "force-dynamic";
 
@@ -32,9 +30,9 @@ export default async function CampaignsPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold font-display">Campaigns</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold font-display"><AppText en="Campaigns" hi="कैंपेन" /></h1>
         <p className="text-sm text-muted-foreground">
-          Send review requests in bulk via WhatsApp & Email
+          <AppText en="Send messages to customers who agreed to hear from you." hi="उन ग्राहकों को संदेश भेजें जिन्होंने आपसे संदेश पाने की सहमति दी है।" />
         </p>
       </div>
 
@@ -42,7 +40,7 @@ export default async function CampaignsPage() {
       <Card>
         <CardContent className="p-5">
           <h3 className="font-semibold mb-3 flex items-center gap-2">
-            <MessageCircle className="h-4 w-4" /> WhatsApp templates
+            <MessageCircle className="h-4 w-4" /> <AppText en="WhatsApp templates" hi="WhatsApp संदेश के नमूने" />
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {(Object.entries(DEFAULT_TEMPLATES) as [string, string][]).map(([key, template]) => (
@@ -55,59 +53,20 @@ export default async function CampaignsPage() {
             ))}
           </div>
           <p className="mt-3 text-xs text-muted-foreground">
-            Variables: <code className="bg-secondary px-1 rounded">{"{{customerName}}"}</code>{" "}
+            <AppText en="Variables:" hi="वेरिएबल:" /> <code className="bg-secondary px-1 rounded">{"{{customerName}}"}</code>{" "}
             <code className="bg-secondary px-1 rounded">{"{{businessName}}"}</code>{" "}
             <code className="bg-secondary px-1 rounded">{"{{reviewUrl}}"}</code>
           </p>
           <p className="mt-2 text-sm text-muted-foreground">
-            Rewards, coupons, and loyalty stamps may be tied only to private feedback or a visit.
-            Never offer them in exchange for a public review.
+            <AppText en="Rewards, coupons, and loyalty stamps may be tied only to private feedback or a visit. Never offer them in exchange for a public review." hi="इनाम, कूपन और लॉयल्टी स्टैम्प सिर्फ़ निजी प्रतिक्रिया या विज़िट से जोड़ें। सार्वजनिक रिव्यू के बदले इन्हें कभी न दें।" />
           </p>
         </CardContent>
       </Card>
 
-      {/* Campaigns list */}
-      <div className="flex items-center justify-between">
-        <h2 className="font-semibold">Your campaigns</h2>
-        <Button size="sm" variant="gradient" disabled title="Coming in next release">
-          <Plus className="h-3.5 w-3.5" /> New campaign
-        </Button>
-      </div>
-
-      {campaigns.length === 0 ? (
-        <Card className="text-center py-12">
-          <CardContent>
-            <Send className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-            <h3 className="font-semibold">No campaigns yet</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              Use the templates above to start manually — bulk campaigns coming soon.
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-2">
-          {campaigns.map((c) => (
-            <Card key={c.id}>
-              <CardContent className="p-4 flex items-center justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{c.name}</span>
-                    <Badge variant={c.status === "ACTIVE" ? "success" : "secondary"}>{c.status}</Badge>
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {c.business.name} · {formatDate(c.createdAt)}
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                  <span>📤 {c.sent}</span>
-                  <span>👁 {c.opened}</span>
-                  <span>⭐ {c.reviewed}</span>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+      <CampaignsClient
+        businesses={businesses.map(({ id, name }) => ({ id, name }))}
+        campaigns={campaigns.map((campaign) => ({ ...campaign, createdAt: campaign.createdAt.toISOString() }))}
+      />
     </div>
   );
 }
