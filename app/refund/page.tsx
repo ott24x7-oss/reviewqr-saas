@@ -1,19 +1,24 @@
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/marketing/legal-page";
+import { buildSeoMetadata, routeDescription, SEO_STATIC_ROUTES } from "@/lib/seo";
+import { getRequestLocale } from "@/lib/locale";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Refund & Cancellation Policy",
-  description: "How cancellations and refunds work for QR24x7 subscriptions."
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return buildSeoMetadata({ path: "/refund", title: SEO_STATIC_ROUTES[8].titleEn, description: routeDescription("/refund", "en"), translated: false });
+}
 
 export default function RefundPage() {
+  const locale = getRequestLocale();
   return (
     <LegalPage
+      locale={locale}
+      path="/refund"
+      breadcrumbName={locale === "hi" ? "रिफंड और रद्दीकरण नीति" : "Refund policy"}
       eyebrow="Legal"
-      title="Refund & Cancellation Policy"
-      intro="Clear, fair rules for cancelling your subscription and requesting a refund."
+      title={locale === "hi" ? "रिफंड और रद्दीकरण नीति" : "Refund & Cancellation Policy"}
+      intro={locale === "hi" ? "सदस्यता रद्द करने और रिफंड माँगने के स्पष्ट और उचित नियम।" : "Clear, fair rules for cancelling your subscription and requesting a refund."}
       updated="2 August 2026"
     >
       <h2>1. Free plan</h2>

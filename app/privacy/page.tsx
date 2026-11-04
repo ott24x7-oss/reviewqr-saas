@@ -1,19 +1,24 @@
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/marketing/legal-page";
+import { buildSeoMetadata, routeDescription, SEO_STATIC_ROUTES } from "@/lib/seo";
+import { getRequestLocale } from "@/lib/locale";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Privacy Policy",
-  description: "How QR24x7 collects, uses, and protects your data."
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return buildSeoMetadata({ path: "/privacy", title: SEO_STATIC_ROUTES[6].titleEn, description: routeDescription("/privacy", "en"), translated: false });
+}
 
 export default function PrivacyPage() {
+  const locale = getRequestLocale();
   return (
     <LegalPage
+      locale={locale}
+      path="/privacy"
+      breadcrumbName={locale === "hi" ? "गोपनीयता नीति" : "Privacy Policy"}
       eyebrow="Legal"
-      title="Privacy Policy"
-      intro="Your data belongs to you. This policy explains what we collect, why, and the choices you have."
+      title={locale === "hi" ? "गोपनीयता नीति" : "Privacy Policy"}
+      intro={locale === "hi" ? "आपका डेटा आपका है। इस नीति में बताया गया है कि हम कौन सी जानकारी लेते हैं, क्यों लेते हैं और आपके पास क्या विकल्प हैं।" : "Your data belongs to you. This policy explains what we collect, why, and the choices you have."}
       updated="22 October 2026"
     >
       <p>

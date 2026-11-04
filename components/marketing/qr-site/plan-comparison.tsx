@@ -3,6 +3,8 @@ import { Check } from "lucide-react";
 import { comparisonFeatureOrder, comparisonGroupForFeature, isMarketingFeature, isPlanFeatureAvailable } from "@/lib/plans/comparison";
 import type { PublicPlan } from "@/lib/plans/public";
 import { SectionHeading } from "./primitives";
+import type { SeoLocale } from "@/lib/seo";
+import { LocalizedCopy } from "./i18n";
 
 const LIMIT_ROWS: Array<{ key: keyof PublicPlan["limits"]; en: string; hi: string }> = [
   { key: "businesses", en: "Businesses", hi: "व्यवसाय" },
@@ -19,15 +21,15 @@ const GROUPS = [
   { id: "STORE", en: "WhatsApp Store", hi: "व्हाट्सऐप स्टोर" }
 ] as const;
 
-function GroupHeading({ en, hi, colSpan }: { en: string; hi: string; colSpan: number }) {
-  return <tr className="qr-compare-group"><th scope="rowgroup" colSpan={colSpan}><span>{en}</span><small lang="hi">{hi}</small></th></tr>;
+function GroupHeading({ en, hi, colSpan, locale }: { en: string; hi: string; colSpan: number; locale: SeoLocale }) {
+  return <tr className="qr-compare-group"><th scope="rowgroup" colSpan={colSpan}>{locale === "hi" ? hi : en}</th></tr>;
 }
 
-function BilingualLabel({ en, hi }: { en: string; hi: string }) {
-  return <span className="qr-compare-label"><span>{en}</span><small lang="hi">{hi}</small></span>;
+function BilingualLabel({ en, hi, locale }: { en: string; hi: string; locale: SeoLocale }) {
+  return <span className="qr-compare-label">{locale === "hi" ? hi : en}</span>;
 }
 
-export function PlanComparison({ plans }: { plans: PublicPlan[] }) {
+export function PlanComparison({ plans, locale = "en" }: { plans: PublicPlan[]; locale?: SeoLocale }) {
   const rows: Array<{ en: string; hi: string; group: string | null }> = [];
   for (const plan of plans) {
     for (const bullet of plan.bullets) {
@@ -46,25 +48,25 @@ export function PlanComparison({ plans }: { plans: PublicPlan[] }) {
   ].filter((group) => group.rows.length);
 
   return (
-    <section className="qr-section qr-compare-section">
+    <LocalizedCopy locale={locale}><section className="qr-section qr-compare-section">
       <div className="qr-wrap">
         <SectionHeading number="08" eyebrow="Find the right fit" title="Compare plans" />
         <div className="qr-compare-table-wrap">
           <table className="qr-compare-table">
-            <thead><tr><th scope="col">Feature</th>{plans.map((plan) => <th scope="col" key={plan.slug}>{plan.nameEn}</th>)}</tr></thead>
+            <thead><tr><th scope="col">{locale === "hi" ? "सुविधा" : "Feature"}</th>{plans.map((plan) => <th scope="col" key={plan.slug}>{locale === "hi" ? plan.nameHi : plan.nameEn}</th>)}</tr></thead>
             <tbody>
-              <GroupHeading en="Limits" hi="सीमाएँ" colSpan={plans.length + 1} />
+              <GroupHeading en="Limits" hi="सीमाएँ" colSpan={plans.length + 1} locale={locale} />
               {LIMIT_ROWS.map((row) => <tr key={row.key}>
-                <th scope="row"><BilingualLabel en={row.en} hi={row.hi} /></th>
+                <th scope="row"><BilingualLabel en={row.en} hi={row.hi} locale={locale} /></th>
                 {plans.map((plan) => {
                   const value = plan.limits[row.key];
                   return <td key={plan.slug}>{value === 0 && row.key !== "aiCalls" ? <span className="qr-compare-excluded" role="img" aria-label="Limit is zero">—</span> : value.toLocaleString("en-US")}</td>;
                 })}
               </tr>)}
               {groupedRows.map((group) => <Fragment key={group.id}>
-                <GroupHeading en={group.en} hi={group.hi} colSpan={plans.length + 1} />
+                <GroupHeading en={group.en} hi={group.hi} colSpan={plans.length + 1} locale={locale} />
                 {group.rows.map((row) => <tr key={row.en}>
-                  <th scope="row"><BilingualLabel en={row.en} hi={row.hi} /></th>
+                  <th scope="row"><BilingualLabel en={row.en} hi={row.hi} locale={locale} /></th>
                   {plans.map((plan) => {
                     const included = plan.bullets.some((bullet) => bullet.compare && bullet.en === row.en) && isPlanFeatureAvailable(row.en, plan);
                     return <td key={plan.slug}>{included ? <Check size={17} aria-label="Included" /> : <span className="qr-compare-excluded" role="img" aria-label="Not included">—</span>}</td>;
@@ -76,5 +78,6 @@ export function PlanComparison({ plans }: { plans: PublicPlan[] }) {
         </div>
       </div>
     </section>
+    </LocalizedCopy>
   );
 }

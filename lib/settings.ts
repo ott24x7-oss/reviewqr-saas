@@ -5,6 +5,7 @@
  */
 import { prisma } from "./db";
 import type { SubscriptionTier } from "@prisma/client";
+import { z } from "zod";
 import { encryptSecret, decryptSecret } from "./crypto";
 import {
   brandFromOrDefault,
@@ -33,7 +34,8 @@ export const SETTING_KEYS = {
   imageAi: "ai.images",
   shipping: "shipping",
   shop: "shop",
-  app: "app.release"
+  app: "app.release",
+  seo: "seo"
 } as const;
 
 // Which fields inside each settings blob are secrets encrypted at rest.
@@ -172,6 +174,110 @@ export type TurnstileConfig = {
   siteKey: string;
   secretKey: string;
 };
+
+export type SeoPageOverride = {
+  title: string;
+  description: string;
+  ogImageUrl: string;
+  noindex: boolean;
+};
+
+export type SeoConfig = {
+  defaultTitleTemplate: string;
+  defaultDescriptionEn: string;
+  defaultDescriptionHi: string;
+  defaultOgImageUrl: string;
+  twitterHandle: string;
+  organization: {
+    legalName: string;
+    logoUrl: string;
+    phone: string;
+    email: string;
+    addressLocality: string;
+    addressRegion: string;
+    postalCode: string;
+    sameAs: string[];
+  };
+  verification: { google: string; bing: string; yandex: string };
+  analytics: { ga4MeasurementId: string; gtmId: string; respectDnt: boolean };
+  overrides: Record<string, SeoPageOverride>;
+};
+
+export const DEFAULT_SEO_CONFIG: SeoConfig = {
+  defaultTitleTemplate: "%s | QR24x7",
+  defaultDescriptionEn: "QR24x7 helps Indian businesses collect Google reviews, share digital menus and take WhatsApp orders from one QR and NFC page. Set up in minutes today.",
+  defaultDescriptionHi: "QR24x7 से भारतीय व्यवसाय एक QR और NFC पेज पर Google रिव्यू लें, डिजिटल मेनू साझा करें और WhatsApp ऑर्डर पाएँ। सुविधा से UPI द्वारा INR में भुगतान करें।",
+  defaultOgImageUrl: "/landing/og-1600.webp",
+  twitterHandle: "",
+  organization: {
+    legalName: "QR24x7",
+    logoUrl: "/brand/logo-mark.png",
+    phone: "",
+    email: "hello@qr24x7.in",
+    addressLocality: "Bengaluru",
+    addressRegion: "Karnataka",
+    postalCode: "",
+    sameAs: []
+  },
+  verification: { google: "", bing: "", yandex: "" },
+  analytics: { ga4MeasurementId: "", gtmId: "", respectDnt: false },
+  overrides: {}
+};
+
+const optionalUrl = z.string().trim().max(500).refine((value) => !value || value.startsWith("/") || /^https:\/\//i.test(value), "Use an https URL or a site-relative path");
+const seoOverrideSchema = z.object({
+  title: z.string().trim().max(160).default(""),
+  description: z.string().trim().max(400).default(""),
+  ogImageUrl: optionalUrl.default(""),
+  noindex: z.boolean().default(false)
+});
+
+export const seoConfigSchema = z.object({
+  defaultTitleTemplate: z.string().trim().min(1).max(100).refine((value) => value.includes("%s"), "Title template must include %s"),
+  defaultDescriptionEn: z.string().trim().max(400),
+  defaultDescriptionHi: z.string().trim().max(400),
+  defaultOgImageUrl: optionalUrl,
+  twitterHandle: z.string().trim().max(80).regex(/^$|^@?[A-Za-z0-9_]{1,30}$/),
+  organization: z.object({
+    legalName: z.string().trim().min(1).max(160),
+    logoUrl: optionalUrl,
+    phone: z.string().trim().max(40),
+    email: z.string().trim().max(254).email().or(z.literal("")),
+    addressLocality: z.string().trim().max(120),
+    addressRegion: z.string().trim().max(120),
+    postalCode: z.string().trim().max(20),
+    sameAs: z.array(z.string().trim().url().max(500)).max(20)
+  }),
+  verification: z.object({ google: z.string().trim().max(200), bing: z.string().trim().max(200), yandex: z.string().trim().max(200) }),
+  analytics: z.object({
+    ga4MeasurementId: z.string().trim().max(40).regex(/^$|^G-[A-Z0-9]+$/i),
+    gtmId: z.string().trim().max(40).regex(/^$|^GTM-[A-Z0-9]+$/i),
+    respectDnt: z.boolean()
+  }),
+  overrides: z.record(z.string().regex(/^\/(?:hi(?:\/|$))?(?:features|how-it-works|pricing|plans\/[a-z0-9-]+|about|demo|privacy|terms|refund|reseller-terms)?$/), seoOverrideSchema)
+});
+
+export function normalizeSeoConfig(value: unknown): SeoConfig {
+  const stored = value && typeof value === "object" ? value as Partial<SeoConfig> : {};
+  const candidate = {
+    ...DEFAULT_SEO_CONFIG,
+    ...stored,
+    organization: { ...DEFAULT_SEO_CONFIG.organization, ...(stored.organization || {}) },
+    verification: { ...DEFAULT_SEO_CONFIG.verification, ...(stored.verification || {}) },
+    analytics: { ...DEFAULT_SEO_CONFIG.analytics, ...(stored.analytics || {}) },
+    overrides: stored.overrides || {}
+  };
+  const parsed = seoConfigSchema.safeParse(candidate);
+  if (!parsed.success) return { ...DEFAULT_SEO_CONFIG, organization: { ...DEFAULT_SEO_CONFIG.organization }, verification: { ...DEFAULT_SEO_CONFIG.verification }, analytics: { ...DEFAULT_SEO_CONFIG.analytics }, overrides: {} };
+  return {
+    ...DEFAULT_SEO_CONFIG,
+    ...parsed.data,
+    organization: { ...DEFAULT_SEO_CONFIG.organization, ...parsed.data.organization },
+    verification: { ...DEFAULT_SEO_CONFIG.verification, ...parsed.data.verification },
+    analytics: { ...DEFAULT_SEO_CONFIG.analytics, ...parsed.data.analytics },
+    overrides: parsed.data.overrides
+  };
+}
 
 export type PlanInfo = {
   tier: SubscriptionTier;
@@ -722,6 +828,22 @@ export async function getTurnstileConfig(): Promise<TurnstileConfig> {
 }
 export async function setTurnstileConfig(v: TurnstileConfig, by?: string) {
   await writeKey(SETTING_KEYS.turnstile, v, by);
+}
+
+/* ============== SEO ============== */
+export async function getSeoConfig(): Promise<SeoConfig> {
+  const stored = await readKey<unknown>(SETTING_KEYS.seo, DEFAULT_SEO_CONFIG);
+  return normalizeSeoConfig(stored);
+}
+
+export async function setSeoConfig(value: unknown, by?: string) {
+  const parsed = seoConfigSchema.safeParse(value);
+  if (!parsed.success) {
+    return { ok: false as const, error: parsed.error.issues[0]?.message || "Invalid SEO settings" };
+  }
+  const normalized = normalizeSeoConfig(parsed.data);
+  await writeKey(SETTING_KEYS.seo, normalized, by);
+  return { ok: true as const, config: normalized };
 }
 
 /* ============== AI (OpenAI-compatible) ============== */

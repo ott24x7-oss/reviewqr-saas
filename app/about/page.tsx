@@ -1,16 +1,32 @@
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/marketing/legal-page";
+import { buildSeoMetadata, routeDescription, SEO_STATIC_ROUTES } from "@/lib/seo";
+import { getRequestLocale } from "@/lib/locale";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "About",
-  description: "Why QR24x7 exists — a public review link for every customer, and a private note for the owner."
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return buildSeoMetadata({ path: "/about", title: SEO_STATIC_ROUTES[4].titleEn, description: routeDescription("/about", "en") });
+}
 
 export default function AboutPage() {
+  const locale = getRequestLocale();
+  if (locale === "hi") return <LegalPage locale="hi" path="/about" breadcrumbName="हमारे बारे में" eyebrow="हमारी कहानी" title="भारत के छोटे व्यवसायों के लिए बना" intro="QR24x7 हर ग्राहक को एक ही स्क्रीन पर सार्वजनिक रिव्यू लिंक और निजी संदेश का विकल्प देता है।">
+    <h2>हमने QR24x7 क्यों बनाया</h2>
+    <p>अच्छे अनुभव के बाद कई ग्राहक रिव्यू देना भूल जाते हैं, जबकि खराब अनुभव वाले ग्राहक अपनी बात सिर्फ़ सार्वजनिक रूप से कह पाते हैं। एक QR से हर ग्राहक दोनों विकल्प देख सकता है। वे Google या Trustpilot पर सार्वजनिक रिव्यू दे सकते हैं और व्यवसाय मालिक को निजी फ़ीडबैक भी भेज सकते हैं। कम रेटिंग के साथ नोट आने पर मालिक को सूचना मिलती है। सार्वजनिक लिंक हर ग्राहक को दिखता है।</p>
+    <h2>हमारी सोच</h2>
+    <ul>
+      <li><strong>सादगी सबसे ज़रूरी है।</strong> दुकान मालिक फ़ोन से कुछ मिनटों में बिना ट्रेनिंग के इसे सेट कर सके।</li>
+      <li><strong>फ़ीडबैक सुधार का अवसर है।</strong> निजी संदेश से आप ग्राहक का अनुभव बेहतर कर सकते हैं। इसे सार्वजनिक रिव्यू लिंक छिपाने या रिव्यू के बदले इनाम देने के लिए इस्तेमाल नहीं किया जाता।</li>
+      <li><strong>भारत के लिए बना।</strong> UPI से भुगतान, WhatsApp सूचना और रुपये में कीमतें हमारे प्रोडक्ट का हिस्सा हैं।</li>
+    </ul>
+    <h2>यह किनके लिए है</h2>
+    <p>भारत के कैफ़े, सैलून, क्लिनिक, दुकान, रेस्टोरेंट, जिम और सेवा व्यवसायों के लिए — जो ग्राहकों से आमने-सामने मिलते हैं और उनसे Google या Trustpilot पर ईमानदार रिव्यू पाना चाहते हैं।</p>
+    <h2>हमसे बात करें</h2>
+    <p>सवाल, सुझाव या साझेदारी का विचार हो तो हमसे संपर्क करें। हमारी टीम जवाब देगी।</p>
+  </LegalPage>;
   return (
-    <LegalPage
+    <LegalPage path="/about"
       eyebrow="Our story"
       title="Built for Indian small businesses"
       intro="QR24x7 shows every customer a public review link and a private note, on the same screen and in the same order."

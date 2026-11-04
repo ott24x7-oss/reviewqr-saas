@@ -8,6 +8,8 @@ import { listPublicPlans } from "@/lib/plans/public";
 import { getPricingCopy } from "@/lib/plans/pricing-copy";
 import { fallbackImageName } from "@/lib/plans/categories";
 import { DURATION_LABELS } from "@/lib/plans/catalog";
+import { buildSeoMetadata, planSeoDescription, planSeoTitle } from "@/lib/seo";
+import { getRequestLocale } from "@/lib/locale";
 
 export const dynamic = "force-dynamic";
 
@@ -23,22 +25,15 @@ async function load(slug: string) {
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { plan, brand } = await load(params.slug);
   if (!plan) return { title: "Plan" };
-  const description = plan.descriptionEn || `${plan.nameEn} for Google reviews, a menu, or WhatsApp orders.`;
+  const description = planSeoDescription(plan.nameEn, plan.descriptionEn, "en");
   const imagePath = plan.imageUrl && !plan.imageUrl.startsWith("data:")
     ? plan.imageUrl
     : `/landing/${fallbackImageName(plan.category)}-1600.webp`;
-  return {
-    title: { absolute: `${plan.nameEn} | ${brand.name}` },
-    description,
-    openGraph: {
-      title: plan.nameEn,
-      description,
-      images: [imagePath]
-    }
-  };
+  return buildSeoMetadata({ path: `/plans/${plan.slug}`, title: planSeoTitle(plan.nameEn, plan.modules, "en"), description, image: imagePath });
 }
 
 export default async function PlanPage({ params, searchParams }: { params: Params; searchParams: Search }) {
+  const locale = getRequestLocale();
   const [{ plan, brand, hardware }, copy] = await Promise.all([load(params.slug), getPricingCopy()]);
   if (!plan) notFound();
   const base = (brand.appUrl || process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "");
@@ -49,13 +44,14 @@ export default async function PlanPage({ params, searchParams }: { params: Param
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
-    name: plan.nameEn,
-    description: plan.descriptionEn || plan.nameEn,
+    name: locale === "hi" ? plan.nameHi : plan.nameEn,
+    description: (locale === "hi" ? plan.descriptionHi : plan.descriptionEn) || plan.nameEn,
     image,
+    inLanguage: locale === "hi" ? "hi-IN" : "en-IN",
     brand: { "@type": "Brand", name: brand.name },
     offers: plan.prices.map((price) => ({
       "@type": "Offer",
-      name: DURATION_LABELS[price.duration].en,
+      name: DURATION_LABELS[price.duration][locale],
       priceCurrency: "INR",
       price: (price.pricePaise / 100).toFixed(2),
       availability: "https://schema.org/InStock",
@@ -64,9 +60,9 @@ export default async function PlanPage({ params, searchParams }: { params: Param
   };
 
   return (
-    <SiteShell brand={brand}>
+    <SiteShell brand={brand} locale={locale} path={`/plans/${plan.slug}`} breadcrumbName={locale === "hi" ? plan.nameHi : plan.nameEn}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <PlanDetail plan={plan} hardware={hardware} initialDuration={searchParams.duration} faqs={copy.faqs} />
+      <PlanDetail plan={plan} hardware={hardware} initialDuration={searchParams.duration} faqs={copy.faqs} locale={locale} />
     </SiteShell>
   );
 }

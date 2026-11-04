@@ -8,6 +8,7 @@ import { AcceptInvite } from "./accept";
 import { AuthFrame } from "@/components/brand/auth-frame";
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = { title: "Team invitation", robots: { index: false, follow: false } };
 
 export default async function InvitePage({ params }: { params: { token: string } }) {
   const invite = await prisma.businessInvite.findUnique({
@@ -65,3 +66,4 @@ export default async function InvitePage({ params }: { params: { token: string }
     </AuthFrame>
   );
 }
+import type { Metadata } from "next";

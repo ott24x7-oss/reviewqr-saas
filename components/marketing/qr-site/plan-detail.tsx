@@ -13,6 +13,8 @@ import { buyHref, fallbackImageName, planAudience } from "@/lib/plans/categories
 import { isPlanFeatureAvailable, isPlanModuleUsable } from "@/lib/plans/comparison";
 import { formatRupees } from "@/lib/landing/money";
 import { Eyebrow, SectionHeading, TextLink } from "./primitives";
+import type { SeoLocale } from "@/lib/seo";
+import { LocalizedCopy, marketingText } from "./i18n";
 
 const HARDWARE_FALLBACKS = ["product-reviews-800.webp", "product-menu-800.webp", "product-combo-800.webp", "product-store-800.webp"];
 
@@ -20,12 +22,14 @@ export function PlanDetail({
   plan,
   hardware,
   initialDuration,
-  faqs
+  faqs,
+  locale = "en"
 }: {
   plan: PublicPlan;
   hardware: StandAddon[];
   initialDuration?: string;
   faqs: PricingFaq[];
+  locale?: SeoLocale;
 }) {
   const firstPrice = plan.prices.find((item) => item.duration === initialDuration) || plan.prices.find((item) => item.duration === "YEAR_1") || plan.prices[0];
   const [duration, setDuration] = React.useState<PlanDuration | undefined>(firstPrice?.duration);
@@ -37,31 +41,31 @@ export function PlanDetail({
   const modules = plan.modules.map((id) => MODULES.find((item) => item.id === id)).filter((item): item is (typeof MODULES)[number] => item !== undefined && isPlanModuleUsable(item.id, plan));
 
   return (
-    <>
+    <LocalizedCopy locale={locale}><>
       <section className="qr-plan-detail-section">
         <div className="qr-wrap">
-          <Link href="/#pricing" className="qr-back-link">← All plans</Link>
+          <Link href={`${locale === "hi" ? "/hi" : ""}#pricing`} className="qr-back-link">← {marketingText("All plans", locale)}</Link>
           <div className="qr-plan-detail-grid">
             <div className="qr-plan-detail-image">
-              <Image src={image} alt={`${plan.nameEn} plan image`} width={1200} height={1200} sizes="(max-width: 760px) 100vw, 50vw" unoptimized priority />
-              <span>PL. 01</span>
+              <Image src={image} alt={`${locale === "hi" ? plan.nameHi : plan.nameEn} ${marketingText("Plan details", locale)}`} width={1200} height={1200} sizes="(max-width: 760px) 100vw, 50vw" unoptimized priority />
+              <span>{marketingText("PL. 01", locale)}</span>
             </div>
             <div className="qr-plan-detail-copy">
-              <Eyebrow>{plan.badge || plan.category.replaceAll("-", " ")}</Eyebrow>
-              <h1>{plan.nameEn}</h1>
-              <p className="qr-plan-detail-description">{plan.descriptionEn}</p>
-              <p className="qr-audience-label">Who it is for</p>
-              <ul className="qr-audience-chips">{audience.map((item) => <li key={item.en}>{item.en}</li>)}</ul>
-              {selected ? <p className="qr-detail-price" data-price data-duration={selected.duration}>{formatRupees(selected.pricePaise)} <span>{DURATION_LABELS[selected.duration].en}</span>{selected.mrpPaise && selected.mrpPaise > selected.pricePaise ? <s>{formatRupees(selected.mrpPaise)}</s> : null}</p> : null}
+              <Eyebrow>{marketingText(plan.badge || plan.category.replaceAll("-", " "), locale)}</Eyebrow>
+              <h1>{locale === "hi" ? plan.nameHi : plan.nameEn}</h1>
+              <p className="qr-plan-detail-description">{locale === "hi" ? plan.descriptionHi : plan.descriptionEn}</p>
+              <p className="qr-audience-label">{marketingText("Who it is for", locale)}</p>
+              <ul className="qr-audience-chips">{audience.map((item) => <li key={item.en}>{locale === "hi" ? item.hi : item.en}</li>)}</ul>
+              {selected ? <p className="qr-detail-price" data-price data-duration={selected.duration}>{formatRupees(selected.pricePaise)} <span>{DURATION_LABELS[selected.duration][locale]}</span>{selected.mrpPaise && selected.mrpPaise > selected.pricePaise ? <s>{formatRupees(selected.mrpPaise)}</s> : null}</p> : null}
               <div className="qr-choice-row qr-detail-durations" role="group" aria-label={`${plan.nameEn} plan duration`}>
-                {plan.prices.map((price) => <button key={price.duration} type="button" aria-pressed={selected?.duration === price.duration} onClick={() => setDuration(price.duration)}>{DURATION_LABELS[price.duration].en}</button>)}
+                {plan.prices.map((price) => <button key={price.duration} type="button" aria-pressed={selected?.duration === price.duration} onClick={() => setDuration(price.duration)}>{DURATION_LABELS[price.duration][locale]}</button>)}
               </div>
-              {selected ? <a href={buyHref(plan.slug, selected.duration)} className="qr-button qr-button-dark qr-detail-buy">Buy now <span aria-hidden="true">↗</span></a> : null}
+              {selected ? <a href={buyHref(plan.slug, selected.duration)} className="qr-button qr-button-dark qr-detail-buy">{marketingText("Buy now", locale)} <span aria-hidden="true">↗</span></a> : null}
               <div className="qr-includes">
                 <h2>What’s included</h2>
                 <ul>
-                  {plan.bullets.filter((bullet) => isPlanFeatureAvailable(bullet.en, plan)).map((bullet) => <li key={bullet.en}><Check size={17} aria-hidden="true" /><span>{bullet.en}</span></li>)}
-                  {modules.map((module) => <li key={module.id}><Check size={17} aria-hidden="true" /><span>{module.blurbEn}</span></li>)}
+                  {plan.bullets.filter((bullet) => isPlanFeatureAvailable(bullet.en, plan)).map((bullet) => <li key={bullet.en}><Check size={17} aria-hidden="true" /><span>{locale === "hi" ? bullet.hi : bullet.en}</span></li>)}
+                  {modules.map((module) => <li key={module.id}><Check size={17} aria-hidden="true" /><span>{locale === "hi" ? module.blurbHi : module.blurbEn}</span></li>)}
                 </ul>
               </div>
             </div>
@@ -77,9 +81,9 @@ export function PlanDetail({
               {hardware.slice(0, 4).map((item, index) => {
                 const src = item.imageUrl || `/landing/${HARDWARE_FALLBACKS[index % HARDWARE_FALLBACKS.length]}`;
                 return <article className="qr-stand-card" key={item.slug}>
-                  <Link href="/dashboard/shop" className="qr-stand-image"><Image src={src} alt={`${item.name} product`} width={800} height={600} sizes="(max-width: 760px) 80vw, 290px" unoptimized /></Link>
-                  <div className="qr-stand-info"><div><h3>{item.name}</h3><p>{item.needsNfc ? "QR + NFC" : "QR stand"}</p></div><strong>{formatRupees(item.salePaise)}</strong></div>
-                  <Link className="qr-button qr-button-light" href="/dashboard/shop">View in shop <span aria-hidden="true">↗</span></Link>
+                  <Link href="/dashboard/shop" className="qr-stand-image"><Image src={src} alt={`${locale === "hi" ? item.nameHi : item.name} product`} width={800} height={600} sizes="(max-width: 760px) 80vw, 290px" unoptimized /></Link>
+                  <div className="qr-stand-info"><div><h3>{locale === "hi" ? item.nameHi : item.name}</h3><p>{item.needsNfc ? "QR + NFC" : locale === "hi" ? "QR स्टैंड" : "QR stand"}</p></div><strong>{formatRupees(item.salePaise)}</strong></div>
+                  <Link className="qr-button qr-button-light" href="/dashboard/shop">{marketingText("View in shop", locale)} <span aria-hidden="true">↗</span></Link>
                 </article>;
               })}
             </div>
@@ -97,10 +101,10 @@ export function PlanDetail({
       <section className="qr-section qr-plan-faq">
         <div className="qr-wrap qr-faq-wrap">
           <div className="qr-section-heading"><Eyebrow>02 / PLAN QUESTIONS</Eyebrow><h2>A few useful details.</h2></div>
-          <div className="qr-faq-list">{faqs.map((faq) => <details key={faq.qEn} className="qr-faq-item"><summary><span>{faq.qEn}</span><ChevronDown size={19} aria-hidden="true" /></summary><p>{faq.aEn}</p></details>)}</div>
+          <div className="qr-faq-list">{faqs.map((faq) => <details key={faq.qEn} className="qr-faq-item"><summary><span>{locale === "hi" ? faq.qHi : faq.qEn}</span><ChevronDown size={19} aria-hidden="true" /></summary><p>{locale === "hi" ? faq.aHi : faq.aEn}</p></details>)}</div>
         </div>
       </section>
-      {selected ? <div className="qr-plan-sticky"><p>{formatRupees(selected.pricePaise)}<span> · {DURATION_LABELS[selected.duration].en}</span></p><a className="qr-button qr-button-dark" href={buyHref(plan.slug, selected.duration)}>Buy now <span aria-hidden="true">↗</span></a></div> : null}
-    </>
+      {selected ? <div className="qr-plan-sticky"><p>{formatRupees(selected.pricePaise)}<span> · {DURATION_LABELS[selected.duration][locale]}</span></p><a className="qr-button qr-button-dark" href={buyHref(plan.slug, selected.duration)}>{marketingText("Buy now", locale)} <span aria-hidden="true">↗</span></a></div> : null}
+    </></LocalizedCopy>
   );
 }

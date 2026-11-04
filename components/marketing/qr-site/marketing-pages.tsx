@@ -13,6 +13,8 @@ import { Eyebrow, PageIntro, PhoneScreenshot, SectionHeading, TextLink } from ".
 import { Reveal, HeroWordReveal } from "./reveal";
 import { FAQList, PricingCards } from "./pricing";
 import { PlanComparison } from "./plan-comparison";
+import { LocalizedCopy } from "./i18n";
+import type { SeoLocale } from "@/lib/seo";
 
 const featureRows: Array<{
   number: string;
@@ -109,27 +111,39 @@ const featureRows: Array<{
 const homeFaqs = [
   {
     q: "What is NFC? Do my customers need an app?",
-    a: "NFC is the same tap used for contactless payments. Most phones open your page when they touch the stand. Phones without NFC scan the QR with the camera. No app either way."
+    a: "NFC is the same tap used for contactless payments. Most phones open your page when they touch the stand. Phones without NFC scan the QR with the camera. No app either way.",
+    qHi: "NFC क्या है? क्या ग्राहकों को ऐप चाहिए?",
+    aHi: "NFC कॉन्टैक्टलेस पेमेंट जैसी टैप तकनीक है। ज़्यादातर फ़ोन स्टैंड छूते ही आपका पेज खोल देते हैं। बिना NFC वाले फ़ोन कैमरे से QR स्कैन कर सकते हैं। दोनों तरीकों में ऐप की ज़रूरत नहीं।"
   },
   {
     q: "Can I change my links after the stand is printed?",
-    a: "Yes. The QR and NFC point at your QR24x7 page, so you can change the menu, links, offers, or theme from the dashboard. The printed stand stays the same."
+    a: "Yes. The QR and NFC point at your QR24x7 page, so you can change the menu, links, offers, or theme from the dashboard. The printed stand stays the same.",
+    qHi: "क्या स्टैंड छपने के बाद लिंक बदल सकते हैं?",
+    aHi: "हाँ। QR और NFC आपके QR24x7 पेज पर खुलते हैं, इसलिए डैशबोर्ड से मेनू, लिंक, ऑफ़र या थीम बदल सकते हैं। छपे हुए स्टैंड को बदलने की ज़रूरत नहीं।"
   },
   {
     q: "How does WhatsApp ordering work?",
-    a: "Customers add items and tap Order on WhatsApp. A message with the items, total, table or address, and a UPI link opens in WhatsApp to your number. You get the order with no commission."
+    a: "Customers add items and tap Order on WhatsApp. A message with the items, total, table or address, and a UPI link opens in WhatsApp to your number. You get the order with no commission.",
+    qHi: "WhatsApp ऑर्डर कैसे काम करता है?",
+    aHi: "ग्राहक आइटम जोड़कर Order on WhatsApp दबाते हैं। आइटम, कुल कीमत, टेबल या पता और UPI लिंक वाला संदेश आपके नंबर पर WhatsApp में खुलता है। ऑर्डर पर कोई कमीशन नहीं।"
   },
   {
     q: "Is this allowed by Google?",
-    a: "Every customer sees the public Google link and a private note on the same screen, at any star rating. Nothing is posted for them. Rewards are never offered in exchange for a public review."
+    a: "Every customer sees the public Google link and a private note on the same screen, at any star rating. Nothing is posted for them. Rewards are never offered in exchange for a public review.",
+    qHi: "क्या Google इसकी अनुमति देता है?",
+    aHi: "हर ग्राहक को हर स्टार रेटिंग पर एक ही स्क्रीन में सार्वजनिक Google लिंक और निजी नोट का विकल्प दिखता है। ग्राहक की ओर से कुछ पोस्ट नहीं होता। सार्वजनिक रिव्यू के बदले कोई इनाम नहीं दिया जाता।"
   },
   {
     q: "Do you deliver the stands?",
-    a: "Yes, across India with tracking. You approve the design first. We then print, program the NFC, and ship."
+    a: "Yes, across India with tracking. You approve the design first. We then print, program the NFC, and ship.",
+    qHi: "क्या आप स्टैंड पूरे भारत में भेजते हैं?",
+    aHi: "हाँ, ट्रैकिंग के साथ पूरे भारत में भेजते हैं। पहले आप डिज़ाइन को मंज़ूरी देते हैं। फिर हम प्रिंट करके NFC प्रोग्राम करते हैं और भेजते हैं।"
   },
   {
     q: "Can I manage more than one branch?",
-    a: "Yes. Each branch, table, or staff member can have its own QR and NFC, and you see them in one dashboard."
+    a: "Yes. Each branch, table, or staff member can have its own QR and NFC, and you see them in one dashboard.",
+    qHi: "क्या मैं कई शाखाएँ संभाल सकता हूँ?",
+    aHi: "हाँ। हर शाखा, टेबल या स्टाफ़ सदस्य के लिए अलग QR और NFC रख सकते हैं और सब कुछ एक डैशबोर्ड में देख सकते हैं।"
   }
 ];
 
@@ -140,8 +154,9 @@ const steps = [
   { number: "04", title: "Track and grow", body: "Follow reviews, scans, enquiries, and orders from the app, then keep improving your page." }
 ];
 
-function FeatureRows() {
+function FeatureRows({ locale = "en" }: { locale?: SeoLocale }) {
   return (
+    <LocalizedCopy locale={locale}>
     <div className="qr-feature-list">
       {featureRows.map((feature, index) => (
         <Reveal key={feature.number}>
@@ -162,14 +177,15 @@ function FeatureRows() {
         </Reveal>
       ))}
     </div>
+    </LocalizedCopy>
   );
 }
 
-function StatsBand({ trust }: { trust: LandingTrust }) {
+function StatsBand({ trust, locale = "en" }: { trust: LandingTrust; locale?: SeoLocale }) {
   const stats = landingStats(trust);
 
   return (
-    <section className="qr-stats-band" aria-label="QR24x7 product facts">
+    <LocalizedCopy locale={locale}><section className="qr-stats-band" aria-label="QR24x7 product facts">
       <div className="qr-wrap">
         <Eyebrow>THE SMALL DETAILS ADD UP</Eyebrow>
         <div className="qr-stats-grid">
@@ -183,13 +199,14 @@ function StatsBand({ trust }: { trust: LandingTrust }) {
         </div>
       </div>
     </section>
+    </LocalizedCopy>
   );
 }
 
-function Marquee() {
+function Marquee({ locale = "en" }: { locale?: SeoLocale }) {
   const items = ["Google reviews", "Digital menu", "WhatsApp orders", "NFC stands", "Scan analytics", "Hindi + English"];
   return (
-    <div className="qr-marquee" aria-label="Reviews, menus, WhatsApp orders, NFC stands, analytics, Hindi and English">
+    <LocalizedCopy locale={locale}><div className="qr-marquee" aria-label="Reviews, menus, WhatsApp orders, NFC stands, analytics, Hindi and English">
       <div className="qr-marquee-track">
         {[0, 1].map((copy) => (
           <span key={copy} aria-hidden={copy === 1}>
@@ -198,13 +215,14 @@ function Marquee() {
         ))}
       </div>
     </div>
+    </LocalizedCopy>
   );
 }
 
-function StorySection({ stories }: { stories: OwnerStory[] }) {
+function StorySection({ stories, locale = "en" }: { stories: OwnerStory[]; locale?: SeoLocale }) {
   if (!stories.length) return null;
   return (
-    <section className="qr-section qr-story-section">
+    <LocalizedCopy locale={locale}><section className="qr-section qr-story-section">
       <div className="qr-wrap">
         <SectionHeading number="09" eyebrow="From business owners" title="Made for the people behind the counter." />
         <div className="qr-stories-grid">
@@ -221,14 +239,15 @@ function StorySection({ stories }: { stories: OwnerStory[] }) {
         </div>
       </div>
     </section>
+    </LocalizedCopy>
   );
 }
 
-function StandCards({ hardware }: { hardware: StandAddon[] }) {
+function StandCards({ hardware, locale = "en" }: { hardware: StandAddon[]; locale?: SeoLocale }) {
   if (!hardware.length) return null;
   const photos = ["product-reviews-800.webp", "product-menu-800.webp", "product-combo-800.webp", "product-store-800.webp"];
   return (
-    <section id="stands" className="qr-section qr-stands-section">
+    <LocalizedCopy locale={locale}><section id="stands" className="qr-section qr-stands-section">
       <div className="qr-wrap">
         <div className="qr-section-heading qr-heading-split">
           <div><Eyebrow>05 / QR + NFC HARDWARE</Eyebrow><h2>A stand that works as hard as your team.</h2></div>
@@ -239,11 +258,11 @@ function StandCards({ hardware }: { hardware: StandAddon[] }) {
             const src = item.imageUrl || `/landing/${photos[index % photos.length]}`;
             return (
               <article className="qr-stand-card" key={item.slug}>
-                <Link href="/dashboard/shop" className="qr-stand-image" aria-label={`Order ${item.name}`}>
-                  <Image src={src} alt={`${item.name} QR and NFC stand`} width={800} height={600} sizes="(max-width: 760px) 80vw, 290px" unoptimized />
+                <Link href="/dashboard/shop" className="qr-stand-image" aria-label={`Order ${locale === "hi" ? item.nameHi : item.name}`}>
+                  <Image src={src} alt={`${locale === "hi" ? item.nameHi : item.name} QR and NFC stand`} width={800} height={600} sizes="(max-width: 760px) 80vw, 290px" unoptimized />
                 </Link>
                 <div className="qr-stand-info">
-                  <div><h3>{item.name}</h3><p>{item.needsNfc ? "QR + NFC" : "QR stand"}</p></div>
+                  <div><h3>{locale === "hi" ? item.nameHi : item.name}</h3><p>{item.needsNfc ? "QR + NFC" : locale === "hi" ? "QR स्टैंड" : "QR stand"}</p></div>
                   <strong>{formatRupees(item.salePaise)}</strong>
                 </div>
                 {item.mrpPaise && item.mrpPaise > item.salePaise ? <s className="qr-stand-mrp">{formatRupees(item.mrpPaise)}</s> : null}
@@ -254,13 +273,14 @@ function StandCards({ hardware }: { hardware: StandAddon[] }) {
         </div>
       </div>
     </section>
+    </LocalizedCopy>
   );
 }
 
-function FinalCTA({ brand, startHref, whatsapp }: { brand: Brand; startHref: string; whatsapp: string | null }) {
+function FinalCTA({ brand, startHref, whatsapp, locale = "en" }: { brand: Brand; startHref: string; whatsapp: string | null; locale?: SeoLocale }) {
   const contactHref = whatsapp || `mailto:${brand.supportEmail || "hello@qr24x7.in"}`;
   return (
-    <section className="qr-section qr-final-cta">
+    <LocalizedCopy locale={locale}><section className="qr-section qr-final-cta">
       <div className="qr-wrap qr-final-inner">
         <div><Eyebrow>ONE SMALL TAP CAN CHANGE THE NEXT STEP</Eyebrow><h2>Ready to make every scan count?</h2><p>Start with a QR page. Add the stand and features that fit your business.</p></div>
         <div className="qr-final-actions">
@@ -269,6 +289,7 @@ function FinalCTA({ brand, startHref, whatsapp }: { brand: Brand; startHref: str
         </div>
       </div>
     </section>
+    </LocalizedCopy>
   );
 }
 
@@ -280,7 +301,8 @@ export function HomeMarketing({
   plans,
   hardware,
   stories,
-  faqs = HOME_FAQS
+  faqs = HOME_FAQS,
+  locale = "en"
 }: {
   brand: Brand;
   trust: LandingTrust;
@@ -290,10 +312,11 @@ export function HomeMarketing({
   hardware: StandAddon[];
   stories: OwnerStory[];
   faqs?: PricingFaq[];
+  locale?: SeoLocale;
 }) {
   const contactHref = whatsapp || `mailto:${brand.supportEmail || "hello@qr24x7.in"}`;
   return (
-    <>
+    <LocalizedCopy locale={locale}><>
       <section className="qr-hero">
         <div className="qr-hero-glow" aria-hidden="true" />
         <svg className="qr-hero-lines" viewBox="0 0 1440 640" aria-hidden="true" preserveAspectRatio="none">
@@ -323,7 +346,7 @@ export function HomeMarketing({
         </div>
       </section>
 
-      <div id="discover"><Marquee /></div>
+      <div id="discover"><Marquee locale={locale} /></div>
 
       <section className="qr-section qr-intro-section">
         <div className="qr-wrap qr-intro-grid">
@@ -336,7 +359,7 @@ export function HomeMarketing({
       <section className="qr-section qr-features-section">
         <div className="qr-wrap">
           <SectionHeading number="02" eyebrow="What you get" title="Tools for the counter, the customer, and the follow-up." description="Use the pieces your business needs, from one QR page managed in the QR24x7 Android app." />
-          <FeatureRows />
+          <FeatureRows locale={locale} />
           <div className="qr-growth-tools">
             <article><Sparkles size={19} aria-hidden="true" /><div><h3>Refer and earn</h3><p>Invite another business and earn free plan months when eligible referrals complete a paid purchase.</p></div><TextLink href="/dashboard/refer">See referral details</TextLink></article>
             <article><Sparkles size={19} aria-hidden="true" /><div><h3>Become a reseller</h3><p>Apply to introduce QR24x7 to local businesses. Approval and active commission rules apply.</p></div><TextLink href="/dashboard/agent-apply">Reseller program</TextLink></article>
@@ -344,8 +367,8 @@ export function HomeMarketing({
         </div>
       </section>
 
-      <StatsBand trust={trust} />
-      <StorySection stories={stories} />
+      <StatsBand trust={trust} locale={locale} />
+      <StorySection stories={locale === "hi" ? [] : stories} locale={locale} />
 
       <section id="home-flow" className="qr-section qr-process-section">
         <div className="qr-wrap">
@@ -360,28 +383,30 @@ export function HomeMarketing({
         </div>
       </section>
 
-      <StandCards hardware={hardware} />
-      <PricingCards plans={plans} title="Pick your plan" description="Choose the active plan and duration that suit your business. Every price comes from the current plan catalog." />
-      <FAQList faqs={faqs} />
-      <FinalCTA brand={brand} startHref={startHref} whatsapp={whatsapp} />
-    </>
+      <StandCards hardware={hardware} locale={locale} />
+      <PricingCards plans={plans} locale={locale} title="Pick your plan" description="Choose the active plan and duration that suit your business. Every price comes from the current plan catalog." />
+      <FAQList faqs={faqs} locale={locale} />
+      <FinalCTA brand={brand} startHref={startHref} whatsapp={whatsapp} locale={locale} />
+    </></LocalizedCopy>
   );
 }
 
 export function FeaturesMarketing({
   plans,
-  legacy
+  legacy,
+  locale = "en"
 }: {
   plans: PublicPlan[];
   legacy: import("@/lib/settings").PricingConfig;
+  locale?: SeoLocale;
 }) {
   return (
-    <>
+    <LocalizedCopy locale={locale}><>
       <PageIntro id="story" eyebrow="A product for the whole customer journey" title={<>A QR code for Google reviews, a digital menu, and WhatsApp orders.</>} description="Give customers a useful page to land on, then follow scans, reviews, menus and orders from the QR24x7 Android app." />
       <section id="features" className="qr-section qr-features-section qr-feature-page-section">
         <div className="qr-wrap">
           <SectionHeading number="01" eyebrow="Product features" title="Set up once. Keep the page useful." />
-          <FeatureRows />
+          <FeatureRows locale={locale} />
           <div className="qr-app-facts">
             <article><Eyebrow>IN THE ANDROID APP</Eyebrow><h3>Your page and plan settings</h3><p>Manage your page, plan and setup checklist from the app.</p><PhoneScreenshot src="/landing/app/me.webp" alt="QR24x7 Android app page and plan settings" sizes="(max-width: 760px) 220px, 270px" /></article>
             <article><Eyebrow>IN THE ANDROID APP</Eyebrow><h3>Review requests</h3><p>Use the review page to invite feedback and open your public review link.</p><PhoneScreenshot src="/landing/app/reviews.webp" alt="QR24x7 Android app review requests" sizes="(max-width: 760px) 220px, 270px" /></article>
@@ -396,8 +421,8 @@ export function FeaturesMarketing({
           </section>
         </div>
       </section>
-      <PricingCards id="plans-list" plans={plans} legacy={legacy} title="Choose what to use" description="Plans and current prices are loaded from the QR24x7 catalog." />
-      <PlanComparison plans={plans} />
+      <PricingCards id="plans-list" plans={plans} legacy={legacy} locale={locale} title="Choose what to use" description="Plans and current prices are loaded from the QR24x7 catalog." />
+      <PlanComparison plans={plans} locale={locale} />
       <section id="how" className="qr-section qr-process-section">
         <div className="qr-wrap">
           <div className="qr-section-heading qr-heading-split"><div><Eyebrow>03 / HOW IT WORKS</Eyebrow><h2>Order a stand, set up, then let customers scan or tap.</h2></div><p>LEAVES YOU WITH</p></div>
@@ -405,13 +430,13 @@ export function FeaturesMarketing({
           <div className="qr-process-link"><TextLink href="/how-it-works#demo">Watch the demo</TextLink><span className="qr-link-gap" /><TextLink href="/#pricing">See pricing</TextLink></div>
         </div>
       </section>
-    </>
+    </></LocalizedCopy>
   );
 }
 
-export function HowItWorksMarketing({ brand, startHref }: { brand: Brand; startHref: string }) {
+export function HowItWorksMarketing({ brand, startHref, locale = "en" }: { brand: Brand; startHref: string; locale?: SeoLocale }) {
   return (
-    <>
+    <LocalizedCopy locale={locale}><>
       <PageIntro eyebrow="Scan · tap · grow" title="How one QR code brings Google reviews, a digital menu, and WhatsApp orders together." description="Get your page ready, put a QR or NFC stand on the counter, and give customers a quick way to review, browse, and message." />
       <section className="qr-section qr-how-section">
         <div className="qr-wrap">
@@ -437,8 +462,8 @@ export function HowItWorksMarketing({ brand, startHref }: { brand: Brand; startH
         </div>
       </section>
       <section className="qr-section qr-standalone-cta"><div className="qr-wrap"><h2>Ready for your own QR page?</h2><p>Start free, then choose a plan or stand when you need one.</p><div className="qr-demo-cta-actions"><Link className="qr-button qr-button-light" href={startHref}>Start free <ArrowUpRight size={16} /></Link><Link className="qr-button qr-button-outline-light" href="/#pricing">See pricing</Link></div></div></section>
-    </>
+    </></LocalizedCopy>
   );
 }
 
-export const HOME_FAQS = homeFaqs.map((item) => ({ qEn: item.q, qHi: item.q, aEn: item.a, aHi: item.a }));
+export const HOME_FAQS = homeFaqs.map((item) => ({ qEn: item.q, qHi: item.qHi, aEn: item.a, aHi: item.aHi }));

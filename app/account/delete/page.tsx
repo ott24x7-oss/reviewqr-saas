@@ -6,7 +6,8 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Delete your account",
-  description: "Request deletion of a QR24x7 account from the web."
+  description: "Request deletion of a QR24x7 account from the web.",
+  robots: { index: false, follow: true }
 };
 
 export default function DeleteAccountPage() {

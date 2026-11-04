@@ -21,6 +21,21 @@
   line-height: 1.55;
   scroll-behavior: smooth;
 }
+.qr-site:lang(hi) { font-family: var(--font-devanagari), var(--font-inter), sans-serif; }
+.qr-language-switch, .qr-footer-language {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 0 11px;
+  border: 1px solid var(--qr-line);
+  border-radius: 999px;
+  color: var(--qr-ink);
+  font-size: .875rem;
+  font-weight: 650;
+  text-decoration: none;
+}
+.qr-language-switch:hover, .qr-footer-language:hover { background: rgb(255 255 255 / 65%); }
 .qr-site *, .qr-site *::before, .qr-site *::after { box-sizing: border-box; }
 .qr-site img { display: block; max-width: 100%; }
 .qr-site a { color: inherit; }
