@@ -340,6 +340,7 @@ model Business {
   city            String?
   state           String?
   pincode         String?
+  listedInDirectory Boolean @default(false)
 
   // Review settings
   googleReviewUrl   String?  @db.Text
@@ -411,6 +412,7 @@ model Business {
   @@index([agentId])
   @@index([slug])
   @@index([customDomain])
+  @@index([listedInDirectory, city, industry])
 }
 
 model Location {

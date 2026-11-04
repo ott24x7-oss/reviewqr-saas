@@ -4,6 +4,8 @@ import { PublicTap } from "@/components/tap/public-page";
 import { metadataForBusiness } from "@/lib/tap/meta";
 import { isReservedSlug } from "@/lib/tap/reserved-slugs";
 import { loadPublicSlug } from "@/lib/tap/resolve";
+import { buildBusinessJsonLd, getListedBusinessBySlug } from "@/lib/local-seo";
+import { jsonLdString } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -18,8 +20,10 @@ export default async function BusinessSlugPage({ params }: { params: { slug: str
   if (isReservedSlug(params.slug)) notFound();
   const record = await loadPublicSlug(params.slug);
   if (record.status !== "active" && record.status !== "limited") notFound();
-  if (record.shortCode) {
-    return <PublicTap code={record.shortCode} channel="q" src="link" countScan />;
-  }
-  return <PublicTap code="" channel="q" src="link" countScan={false} record={record} />;
+  const directoryBusiness = record.status === "active" ? await getListedBusinessBySlug(params.slug) : null;
+  const localBusinessSchema = directoryBusiness ? buildBusinessJsonLd(directoryBusiness, directoryBusiness.ratingAverage, directoryBusiness.reviewCount) : null;
+  const publicPage = record.shortCode
+    ? <PublicTap code={record.shortCode} channel="q" src="link" countScan />
+    : <PublicTap code="" channel="q" src="link" countScan={false} record={record} />;
+  return <>{localBusinessSchema ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(localBusinessSchema) }} /> : null}{publicPage}</>;
 }

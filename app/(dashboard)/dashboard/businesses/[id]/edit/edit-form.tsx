@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ImageUpload } from "@/components/ui/image-upload";
+import { AppText } from "@/components/app-ui/i18n";
 
 type Init = {
   id: string;
@@ -36,6 +37,8 @@ type Init = {
   primaryColor: string;
   customThankYou: string;
   catalogMode: "MENU" | "SERVICES" | "BOTH";
+  listedInDirectory: boolean;
+  canEditDirectory: boolean;
 };
 
 export function EditBusinessForm({ initial }: { initial: Init }) {
@@ -51,10 +54,13 @@ export function EditBusinessForm({ initial }: { initial: Init }) {
     e.preventDefault();
     setLoading(true);
     try {
+      const payload: Partial<Init> = { ...form };
+      delete payload.canEditDirectory;
+      if (!form.canEditDirectory) delete payload.listedInDirectory;
       const res = await fetch(`/api/businesses/${initial.id}`, {
         method: "PATCH",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(form)
+        body: JSON.stringify(payload)
       });
       const json = await res.json();
       if (!res.ok) {
@@ -115,6 +121,10 @@ export function EditBusinessForm({ initial }: { initial: Init }) {
           <CardTitle>Basic info</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
+          {form.canEditDirectory ? <label className="flex items-start gap-3 rounded-xl border p-4">
+            <input type="checkbox" checked={form.listedInDirectory} onChange={(e) => update("listedInDirectory", e.target.checked)} className="mt-1 h-4 w-4" />
+            <span><span className="font-medium"><AppText en="Show my business in the QR24x7 directory" hi="मेरे व्यवसाय को QR24x7 डायरेक्टरी में दिखाएँ" /></span><span className="mt-1 block text-sm text-muted-foreground"><AppText en="Your business appears in local category and city pages after its public page is published." hi="आपका सार्वजनिक पेज प्रकाशित होने पर व्यवसाय स्थानीय श्रेणी और शहर के पेजों पर दिखेगा।" /></span></span>
+          </label> : null}
           <div className="space-y-1.5">
             <Label htmlFor="name">Name</Label>
             <Input id="name" value={form.name} onChange={(e) => update("name", e.target.value)} />

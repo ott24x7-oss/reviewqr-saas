@@ -5,6 +5,7 @@ import { listPublicPlans } from "@/lib/plans/public";
 import { fetchRenderedSeoChecklist, planSeoDescription, SEO_STATIC_ROUTES, publicLocalePath } from "@/lib/seo";
 import { PageHeader } from "@/components/admin/ui/primitives";
 import { SeoForm, type SeoRouteRow } from "./seo-form";
+import { directoryPagePaths, getDirectoryInventory } from "@/lib/local-seo";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "SEO settings", robots: { index: false, follow: false } };
@@ -25,9 +26,18 @@ export default async function AdminSeoPage() {
     { path: route.path, locale: "hi" as const, hreflangExpected: route.translated }
   ]));
   const checklist = await fetchRenderedSeoChecklist(checklistRoutes);
+  const inventory = await getDirectoryInventory(seo.localPages);
+  const localPaths = directoryPagePaths(seo.localPages, inventory);
+  const generatedPages = [
+    ...[...inventory.pages.entries()].map(([key, businesses]) => ({ path: `/in/${key}`, count: businesses.length, indexable: seo.localPages.enabled && businesses.length >= seo.localPages.minBusinessesPerPage, kind: "Directory" })),
+    ...localPaths.categoryHubs.map((slug) => ({ path: `/in/${slug}`, count: inventory.businesses.filter((business) => business.category.slug === slug).length, indexable: seo.localPages.enabled, kind: "Category hub" })),
+    ...localPaths.cityHubs.map((slug) => ({ path: `/in/city/${slug}`, count: inventory.byCity.get(slug)?.length || 0, indexable: seo.localPages.enabled, kind: "City hub" })),
+    ...localPaths.serviceCities.map((slug) => ({ path: `/qr-code-for-google-reviews/${slug}`, count: inventory.byCity.get(slug)?.length || 0, indexable: seo.localPages.enabled, kind: "Service landing" })),
+    ...inventory.businesses.map((business) => ({ path: `/${business.slug}`, count: 1, indexable: seo.localPages.enabled, kind: "Business page" }))
+  ];
 
   return <div className="space-y-5">
     <PageHeader title="SEO settings" subtitle="Manage public page search metadata, verification, schema, analytics, and the technical SEO checklist." />
-    <SeoForm initial={seo} routes={overrideRoutes} checklist={checklist} />
+    <SeoForm initial={seo} routes={overrideRoutes} checklist={checklist} generatedPages={generatedPages} />
   </div>;
 }

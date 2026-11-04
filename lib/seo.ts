@@ -104,15 +104,18 @@ function absolute(path: string) {
 }
 
 function applyTitleTemplate(title: string, template: string) {
-  const result = template.includes("%s") ? template.replaceAll("%s", title) : `${title} | QR24x7`;
-  const normalized = result.replace(/\s+/g, " ").trim();
-  if (normalized.length <= 60) return normalized;
-  let shortened = "";
-  for (const character of Array.from(normalized)) {
-    if ((shortened + character + "…").length > 60) break;
-    shortened += character;
+  const normalizedTitle = title.replace(/\s+/g, " ").trim();
+  const effectiveTemplate = template.includes("%s") ? template : "%s | QR24x7";
+  const suffix = effectiveTemplate.split("%s").slice(1).join("%s").replace(/\s+/g, " ").trim();
+  // A few local page titles used to include the brand already. Avoid applying the
+  // configured suffix a second time when a complete title is passed in.
+  let titleWithSingleSuffix = normalizedTitle;
+  if (suffix) {
+    const repeatedSuffix = `${suffix} ${suffix}`;
+    while (titleWithSingleSuffix.endsWith(repeatedSuffix)) titleWithSingleSuffix = titleWithSingleSuffix.slice(0, -suffix.length - 1);
+    if (titleWithSingleSuffix.endsWith(suffix)) return titleWithSingleSuffix;
   }
-  return `${shortened.trimEnd()}…`;
+  return effectiveTemplate.replaceAll("%s", titleWithSingleSuffix).replace(/\s+/g, " ").trim();
 }
 
 export async function buildSeoMetadata(input: SeoPageInput, config?: SeoConfig): Promise<Metadata> {
@@ -326,18 +329,6 @@ function joinSeoModules(labels: string[], locale: SeoLocale) {
   return `${labels.slice(0, -1).join(", ")} & ${labels[labels.length - 1]}`;
 }
 
-function fitSeoTitlePart(value: string, maxLength: number) {
-  if (value.length <= maxLength) return value;
-  if (maxLength <= 0) return "";
-  if (maxLength === 1) return "…";
-  let result = "";
-  for (const character of Array.from(value)) {
-    if ((result + character + "…").length > maxLength) break;
-    result += character;
-  }
-  return `${result.trimEnd()}…`;
-}
-
 /** Build a descriptive plan title from only the modules included in the plan. */
 export function planSeoTitle(name: string, modules: readonly string[], locale: SeoLocale) {
   const labels = locale === "hi"
@@ -364,6 +355,5 @@ export function planSeoTitle(name: string, modules: readonly string[], locale: S
 
   const moduleText = joinSeoModules(present.map((id) => compactLabels[id]), locale);
   const fixedTitle = `${planWord}${moduleText ? `: ${moduleText}` : ""}`;
-  const nameLength = maxTitleLength - fixedTitle.length - 1;
-  return `${fitSeoTitlePart(trimmedName, nameLength)} ${fixedTitle}`.trim();
+  return fixedTitle;
 }

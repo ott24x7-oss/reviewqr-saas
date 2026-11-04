@@ -79,7 +79,6 @@ export async function generateMetadata(): Promise<Metadata> {
       ...(seo.verification.yandex ? { yandex: seo.verification.yandex } : {})
     },
     twitter: { card: "summary_large_image", title: fullTitle, description: seo.defaultDescriptionEn, images: ogImages },
-    robots: { index: true, follow: true },
     icons: {
       icon: [
         { url: BRAND_FAVICON },
