@@ -29,6 +29,32 @@ export async function isCloudApiConfigured() {
   return !!(cfg.apiToken && cfg.phoneId);
 }
 
+/** Campaign sends require an automated WhatsApp provider that is ready to send. */
+export async function isAutomatedWhatsAppReady() {
+  const cfg = await getWhatsAppConfig();
+  if (cfg.provider === "cloud-api") {
+    if (!cfg.apiToken || !cfg.phoneId) return false;
+    try {
+      const base = cfg.apiUrl.replace(/\/$/, "");
+      const response = await fetch(`${base}/${cfg.phoneId}?fields=id`, {
+        headers: { Authorization: `Bearer ${cfg.apiToken}` },
+        signal: AbortSignal.timeout(4_000)
+      });
+      const body = (await response.json().catch(() => ({}))) as { id?: unknown };
+      return response.ok && body.id === cfg.phoneId;
+    } catch {
+      return false;
+    }
+  }
+  if (cfg.provider !== "baileys") return false;
+  try {
+    const { getBaileys } = await import("./whatsapp-baileys");
+    return await getBaileys().ensureConnected();
+  } catch {
+    return false;
+  }
+}
+
 export async function sendWhatsAppCloud(payload: WhatsAppPayload) {
   const cfg = await getWhatsAppConfig();
   if (!cfg.apiToken || !cfg.phoneId) {

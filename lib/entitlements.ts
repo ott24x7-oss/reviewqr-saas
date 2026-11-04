@@ -5,7 +5,7 @@
 import { prisma } from "./db";
 import type { PlanInfo } from "./payments";
 import { getAiConfig } from "./settings";
-import { limitValue } from "./plans/catalog";
+import { limitValue, type ModuleId } from "./plans/catalog";
 import { loadEntitlement, moduleBlock } from "./plans/entitlements";
 import type { SubscriptionStatus, SubscriptionTier } from "@prisma/client";
 
@@ -94,7 +94,7 @@ export class AiQuotaError extends Error {
 }
 
 /** Reserve one AI call for a business. Throws AiQuotaError when a cap is hit. */
-export async function consumeAiCall(businessId: string) {
+export async function consumeAiCall(businessId: string, module: ModuleId = "REVIEWS") {
   const business = await prisma.business.findUnique({
     where: { id: businessId },
     select: {
@@ -111,7 +111,7 @@ export async function consumeAiCall(businessId: string) {
   });
   if (!business) throw new AiQuotaError("plan");
 
-  const locked = await moduleBlock(business.owner.id, "REVIEWS");
+  const locked = await moduleBlock(business.owner.id, module);
   if (locked) throw new AiQuotaError("plan");
   const ent = await loadEntitlement(business.owner.id);
   const limit = ent.limits.aiCalls;

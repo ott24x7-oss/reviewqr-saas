@@ -12,6 +12,7 @@
 import type { AiConfig } from "./settings";
 import { assertSafeOutboundUrl } from "./ssrf";
 import { consumeAiCall } from "./entitlements";
+import type { ModuleId } from "./plans/catalog";
 import { parseMenuDraft, type MenuDraftItem } from "./tap/menu-draft";
 import { readItemCopy, type ItemCopyField } from "./store/item-copy";
 import { readProductDraft, type ProductDraft } from "./store/entry";
@@ -87,10 +88,10 @@ type ChatContent =
 async function chat(
   cfg: AiConfig,
   messages: Array<{ role: "system" | "user"; content: ChatContent }>,
-  opts: { maxTokens?: number; temperature?: number; businessId?: string } = {}
+  opts: { maxTokens?: number; temperature?: number; businessId?: string; module?: ModuleId } = {}
 ): Promise<string> {
   if (!cfg.enabled || !cfg.apiKey) throw new Error("AI not configured");
-  if (opts.businessId) await consumeAiCall(opts.businessId);
+  if (opts.businessId) await consumeAiCall(opts.businessId, opts.module);
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 20_000);
@@ -289,7 +290,7 @@ export async function suggestItemCopy(
       { role: "system", content: description },
       { role: "user", content: ask }
     ],
-    { maxTokens: 180, temperature: 0.3, businessId }
+    { maxTokens: 180, temperature: 0.3, businessId, module: "MENU" }
   );
   return readItemCopy(raw, input.field);
 }
@@ -324,7 +325,7 @@ export async function generateMenuFromPhoto(
         ]
       }
     ],
-    { maxTokens: 2200, temperature: 0.2, businessId }
+    { maxTokens: 2200, temperature: 0.2, businessId, module: "MENU" }
   );
   return parseMenuDraft(raw);
 }
@@ -360,7 +361,7 @@ export async function readProductPhoto(
         ]
       }
     ],
-    { maxTokens: 300, temperature: 0.2, businessId }
+    { maxTokens: 300, temperature: 0.2, businessId, module: "MENU" }
   );
   const draft = readProductDraft(raw);
   if (!draft) throw new Error("No usable text");
@@ -384,7 +385,7 @@ export async function cleanPastedItems(cfg: AiConfig, text: string, businessId: 
         content: `${notes}\n\nRespond as JSON: {"items":[{"name":"Cappuccino","priceRupees":120,"veg":"NONE"}]}. At most 50 items.`
       }
     ],
-    { maxTokens: 2200, temperature: 0.1, businessId }
+    { maxTokens: 2200, temperature: 0.1, businessId, module: "MENU" }
   );
   return parseMenuDraft(raw).filter((item) => item.priceRupees > 0);
 }

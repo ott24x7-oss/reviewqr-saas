@@ -47,7 +47,7 @@ Each source path below is mapped once. “Merge” means its current feature bec
 | app/(dashboard)/dashboard/businesses/[id]/menu/menu-entry.tsx | Sell · Menu & products | Keep item and category editing in the catalog. |
 | app/(dashboard)/dashboard/businesses/[id]/offers/page.tsx | Sell · Offers & campaigns | Merge the per-business offer editor into the campaigns screen; the page already uses the plan gate. |
 | app/(dashboard)/dashboard/businesses/[id]/offers/offers-editor.tsx | Sell · Offers & campaigns | Keep the existing offer fields and saving behavior in the merged screen. |
-| app/(dashboard)/dashboard/campaigns/page.tsx | Sell · Offers & campaigns | Merge existing campaign list and send-state into the combined screen; sending remains gated by CAMPAIGN_SEND_ENABLED. |
+| app/(dashboard)/dashboard/campaigns/page.tsx | Sell · Offers & campaigns | Merge the campaign list into the combined screen; bilingual creation is live and sends require a connected Cloud API or Baileys provider. |
 | app/(dashboard)/dashboard/businesses/[id]/store/page.tsx | Account · Settings · Store hours & UPI | Merge per-business store settings into the Settings section; the page already applies the plan gate. |
 | app/(dashboard)/dashboard/businesses/[id]/store/store-form.tsx | Account · Settings · Store hours & UPI | Keep the current settings fields and save behavior. |
 | app/(dashboard)/dashboard/businesses/[id]/staff/page.tsx | Account · Settings · Team & staff | Merge the staff screen into Settings. |

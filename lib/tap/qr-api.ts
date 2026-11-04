@@ -197,7 +197,7 @@ export type ClaimResult =
   | {
       ok: false;
       status: number;
-      body: { error: string; message: string; support: boolean; needsConfirm: boolean };
+      body: { error: string; message: string; support: boolean; needsConfirm: boolean; code?: string; feature?: string };
     };
 
 export async function claimQrCode(userId: string, businessId: string, raw: unknown, meta: RequestMeta): Promise<ClaimResult> {
@@ -260,7 +260,9 @@ export async function claimQrCode(userId: string, businessId: string, raw: unkno
         error: result.error,
         message: result.message || result.error,
         support: result.support === true,
-        needsConfirm: result.needsConfirm === true
+        needsConfirm: result.needsConfirm === true,
+        ...(result.code ? { code: result.code } : {}),
+        ...(result.feature ? { feature: result.feature } : {})
       }
     };
   }

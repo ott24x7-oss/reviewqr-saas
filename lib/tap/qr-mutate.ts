@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { revalidateTag } from "next/cache";
 import { prisma } from "@/lib/db";
 import { ownerLimitError, type LimitUser } from "@/lib/entitlements";
+import { featureBlock } from "@/lib/plans/feature-gate";
 import { locationInBusiness } from "@/lib/tenant";
 import { makeQrPublicId } from "./ids";
 import { deviceFollowsQr, lostStatus, type DeviceStatusName } from "./device-status";
@@ -41,7 +42,16 @@ class DeviceStatusError extends Error {
   }
 }
 
-type Fail = { ok: false; status: number; error: string; support?: boolean; needsConfirm?: boolean; message?: string };
+type Fail = {
+  ok: false;
+  status: number;
+  error: string;
+  support?: boolean;
+  needsConfirm?: boolean;
+  message?: string;
+  code?: string;
+  feature?: string;
+};
 type Ok<T> = { ok: true } & T;
 
 function fail(status: number, error: string, extra?: Omit<Fail, "ok" | "status" | "error">): Fail {
@@ -213,6 +223,13 @@ export async function assignQr(input: {
   if (!input.confirm) return fail(409, message, { needsConfirm: true, message });
 
   const sameOwner = qr.business?.ownerId === business.ownerId;
+  if (!sameOwner) {
+    const used = await prisma.qRCode.count({ where: { business: { ownerId: business.ownerId } } });
+    if (used >= 1) {
+      const blocked = await featureBlock(business.ownerId, "multiple-qrs");
+      if (blocked) return blocked;
+    }
+  }
   const limitError = await roomFor(business.ownerId, sameOwner ? 0 : 1);
   if (limitError) return fail(402, limitError);
 
