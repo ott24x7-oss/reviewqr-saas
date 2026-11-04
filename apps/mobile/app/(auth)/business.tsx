@@ -74,6 +74,7 @@ export default function BusinessNameScreen() {
           <Text style={[styles.title, lang === "hi" && styles.hindi]}>{t.signupTitle}</Text>
           <SectionHeader label={t.name} />
           <View style={styles.card}>
+            <FilledField label={t.verifiedPhone} value={phone} editable={false} />
             <FilledField label={t.name} value={name} onChangeText={setName} />
             <FilledField label={t.businessName} value={businessName} onChangeText={setBusinessName} />
           </View>

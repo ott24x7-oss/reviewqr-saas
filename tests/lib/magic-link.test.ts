@@ -3,6 +3,7 @@ import {
   createMagicLinkSecret,
   decideMagicLinkMessage,
   MAGIC_LINK_KEYWORD,
+  SIGNUP_MAGIC_LINK_KEYWORD,
   magicLinkRateLimitAllowed,
   magicLinkUsable,
   normalizeMagicLinkText,
@@ -25,6 +26,19 @@ describe("WhatsApp magic-link message decisions", () => {
         message: { conversation: `${MAGIC_LINK_KEYWORD} please` }
       }).kind
     ).toBe("ignore");
+  });
+
+  it("accepts the exact signup keyword while rejecting extra text", () => {
+    const message = (text: string) => ({
+      key: { remoteJid: "919811111111@s.whatsapp.net" },
+      message: { conversation: text }
+    });
+    expect(decideMagicLinkMessage("notify", message(SIGNUP_MAGIC_LINK_KEYWORD))).toEqual({
+      kind: "signup",
+      phone: "919811111111",
+      replyTo: "919811111111@s.whatsapp.net"
+    });
+    expect(decideMagicLinkMessage("notify", message(`${SIGNUP_MAGIC_LINK_KEYWORD} please`)).kind).toBe("ignore");
   });
 
   it("ignores requests older than ten minutes across supported timestamp formats", () => {

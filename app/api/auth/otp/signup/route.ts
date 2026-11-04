@@ -4,9 +4,9 @@ import { runSignupOtp } from "@/lib/auth/signup-otp";
 import {
   enforceOtpLimits,
   isSignupRequest,
+  legacySignupOtpPhoneLimits,
   otpIpLimits,
   otpLimitMessage,
-  otpPhoneLimits,
   OTP_RESEND_AFTER_SEC,
   phoneKeyFromBody
 } from "@/lib/otp-message";
@@ -19,9 +19,12 @@ export async function POST(req: NextRequest) {
   if (!ipLimit.ok) return NextResponse.json({ error: otpLimitMessage(ipLimit.key) }, { status: 429 });
 
   const body = await req.json().catch(() => ({}));
+  const rawAction = body && typeof body === "object" ? body.action : undefined;
+  const action = typeof rawAction === "string" && ["request", "confirm", "finish", "verify"].includes(rawAction) ? rawAction : "unknown";
+  console.info("[auth] legacy signup OTP API used", { version: "web", action });
   const phone = phoneKeyFromBody(body);
   if (phone && isSignupRequest(body)) {
-    const phoneLimit = await enforceOtpLimits(otpPhoneLimits(phone), rateLimitDb);
+    const phoneLimit = await enforceOtpLimits(legacySignupOtpPhoneLimits(phone), rateLimitDb);
     if (!phoneLimit.ok) return NextResponse.json({ error: otpLimitMessage(phoneLimit.key) }, { status: 429 });
   }
   const result = await runSignupOtp(body);

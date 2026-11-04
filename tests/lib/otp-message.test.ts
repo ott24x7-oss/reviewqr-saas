@@ -3,6 +3,7 @@ import {
   deliverOtpCode,
   enforceOtpLimits,
   indiaE164,
+  legacySignupOtpPhoneLimits,
   otpGateError,
   otpIpLimits,
   otpEmailHtml,
@@ -162,6 +163,9 @@ describe("OTP limits and verify errors", () => {
       { key: "otp-phone:9811111111", limit: 5, windowSeconds: 600 },
       { key: "otp-phone-15:9811111111", limit: 5, windowSeconds: 900 },
       { key: "otp-cooldown:9811111111", limit: 1, windowSeconds: 30 }
+    ]);
+    expect(legacySignupOtpPhoneLimits("9811111111")).toEqual([
+      { key: "otp-signup-phone:9811111111", limit: 3, windowSeconds: 3600 }
     ]);
   });
 

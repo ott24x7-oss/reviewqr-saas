@@ -3,6 +3,7 @@ import { prisma } from "../db";
 import { DEFAULT_REVIEW_GATING } from "../review-policy";
 import {
   consumeSignupProof,
+  consumeSignupProofToken,
   createOtpSession,
   findUserByPhone,
   issueSignupProof,
@@ -158,4 +159,13 @@ export async function runSignupOtp(body: unknown): Promise<SignupOtpResult> {
   });
   if (!created.ok) return { ok: false, status: created.status, error: created.error };
   return { ok: true, kind: "session", otpToken: created.otpToken, deviceName: data.deviceName };
+}
+
+/** Claims a bot-issued signup proof once, then replaces it with the proof used by finish. */
+export async function claimWhatsappSignupToken(token: unknown) {
+  if (typeof token !== "string") return null;
+  const phone = await consumeSignupProofToken(token);
+  if (!phone) return null;
+  if (await findUserByPhone(phone)) return null;
+  return { phone, signupToken: await issueSignupProof(phone) };
 }

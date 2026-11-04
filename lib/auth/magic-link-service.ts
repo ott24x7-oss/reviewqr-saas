@@ -1,5 +1,5 @@
 import { prisma } from "../db";
-import { findUserByPhone } from "../otp";
+import { findUserByPhone, issueSignupProof } from "../otp";
 import { rateLimitDb } from "../rate-limit";
 import { getSiteConfig } from "../settings";
 import {
@@ -37,7 +37,13 @@ export async function magicLinkReplyForPhone(rawPhone: string) {
 
   const [user, origin] = await Promise.all([findUserByPhone(rawPhone), appUrl()]);
   if (!user || user.deletedAt) {
-    return `Create your QR24x7 account: ${origin}/register`;
+    const signupToken = await issueSignupProof(phone);
+    const signupUrl = new URL(`/register?signup=${encodeURIComponent(signupToken)}`, origin).toString();
+    return [
+      `Create your QR24x7 account (valid for 10 minutes, one time): ${signupUrl}`,
+      `अपना QR24x7 अकाउंट बनाएँ (लिंक 10 मिनट तक मान्य है और केवल एक बार इस्तेमाल होगा): ${signupUrl}`,
+      "If you did not request this, ignore this message."
+    ].join("\n\n");
   }
   if (user.suspendedAt) return null;
 

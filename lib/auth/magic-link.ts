@@ -2,6 +2,7 @@ import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { phoneKeyFromRaw } from "../otp-message";
 
 export const MAGIC_LINK_KEYWORD = "Login with Magic Link for QR24x7";
+export const SIGNUP_MAGIC_LINK_KEYWORD = "Sign up for QR24x7";
 export const MAGIC_LINK_TTL_MS = 10 * 60 * 1000;
 export const MAGIC_LINK_RATE_LIMIT = 3;
 export const MAGIC_LINK_RATE_WINDOW_SECONDS = 10 * 60;
@@ -56,9 +57,9 @@ export function phoneFromWhatsAppJid(remoteJid: unknown, senderPn?: unknown, par
 export type MagicMessageDecision =
   | { kind: "ignore" }
   | { kind: "missing-phone"; replyTo: string }
-  | { kind: "login"; phone: string; replyTo: string };
+  | { kind: "login" | "signup"; phone: string; replyTo: string };
 
-/** Parses only notify events containing the exact magic-link keyword in a 1:1 text chat. */
+/** Parses only notify events containing an exact auth keyword in a 1:1 text chat. */
 export function decideMagicLinkMessage(upsertType: unknown, message: any, now = Date.now()): MagicMessageDecision {
   const key = message?.key;
   const remoteJid = key?.remoteJid;
@@ -79,12 +80,20 @@ export function decideMagicLinkMessage(upsertType: unknown, message: any, now = 
   }
 
   const text = plainTextFromMessage(message.message);
-  if (text === null || normalizeMagicLinkText(text) !== normalizeMagicLinkText(MAGIC_LINK_KEYWORD)) {
+  if (text === null) {
     return { kind: "ignore" };
   }
+  const normalizedText = normalizeMagicLinkText(text);
+  const kind =
+    normalizedText === normalizeMagicLinkText(MAGIC_LINK_KEYWORD)
+      ? "login"
+      : normalizedText === normalizeMagicLinkText(SIGNUP_MAGIC_LINK_KEYWORD)
+        ? "signup"
+        : null;
+  if (!kind) return { kind: "ignore" };
 
   const phone = phoneFromWhatsAppJid(remoteJid, key.senderPn, key.participantPn);
-  return phone ? { kind: "login", phone, replyTo: remoteJid } : { kind: "missing-phone", replyTo: remoteJid };
+  return phone ? { kind, phone, replyTo: remoteJid } : { kind: "missing-phone", replyTo: remoteJid };
 }
 
 export function createMagicLinkSecret(now = Date.now(), bytes = randomBytes(32)) {
