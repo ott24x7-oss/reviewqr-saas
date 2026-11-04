@@ -11,7 +11,7 @@ export default function robots(): MetadataRoute.Robots {
         allow: "/",
         // Keep authenticated, transactional, and per-customer review pages
         // out of the index.
-        disallow: ["/dashboard", "/admin", "/api", "/r/", "/q/", "/t/"]
+        disallow: ["/dashboard", "/admin", "/api", "/r/", "/q/", "/t/", "/m/", "/o/", "/invite/", "/join/", "/agent/join/"]
       }
     ],
     sitemap: `${baseUrl}/sitemap.xml`

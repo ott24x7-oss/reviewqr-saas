@@ -1,19 +1,24 @@
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/marketing/legal-page";
+import { buildSeoMetadata, routeDescription, SEO_STATIC_ROUTES } from "@/lib/seo";
+import { getRequestLocale } from "@/lib/locale";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Terms of Service",
-  description: "The terms that govern your use of QR24x7."
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return buildSeoMetadata({ path: "/terms", title: SEO_STATIC_ROUTES[7].titleEn, description: routeDescription("/terms", "en"), translated: false });
+}
 
 export default function TermsPage() {
+  const locale = getRequestLocale();
   return (
     <LegalPage
+      locale={locale}
+      path="/terms"
+      breadcrumbName={locale === "hi" ? "सेवा की शर्तें" : "Terms of Service"}
       eyebrow="Legal"
-      title="Terms of Service"
-      intro="These terms govern your access to and use of QR24x7. Please read them carefully."
+      title={locale === "hi" ? "सेवा की शर्तें" : "Terms of Service"}
+      intro={locale === "hi" ? "ये शर्तें QR24x7 के उपयोग पर लागू होती हैं। कृपया इन्हें ध्यान से पढ़ें।" : "These terms govern your access to and use of QR24x7. Please read them carefully."}
       updated="21 October 2026"
     >
       <p>

@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { JoinButton } from "./join-button";
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = { title: "Join a team", robots: { index: false, follow: false } };
 
 export default async function JoinTeamPage({ params }: { params: { code: string } }) {
   const user = await getCurrentUser();
@@ -23,3 +24,4 @@ export default async function JoinTeamPage({ params }: { params: { code: string 
     </main>
   );
 }
+import type { Metadata } from "next";

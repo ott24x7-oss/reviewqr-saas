@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import localFont from "next/font/local";
 import { Providers } from "@/components/providers";
 import { Toaster } from "@/components/ui/toaster";
@@ -6,6 +7,7 @@ import { ShapeGridGate } from "@/components/ui/shape-grid-gate";
 import { getBrand } from "@/lib/brand";
 import { DEFAULT_BRAND_NAME, DEFAULT_BRAND_TAGLINE } from "@/lib/brand-defaults";
 import { BRAND_APPLE, BRAND_FAVICON, BRAND_OG } from "@/lib/brand-assets";
+import { DEFAULT_SEO_CONFIG, getSeoConfig } from "@/lib/settings";
 import "./globals.css";
 import "@/components/marketing/qr-site/qr-site.css";
 
@@ -27,17 +29,26 @@ const poppins = localFont({
   variable: "--font-display",
   display: "swap"
 });
+const devanagari = localFont({
+  src: [
+    { path: "../fonts/noto-sans-devanagari-latin-devanagari-400.woff2", weight: "400" },
+    { path: "../fonts/noto-sans-devanagari-latin-devanagari-600.woff2", weight: "600" },
+    { path: "../fonts/noto-sans-devanagari-latin-devanagari-700.woff2", weight: "700" }
+  ],
+  variable: "--font-devanagari",
+  display: "swap"
+});
 
 export async function generateMetadata(): Promise<Metadata> {
-  const brand = await getBrand().catch(() => ({
+  const [brand, seo] = await Promise.all([getBrand().catch(() => ({
     name: DEFAULT_BRAND_NAME,
     logoUrl: "",
     appUrl: process.env.NEXT_PUBLIC_APP_URL || "",
     supportEmail: "hello@qr24x7.in",
     tagline: DEFAULT_BRAND_TAGLINE
-  }));
+  })), getSeoConfig().catch(() => DEFAULT_SEO_CONFIG)]);
 
-  const fullTitle = `${brand.name} — ${brand.tagline}`;
+  const fullTitle = `QR Review, Menu & WhatsApp Orders | ${brand.name}`;
   const ogImages =
     brand.logoUrl && brand.logoUrl.startsWith("http")
       ? [brand.logoUrl]
@@ -45,11 +56,8 @@ export async function generateMetadata(): Promise<Metadata> {
 
   return {
     metadataBase: new URL(brand.appUrl || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
-    title: {
-      default: fullTitle,
-      template: `%s | ${brand.name}`
-    },
-    description: brand.tagline,
+    title: { default: fullTitle, template: seo.defaultTitleTemplate || `%s | ${brand.name}` },
+    description: seo.defaultDescriptionEn,
     keywords: [
       "google reviews",
       "review qr code",
@@ -61,10 +69,16 @@ export async function generateMetadata(): Promise<Metadata> {
     openGraph: {
       type: "website",
       title: fullTitle,
-      description: brand.tagline,
+      description: seo.defaultDescriptionEn,
       siteName: brand.name,
       images: ogImages
     },
+    verification: {
+      ...(seo.verification.google ? { google: seo.verification.google } : {}),
+      ...(seo.verification.bing ? { other: { "msvalidate.01": seo.verification.bing } } : {}),
+      ...(seo.verification.yandex ? { yandex: seo.verification.yandex } : {})
+    },
+    twitter: { card: "summary_large_image", title: fullTitle, description: seo.defaultDescriptionEn, images: ogImages },
     robots: { index: true, follow: true },
     icons: {
       icon: [
@@ -89,8 +103,9 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const locale = headers().get("x-app-locale") === "hi" ? "hi" : "en";
   return (
-    <html lang="en" className={`${inter.variable} ${poppins.variable}`}>
+    <html lang={locale} className={`${inter.variable} ${poppins.variable} ${devanagari.variable}`}>
       <body className="min-h-screen bg-[#eef1f6] font-sans antialiased">
         <ShapeGridGate />
         <Providers>

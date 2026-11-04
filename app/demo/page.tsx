@@ -15,6 +15,9 @@ import {
 import { SiteShell, PageIntro, Eyebrow } from "@/components/marketing/qr-site/ui";
 import { getBrand } from "@/lib/brand";
 import { absoluteUrl } from "@/lib/utils";
+import { buildSeoMetadata, routeDescription, SEO_STATIC_ROUTES } from "@/lib/seo";
+import { LocalizedCopy } from "@/components/marketing/qr-site/i18n";
+import { getRequestLocale } from "@/lib/locale";
 
 const DEMO_QR_IMAGE = "https://i.ibb.co/Y7RWPMK5/QR-pay.png";
 
@@ -46,18 +49,19 @@ const steps = [
   }
 ];
 
-export const metadata: Metadata = {
-  title: "Live Demo · QR24x7",
-  description: "Scan the QR or use the live preview. Every star shows the public review link and a private note."
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return buildSeoMetadata({ path: "/demo", title: SEO_STATIC_ROUTES[5].titleEn, description: routeDescription("/demo", "en") });
+}
 
 export const dynamic = "force-dynamic";
 
 export default async function DemoPage() {
+  const locale = getRequestLocale();
   const brand = await getBrand();
   const demoReviewUrl = absoluteUrl("/r/ensofter");
   return (
-    <SiteShell brand={brand}>
+    <SiteShell brand={brand} locale={locale} path="/demo">
+      <LocalizedCopy locale={locale}><>
       <PageIntro eyebrow="Live demo" title={<>See it on your phone <em>right now.</em></>} description="Scan the QR below — or use the live embed underneath — to walk through the full customer flow. The demo is the same page your customers will get." />
 
       <section className="qr-demo-section">
@@ -120,10 +124,11 @@ export default async function DemoPage() {
           <p>Add your Google or Trustpilot review URL, generate a QR for your counter, and start collecting reviews today. Free trial — no card needed.</p>
           <div className="qr-demo-cta-actions">
             <Link href="/register" className="qr-button qr-button-light">Start free trial <ArrowRight size={16} /></Link>
-            <Link href="/#pricing" className="qr-button qr-button-outline-light">See pricing</Link>
+            <Link href={`${locale === "hi" ? "/hi" : ""}#pricing`} className="qr-button qr-button-outline-light">See pricing</Link>
           </div>
         </div>
       </section>
+      </></LocalizedCopy>
     </SiteShell>
   );
 }

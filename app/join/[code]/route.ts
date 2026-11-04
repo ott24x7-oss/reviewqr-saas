@@ -4,6 +4,7 @@ import { JOIN_COOKIE, joinCookieUpdate } from "@/lib/plans/attribution";
 export async function GET(req: NextRequest, { params }: { params: { code: string } }) {
   const url = new URL("/register", req.url);
   const res = NextResponse.redirect(url);
+  res.headers.set("X-Robots-Tag", "noindex, nofollow");
   const next = joinCookieUpdate(req.cookies.get(JOIN_COOKIE)?.value, { kind: "agent", code: params.code });
   if (next) {
     res.cookies.set(JOIN_COOKIE, next, {

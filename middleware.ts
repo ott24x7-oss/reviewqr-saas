@@ -3,6 +3,11 @@ import { legacyHostnames, legacyHostRedirect } from "@/lib/http/legacy-host";
 import { absoluteRedirect, destinationFor, directRedirectResponse, ownHostsFrom } from "@/lib/tap/direct-http";
 
 export async function middleware(req: NextRequest) {
+  const requestHeaders = new Headers(req.headers);
+  const isHindi = req.nextUrl.pathname === "/hi" || req.nextUrl.pathname.startsWith("/hi/");
+  requestHeaders.set("x-app-locale", isHindi ? "hi" : "en");
+  const nextWithLocale = () => NextResponse.next({ request: { headers: requestHeaders } });
+
   const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || req.nextUrl.host;
   const legacy = legacyHostRedirect({
     pathname: req.nextUrl.pathname,
@@ -14,8 +19,8 @@ export async function middleware(req: NextRequest) {
   if (legacy) return NextResponse.redirect(legacy, 301);
 
   const match = req.nextUrl.pathname.match(/^\/(q|t)\/([^/]+)\/?$/);
-  if (!match) return NextResponse.next();
-  if (req.nextUrl.searchParams.get("page") === "1") return NextResponse.next();
+  if (!match) return nextWithLocale();
+  if (req.nextUrl.searchParams.get("page") === "1") return nextWithLocale();
 
   const channel = match[1];
   const code = decodeURIComponent(match[2] || "");
@@ -35,17 +40,17 @@ export async function middleware(req: NextRequest) {
 
   try {
     const res = await fetch(decide, { headers, cache: "no-store" });
-    if (!res.ok) return NextResponse.next();
+    if (!res.ok) return nextWithLocale();
     const body = (await res.json()) as { redirect?: unknown };
-    if (typeof body.redirect !== "string" || !body.redirect) return NextResponse.next();
+    if (typeof body.redirect !== "string" || !body.redirect) return nextWithLocale();
     const hosts = ownHostsFrom(host, process.env.NEXT_PUBLIC_APP_URL, legacyHostnames(process.env.LEGACY_HOSTS));
     const safe = destinationFor(body.redirect, hosts);
-    if (!safe) return NextResponse.next();
+    if (!safe) return nextWithLocale();
     const location = absoluteRedirect(safe, req.nextUrl.origin);
-    if (!location) return NextResponse.next();
+    if (!location) return nextWithLocale();
     return directRedirectResponse(location);
   } catch {
-    return NextResponse.next();
+    return nextWithLocale();
   }
 }
 

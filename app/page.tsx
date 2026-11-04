@@ -11,38 +11,34 @@ import { landingTrust } from "@/lib/landing/proof";
 import { landingPhotoCredits } from "@/lib/landing/credits";
 import { landingStories } from "@/lib/landing/stories";
 import { listStandAddons } from "@/lib/landing/hardware";
+import { buildSeoMetadata, routeDescription, SEO_STATIC_ROUTES } from "@/lib/seo";
+import { getRequestLocale } from "@/lib/locale";
+import { HomeStructuredData } from "@/components/marketing/qr-site/structured-data";
+import { getPricingCopy } from "@/lib/plans/pricing-copy";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const brand = await getBrand();
-  const title = `${brand.name} — ${brand.tagline}`;
-  const description = `${brand.tagline}. Google reviews, menu and WhatsApp orders from one QR + NFC stand. No commission. Setup in 10 minutes. Made in India.`;
-  return {
-    title: { absolute: title },
-    description,
-    openGraph: {
-      title,
-      description,
-      images: [{ url: "/landing/og-1600.webp", width: 1200, height: 630, alt: "QR and NFC stand on a café counter" }]
-    }
-  };
+  return buildSeoMetadata({ path: "/", title: SEO_STATIC_ROUTES[0].titleEn, description: routeDescription("/", "en"), image: "/landing/og-1600.webp" });
 }
 
 export default async function HomePage() {
-  const [catalog, priced, brand, trust, hardware] = await Promise.all([
+  const locale = getRequestLocale();
+  const [catalog, priced, brand, trust, hardware, copy] = await Promise.all([
     listPublicPlans(),
     listActivePlanPrices(),
     getBrand(),
     landingTrust(),
-    listStandAddons()
+    listStandAddons(),
+    getPricingCopy()
   ]);
   const free = freePlanOffer(priced);
   const startHref = free ? buyHref(free.slug, free.duration) : "/register";
   const whatsapp = await talkToUsHref();
 
   return (
-    <SiteShell brand={brand} startHref={startHref} whatsapp={whatsapp} credits={landingPhotoCredits()}>
+    <SiteShell brand={brand} startHref={startHref} whatsapp={whatsapp} credits={landingPhotoCredits()} locale={locale} path="/">
+      <HomeStructuredData locale={locale} faqs={copy.faqs} />
       <LegacyHashRedirect />
       <HomeMarketing
         brand={brand}
@@ -52,6 +48,8 @@ export default async function HomePage() {
         plans={catalog}
         hardware={hardware}
         stories={landingStories()}
+        faqs={copy.faqs}
+        locale={locale}
       />
     </SiteShell>
   );

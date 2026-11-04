@@ -20,6 +20,7 @@ export type AdminIcon =
   | "email"
   | "ai"
   | "site"
+  | "seo"
   | "branding"
   | "themes"
   | "presets"
@@ -88,6 +89,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
     label: "Content",
     items: [
       { href: "/admin/site", label: "Website", icon: "site" },
+      { href: "/admin/seo", label: "SEO settings", icon: "seo" },
       { href: "/admin/themes", label: "Tap themes", icon: "themes" },
       { href: "/admin/help", label: "Help centre", icon: "help" }
     ]
