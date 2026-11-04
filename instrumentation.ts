@@ -8,7 +8,9 @@ export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
     const { scheduleBaileysAutostart } = await import("./lib/boot/baileys-autostart");
     const { scheduleBillingReconciliation } = await import("./lib/jobs/billing-scheduler");
+    const { scheduleInProcessJobs } = await import("./lib/jobs/inprocess-scheduler");
     scheduleBaileysAutostart();
     scheduleBillingReconciliation();
+    scheduleInProcessJobs();
   }
 }

@@ -28,7 +28,8 @@ function mapJob(row: ClaimedJob | undefined): ClaimedJob | null {
 }
 
 export function webWorkerId() {
-  return process.env.WORKER_ID || "web";
+  const instance = process.env.RAILWAY_REPLICA_ID || process.env.HOSTNAME || process.pid;
+  return `web-${instance}`;
 }
 
 export async function enqueueJob(
@@ -186,5 +187,15 @@ export async function touchHeartbeat(workerId: string, db: Db = prisma) {
 
 export async function workerIsFresh(now = new Date(), db: Db = prisma) {
   const row = await db.workerHeartbeat.findFirst({ orderBy: { seenAt: "desc" } });
+  return heartbeatFresh(row?.seenAt ?? null, now.getTime());
+}
+
+export async function externalWorkerIsFresh(now = new Date(), db: Db = prisma) {
+  const row = await db.workerHeartbeat.findFirst({
+    // Web replicas share this scheduler and must not make each other back off.
+    where: { NOT: { id: { startsWith: "web-" } } },
+    orderBy: { seenAt: "desc" },
+    select: { seenAt: true }
+  });
   return heartbeatFresh(row?.seenAt ?? null, now.getTime());
 }

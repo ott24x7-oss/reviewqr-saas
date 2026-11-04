@@ -22,8 +22,9 @@ export async function POST(req: NextRequest) {
   if (!authed) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
+    const now = new Date();
     const [reconcileJob, staleJob, lapsedJob, reminderJob] = await enqueueBillingJobs();
-    await enqueueInsightJobs().catch(() => {});
+    await enqueueInsightJobs(now).catch(() => {});
     if (await workerIsFresh()) return NextResponse.json({ queued: true });
 
     const result = (await runClaimedJob(reconcileJob.id)) as { checked: number; activated: number } | null;
