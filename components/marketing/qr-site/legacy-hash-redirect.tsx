@@ -23,6 +23,7 @@ export function LegacyHashRedirect() {
     const go = () => {
       const id = window.location.hash.replace(/^#/, "");
       if (!MOVED.has(id)) return;
+      if (document.getElementById(id)) return;
       window.location.replace(`/features#${id}`);
     };
     go();

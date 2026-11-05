@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { LegacyHashRedirect } from "@/components/marketing/qr-site/legacy-hash-redirect";
-import { HomeMarketing } from "@/components/marketing/qr-site/marketing-pages";
+import { HomeMarketing, homeFaqsWithReviewPolicy } from "@/components/marketing/qr-site/marketing-pages";
 import { SiteShell } from "@/components/marketing/qr-site/ui";
 import { listActivePlanPrices, listPublicPlans } from "@/lib/plans/public";
 import { buyHref } from "@/lib/plans/categories";
@@ -35,10 +35,11 @@ export default async function HomePage() {
   const free = freePlanOffer(priced);
   const startHref = free ? buyHref(free.slug, free.duration) : "/register";
   const whatsapp = await talkToUsHref();
+  const homeFaqs = homeFaqsWithReviewPolicy(copy.faqs);
 
   return (
     <SiteShell brand={brand} startHref={startHref} whatsapp={whatsapp} credits={landingPhotoCredits()} locale={locale} path="/">
-      <HomeStructuredData locale={locale} faqs={copy.faqs} />
+      <HomeStructuredData locale={locale} faqs={homeFaqs} />
       <LegacyHashRedirect />
       <HomeMarketing
         brand={brand}
@@ -48,7 +49,7 @@ export default async function HomePage() {
         plans={catalog}
         hardware={hardware}
         stories={landingStories()}
-        faqs={copy.faqs}
+        faqs={homeFaqs}
         locale={locale}
       />
     </SiteShell>
