@@ -1,6 +1,29 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowUpRight, Check, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  ArrowUpRight,
+  BarChart3,
+  BookOpen,
+  CakeSlice,
+  Check,
+  Coffee,
+  Dumbbell,
+  Hotel,
+  Languages,
+  MapPin,
+  MessageCircle,
+  Nfc,
+  Scissors,
+  ShieldCheck,
+  ShoppingBasket,
+  Smartphone,
+  Star,
+  Stethoscope,
+  Upload,
+  UtensilsCrossed,
+  type LucideIcon
+} from "lucide-react";
 import type { Brand } from "@/lib/brand";
 import type { LandingTrust } from "@/lib/landing/proof";
 import type { OwnerStory } from "@/lib/landing/stories";
@@ -10,100 +33,52 @@ import type { PricingFaq } from "@/lib/plans/pricing-copy";
 import { formatRupees } from "@/lib/landing/money";
 import { landingStats } from "@/lib/landing/stats";
 import { Eyebrow, PageIntro, PhoneScreenshot, SectionHeading, TextLink } from "./primitives";
-import { Reveal, HeroWordReveal } from "./reveal";
-import { LocalizedCopy } from "./i18n";
-import { HomePricing } from "./home-pricing";
+import { LocalizedCopy, marketingText } from "./i18n";
+import { HomeFaq, HomePricing } from "./home-pricing";
 import type { SeoLocale } from "@/lib/seo";
+import { INDUSTRY_SLUGS, industryCategory, type IndustrySlug } from "@/lib/industry-pages";
 
 const featureRows: Array<{
   number: string;
-  id: string;
   title: string;
   body: string;
-  image: string;
-  alt: string;
-  crop?: "orders" | "analytics";
-  points: string[];
+  icon: LucideIcon;
 }> = [
   {
     number: "01",
-    id: "reviews",
     title: "A QR code for Google reviews and private feedback",
-    body: "Every customer can open your public review link. Anyone can also share private feedback, which can alert you by WhatsApp and email.",
-    image: "/landing/app/reviews.webp",
-    alt: "QR24x7 Android app screen for review requests",
-    points: [
-      "Every customer can leave a public review and can also share private feedback.",
-      "A low rating with a note can alert you on WhatsApp and email.",
-      "Ask for reviews shares your public review link on WhatsApp."
-    ]
+    body: "Give every customer the public review link and a private feedback option, with alerts sent to you by WhatsApp and email.",
+    icon: ShieldCheck
   },
   {
     number: "02",
-    id: "menu",
     title: "A digital menu you can update in minutes",
-    body: "Keep your catalogue on the customer page and upload products in bulk with a CSV or Excel template.",
-    image: "/landing/app/bulk-upload.webp",
-    alt: "QR24x7 menu bulk upload screen with CSV and Excel template",
-    points: [
-      "Download CSV or Excel templates and demo files.",
-      "Add item photos, prices and product variants.",
-      "Saved menu items appear on your customer page."
-    ]
+    body: "Keep your catalogue on your customer page and upload products in bulk with a CSV or Excel template.",
+    icon: Upload
   },
   {
     number: "03",
-    id: "store",
     title: "WhatsApp orders and enquiries go to you",
     body: "Customers can send a cart or enquiry to your WhatsApp number. Orders stay on your channel, with no QR24x7 commission.",
-    image: "/landing/app/orders.webp",
-    alt: "QR24x7 Android app orders screen with order filters",
-    crop: "orders",
-    points: [
-      "A customer cart opens a ready-to-send WhatsApp order to your number.",
-      "WhatsApp orders have no QR24x7 commission.",
-      "View incoming orders from the app."
-    ]
+    icon: MessageCircle
   },
   {
     number: "04",
-    id: "profile",
     title: "Your own business page, with 20 theme options",
     body: "Share your profile, menu, products and contact links on one page. Change the theme and page details from the app.",
-    image: "/landing/app/themes.webp",
-    alt: "QR24x7 business page theme options in the Android app",
-    points: [
-      "Choose from 20 page theme presets.",
-      "Add a logo, business details and page buttons.",
-      "Update your page details from the app."
-    ]
+    icon: Smartphone
   },
   {
     number: "05",
-    id: "analytics",
     title: "Scan and review analytics, with weekly WhatsApp reports",
     body: "See activity in the app and get a weekly report on WhatsApp, so you can follow how your QR page is being used.",
-    image: "/landing/app/analytics.webp",
-    alt: "QR24x7 Android app analytics period filters",
-    crop: "analytics",
-    points: [
-      "Review scans, ratings and order activity in the app.",
-      "Get a weekly summary on WhatsApp.",
-      "Monthly activity is available as a PDF report."
-    ]
+    icon: BarChart3
   },
   {
     number: "06",
-    id: "products",
     title: "QR and NFC stands, with order tracking",
     body: "Choose a physical stand from the QR24x7 shop. Your QR and NFC open the same page, and stand orders include tracking.",
-    image: "/landing/app/shop.webp",
-    alt: "QR24x7 Android app shop with QR and NFC products",
-    points: [
-      "Choose from QR stands, NFC + QR combos, NFC cards and stickers.",
-      "Approve the print proof before production.",
-      "Track stand delivery from your account."
-    ]
+    icon: Nfc
   }
 ];
 
@@ -156,26 +131,25 @@ export const HOME_STEPS = [
 export function FeatureRows({ locale = "en" }: { locale?: SeoLocale }) {
   return (
     <LocalizedCopy locale={locale}>
-    <div className="qr-feature-list">
-      {featureRows.map((feature, index) => (
-        <Reveal key={feature.number}>
-          <article id={feature.id} className={`qr-feature-row${index % 2 ? " is-reversed" : ""}`}>
-            <div className="qr-feature-copy">
-              <Eyebrow>PL. {feature.number} · PRODUCT</Eyebrow>
-              <h3>{feature.title}</h3>
-              <p>{feature.body}</p>
-              <ul className="qr-checked-list">
-                {feature.points.map((point) => <li key={point}><Check size={16} aria-hidden="true" /> {point}</li>)}
-              </ul>
-            </div>
-            <div className="qr-feature-visual">
-              <PhoneScreenshot src={feature.image} alt={feature.alt} crop={feature.crop} sizes="(max-width: 760px) 320px, 390px" />
-              <span className="qr-visual-index">{feature.number}</span>
-            </div>
-          </article>
-        </Reveal>
-      ))}
-    </div>
+      <section id="features" className="qr-home-features">
+        <div className="qr-home-container">
+          <header className="qr-home-heading qr-home-heading-dark">
+            <Eyebrow>Features</Eyebrow>
+            <h2>Everything your counter needs. Nothing it doesn’t.</h2>
+            <p>Use the tools that fit your business, from one QR page managed in the QR24x7 app.</p>
+          </header>
+          <div className="qr-home-feature-grid">
+            {featureRows.map((feature) => {
+              const Icon = feature.icon;
+              return <article className="qr-home-feature-card" key={feature.number}>
+                <span className="qr-home-feature-icon"><Icon size={21} aria-hidden="true" /></span>
+                <h3>{feature.title}</h3>
+                <p>{feature.body}</p>
+              </article>;
+            })}
+          </div>
+        </div>
+      </section>
     </LocalizedCopy>
   );
 }
@@ -229,7 +203,7 @@ function StorySection({ stories, locale = "en" }: { stories: OwnerStory[]; local
             const photo = story.photo.startsWith("/") || story.photo.startsWith("http") ? story.photo : `/landing/photos/${story.photo}-640.webp`;
             return (
               <figure className="qr-story-card" key={`${story.name}-${story.business}`}>
-                <Image src={photo} alt={`${story.business} in ${story.city}`} width={640} height={480} sizes="(max-width: 760px) 85vw, 360px" unoptimized />
+                <Image src={photo} alt={`${story.business} in ${story.city}`} width={640} height={480} sizes="(max-width: 760px) 85vw, 360px" loading="lazy" unoptimized />
                 <blockquote>“{story.quote}”</blockquote>
                 <figcaption>{story.name} · {story.business}, {story.city}</figcaption>
               </figure>
@@ -243,32 +217,30 @@ function StorySection({ stories, locale = "en" }: { stories: OwnerStory[]; local
 }
 
 function StandCards({ hardware, locale = "en" }: { hardware: StandAddon[]; locale?: SeoLocale }) {
-  if (!hardware.length) return null;
-  const photos = ["product-reviews-800.webp", "product-menu-800.webp", "product-combo-800.webp", "product-store-800.webp"];
   return (
-    <LocalizedCopy locale={locale}><section id="stands" className="qr-section qr-stands-section">
-      <div className="qr-wrap">
-        <div className="qr-section-heading qr-heading-split">
-          <div><Eyebrow>05 / QR + NFC HARDWARE</Eyebrow><h2>A stand that works as hard as your team.</h2></div>
-          <p>Choose from the QR24x7 shop. Your QR and NFC open the same page, and stand orders can be tracked.</p>
+    <LocalizedCopy locale={locale}><section id="shop" className="qr-home-shop">
+      <div className="qr-home-container">
+        <div className="qr-home-shop-heading">
+          <div><Eyebrow>Shop stands</Eyebrow><h2>Counter-ready, delivered.</h2><p>Choose a real product from the shop. Your QR and NFC open the same page.</p></div>
+          <Link href="/dashboard/shop" className="qr-home-inline-link">Browse all stands <ArrowRight size={16} aria-hidden="true" /></Link>
         </div>
-        <div className="qr-stands-grid">
-          {hardware.slice(0, 4).map((item, index) => {
-            const src = item.imageUrl || `/landing/${photos[index % photos.length]}`;
+        <div className="qr-home-shop-grid">
+          {hardware.length ? hardware.slice(0, 4).map((item, index) => {
+            const productHref = `/dashboard/shop/${item.slug}`;
             return (
-              <article className="qr-stand-card" key={item.slug}>
-                <Link href="/dashboard/shop" className="qr-stand-image" aria-label={`Order ${locale === "hi" ? item.nameHi : item.name}`}>
-                  <Image src={src} alt={`${locale === "hi" ? item.nameHi : item.name} QR and NFC stand`} width={800} height={600} sizes="(max-width: 760px) 80vw, 290px" unoptimized />
+              <article className="qr-home-shop-card" key={item.slug}>
+                <Link href={productHref} className="qr-home-product-visual" aria-label={`Order ${locale === "hi" ? item.nameHi : item.name}`}>
+                  {item.imageUrl ? <Image src={item.imageUrl} alt={`${locale === "hi" ? item.nameHi : item.name} QR and NFC stand`} width={800} height={600} sizes="(max-width: 760px) 80vw, 290px" loading="lazy" unoptimized /> : <HomeStandVisual index={index} />}
                 </Link>
-                <div className="qr-stand-info">
+                <div className="qr-home-product-info">
                   <div><h3>{locale === "hi" ? item.nameHi : item.name}</h3><p>{item.needsNfc ? "QR + NFC" : locale === "hi" ? "QR स्टैंड" : "QR stand"}</p></div>
                   <strong>{formatRupees(item.salePaise)}</strong>
                 </div>
-                {item.mrpPaise && item.mrpPaise > item.salePaise ? <s className="qr-stand-mrp">{formatRupees(item.mrpPaise)}</s> : null}
-                <Link href="/dashboard/shop" className="qr-button qr-button-light">View in shop <span aria-hidden="true">↗</span></Link>
+                {item.mrpPaise && item.mrpPaise > item.salePaise ? <s className="qr-home-product-mrp">{formatRupees(item.mrpPaise)}</s> : null}
+                <Link href={productHref} className="qr-button qr-button-light">View in shop <span aria-hidden="true">↗</span></Link>
               </article>
             );
-          })}
+          }) : <p className="qr-home-shop-empty">{marketingText("Browse the shop to see available QR and NFC stands.", locale)}</p>}
         </div>
       </div>
     </section>
@@ -279,17 +251,190 @@ function StandCards({ hardware, locale = "en" }: { hardware: StandAddon[]; local
 function FinalCTA({ brand, startHref, whatsapp, locale = "en" }: { brand: Brand; startHref: string; whatsapp: string | null; locale?: SeoLocale }) {
   const contactHref = whatsapp || `mailto:${brand.supportEmail || "hello@qr24x7.in"}`;
   return (
-    <LocalizedCopy locale={locale}><section className="qr-section qr-final-cta">
-      <div className="qr-wrap qr-final-inner">
-        <div><Eyebrow>ONE SMALL TAP CAN CHANGE THE NEXT STEP</Eyebrow><h2>Ready to make every scan count?</h2><p>Start with a QR page. Add the stand and features that fit your business.</p></div>
-        <div className="qr-final-actions">
-          <Link className="qr-button qr-button-light" href={startHref}>Start free <ArrowUpRight size={16} /></Link>
-          <a className="qr-button qr-button-outline-light" href={contactHref} target={whatsapp ? "_blank" : undefined} rel={whatsapp ? "noopener noreferrer" : undefined}>Talk to us <ArrowUpRight size={16} /></a>
+    <LocalizedCopy locale={locale}><section id="start" className="qr-home-final">
+      <div className="qr-home-container qr-home-final-inner">
+        <div><Eyebrow>Scan. Tap. Grow.</Eyebrow><h2>Your next customer action starts at the counter.</h2><p>Start with a QR page. Add the stand and features that fit your business.</p></div>
+        <div className="qr-home-final-actions">
+          <Link className="qr-button qr-button-dark" href={startHref}>Start free <ArrowRight size={16} /></Link>
+          <a className="qr-button qr-button-outline-light" href={contactHref} target={whatsapp ? "_blank" : undefined} rel={whatsapp ? "noopener noreferrer" : undefined}><MessageCircle size={16} /> Talk to us</a>
         </div>
       </div>
     </section>
     </LocalizedCopy>
   );
+}
+
+export const HOME_REVIEW_POLICY_FAQ: PricingFaq = {
+  qEn: "Do you ask every customer equally?",
+  qHi: "क्या आप हर ग्राहक से समान रूप से पूछते हैं?",
+  aEn: "Yes. Every customer gets the same option to open the public review link and share private feedback, whatever their star rating. We do not filter or hide unhappy customers from the public link, and we do not offer rewards for reviews.",
+  aHi: "हाँ। हर ग्राहक को स्टार रेटिंग चाहे जो हो, सार्वजनिक रिव्यू लिंक खोलने और निजी फ़ीडबैक देने का समान विकल्प मिलता है। हम नाखुश ग्राहकों को सार्वजनिक लिंक से नहीं छाँटते या छिपाते, और रिव्यू के बदले इनाम नहीं देते।"
+};
+
+export function homeFaqsWithReviewPolicy(faqs: PricingFaq[]) {
+  const policyQuestion = /^(is this allowed by google\?|do you ask every customer equally\?|do you use review gating\?)$/i;
+  return [...faqs.filter((faq) => !policyQuestion.test(faq.qEn.trim())), HOME_REVIEW_POLICY_FAQ];
+}
+
+function QRGlyph({ className = "" }: { className?: string }) {
+  const cells: Array<[number, number]> = [];
+  for (let y = 0; y < 21; y += 1) for (let x = 0; x < 21; x += 1) {
+    const inFinder = (x < 8 && y < 8) || (x > 12 && y < 8) || (x < 8 && y > 12);
+    if (!inFinder && ((x * 7 + y * 13 + x * y) % 5 < 2)) cells.push([x, y]);
+  }
+  const Finder = ({ x, y }: { x: number; y: number }) => <g>
+    <rect x={x} y={y} width="7" height="7" rx="1" />
+    <rect x={x + 1} y={y + 1} width="5" height="5" rx="0.5" fill="white" />
+    <rect x={x + 2} y={y + 2} width="3" height="3" rx="0.3" />
+  </g>;
+  return <svg viewBox="0 0 21 21" className={className} fill="currentColor" aria-hidden="true" shapeRendering="crispEdges">
+    <Finder x={0} y={0} /><Finder x={14} y={0} /><Finder x={0} y={14} />
+    {cells.map(([x, y]) => <rect key={`${x}-${y}`} x={x} y={y} width="1" height="1" />)}
+  </svg>;
+}
+
+function HomeStandVisual({ index }: { index: number }) {
+  return <span className={`qr-home-stand-art qr-home-stand-art-${index % 3}`} aria-hidden="true">
+    <span className="qr-home-stand-brand">QR24<span>x7</span><Nfc size={17} /></span>
+    <span className="qr-home-stand-label">Scan to open your page</span>
+    <span className="qr-home-stand-code"><QRGlyph /></span>
+  </span>;
+}
+
+function HeroVisual({ locale }: { locale: SeoLocale }) {
+  const actions = [
+    { icon: Star, label: "Review on Google" },
+    { icon: BookOpen, label: "View menu" },
+    { icon: MessageCircle, label: "Order on WhatsApp" },
+    { icon: ShieldCheck, label: "Private feedback" }
+  ];
+  return <div className="qr-home-visual" role="img" aria-label={locale === "hi" ? "QR और NFC स्टैंड और ग्राहक पेज का नमूना" : "Illustration of a QR and NFC stand beside a customer page preview"}>
+    <div className="qr-home-visual-backdrop" />
+    <div className="qr-home-hero-stand">
+      <div className="qr-home-hero-stand-top"><span>QR24<span>x7</span></span><Nfc size={17} /></div>
+      <p>{marketingText("Loved it? Review us on Google", locale)}</p>
+      <div className="qr-home-hero-qr"><QRGlyph /></div>
+      <span className="qr-home-tap-label"><Smartphone size={12} /> {marketingText("Scan or tap phone here", locale)}</span>
+      <span className="qr-home-stand-foot" />
+    </div>
+    <div className="qr-home-phone">
+      <div className="qr-home-phone-screen">
+        <div className="qr-home-phone-cover">
+          <span>{marketingText("Your business", locale)}</span>
+          <strong>{marketingText("Your customer page", locale)}</strong>
+          <small><MapPin size={10} /> {marketingText("Your city", locale)}</small>
+        </div>
+        <div className="qr-home-phone-actions">
+          {actions.map(({ icon: Icon, label }, index) => <span className="qr-home-phone-action" key={label}>
+            <i className={index === 0 ? "is-primary" : ""}><Icon size={12} /></i><b>{marketingText(label, locale)}</b>
+          </span>)}
+        </div>
+      </div>
+    </div>
+    <div className="qr-home-example-badge"><span aria-hidden="true">✦</span>{marketingText("Example preview", locale)}</div>
+  </div>;
+}
+
+function HeroHeadline({ locale }: { locale: SeoLocale }) {
+  return <h1 className="qr-home-h1">
+    {locale === "hi"
+      ? marketingText("Get more Google reviews with one QR + NFC stand", locale)
+      : <>Get more <span>Google reviews</span> with one QR + NFC stand</>}
+  </h1>;
+}
+
+function HomeHero({ startHref, locale }: { startHref: string; locale: SeoLocale }) {
+  return <section className="qr-home-hero" id="top">
+    <div className="qr-home-container qr-home-hero-grid">
+      <div className="qr-home-hero-copy">
+        <span className="qr-home-kicker"><i aria-hidden="true" />{marketingText("Scan. Tap. Grow.", locale)}</span>
+        <HeroHeadline locale={locale} />
+        <p className="qr-home-hero-description">{marketingText("Give your customers one simple place to review, browse, message, or order — from the QR or a tap.", locale)}</p>
+        <div className="qr-home-hero-actions">
+          <Link className="qr-home-primary-button" href={startHref}>{marketingText("Start free", locale)}<ArrowRight size={16} /></Link>
+          <a className="qr-home-secondary-button" href="#how">{marketingText("See how it works", locale)}</a>
+        </div>
+        <ul className="qr-home-points">
+          {["Free plan", "Setup in 10 min", "Hindi + English"].map((item) => <li key={item}><Check size={16} aria-hidden="true" />{marketingText(item, locale)}</li>)}
+        </ul>
+      </div>
+      <HeroVisual locale={locale} />
+    </div>
+  </section>;
+}
+
+const HOME_INDUSTRY_ICONS: Record<IndustrySlug, LucideIcon> = {
+  restaurants: UtensilsCrossed,
+  cafes: Coffee,
+  bakeries: CakeSlice,
+  salons: Scissors,
+  clinics: Stethoscope,
+  "kirana-stores": ShoppingBasket,
+  hotels: Hotel,
+  gyms: Dumbbell
+};
+
+function HomeIndustryTiles({ locale }: { locale: SeoLocale }) {
+  return <LocalizedCopy locale={locale}><section className="qr-home-industries">
+    <div className="qr-home-container">
+      <header className="qr-home-heading">
+        <Eyebrow>For your business</Eyebrow>
+        <h2>Made for India’s local businesses.</h2>
+        <p>Start with a page that fits the way your customers find and contact you.</p>
+      </header>
+      <div className="qr-home-industry-grid">
+        {INDUSTRY_SLUGS.map((slug) => {
+          const category = industryCategory(slug);
+          if (!category) return null;
+          const Icon = HOME_INDUSTRY_ICONS[slug];
+          return <Link className="qr-home-industry-card" href={`${locale === "hi" ? "/hi" : ""}/for/${slug}`} key={slug}>
+            <span className="qr-home-industry-icon"><Icon size={22} aria-hidden="true" /></span>
+            <strong>{locale === "hi" ? category.hi : category.en}</strong>
+            <span className="qr-home-industry-link">{marketingText("Explore", locale)}<ArrowRight size={15} aria-hidden="true" /></span>
+          </Link>;
+        })}
+      </div>
+    </div>
+  </section></LocalizedCopy>;
+}
+
+function BenefitsStrip({ locale }: { locale: SeoLocale }) {
+  const items = [
+    { icon: Star, label: "Google reviews" },
+    { icon: BookOpen, label: "Digital menu" },
+    { icon: MessageCircle, label: "WhatsApp orders" },
+    { icon: Nfc, label: "NFC stands" },
+    { icon: BarChart3, label: "Scan analytics" },
+    { icon: Languages, label: "Hindi + English" }
+  ];
+  return <section className="qr-home-benefits" aria-label={locale === "hi" ? "QR24x7 सुविधाएँ" : "QR24x7 benefits"}>
+    <div className="qr-home-container qr-home-benefit-grid">
+      {items.map(({ icon: Icon, label }) => <div className="qr-home-benefit" key={label}>
+        <span><Icon size={17} aria-hidden="true" /></span><strong>{marketingText(label, locale)}</strong>
+      </div>)}
+    </div>
+  </section>;
+}
+
+function HomeHowItWorks({ locale }: { locale: SeoLocale }) {
+  const steps: ReadonlyArray<readonly [string, string]> = [
+    ["Create your page in the app", "Add your business, menu and WhatsApp number in the Android app — in Hindi or English."],
+    ["Put a stand on the counter", "Order a ready QR + NFC stand, or download your QR and print it yourself."],
+    ["Customers scan or tap", "They open your page to review, browse your menu, order or share feedback."]
+  ];
+  return <LocalizedCopy locale={locale}><section id="how" className="qr-home-how">
+    <div className="qr-home-container">
+      <header className="qr-home-heading qr-home-heading-centered">
+        <Eyebrow>How it works</Eyebrow>
+        <h2>Live in 10 minutes. No tech skills needed.</h2>
+      </header>
+      <ol className="qr-home-step-grid">
+        {steps.map(([title, body], index) => <li key={title}>
+          <span className="qr-home-step-number">0{index + 1}</span><h3>{title}</h3><p>{body}</p>
+        </li>)}
+      </ol>
+    </div>
+  </section></LocalizedCopy>;
 }
 
 export function HomeMarketing({
@@ -313,77 +458,19 @@ export function HomeMarketing({
   faqs?: PricingFaq[];
   locale?: SeoLocale;
 }) {
-  const contactHref = whatsapp || `mailto:${brand.supportEmail || "hello@qr24x7.in"}`;
+  const homeFaqs = homeFaqsWithReviewPolicy(faqs);
   return (
     <LocalizedCopy locale={locale}><div className="qr-home-content">
-      <section className="qr-hero">
-        <div className="qr-hero-glow" aria-hidden="true" />
-        <svg className="qr-hero-lines" viewBox="0 0 1440 640" aria-hidden="true" preserveAspectRatio="none">
-          <path d="M-80 380C110 180 215 205 308 345S310 580 90 585M1510 85c-225 75-304 180-225 315s142 180 300 200M-60 75c160 0 255 72 305 187" />
-        </svg>
-        <div className="qr-wrap qr-hero-grid">
-          <div className="qr-hero-copy">
-            <Eyebrow>REVIEWS · MENU · ORDERS</Eyebrow>
-            <HeroWordReveal text={brand.name || "QR24x7"} />
-            <p className="qr-hero-tagline">{brand.tagline || "Scan. Tap. Grow."}</p>
-            <h1 className="qr-hero-lead">Get more Google reviews with one QR + NFC stand</h1>
-            <p className="qr-hero-description">Give your customers one simple place to review, browse, message, or order — from the QR or a tap.</p>
-            <div className="qr-hero-actions">
-              <Link className="qr-button qr-button-dark" href={startHref}>Start free <ArrowUpRight size={16} /></Link>
-              <a className="qr-button qr-button-light" href="#home-flow">See how it works <ArrowUpRight size={16} /></a>
-            </div>
-            <a className="qr-scroll-cue" href="#discover"><span aria-hidden="true" />Scroll to discover</a>
-          </div>
-          <div className="qr-hero-visual">
-            <div className="qr-hero-phone-wrap"><PhoneScreenshot src="/landing/app/home.webp" alt="QR24x7 Android app home showing today’s stats and setup checklist" priority sizes="(max-width: 760px) min(235px, 57vw), 284px" /></div>
-            <figure className="qr-hero-product">
-              <Image src="/landing/photos/stand-hero-640.webp" alt="QR24x7 QR and NFC stand on a business counter" width={640} height={480} sizes="(max-width: 760px) min(290px, 58vw), 340px" />
-              <figcaption>One stand. Many ways to grow.</figcaption>
-            </figure>
-            <span className="qr-hero-spark" aria-hidden="true">✳</span>
-          </div>
-        </div>
-      </section>
-
-      <div id="discover"><Marquee locale={locale} /></div>
-
-      <section className="qr-section qr-intro-section">
-        <div className="qr-wrap qr-intro-grid">
-          <Reveal><Eyebrow>01 / ONE PAGE, MORE POSSIBILITIES</Eyebrow></Reveal>
-          <Reveal delay={0.08}><h2>One QR code for Google reviews, a digital menu, and WhatsApp orders.</h2></Reveal>
-          <Reveal delay={0.16}><p>QR24x7 gives customers a useful next step and gives you a clear view of what happens after they scan.</p></Reveal>
-        </div>
-      </section>
-
-      <section className="qr-section qr-features-section">
-        <div className="qr-wrap">
-          <SectionHeading number="02" eyebrow="What you get" title="Tools for the counter, the customer, and the follow-up." description="Use the pieces your business needs, from one QR page managed in the QR24x7 Android app." />
-          <FeatureRows locale={locale} />
-          <div className="qr-growth-tools">
-            <article><Sparkles size={19} aria-hidden="true" /><div><h3>Refer and earn</h3><p>Invite another business and earn free plan months when eligible referrals complete a paid purchase.</p></div><TextLink href="/dashboard/refer">See referral details</TextLink></article>
-            <article><Sparkles size={19} aria-hidden="true" /><div><h3>Become a reseller</h3><p>Apply to introduce QR24x7 to local businesses. Approval and active commission rules apply.</p></div><TextLink href="/dashboard/agent-apply">Reseller program</TextLink></article>
-          </div>
-        </div>
-      </section>
-
-      <StatsBand trust={trust} locale={locale} />
-      <StorySection stories={locale === "hi" ? [] : stories} locale={locale} />
-
-      <section id="home-flow" className="qr-section qr-process-section">
-        <div className="qr-wrap">
-          <div className="qr-section-heading qr-heading-split">
-            <div><Eyebrow>03 / THE SIMPLE ROUTE</Eyebrow><h2>Four steps from a stand to a better customer loop.</h2></div>
-            <p>LEAVES YOU WITH</p>
-          </div>
-          <ol className="qr-process-grid">
-            {HOME_STEPS.map((step) => <li key={step.number}><span>{step.number}</span><h3>{step.title}</h3><p>{step.body}</p></li>)}
-          </ol>
-          <div className="qr-process-link"><TextLink href="/how-it-works">See how it works</TextLink></div>
-        </div>
-      </section>
-
+      <HomeHero startHref={startHref} locale={locale} />
+      <BenefitsStrip locale={locale} />
+      <HomeHowItWorks locale={locale} />
+      <FeatureRows locale={locale} />
+      <HomeIndustryTiles locale={locale} />
       <StandCards hardware={hardware} locale={locale} />
-      <HomePricing plans={plans} faqs={faqs} locale={locale} />
+      <HomePricing plans={plans} locale={locale} />
+      <StorySection stories={stories} locale={locale} />
+      <StatsBand trust={trust} locale={locale} />
+      <HomeFaq faqs={homeFaqs} locale={locale} />
       <FinalCTA brand={brand} startHref={startHref} whatsapp={whatsapp} locale={locale} />
     </div></LocalizedCopy>
   );

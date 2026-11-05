@@ -11,7 +11,8 @@ import { Eyebrow, SectionHeading } from "./primitives";
 import { LocalizedCopy, marketingText } from "./i18n";
 import type { SeoLocale } from "@/lib/seo";
 
-export function HomePricing({ plans, faqs, locale }: { plans: PublicPlan[]; faqs: PricingFaq[]; locale: SeoLocale }) {
+export function HomePricing({ plans, locale }: { plans: PublicPlan[]; locale: SeoLocale }) {
+  const comparePath = locale === "hi" ? "/hi/compare/commission-free-whatsapp-ordering" : "/compare/commission-free-whatsapp-ordering";
   return <LocalizedCopy locale={locale}>
     <>
       <section id="pricing" className="qr-section qr-pricing-section">
@@ -70,19 +71,23 @@ export function HomePricing({ plans, faqs, locale }: { plans: PublicPlan[]; faqs
           <p className="qr-pricing-note">{locale === "hi"
             ? "चेकआउट में सेव की गई प्लान कीमत लागू होगी। INR भुगतान और GST बिल की जानकारी वहाँ दिखाई जाएगी।"
             : "Checkout uses the saved plan price. INR payment and GST invoice details are shown during checkout."}</p>
-        </div>
-      </section>
-      <section className="qr-section qr-faq-section">
-        <div className="qr-wrap qr-faq-wrap">
-          <SectionHeading number="08" eyebrow="Good to know" title={marketingText("Questions owners ask", locale)} />
-          <div className="qr-faq-list">
-            {faqs.map((faq) => <details key={faq.qEn} className="qr-faq-item">
-              <summary><span>{locale === "hi" ? faq.qHi : faq.qEn}</span><span aria-hidden="true">⌄</span></summary>
-              <p>{locale === "hi" ? faq.aHi : faq.aEn}</p>
-            </details>)}
-          </div>
+          <p className="qr-home-compare-link"><Link href={comparePath}>{marketingText("Compare plans", locale)} <span aria-hidden="true">↗</span></Link></p>
         </div>
       </section>
     </>
   </LocalizedCopy>;
+}
+
+export function HomeFaq({ faqs, locale }: { faqs: PricingFaq[]; locale: SeoLocale }) {
+  return <LocalizedCopy locale={locale}><section className="qr-section qr-faq-section">
+    <div className="qr-wrap qr-faq-wrap">
+      <SectionHeading number="09" eyebrow="Good to know" title={marketingText("Questions owners ask", locale)} />
+      <div className="qr-faq-list">
+        {faqs.map((faq) => <details key={faq.qEn} className="qr-faq-item">
+          <summary><span>{locale === "hi" ? faq.qHi : faq.qEn}</span><span aria-hidden="true">⌄</span></summary>
+          <p>{locale === "hi" ? faq.aHi : faq.aEn}</p>
+        </details>)}
+      </div>
+    </div>
+  </section></LocalizedCopy>;
 }

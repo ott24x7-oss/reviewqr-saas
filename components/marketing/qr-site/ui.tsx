@@ -97,7 +97,7 @@ export async function SiteShell({
       <LocalizedCopy locale={locale}>
         <a className="qr-skip-link" href="#main-content">Skip to content</a>
       </LocalizedCopy>
-      <SiteHeader brand={brand} startHref={startHref} locale={locale} path={path} />
+      <SiteHeader brand={brand} startHref={startHref} locale={locale} path={path} isHome={path === "/"} />
       {breadcrumb ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(breadcrumb) }} /> : null}
       <PublicAnalytics ga4MeasurementId={seo.analytics.ga4MeasurementId} gtmId={seo.analytics.gtmId} respectDnt={seo.analytics.respectDnt} />
       <main id="main-content">{children}</main>
