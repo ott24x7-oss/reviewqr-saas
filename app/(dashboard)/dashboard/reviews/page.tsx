@@ -11,6 +11,8 @@ import { ownedOrAssignedWhere } from "@/lib/tenant";
 import { LoadMore, shownCount } from "@/components/dashboard/load-more";
 import { AppText } from "@/components/app-ui/i18n";
 import { KpiCard, RelativeTime, EmptyState } from "@/components/app-ui/primitives";
+import { requireAccountFeatureForRoute } from "@/lib/plans/dashboard-gate";
+import { LockedFeature } from "@/components/app-ui/locked-feature";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +23,8 @@ export default async function ReviewsPage({
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  const locked = await requireAccountFeatureForRoute(user.id, "/dashboard/reviews", "reviews-log");
+  if (locked) return <LockedFeature state={locked} />;
 
   const businesses = await prisma.business.findMany({
     where: ownedOrAssignedWhere(user.id),

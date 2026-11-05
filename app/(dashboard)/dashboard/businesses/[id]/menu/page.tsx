@@ -4,8 +4,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { requireBusinessRole } from "@/lib/tenant";
 import { getAiConfig } from "@/lib/settings";
 import { resolveLayout, type StoreView } from "@/lib/store/layout";
-import { moduleBlock, upsellOffer } from "@/lib/plans/entitlements";
-import { ModuleUpsell } from "@/components/plans/module-upsell";
+import { requireFeatureForRoute } from "@/lib/plans/dashboard-gate";
+import { LockedFeature } from "@/components/app-ui/locked-feature";
 import { MenuEditor } from "./menu-editor";
 import { HelpLink } from "@/components/help/help-link";
 
@@ -22,6 +22,9 @@ export default async function BusinessMenuPage({
   if (!user) redirect("/login");
   const access = await requireBusinessRole(user.id, params.id, "read");
   if (!access) notFound();
+  const serviceMode = searchParams?.tab === "services";
+  const locked = await requireFeatureForRoute(access.ownerId, "/dashboard/businesses/:id/menu", serviceMode ? "services-booking" : "menu");
+  if (locked) return <LockedFeature state={locked} />;
   const categories = await prisma.menuCategory.findMany({
     where: { businessId: access.id },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
@@ -48,12 +51,6 @@ export default async function BusinessMenuPage({
     prisma.storeSettings.findUnique({ where: { businessId: access.id }, select: { layout: true } })
   ]);
   const layout: StoreView = resolveLayout(settings?.layout, access.industry);
-  const serviceMode = searchParams?.tab === "services";
-  const locked = await moduleBlock(access.ownerId, "MENU");
-  if (locked) {
-    const offer = await upsellOffer("MENU");
-    return <ModuleUpsell title={offer.title} body={locked} href={offer.href} />;
-  }
   return (
     <div className="space-y-3">
     <HelpLink context="menu" page="Menu" />

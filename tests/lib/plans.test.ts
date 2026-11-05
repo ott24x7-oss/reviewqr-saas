@@ -31,17 +31,18 @@ describe("plan modules and legacy tiers", () => {
     expect(pricingTab(["REVIEWS", "MENU", "STORE"])).toBe("all");
   });
 
-  it("maps old tiers onto modules without shrinking paid limits", async () => {
+  it("uses current tier plan modules and limits", async () => {
     for (const tier of ["FREE", "STARTER", "GROWTH", "AGENCY", "FOUNDER"] as const) {
-      expect(modulesForTier(tier)).toEqual(["REVIEWS", "MENU", "STORE"]);
+      const plan = await prisma.plan.findUnique({
+        where: { id: `plan_legacy_${tier.toLowerCase()}` },
+        select: { modules: true }
+      });
+      expect(await modulesForTier(tier)).toEqual(plan?.modules ?? ["REVIEWS", "MENU", "STORE"]);
       const limits = await limitsForTier(tier);
-      expect(limits.products).toBe(100000);
-      expect(limits.storeProducts).toBe(100000);
-      expect(limits.storeOrders).toBe(100000);
+      expect(limits.products).toBeGreaterThanOrEqual(0);
+      expect(limits.storeProducts).toBeGreaterThanOrEqual(0);
+      expect(limits.storeOrders).toBeGreaterThanOrEqual(0);
     }
-    expect((await limitsForTier("FREE")).qrCodes).toBe(2);
-    expect((await limitsForTier("FREE")).businesses).toBe(1);
-    expect((await limitsForTier("GROWTH")).businesses).toBe(5);
     expect(savingsPercent({ pricePaise: 999900, mrpPaise: 1198800 })).toBe(17);
   });
 
@@ -65,7 +66,7 @@ describe("old-tier users on a database", () => {
     await prisma.user.deleteMany({ where: { id: { in: created } } });
   });
 
-  it("copies a pre-plan Growth user onto all modules and keeps the end date", async () => {
+  it("copies a pre-plan Growth user using the current Growth plan and keeps the end date", async () => {
     const endsAt = new Date("2027-04-01T00:00:00Z");
     const user = await prisma.user.create({
       data: {
@@ -77,14 +78,14 @@ describe("old-tier users on a database", () => {
     });
     created.push(user.id);
     const row = await ensureLegacySubscription(user.id);
-    expect(row?.modules).toEqual(["REVIEWS", "MENU", "STORE"]);
+    expect(row?.modules).toEqual(await modulesForTier("GROWTH"));
     expect(row?.endsAt?.toISOString()).toBe(endsAt.toISOString());
     expect(row?.tier).toBe("GROWTH");
     const again = await ensureLegacySubscription(user.id);
     expect(again?.id).toBe(row?.id);
   });
 
-  it("copies a free user with today's menu and store", async () => {
+  it("copies a free user from the current Free plan row", async () => {
     const user = await prisma.user.create({
       data: {
         email: `old-free-${Date.now()}@example.test`,
@@ -94,9 +95,9 @@ describe("old-tier users on a database", () => {
     });
     created.push(user.id);
     const row = await ensureLegacySubscription(user.id);
-    expect(row?.modules).toEqual(["REVIEWS", "MENU", "STORE"]);
+    expect(row?.modules).toEqual(await modulesForTier("FREE"));
     expect(row?.planId).toBe("plan_legacy_free");
-    expect(row?.limits).toMatchObject({ storeProducts: 100000, storeOrders: 100000, qrCodes: 2 });
+    expect(row?.limits).toEqual(await limitsForTier("FREE"));
   });
 });
 
@@ -279,11 +280,13 @@ describe("entitlements per module", () => {
       }
     });
     created.push(free.id);
-    expect(await hasModule(free.id, "REVIEWS")).toBe(true);
-    expect(await hasModule(free.id, "MENU")).toBe(true);
-    expect(await hasModule(free.id, "STORE")).toBe(true);
-    expect(await limit(free.id, "qrCodes")).toBe(2);
-    expect(await limit(free.id, "storeProducts")).toBe(100000);
+    const freeModules = await modulesForTier("FREE");
+    const freeLimits = await limitsForTier("FREE");
+    expect(await hasModule(free.id, "REVIEWS")).toBe(freeModules.includes("REVIEWS"));
+    expect(await hasModule(free.id, "MENU")).toBe(freeModules.includes("MENU"));
+    expect(await hasModule(free.id, "STORE")).toBe(freeModules.includes("STORE"));
+    expect(await limit(free.id, "qrCodes")).toBe(freeLimits.qrCodes);
+    expect(await limit(free.id, "storeProducts")).toBe(freeLimits.storeProducts);
 
     const trial = await prisma.user.create({
       data: {
@@ -294,8 +297,9 @@ describe("entitlements per module", () => {
       }
     });
     created.push(trial.id);
-    expect(await hasModule(trial.id, "MENU")).toBe(true);
-    expect(await hasModule(trial.id, "STORE")).toBe(true);
+    const growthModules = await modulesForTier("GROWTH");
+    expect(await hasModule(trial.id, "MENU")).toBe(growthModules.includes("MENU"));
+    expect(await hasModule(trial.id, "STORE")).toBe(growthModules.includes("STORE"));
 
     const endsAt = new Date("2027-08-01T00:00:00Z");
     const paid = await prisma.user.create({
@@ -347,7 +351,7 @@ describe("entitlements per module", () => {
     expect(await limit(paid.id, "products")).toBe(12);
   });
 
-  it("falls expired paid plans and finished trials back to today's free access", async () => {
+  it("falls expired paid plans and finished trials back to the current Free plan", async () => {
     const expired = await prisma.user.create({
       data: {
         email: `ent-expired-${Date.now()}@example.test`,
@@ -368,9 +372,10 @@ describe("entitlements per module", () => {
         endsAt: new Date(Date.now() - 86_400_000)
       }
     });
-    expect(await hasModule(expired.id, "MENU")).toBe(true);
-    expect(await hasModule(expired.id, "STORE")).toBe(true);
-    expect(await limit(expired.id, "qrCodes")).toBe(2);
+    const freeModules = await modulesForTier("FREE");
+    expect(await hasModule(expired.id, "MENU")).toBe(freeModules.includes("MENU"));
+    expect(await hasModule(expired.id, "STORE")).toBe(freeModules.includes("STORE"));
+    expect(await limit(expired.id, "qrCodes")).toBe((await limitsForTier("FREE")).qrCodes);
 
     const finished = await prisma.user.create({
       data: {
@@ -382,11 +387,11 @@ describe("entitlements per module", () => {
     });
     created.push(finished.id);
     await ensureLegacySubscription(finished.id);
-    expect(await hasModule(finished.id, "STORE")).toBe(true);
+    expect(await hasModule(finished.id, "STORE")).toBe(freeModules.includes("STORE"));
     expect(await limit(finished.id, "qrCodes")).toBe((await limitsForTier("FREE")).qrCodes);
   });
 
-  it("keeps a free owner's public menu, customer order, and store settings after migration", async () => {
+  it("uses the linked Free plan row for public menu and store access", async () => {
     const stamp = `${Date.now().toString(36)}${Math.floor(Math.random() * 1000).toString(36)}`;
     const user = await prisma.user.create({
       data: {
@@ -397,10 +402,23 @@ describe("entitlements per module", () => {
     });
     created.push(user.id);
     const legacy = await ensureLegacySubscription(user.id);
-    expect(legacy?.modules).toEqual(["REVIEWS", "MENU", "STORE"]);
+    expect(legacy?.modules).toEqual(await modulesForTier("FREE"));
+    const freeLimits = await limitsForTier("FREE");
+    const storePlan = await prisma.plan.create({
+      data: {
+        id: `plan_legacy_free_store_${stamp}`,
+        nameEn: "Free with Menu and Store",
+        nameHi: "मेनू और स्टोर वाला मुफ़्त प्लान",
+        slug: `free-store-${stamp}`,
+        modules: ["REVIEWS", "MENU", "STORE"],
+        limits: { ...freeLimits, products: 100000, storeProducts: 100000, storeOrders: 100000 },
+        legacyTier: "FREE"
+      }
+    });
+    plans.push(storePlan.id);
     await prisma.subscription.update({
       where: { id: legacy!.id },
-      data: { modules: ["REVIEWS"] }
+      data: { planId: storePlan.id, modules: ["REVIEWS"] }
     });
     expect(await hasModule(user.id, "MENU")).toBe(true);
     expect(await hasModule(user.id, "STORE")).toBe(true);

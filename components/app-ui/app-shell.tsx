@@ -26,6 +26,7 @@ import {
 import { AnnouncementBanner } from "@/components/dashboard/announcement-banner";
 import { AppLanguageProvider, useAppLanguage } from "./i18n";
 import { FinishAccountCard } from "./finish-account-card";
+import type { FeatureId } from "@reviewqr/shared";
 import "./tokens.css";
 
 type Business = { id: string; name: string; slug: string; logo: string | null };
@@ -42,29 +43,29 @@ type User = {
   emailVerified?: boolean;
 };
 
-type NavItem = { href: string; key: string; icon: LucideIcon; exact?: boolean };
+type NavItem = { href: string; key: string; icon: LucideIcon; exact?: boolean; featureId?: FeatureId };
 type NavGroup = { key: string; items: NavItem[] };
 
 const ownerGroups: NavGroup[] = [
   { key: "home", items: [{ href: "/dashboard", key: "home", icon: LayoutDashboard, exact: true }] },
   { key: "sell", items: [
-    { href: "/dashboard/sell/orders", key: "orders", icon: ShoppingBag },
-    { href: "/dashboard/sell/bookings", key: "bookings", icon: CalendarDays },
-    { href: "/dashboard/sell/menu", key: "menu", icon: Package },
-    { href: "/dashboard/sell/customers", key: "customers", icon: Users },
-    { href: "/dashboard/sell/campaigns", key: "campaigns", icon: Activity }
+    { href: "/dashboard/sell/orders", key: "orders", icon: ShoppingBag, featureId: "orders" },
+    { href: "/dashboard/sell/bookings", key: "bookings", icon: CalendarDays, featureId: "services-booking" },
+    { href: "/dashboard/sell/menu", key: "menu", icon: Package, featureId: "menu" },
+    { href: "/dashboard/sell/customers", key: "customers", icon: Users, featureId: "customers" },
+    { href: "/dashboard/sell/campaigns", key: "campaigns", icon: Activity, featureId: "campaigns" }
   ] },
   { key: "reputation", items: [
-    { href: "/dashboard/reputation/reviews", key: "reviews", icon: Star },
-    { href: "/dashboard/reputation/feedback", key: "feedback", icon: MessageSquare },
-    { href: "/dashboard/reputation/ai-replies", key: "aiReplies", icon: Sparkles }
+    { href: "/dashboard/reputation/reviews", key: "reviews", icon: Star, featureId: "reviews-log" },
+    { href: "/dashboard/reputation/feedback", key: "feedback", icon: MessageSquare, featureId: "reviews-log" },
+    { href: "/dashboard/reputation/ai-replies", key: "aiReplies", icon: Sparkles, featureId: "ai-replies" }
   ] },
   { key: "pageQr", items: [
     { href: "/dashboard/page", key: "myPage", icon: Building2 },
-    { href: "/dashboard/page/qr", key: "qrCodes", icon: QrCode },
-    { href: "/dashboard/page/print", key: "printStands", icon: Package }
+    { href: "/dashboard/page/qr", key: "qrCodes", icon: QrCode, featureId: "multiple-qrs" },
+    { href: "/dashboard/page/print", key: "printStands", icon: Package, featureId: "multiple-qrs" }
   ] },
-  { key: "insights", items: [{ href: "/dashboard/insights", key: "analytics", icon: BarChart3 }] },
+  { key: "insights", items: [{ href: "/dashboard/insights", key: "analytics", icon: BarChart3, featureId: "analytics" }] },
   { key: "account", items: [
     { href: "/dashboard/account/plan", key: "billing", icon: CreditCard },
     { href: "/dashboard/account/refer", key: "refer", icon: Gift },
@@ -127,7 +128,7 @@ function ThemeAndLanguageControls() {
   );
 }
 
-function NavGroups({ groups, pathname, close }: { groups: NavGroup[]; pathname: string; close?: () => void }) {
+function NavGroups({ groups, pathname, close, lockedFeatureIds }: { groups: NavGroup[]; pathname: string; close?: () => void; lockedFeatureIds: ReadonlySet<FeatureId> }) {
   const { text } = useAppLanguage();
   const isActive = (item: NavItem) => item.exact ? pathname === item.href : pathname === item.href || pathname.startsWith(item.href + "/");
   return (
@@ -138,10 +139,13 @@ function NavGroups({ groups, pathname, close }: { groups: NavGroup[]; pathname: 
           <ul className="space-y-0.5">
             {group.items.map((item) => (
               <li key={item.href}>
-                <Link
+                {(() => {
+                  const locked = !!item.featureId && lockedFeatureIds.has(item.featureId);
+                  return <Link
                   href={item.href}
                   onClick={close}
                   aria-current={isActive(item) ? "page" : undefined}
+                  aria-label={locked ? `${translatedLabel(item.key, text)}, ${text("plan required", "प्लान ज़रूरी है")}` : undefined}
                   className={cn(
                     "app-ui-focus flex min-h-10 items-center gap-3 rounded-md px-3 text-sm transition-colors",
                     isActive(item) ? "bg-primary/10 font-semibold text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -149,8 +153,10 @@ function NavGroups({ groups, pathname, close }: { groups: NavGroup[]; pathname: 
                 >
                   <item.icon className={cn("h-4 w-4 shrink-0", isActive(item) && "text-primary")} />
                   <span className="min-w-0 flex-1 truncate">{translatedLabel(item.key, text)}</span>
-                  {isActive(item) ? <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true" /> : null}
-                </Link>
+                  {locked ? <LockKeyhole className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" /> : null}
+                  {!locked && isActive(item) ? <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true" /> : null}
+                </Link>;
+                })()}
               </li>
             ))}
           </ul>
@@ -193,7 +199,7 @@ function BusinessSwitcher({ businesses, pathname }: { businesses: Business[]; pa
   );
 }
 
-function CommandSearch({ open, setOpen, groups }: { open: boolean; setOpen: (open: boolean) => void; groups: NavGroup[] }) {
+function CommandSearch({ open, setOpen, groups, lockedFeatureIds }: { open: boolean; setOpen: (open: boolean) => void; groups: NavGroup[]; lockedFeatureIds: ReadonlySet<FeatureId> }) {
   const router = useRouter();
   const { text } = useAppLanguage();
   const [query, setQuery] = React.useState("");
@@ -229,7 +235,8 @@ function CommandSearch({ open, setOpen, groups }: { open: boolean; setOpen: (ope
               <p className="px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{text("Pages", "पेज")}</p>
               {filtered.map((item) => (
                 <button key={item.href} type="button" onClick={() => go(item.href)} className="app-ui-focus flex min-h-10 w-full items-center gap-3 rounded-md px-2 text-left text-sm hover:bg-muted">
-                  <item.icon className="h-4 w-4 text-muted-foreground" /> {item.label}
+                  <item.icon className="h-4 w-4 text-muted-foreground" /> <span className="flex-1">{item.label}</span>
+                  {item.featureId && lockedFeatureIds.has(item.featureId) ? <LockKeyhole className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" /> : null}
                 </button>
               ))}
             </>
@@ -257,12 +264,13 @@ function CommandSearch({ open, setOpen, groups }: { open: boolean; setOpen: (ope
 }
 
 function AppShellContent({
-  user, businesses, brand, impersonation, children
+  user, businesses, brand, impersonation, lockedFeatureIds, children
 }: {
   user: User;
   businesses: Business[];
   brand?: { name: string; logoUrl: string };
   impersonation?: { exp: number } | null;
+  lockedFeatureIds: FeatureId[];
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -274,6 +282,7 @@ function AppShellContent({
   const [unread, setUnread] = React.useState(0);
   const brandName = brand?.name || "QR24x7";
   const navGroups = user.role === "AGENT" ? [ownerGroups[0], agentGroup, ...ownerGroups.slice(1)] : ownerGroups;
+  const lockedFeatures = React.useMemo(() => new Set(lockedFeatureIds), [lockedFeatureIds]);
 
   React.useEffect(() => {
     setMobileOpen(false);
@@ -312,11 +321,11 @@ function AppShellContent({
 
   const logo = brand?.logoUrl || "/brand/icon-192.png";
   const trialDays = user.trialEndsAt ? Math.max(0, Math.ceil((user.trialEndsAt.getTime() - Date.now()) / 86400000)) : 0;
-  const mobileShortcuts = [
+  const mobileShortcuts: NavItem[] = [
     { href: "/dashboard", key: "home", icon: LayoutDashboard, exact: true },
-    { href: "/dashboard/sell/orders", key: "orders", icon: ShoppingBag },
-    { href: "/dashboard/reputation/reviews", key: "reviews", icon: Star },
-    { href: "/dashboard/page/qr", key: "qrCodes", icon: QrCode },
+    { href: "/dashboard/sell/orders", key: "orders", icon: ShoppingBag, featureId: "orders" },
+    { href: "/dashboard/reputation/reviews", key: "reviews", icon: Star, featureId: "reviews-log" },
+    { href: "/dashboard/page/qr", key: "qrCodes", icon: QrCode, featureId: "multiple-qrs" },
     { href: "/dashboard/account/settings", key: "settings", icon: Settings }
   ];
 
@@ -394,7 +403,7 @@ function AppShellContent({
       <div className="flex min-h-0 flex-1">
         <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-[248px] shrink-0 overflow-y-auto border-r bg-card p-3 md:block">
           {businesses.length ? <div className="mb-4 px-1 lg:hidden"><BusinessSwitcher businesses={businesses} pathname={pathname} /></div> : null}
-          <NavGroups groups={navGroups} pathname={pathname} />
+          <NavGroups groups={navGroups} pathname={pathname} lockedFeatureIds={lockedFeatures} />
           <div className="mt-6 border-t pt-4">
             {(user.tier === "FREE" || (user.tier === "GROWTH" && !user.subscriptionEndsAt)) ? (
               <Link href="/dashboard/account/plan" className="flex min-h-10 items-center justify-between rounded-md bg-primary/10 px-3 text-sm font-medium hover:bg-primary/15">
@@ -433,7 +442,7 @@ function AppShellContent({
               <button type="button" className="app-ui-focus inline-flex h-9 w-9 items-center justify-center rounded-md hover:bg-muted" aria-label={text("Close navigation", "नेविगेशन बंद करें")} onClick={() => setMobileOpen(false)}><X className="h-4 w-4" /></button>
             </div>
             <div className="mb-4"><BusinessSwitcher businesses={businesses} pathname={pathname} /></div>
-            <NavGroups groups={navGroups} pathname={pathname} close={() => setMobileOpen(false)} />
+            <NavGroups groups={navGroups} pathname={pathname} close={() => setMobileOpen(false)} lockedFeatureIds={lockedFeatures} />
           </motion.aside>
         </div>
       ) : null}
@@ -441,13 +450,14 @@ function AppShellContent({
       <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden" aria-label={text("Quick navigation", "त्वरित नेविगेशन")}>
         {mobileShortcuts.map((item) => {
           const active = item.exact ? pathname === item.href : pathname === item.href || pathname.startsWith(item.href + "/");
+          const locked = !!item.featureId && lockedFeatures.has(item.featureId);
           return <Link key={item.href} href={item.href} className={cn("app-ui-focus flex min-h-14 flex-col items-center justify-center gap-1 text-[10px] font-medium", active ? "text-primary" : "text-muted-foreground")}>
-            <item.icon className="h-5 w-5" /><span>{translatedLabel(item.key, text)}</span>
+            <span className="relative"><item.icon className="h-5 w-5" />{locked ? <LockKeyhole className="absolute -right-2 -top-1 h-3 w-3 rounded-full bg-card" aria-hidden="true" /> : null}</span><span>{translatedLabel(item.key, text)}</span>
           </Link>;
         })}
       </nav>
 
-      <CommandSearch open={searchOpen} setOpen={setSearchOpen} groups={navGroups} />
+      <CommandSearch open={searchOpen} setOpen={setSearchOpen} groups={navGroups} lockedFeatureIds={lockedFeatures} />
     </div>
   );
 }
@@ -457,19 +467,21 @@ export function AppShell({
   businesses,
   brand,
   impersonation,
+  lockedFeatureIds,
   children
 }: {
   user: User;
   businesses: Business[];
   brand?: { name: string; logoUrl: string };
   impersonation?: { exp: number } | null;
+  lockedFeatureIds: FeatureId[];
   children: React.ReactNode;
 }) {
   return (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} storageKey="qr24x7-owner-theme">
       <MotionConfig reducedMotion="user">
         <AppLanguageProvider>
-          <AppShellContent user={user} businesses={businesses} brand={brand} impersonation={impersonation}>{children}</AppShellContent>
+          <AppShellContent user={user} businesses={businesses} brand={brand} impersonation={impersonation} lockedFeatureIds={lockedFeatureIds}>{children}</AppShellContent>
         </AppLanguageProvider>
       </MotionConfig>
     </ThemeProvider>

@@ -8,6 +8,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { WEEK_DAYS, type WeekDay, type WeekHours } from "@/lib/tap/hours";
 import { DesignPicker } from "@/components/tap/design-picker";
+import type { LockedFeatureState } from "@/lib/plans/dashboard-gate";
+import { LockedFeature } from "@/components/app-ui/locked-feature";
 
 const DAY_LABEL: Record<WeekDay, string> = {
   sun: "Sunday",
@@ -58,12 +60,14 @@ export function StoreForm({
   businessId,
   initial,
   accent,
-  accentInk
+  accentInk,
+  whatsappOrdersLock
 }: {
   businessId: string;
   initial: StoreFormValues;
   accent: string;
   accentInk: string;
+  whatsappOrdersLock: LockedFeatureState | null;
 }) {
   const router = useRouter();
   const [holiday, setHoliday] = React.useState(initial.holiday);
@@ -172,7 +176,7 @@ export function StoreForm({
           <p className="text-sm text-muted-foreground">Automatic uses food for cafés and restaurants, services for salons and clinics, and a shop for everything else.</p>
         </CardContent>
       </Card>
-      <Card>
+      {whatsappOrdersLock ? <LockedFeature state={whatsappOrdersLock} compact /> : <Card>
         <CardContent className="space-y-3 p-4">
           <h2 className="font-semibold">Orders</h2>
           <label className="flex min-h-11 items-center gap-3 text-sm">
@@ -206,7 +210,7 @@ export function StoreForm({
           <Input className="min-h-11" aria-label="UPI ID" placeholder="UPI ID, e.g. shop@okaxis" value={upiId} onChange={(event) => setUpiId(event.target.value)} />
           <p className="text-sm text-muted-foreground">Leave the UPI ID blank to take cash only. The customer pays that ID directly. Review QR does not collect the money.</p>
         </CardContent>
-      </Card>
+      </Card>}
       <Card>
         <CardContent className="space-y-3 p-4">
           <h2 className="font-semibold">GST</h2>

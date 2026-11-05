@@ -3,6 +3,7 @@ import { observe } from "@/lib/api/observe";
 import { requireV1User, v1Data } from "@/lib/api/v1";
 import { prisma } from "@/lib/db";
 import { loadEntitlement } from "@/lib/plans/entitlements";
+import { findPlanForTier } from "@/lib/plans/legacy";
 import { requireBusinessRole } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
@@ -36,6 +37,7 @@ async function getHandler(req: NextRequest) {
         select: { slug: true, nameEn: true }
       })
     : null;
+  const plan = subscription?.plan ?? await findPlanForTier(entitlement.tier);
   return v1Data({
     tier: entitlement.tier,
     status: user?.subscriptionStatus ?? "TRIALING",
@@ -44,8 +46,8 @@ async function getHandler(req: NextRequest) {
     startsAt: subscription?.startsAt ?? null,
     modules: entitlement.modules,
     limits: entitlement.limits,
-    plan: subscription?.plan
-      ? { slug: subscription.plan.slug, nameEn: subscription.plan.nameEn, nameHi: subscription.plan.nameHi, duration: subscription.duration }
+    plan: plan
+      ? { slug: plan.slug, nameEn: plan.nameEn, nameHi: plan.nameHi, duration: subscription?.duration ?? null }
       : null,
     pending: pending
       ? { slug: pending.slug, nameEn: pending.nameEn, duration: subscription?.pendingDuration ?? null }

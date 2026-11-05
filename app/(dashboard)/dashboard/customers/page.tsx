@@ -6,12 +6,16 @@ import { PageHeader, EmptyState } from "@/components/app-ui/primitives";
 import { AppText } from "@/components/app-ui/i18n";
 import { CustomersTable } from "./customers-table";
 import { Download, Users } from "lucide-react";
+import { requireAccountFeatureForRoute } from "@/lib/plans/dashboard-gate";
+import { LockedFeature } from "@/components/app-ui/locked-feature";
 
 export const dynamic = "force-dynamic";
 
 export default async function CustomersPage({ searchParams }: { searchParams: { q?: string; page?: string; sort?: string; dir?: "asc" | "desc"; businessId?: string } }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  const locked = await requireAccountFeatureForRoute(user.id, "/dashboard/customers", "customers");
+  if (locked) return <LockedFeature state={locked} />;
   const pageIndex = Math.max(0, Math.min(500, Number(searchParams.page || 0) || 0));
   const page = await loadCustomerPage(user.id, { query: searchParams.q, pageIndex, pageSize: 20, sort: searchParams.sort, direction: searchParams.dir, businessId: searchParams.businessId });
   return <div className="space-y-5">

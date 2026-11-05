@@ -7,12 +7,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Sparkles, ArrowRight, AlertTriangle, CheckCircle2, Building2, Plus } from "lucide-react";
 import { ownedOrAssignedWhere } from "@/lib/tenant";
+import { requireAccountFeatureForRoute } from "@/lib/plans/dashboard-gate";
+import { LockedFeature } from "@/components/app-ui/locked-feature";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardAiPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  const locked = await requireAccountFeatureForRoute(user.id, "/dashboard/ai", "ai-replies");
+  if (locked) return <LockedFeature state={locked} />;
 
   const [businesses, ai] = await Promise.all([
     prisma.business.findMany({

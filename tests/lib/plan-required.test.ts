@@ -147,7 +147,7 @@ describe("PLAN_REQUIRED feature gates", () => {
   beforeAll(async () => {
     for (const kind of ["reviews", "menu", "store", "free"] as const) {
       const stamp = `${Date.now().toString(36)}${Math.floor(Math.random() * 1000).toString(36)}`;
-      const modules = kind === "reviews" ? ["REVIEWS"] : kind === "menu" ? ["MENU"] : kind === "store" ? ["STORE"] : [];
+      const modules = kind === "reviews" ? ["REVIEWS"] : kind === "menu" ? ["MENU"] : kind === "store" ? ["STORE"] : ["REVIEWS", "MENU", "STORE"];
       const user = await prisma.user.create({
         data: {
           email: `plan-${kind}-${stamp}@example.test`,
@@ -158,30 +158,28 @@ describe("PLAN_REQUIRED feature gates", () => {
         }
       });
       userIds.push(user.id);
-      if (kind !== "free") {
-        const plan = await prisma.plan.create({
-          data: {
-            nameEn: `${kind} only`,
-            nameHi: `${kind} only`,
-            slug: `plan-${kind}-${stamp}`,
-            modules,
-            limits: LIMITS,
-            legacyTier: "STARTER"
-          }
-        });
-        planIds.push(plan.id);
-        await prisma.subscription.create({
-          data: {
-            userId: user.id,
-            planId: plan.id,
-            modules,
-            limits: LIMITS,
-            tier: "STARTER",
-            status: "ACTIVE",
-            endsAt: user.subscriptionEndsAt
-          }
-        });
-      }
+      const plan = await prisma.plan.create({
+        data: {
+          nameEn: `${kind} test plan`,
+          nameHi: `${kind} टेस्ट प्लान`,
+          slug: `plan-${kind}-${stamp}`,
+          modules,
+          limits: LIMITS,
+          legacyTier: kind === "free" ? "FREE" : "STARTER"
+        }
+      });
+      planIds.push(plan.id);
+      await prisma.subscription.create({
+        data: {
+          userId: user.id,
+          planId: plan.id,
+          modules,
+          limits: LIMITS,
+          tier: kind === "free" ? "FREE" : "STARTER",
+          status: "ACTIVE",
+          endsAt: user.subscriptionEndsAt
+        }
+      });
       const business = await prisma.business.create({
         data: {
           ownerId: user.id,

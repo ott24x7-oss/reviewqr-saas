@@ -2,12 +2,13 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { featureBlock } from "@/lib/plans/feature-gate";
 import { listBookings } from "@/lib/store/bookings";
 import { readableBusinessWhere } from "@/lib/tenant";
 import { AppText } from "@/components/app-ui/i18n";
-import { EmptyState, InlineError, PageHeader, PlanLockNotice } from "@/components/app-ui/primitives";
+import { EmptyState, InlineError, PageHeader } from "@/components/app-ui/primitives";
 import { BookingsBoard, type BookingCard } from "./bookings-board";
+import { requireFeatureForRoute } from "@/lib/plans/dashboard-gate";
+import { LockedFeature } from "@/components/app-ui/locked-feature";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +43,8 @@ export default async function BookingsPage({
       />
     );
   }
-  const locked = await featureBlock(selected.ownerId, "services-booking");
+  const locked = await requireFeatureForRoute(selected.ownerId, "/dashboard/sell/bookings", "services-booking");
+  if (locked) return <LockedFeature state={locked} />;
   const status = FILTERS.some((row) => row[0] === searchParams.status) ? searchParams.status || "" : "";
   const date = searchParams.date && /^\d{4}-\d{2}-\d{2}$/.test(searchParams.date) ? searchParams.date : "";
   return (
@@ -65,11 +67,7 @@ export default async function BookingsPage({
           </div>
         }
       />
-      {locked ? (
-        <PlanLockNotice title={<AppText en="Services and bookings" hi="सेवाएँ और बुकिंग" />} body={locked.error} />
-      ) : (
-        <BookingList userId={user.id} businessId={selected.id} status={status} date={date} />
-      )}
+      <BookingList userId={user.id} businessId={selected.id} status={status} date={date} />
     </div>
   );
 }

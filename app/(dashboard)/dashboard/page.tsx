@@ -3,12 +3,12 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import {
   Activity, ArrowUpRight, Building2, CircleHelp,
-  Clock3, MessageSquare, Package, QrCode, ShoppingBag, Star, Users
+  Clock3, LockKeyhole, MessageSquare, Package, QrCode, ShoppingBag, Star, Users
 } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { readableBusinessWhere } from "@/lib/tenant";
-import { hasModule } from "@/lib/plans/entitlements";
+import { getAccountLockedFeatureIds } from "@/lib/plans/dashboard-gate";
 import { setupChecklist } from "@/lib/growth/setup";
 import { bookingTimeLabel } from "@reviewqr/shared";
 import { addIstDays, istDayKey, istDayRange } from "@/lib/analytics/ist";
@@ -61,10 +61,7 @@ export default async function DashboardOverview({
       phone: true,
       address: true,
       city: true,
-      logo: true,
-      tapPage: { select: { published: true, draft: true } },
-      storeSettings: { select: { hours: true, upiId: true } },
-      _count: { select: { qrCodes: true, menuItems: true } }
+      logo: true
     },
     orderBy: { createdAt: "asc" }
   });
@@ -84,29 +81,40 @@ export default async function DashboardOverview({
   const businessIds = searchParams.businessId && businesses.some((business) => business.id === searchParams.businessId)
     ? [searchParams.businessId]
     : businesses.map((business) => business.id);
+  const lockedFeatureIds = new Set(await getAccountLockedFeatureIds(user.id, ["analytics", "orders", "reviews-log", "services-booking", "menu", "store", "multiple-qrs"]));
+  const analyticsLocked = lockedFeatureIds.has("analytics");
+  const ordersLocked = lockedFeatureIds.has("orders");
+  const reviewsLocked = lockedFeatureIds.has("reviews-log");
+  const bookingsLocked = lockedFeatureIds.has("services-booking");
+  const menuLocked = lockedFeatureIds.has("menu");
+  const storeLocked = lockedFeatureIds.has("store");
+  const qrLocked = lockedFeatureIds.has("multiple-qrs");
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const { start: todayStart, end: tomorrowStart } = kolkataDayWindow();
   const todayKey = istDayKey(new Date());
   const weekFrom = istDayRange(addIstDays(todayKey, -6)).start;
 
-  const [userPlan, menuOn, printedMark, scannedQr, todayScans, todayOrders, todayReviews, todaySales, openOrders, openFeedback, lowRatings, weeklyDays, recentOrderRows, recentReviewRows, recentFeedbackRows, todayBookingCount, todayBookingRows] = await Promise.all([
+  const [userPlan, menuOn, printedMark, menuCount, storeSettings, tapPage, scannedQr, todayScans, todayOrders, todayReviews, todaySales, openOrders, openFeedback, lowRatings, weeklyDays, recentOrderRows, recentReviewRows, recentFeedbackRows, todayBookingCount, todayBookingRows] = await Promise.all([
     prisma.user.findUnique({ where: { id: user.id }, select: { subscriptionEndsAt: true, subscriptionStatus: true } }),
-    hasModule(activeBusiness.ownerId, "MENU"),
+    Promise.resolve(!menuLocked),
     prisma.onboardingMark.findUnique({ where: { userId_kind: { userId: user.id, kind: "printed_qr" } }, select: { id: true } }),
-    prisma.qRCode.count({ where: { businessId: activeBusiness.id, scans: { gt: 0 } } }),
-    prisma.qrScan.count({ where: { createdAt: { gte: todayStart, lt: tomorrowStart }, qrCode: { businessId: { in: businessIds } } } }),
-    prisma.menuOrder.count({ where: { businessId: { in: businessIds }, createdAt: { gte: todayStart, lt: tomorrowStart }, status: { not: "REJECTED" } } }),
-    prisma.review.count({ where: { businessId: { in: businessIds }, createdAt: { gte: todayStart, lt: tomorrowStart } } }),
-    prisma.menuOrder.aggregate({ where: { businessId: { in: businessIds }, createdAt: { gte: todayStart, lt: tomorrowStart }, status: { not: "REJECTED" } }, _sum: { totalPaise: true } }),
-    prisma.menuOrder.count({ where: { businessId: { in: businessIds }, status: "NEW" } }),
-    prisma.feedback.count({ where: { businessId: { in: businessIds }, status: "NEW" } }),
-    prisma.review.count({ where: { businessId: { in: businessIds }, rating: { lte: 3 }, createdAt: { gte: since } } }),
-    prisma.analyticsDaily.findMany({ where: { businessId: { in: businessIds }, day: { gte: weekFrom } }, select: { day: true, scans: true, orderCount: true, ratingCount: true, orderPaise: true }, orderBy: { day: "asc" } }),
-    prisma.menuOrder.findMany({ where: { businessId: { in: businessIds } }, select: { id: true, number: true, status: true, createdAt: true, business: { select: { name: true } } }, orderBy: { createdAt: "desc" }, take: 4 }),
-    prisma.review.findMany({ where: { businessId: { in: businessIds } }, select: { id: true, customerName: true, rating: true, createdAt: true, business: { select: { name: true } } }, orderBy: { createdAt: "desc" }, take: 4 }),
-    prisma.feedback.findMany({ where: { businessId: { in: businessIds } }, select: { id: true, message: true, createdAt: true, business: { select: { name: true } } }, orderBy: { createdAt: "desc" }, take: 4 }),
-    prisma.bookingRequest.count({ where: { businessId: { in: businessIds }, preferredDate: todayKey, status: { not: "CANCELLED" } } }),
-    prisma.bookingRequest.findMany({
+    menuLocked ? Promise.resolve(null) : prisma.menuItem.count({ where: { businessId: activeBusiness.id } }),
+    storeLocked ? Promise.resolve(null) : prisma.storeSettings.findUnique({ where: { businessId: activeBusiness.id }, select: { hours: true, upiId: true } }),
+    prisma.tapPage.findUnique({ where: { businessId: activeBusiness.id }, select: { published: true, draft: true } }),
+    qrLocked ? Promise.resolve(0) : prisma.qRCode.count({ where: { businessId: activeBusiness.id, scans: { gt: 0 } } }),
+    analyticsLocked ? Promise.resolve(0) : prisma.qrScan.count({ where: { createdAt: { gte: todayStart, lt: tomorrowStart }, qrCode: { businessId: { in: businessIds } } } }),
+    ordersLocked ? Promise.resolve(0) : prisma.menuOrder.count({ where: { businessId: { in: businessIds }, createdAt: { gte: todayStart, lt: tomorrowStart }, status: { not: "REJECTED" } } }),
+    reviewsLocked ? Promise.resolve(0) : prisma.review.count({ where: { businessId: { in: businessIds }, createdAt: { gte: todayStart, lt: tomorrowStart } } }),
+    ordersLocked ? Promise.resolve({ _sum: { totalPaise: null as number | null } }) : prisma.menuOrder.aggregate({ where: { businessId: { in: businessIds }, createdAt: { gte: todayStart, lt: tomorrowStart }, status: { not: "REJECTED" } }, _sum: { totalPaise: true } }),
+    ordersLocked ? Promise.resolve(0) : prisma.menuOrder.count({ where: { businessId: { in: businessIds }, status: "NEW" } }),
+    reviewsLocked ? Promise.resolve(0) : prisma.feedback.count({ where: { businessId: { in: businessIds }, status: "NEW" } }),
+    reviewsLocked ? Promise.resolve(0) : prisma.review.count({ where: { businessId: { in: businessIds }, rating: { lte: 3 }, createdAt: { gte: since } } }),
+    analyticsLocked ? Promise.resolve([] as Array<{ day: Date; scans: number; orderCount: number; ratingCount: number; orderPaise: number }>) : prisma.analyticsDaily.findMany({ where: { businessId: { in: businessIds }, day: { gte: weekFrom } }, select: { day: true, scans: true, orderCount: true, ratingCount: true, orderPaise: true }, orderBy: { day: "asc" } }),
+    ordersLocked ? Promise.resolve([] as Array<{ id: string; number: string; status: string; createdAt: Date; business: { name: string } }>) : prisma.menuOrder.findMany({ where: { businessId: { in: businessIds } }, select: { id: true, number: true, status: true, createdAt: true, business: { select: { name: true } } }, orderBy: { createdAt: "desc" }, take: 4 }),
+    reviewsLocked ? Promise.resolve([] as Array<{ id: string; customerName: string | null; rating: number; createdAt: Date; business: { name: string } }>) : prisma.review.findMany({ where: { businessId: { in: businessIds } }, select: { id: true, customerName: true, rating: true, createdAt: true, business: { select: { name: true } } }, orderBy: { createdAt: "desc" }, take: 4 }),
+    reviewsLocked ? Promise.resolve([] as Array<{ id: string; message: string | null; createdAt: Date; business: { name: string } }>) : prisma.feedback.findMany({ where: { businessId: { in: businessIds } }, select: { id: true, message: true, createdAt: true, business: { select: { name: true } } }, orderBy: { createdAt: "desc" }, take: 4 }),
+    bookingsLocked ? Promise.resolve(0) : prisma.bookingRequest.count({ where: { businessId: { in: businessIds }, preferredDate: todayKey, status: { not: "CANCELLED" } } }),
+    bookingsLocked ? Promise.resolve([] as Array<{ id: string; customerName: string; status: string; preferredSlot: string | null; preferredTime: string | null; item: { name: string } }>) : prisma.bookingRequest.findMany({
       where: { businessId: { in: businessIds }, preferredDate: todayKey, status: { not: "CANCELLED" } },
       orderBy: { createdAt: "desc" },
       take: 5,
@@ -114,16 +122,16 @@ export default async function DashboardOverview({
     })
   ]);
 
-  const hours = activeBusiness.storeSettings?.hours;
+  const hours = storeSettings?.hours;
   const hasHours = !!hours && typeof hours === "object" && !Array.isArray(hours) && Object.keys(hours).length > 0;
   const setup = setupChecklist({
     hasDetails: [activeBusiness.phone, activeBusiness.address, activeBusiness.city].some((value) => !!value?.trim()),
     hasLink: !!activeBusiness.slug.trim(),
-    hasMenu: activeBusiness._count.menuItems > 0,
+    hasMenu: !menuLocked && (menuCount || 0) > 0,
     menuOn,
-    hasButtons: Math.max(countEnabledLinks(activeBusiness.tapPage?.published), countEnabledLinks(activeBusiness.tapPage?.draft)) > 0,
-    hasHours,
-    hasUpi: !!activeBusiness.storeSettings?.upiId.trim(),
+    hasButtons: Math.max(countEnabledLinks(tapPage?.published), countEnabledLinks(tapPage?.draft)) > 0,
+    hasHours: !storeLocked && hasHours,
+    hasUpi: !storeLocked && !!storeSettings?.upiId.trim(),
     printed: !!printedMark || scannedQr > 0
   });
   const setupSteps: SetupStep[] = [
@@ -175,10 +183,10 @@ export default async function DashboardOverview({
           <Link href="/dashboard/insights" className="app-ui-focus inline-flex min-h-9 items-center gap-1 text-sm font-medium text-primary"><AppText en="See the last 7 days" hi="पिछले 7 दिन देखें" /><ArrowUpRight className="h-4 w-4" /></Link>
         </div>
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-          <KpiCard label={<AppText en="Scans" hi="स्कैन" />} value={todayScans} delta={<AppText en="People who opened your page from a QR or NFC tag today." hi="आज QR या NFC से आपका पेज खोलने वाले लोग।" />} data={valueArray(weeklyDays, "scans", 7)} />
-          <KpiCard label={<AppText en="Orders" hi="ऑर्डर" />} value={todayOrders} delta={<AppText en="WhatsApp orders placed today. Cancelled orders are left out." hi="आज के WhatsApp ऑर्डर। रद्द ऑर्डर शामिल नहीं हैं।" />} data={valueArray(weeklyDays, "orderCount", 7)} />
-          <KpiCard label={<AppText en="Reviews" hi="रिव्यू" />} value={todayReviews} delta={<AppText en="Star ratings customers left today." hi="आज ग्राहकों की दी हुई स्टार रेटिंग।" />} data={valueArray(weeklyDays, "ratingCount", 7)} />
-          <KpiCard label={<AppText en="Sales" hi="बिक्री" />} value={Number(todaySales._sum.totalPaise || 0) / 100} format="inr" delta={<AppText en="Rupee value of today's orders, including ones not paid yet." hi="आज के ऑर्डर की राशि, जिनमें अभी भुगतान नहीं हुआ।" />} data={valueArray(weeklyDays, "orderPaise", 7).map((value) => value / 100)} />
+          <KpiCard label={<AppText en="Scans" hi="स्कैन" />} value={analyticsLocked ? <FeatureLockLink href="/dashboard/insights" /> : todayScans} delta={analyticsLocked ? <AppText en="Your plan doesn't include Analytics." hi="आपके प्लान में एनालिटिक्स शामिल नहीं है।" /> : <AppText en="People who opened your page from a QR or NFC tag today." hi="आज QR या NFC से आपका पेज खोलने वाले लोग।" />} data={analyticsLocked ? [] : valueArray(weeklyDays, "scans", 7)} />
+          <KpiCard label={<AppText en="Orders" hi="ऑर्डर" />} value={ordersLocked ? <FeatureLockLink href="/dashboard/sell/orders" /> : todayOrders} delta={ordersLocked ? <AppText en="Your plan doesn't include Orders." hi="आपके प्लान में ऑर्डर शामिल नहीं हैं।" /> : <AppText en="WhatsApp orders placed today. Cancelled orders are left out." hi="आज के WhatsApp ऑर्डर। रद्द ऑर्डर शामिल नहीं हैं।" />} data={ordersLocked ? [] : valueArray(weeklyDays, "orderCount", 7)} />
+          <KpiCard label={<AppText en="Reviews" hi="रिव्यू" />} value={reviewsLocked ? <FeatureLockLink href="/dashboard/reputation/reviews" /> : todayReviews} delta={reviewsLocked ? <AppText en="Your plan doesn't include Reviews log." hi="आपके प्लान में रिव्यू लॉग शामिल नहीं है।" /> : <AppText en="Star ratings customers left today." hi="आज ग्राहकों की दी हुई स्टार रेटिंग।" />} data={reviewsLocked ? [] : valueArray(weeklyDays, "ratingCount", 7)} />
+          <KpiCard label={<AppText en="Sales" hi="बिक्री" />} value={ordersLocked ? <FeatureLockLink href="/dashboard/sell/orders" /> : Number(todaySales._sum.totalPaise || 0) / 100} format={ordersLocked ? undefined : "inr"} delta={ordersLocked ? <AppText en="Your plan doesn't include Orders." hi="आपके प्लान में ऑर्डर शामिल नहीं हैं।" /> : <AppText en="Rupee value of today's orders, including ones not paid yet." hi="आज के ऑर्डर की राशि, जिनमें अभी भुगतान नहीं हुआ।" />} data={ordersLocked ? [] : valueArray(weeklyDays, "orderPaise", 7).map((value) => value / 100)} />
         </div>
         <Link href="/dashboard/sell/bookings" className="mt-3 block rounded-xl border bg-card p-4 hover:bg-muted/40">
           <div className="flex items-center justify-between gap-3">
@@ -186,9 +194,9 @@ export default async function DashboardOverview({
               <h3 className="text-sm font-semibold"><AppText en="Bookings today" hi="आज की बुकिंग" /></h3>
               <p className="mt-0.5 text-xs text-muted-foreground"><AppText en="Appointments asked for today. Open this to confirm or cancel them." hi="आज माँगी गई अपॉइंटमेंट। पुष्टि या रद्द करने के लिए इसे खोलें।" /></p>
             </div>
-            <span className="text-sm font-semibold tabular-nums">{todayBookingCount}</span>
+            {bookingsLocked ? <FeatureLockLink href="/dashboard/sell/bookings" /> : <span className="text-sm font-semibold tabular-nums">{todayBookingCount}</span>}
           </div>
-          {todayBookingRows.length ? (
+          {bookingsLocked ? <p className="mt-2 text-sm text-muted-foreground"><AppText en="Your plan doesn't include Service booking." hi="आपके प्लान में सेवा बुकिंग शामिल नहीं है।" /></p> : todayBookingRows.length ? (
             <ul className="mt-2 space-y-1 text-sm">
               {todayBookingRows.map((row) => (
                 <li key={row.id}>
@@ -244,7 +252,7 @@ export default async function DashboardOverview({
       </section>
 
       <section className="grid gap-3 sm:grid-cols-3">
-        <BusinessShortcut href="/dashboard/sell/menu" icon={<Package className="h-4 w-4" />} title={<AppText en="Menu & products" hi="मेन्यू और उत्पाद" />} description={<AppText en={`${activeBusiness._count.menuItems} items. Open this to add what customers can order.`} hi={`${activeBusiness._count.menuItems} आइटम। ग्राहक जो ऑर्डर कर सकें, उसे जोड़ने के लिए खोलें।`} />} />
+        <BusinessShortcut href="/dashboard/sell/menu" icon={menuLocked ? <LockKeyhole className="h-4 w-4" /> : <Package className="h-4 w-4" />} title={<AppText en="Menu & products" hi="मेन्यू और उत्पाद" />} description={menuLocked ? <AppText en="Your plan doesn't include Menu." hi="आपके प्लान में मेन्यू शामिल नहीं है।" /> : <AppText en={`${menuCount || 0} items. Open this to add what customers can order.`} hi={`${menuCount || 0} आइटम। ग्राहक जो ऑर्डर कर सकें, उसे जोड़ने के लिए खोलें।`} />} />
         <BusinessShortcut href="/dashboard/account/settings" icon={<Users className="h-4 w-4" />} title={<AppText en="Your business" hi="आपका कारोबार" />} description={<AppText en="Details, team and store hours" hi="जानकारी, टीम और खुलने का समय" />} />
         <BusinessShortcut href="/dashboard/account/help" icon={<CircleHelp className="h-4 w-4" />} title={<AppText en="Need a hand?" hi="मदद चाहिए?" />} description={<AppText en="Find answers or contact support" hi="जवाब पाएँ या सहायता से संपर्क करें" />} />
       </section>
@@ -259,4 +267,8 @@ function BusinessShortcut({ href, icon, title, description }: { href: string; ic
     <span className="min-w-0 flex-1"><span className="block text-sm font-medium">{title}</span><span className="mt-0.5 block truncate text-xs text-muted-foreground">{description}</span></span>
     <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground" />
   </Link>;
+}
+
+function FeatureLockLink({ href }: { href: string }) {
+  return <Link href={href} aria-label="Plan required. Open feature details" className="inline-flex h-9 w-9 items-center justify-center rounded-md border hover:bg-muted"><LockKeyhole className="h-4 w-4" /></Link>;
 }

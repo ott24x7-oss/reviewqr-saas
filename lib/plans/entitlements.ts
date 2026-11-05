@@ -2,7 +2,7 @@ import type { SubscriptionTier } from "@prisma/client";
 import { prisma } from "../db";
 import { effectiveTier } from "../payments";
 import { cleanModules, limitValue, parseLimits, type ModuleId, type PlanLimits } from "./catalog";
-import { isCataloguePlan, limitsForTier, modulesForTier, snapshotGrants } from "./legacy";
+import { defaultLimitsForTier, isCataloguePlan, planAccessForTier, snapshotGrants } from "./legacy";
 import { formatINR } from "../utils";
 
 export type Entitlement = {
@@ -22,7 +22,8 @@ const userSelect = {
 export async function loadEntitlement(userId: string): Promise<Entitlement> {
   const user = await prisma.user.findUnique({ where: { id: userId }, select: userSelect });
   if (!user) {
-    return { tier: "FREE", modules: cleanModules(modulesForTier("FREE")), limits: await limitsForTier("FREE") };
+    const access = await planAccessForTier("FREE");
+    return { tier: "FREE", modules: cleanModules(access.modules), limits: access.limits };
   }
   const sub = await prisma.subscription.findFirst({
     where: { userId, status: { in: ["ACTIVE", "TRIALING", "PAST_DUE"] } },
@@ -31,19 +32,25 @@ export async function loadEntitlement(userId: string): Promise<Entitlement> {
   });
   if (sub && snapshotGrants({ tier: sub.tier, status: sub.status, endsAt: sub.endsAt })) {
     const tier = sub.tier;
-    // A catalogue plan follows the current row, so an admin edit reaches the app without a deploy.
-    // The subscription row stays the purchase record when the plan itself is gone.
-    if (isCataloguePlan(sub.planId)) {
+    // Every linked plan row is live, including rows with plan_legacy_* ids.
+    if (sub.plan) {
       return {
         tier,
-        modules: cleanModules(sub.plan ? sub.plan.modules : sub.modules),
-        limits: parseLimits(sub.plan ? sub.plan.limits : sub.limits, await limitsForTier(tier))
+        modules: cleanModules(sub.plan.modules),
+        limits: parseLimits(sub.plan.limits, await defaultLimitsForTier(tier))
       };
     }
-    return { tier, modules: cleanModules(modulesForTier(tier)), limits: await limitsForTier(tier) };
+    // If a non-legacy catalogue row was removed, keep its saved purchase snapshot.
+    if (isCataloguePlan(sub.planId)) {
+      const defaults = await defaultLimitsForTier(tier);
+      return { tier, modules: cleanModules(sub.modules), limits: parseLimits(sub.limits, defaults) };
+    }
+    const access = await planAccessForTier(tier);
+    return { tier, modules: cleanModules(access.modules), limits: access.limits };
   }
   const tier = effectiveTier(user);
-  return { tier, modules: cleanModules(modulesForTier(tier)), limits: await limitsForTier(tier) };
+  const access = await planAccessForTier(tier);
+  return { tier, modules: cleanModules(access.modules), limits: access.limits };
 }
 
 export async function hasModule(userId: string, moduleId: ModuleId) {
@@ -69,11 +76,11 @@ export async function moduleBlock(ownerId: string, moduleId: ModuleId) {
 
 export async function upsellOffer(moduleId: ModuleId) {
   const plans = await prisma.plan.findMany({
-    where: { active: true, visibleOnPricingPage: true },
+    where: { active: true, visibleOnPricingPage: true, modules: { has: moduleId } },
     orderBy: { sortOrder: "asc" },
     include: { prices: { where: { active: true, duration: "MONTH_1", pricePaise: { gt: 0 } } } }
   });
-  const match = plans.find((plan) => cleanModules(plan.modules).includes(moduleId) && plan.prices[0]);
+  const match = plans.find((plan) => plan.prices[0]);
   const price = match?.prices[0];
   if (!match || !price) {
     return { title: LOCKED[moduleId], href: "/pricing", priceLabel: "" };

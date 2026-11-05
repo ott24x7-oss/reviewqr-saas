@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { requireBusinessRole } from "@/lib/tenant";
 import { StaffClient } from "./staff-client";
+import { requireFeatureForRoute } from "@/lib/plans/dashboard-gate";
+import { LockedFeature } from "@/components/app-ui/locked-feature";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +13,8 @@ export default async function StaffPage({ params }: { params: { id: string } }) 
   if (!user) redirect("/login");
   const access = await requireBusinessRole(user.id, params.id, "manage");
   if (!access) notFound();
+  const locked = await requireFeatureForRoute(access.ownerId, "/dashboard/businesses/:id/staff", "staff");
+  if (locked) return <LockedFeature state={locked} />;
   const business = await prisma.business.findFirst({
     where: { id: params.id, archived: false },
     include: {

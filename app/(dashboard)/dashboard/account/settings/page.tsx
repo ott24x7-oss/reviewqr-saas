@@ -5,6 +5,8 @@ import { prisma } from "@/lib/db";
 import { readableBusinessWhere } from "@/lib/tenant";
 import { PageHeader, EmptyState } from "@/components/app-ui/primitives";
 import { AppText } from "@/components/app-ui/i18n";
+import { LockKeyhole } from "lucide-react";
+import { getBusinessLockedFeatureIds } from "@/lib/plans/dashboard-gate";
 import SettingsPage from "@/app/(dashboard)/dashboard/settings/page";
 import BusinessesPage from "@/app/(dashboard)/dashboard/businesses/page";
 import NewBusinessPage from "@/app/(dashboard)/dashboard/businesses/new/page";
@@ -27,8 +29,9 @@ const sections = [
 export default async function AccountSettingsPage({ searchParams }: { searchParams: { section?: string; businessId?: string; new?: string } }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  const businesses = await prisma.business.findMany({ where: readableBusinessWhere(user.id), select: { id: true, name: true }, orderBy: { createdAt: "asc" } });
+  const businesses = await prisma.business.findMany({ where: readableBusinessWhere(user.id), select: { id: true, name: true, ownerId: true }, orderBy: { createdAt: "asc" } });
   const business = businesses.find((item) => item.id === searchParams.businessId) || businesses[0];
+  const locked = new Set(business ? await getBusinessLockedFeatureIds(business.ownerId, ["store", "staff", "locations"]) : []);
   const section = searchParams.new === "1" ? "business-details" : searchParams.section || "profile";
   const params = new URLSearchParams();
   params.set("section", section);
@@ -54,7 +57,10 @@ export default async function AccountSettingsPage({ searchParams }: { searchPara
     <div className="space-y-5">
       <PageHeader title={<AppText en="Settings" hi="सेटिंग" />} description={<AppText en="Your account, business details and team." hi="आपका खाता, कारोबार की जानकारी और टीम।" />} actions={businesses.length > 1 ? <BusinessSelect businesses={businesses} selected={business?.id || ""} section={section} /> : undefined} />
       <nav className="flex gap-1 overflow-x-auto border-b" aria-label="Settings sections">
-        {sections.map(([key, en, hi]) => <Link key={key} href={href(key)} aria-current={section === key ? "page" : undefined} className={`inline-flex min-h-10 shrink-0 items-center border-b-2 px-3 text-sm font-medium ${section === key ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}><AppText en={en} hi={hi} /></Link>)}
+        {sections.map(([key, en, hi]) => {
+          const featureId = key === "store" ? "store" : key === "staff" ? "staff" : key === "locations" ? "locations" : null;
+          return <Link key={key} href={href(key)} aria-current={section === key ? "page" : undefined} className={`inline-flex min-h-10 shrink-0 items-center gap-2 border-b-2 px-3 text-sm font-medium ${section === key ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}><AppText en={en} hi={hi} />{featureId && locked.has(featureId) ? <LockKeyhole className="h-3.5 w-3.5" aria-hidden="true" /> : null}</Link>;
+        })}
       </nav>
       {content}
     </div>

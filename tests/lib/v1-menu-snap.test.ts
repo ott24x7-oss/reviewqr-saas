@@ -37,7 +37,15 @@ describe("v1 menu photo", () => {
   });
 
   it("rejects a bad photo or says the reader is off", async () => {
-    const user = await prisma.user.create({ data: { email: `snap-c-${Date.now()}@example.test`, role: "USER" } });
+    const user = await prisma.user.create({
+      data: {
+        email: `snap-c-${Date.now()}@example.test`,
+        role: "USER",
+        subscriptionTier: "STARTER",
+        subscriptionStatus: "ACTIVE",
+        subscriptionEndsAt: new Date("2027-08-01T00:00:00.000Z")
+      }
+    });
     users.push(user.id);
     const business = await prisma.business.create({
       data: { ownerId: user.id, name: "Snap self", slug: `snap-self-${Date.now()}` }

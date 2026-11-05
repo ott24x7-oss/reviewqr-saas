@@ -6,8 +6,8 @@ import type { WeekHours } from "@/lib/tap/hours";
 import { readAdminThemes } from "@/lib/tap/theme-store";
 import { resolveTheme } from "@/lib/tap/themes";
 import { effectiveTier } from "@/lib/payments";
-import { moduleBlock, upsellOffer } from "@/lib/plans/entitlements";
-import { ModuleUpsell } from "@/components/plans/module-upsell";
+import { requireFeatureForRoute } from "@/lib/plans/dashboard-gate";
+import { LockedFeature } from "@/components/app-ui/locked-feature";
 import { StoreForm, type StoreFormValues } from "./store-form";
 import { HelpLink } from "@/components/help/help-link";
 
@@ -18,11 +18,9 @@ export default async function StoreSettingsPage({ params }: { params: { id: stri
   if (!user) redirect("/login");
   const access = await requireBusinessRole(user.id, params.id, "read");
   if (!access) notFound();
-  const locked = await moduleBlock(access.ownerId, "STORE");
-  if (locked) {
-    const offer = await upsellOffer("STORE");
-    return <ModuleUpsell title={offer.title} body={locked} href={offer.href} />;
-  }
+  const locked = await requireFeatureForRoute(access.ownerId, "/dashboard/businesses/:id/store", "store");
+  if (locked) return <LockedFeature state={locked} />;
+  const whatsappOrdersLock = await requireFeatureForRoute(access.ownerId, "/dashboard/businesses/:id/store", "whatsapp-orders");
   const [settings, tap, owner, extra] = await Promise.all([
     prisma.storeSettings.findUnique({ where: { businessId: access.id } }),
     prisma.tapPage.findUnique({ where: { businessId: access.id }, select: { published: true } }),
@@ -77,7 +75,7 @@ export default async function StoreSettingsPage({ params }: { params: { id: stri
       {access.accessRole === "STAFF" ? (
         <p className="text-sm text-muted-foreground">Only a manager can change store settings.</p>
       ) : (
-        <StoreForm businessId={access.id} initial={initial} accent={theme.tokens.buttonBg} accentInk={theme.tokens.buttonInk} />
+        <StoreForm businessId={access.id} initial={initial} accent={theme.tokens.buttonBg} accentInk={theme.tokens.buttonInk} whatsappOrdersLock={whatsappOrdersLock} />
       )}
     </div>
   );

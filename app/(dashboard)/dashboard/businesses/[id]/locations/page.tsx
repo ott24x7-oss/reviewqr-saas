@@ -4,6 +4,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { requireBusinessRole } from "@/lib/tenant";
 import { Card, CardContent } from "@/components/ui/card";
 import { LocationsClient } from "./locations-client";
+import { requireFeatureForRoute } from "@/lib/plans/dashboard-gate";
+import { LockedFeature } from "@/components/app-ui/locked-feature";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +14,8 @@ export default async function LocationsPage({ params }: { params: { id: string }
   if (!user) redirect("/login");
   const access = await requireBusinessRole(user.id, params.id, "manage");
   if (!access) notFound();
+  const locked = await requireFeatureForRoute(access.ownerId, "/dashboard/businesses/:id/locations", "locations");
+  if (locked) return <LockedFeature state={locked} />;
   const business = await prisma.business.findFirst({
     where: { id: params.id, archived: false },
     include: { locations: { orderBy: { createdAt: "asc" } } }

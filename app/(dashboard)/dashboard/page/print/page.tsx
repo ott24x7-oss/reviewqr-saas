@@ -5,6 +5,8 @@ import { prisma } from "@/lib/db";
 import { readableBusinessWhere } from "@/lib/tenant";
 import { PageHeader } from "@/components/app-ui/primitives";
 import { AppText } from "@/components/app-ui/i18n";
+import { LockKeyhole } from "lucide-react";
+import { getBusinessLockedFeatureIds } from "@/lib/plans/dashboard-gate";
 import BusinessPrintPage from "@/app/(dashboard)/dashboard/businesses/[id]/print/page";
 import PrintPaperPage from "@/app/(dashboard)/dashboard/print/paper/page";
 import ShopPage from "@/app/(dashboard)/dashboard/shop/page";
@@ -18,17 +20,18 @@ export const dynamic = "force-dynamic";
 export default async function PrintAndStandsPage({ searchParams }: { searchParams: { businessId?: string; tab?: string; slug?: string; orderId?: string } }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  const businesses = await prisma.business.findMany({ where: readableBusinessWhere(user.id), select: { id: true, name: true }, orderBy: { createdAt: "asc" } });
+  const businesses = await prisma.business.findMany({ where: readableBusinessWhere(user.id), select: { id: true, name: true, ownerId: true }, orderBy: { createdAt: "asc" } });
   const business = businesses.find((item) => item.id === searchParams.businessId) || businesses[0];
+  const locked = new Set(business ? await getBusinessLockedFeatureIds(business.ownerId, ["multiple-qrs"]) : []);
   const tab = searchParams.tab || "print";
   const destinations = [
-    ["print", "Print my QR", "अपना QR प्रिंट करें"],
-    ["paper", "Print sheets", "प्रिंट शीट"],
-    ["shop", "Order stands", "स्टैंड ऑर्डर करें"],
-    ["orders", "My orders", "मेरे ऑर्डर"]
+    ["print", "Print my QR", "अपना QR प्रिंट करें", true],
+    ["paper", "Print sheets", "प्रिंट शीट", true],
+    ["shop", "Order stands", "स्टैंड ऑर्डर करें", false],
+    ["orders", "My orders", "मेरे ऑर्डर", false]
   ] as const;
   let content: React.ReactNode;
-  if (tab === "paper") content = <PrintPaperPage />;
+  if (tab === "paper") content = <PrintPaperPage ownerId={business?.ownerId} />;
   else if (tab === "shop") content = <ShopPage />;
   else if (tab === "orders") content = <ShopOrdersPage />;
   else if (tab === "cart") content = <ShopCartPage />;
@@ -38,7 +41,7 @@ export default async function PrintAndStandsPage({ searchParams }: { searchParam
   return <div className="space-y-5">
     <PageHeader title={<AppText en="Print & order stands" hi="प्रिंट और ऑर्डर स्टैंड" />} description={business?.name} />
     <nav className="flex gap-1 overflow-x-auto border-b" aria-label="Print and stands">
-      {destinations.map(([key, en, hi]) => <Link key={key} href={`/dashboard/page/print?tab=${key}${business ? `&businessId=${business.id}` : ""}`} aria-current={tab === key ? "page" : undefined} className={`inline-flex min-h-10 shrink-0 items-center border-b-2 px-3 text-sm font-medium ${tab === key ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}><AppText en={en} hi={hi} /></Link>)}
+      {destinations.map(([key, en, hi, featureBacked]) => <Link key={key} href={`/dashboard/page/print?tab=${key}${business ? `&businessId=${business.id}` : ""}`} aria-current={tab === key ? "page" : undefined} className={`inline-flex min-h-10 shrink-0 items-center gap-2 border-b-2 px-3 text-sm font-medium ${tab === key ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}><AppText en={en} hi={hi} />{featureBacked && locked.has("multiple-qrs") ? <LockKeyhole className="h-3.5 w-3.5" aria-label="Plan required" /> : null}</Link>)}
     </nav>
     {businesses.length ? content : tab === "shop" || tab === "orders" ? content : <Link href="/dashboard/businesses/new" className="inline-flex min-h-10 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"><AppText en="Add your business" hi="अपना कारोबार जोड़ें" /></Link>}
   </div>;

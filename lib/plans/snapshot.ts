@@ -3,7 +3,7 @@
  * YouPI activation, hardware bundles, admin edits, and referral rewards all use it.
  */
 import { Prisma, type PlanDuration, type SubscriptionStatus, type SubscriptionTier } from "@prisma/client";
-import { legacyPlanId, limitsForTier, modulesForTier } from "./legacy";
+import { legacyPlanId, planAccessForTier } from "./legacy";
 
 export type SnapshotWrite = {
   userId: string;
@@ -34,18 +34,22 @@ export async function applySubscriptionSnapshot(tx: Prisma.TransactionClient, in
     where: { userId: input.userId, status: { in: ["ACTIVE", "TRIALING", "PAST_DUE"] } },
     orderBy: { createdAt: "desc" }
   });
+  const fallbackAccess =
+    (!input.modules?.length && !open?.modules?.length) || !(input.limits && typeof input.limits === "object")
+      ? await planAccessForTier(input.tier)
+      : null;
   const modules =
     input.modules && input.modules.length
       ? input.modules
       : open?.modules?.length
         ? open.modules
-        : modulesForTier(input.tier);
+        : fallbackAccess!.modules;
   const limits =
     input.limits && typeof input.limits === "object"
       ? input.limits
       : open?.limits && typeof open.limits === "object"
         ? open.limits
-        : await limitsForTier(input.tier);
+        : fallbackAccess!.limits;
   const pricePaise =
     input.addPricePaise != null
       ? Math.max(0, (open?.pricePaise || 0) + Math.floor(input.addPricePaise))
@@ -116,6 +120,7 @@ export async function editUserSubscription(
     endsAt: Date | null;
   }
 ) {
+  const access = await planAccessForTier(input.tier);
   const saved = await applySubscriptionSnapshot(tx, {
     userId: input.userId,
     tier: input.tier,
@@ -123,8 +128,8 @@ export async function editUserSubscription(
     endsAt: input.endsAt,
     planId: legacyPlanId(input.tier),
     duration: input.tier === "FOUNDER" && input.status === "ACTIVE" ? "LIFETIME" : null,
-    modules: modulesForTier(input.tier),
-    limits: await limitsForTier(input.tier),
+    modules: access.modules,
+    limits: access.limits,
     pricePaise: 0,
     clearPending: input.status === "CANCELED"
   });

@@ -2,7 +2,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { differenceInCalendarDays } from "date-fns";
 import { prisma } from "../../lib/db";
 import { fulfillPaidShopOrder } from "../../lib/shop/fulfill";
-import { limitsForTier } from "../../lib/plans/legacy";
+import { limitsForTier, modulesForTier } from "../../lib/plans/legacy";
 import { pushRewardEnd } from "../../lib/plans/rewards";
 import { editUserSubscription } from "../../lib/plans/snapshot";
 import { hasModule, limit } from "../../lib/plans/entitlements";
@@ -130,20 +130,20 @@ describe("subscription snapshots from bundles, admin, and referrals", () => {
     await buyGrowth(user.id);
     const row = await prisma.subscription.findFirst({ where: { userId: user.id } });
     expect(row?.tier).toBe("GROWTH");
-    expect(row?.modules).toEqual(["REVIEWS", "MENU", "STORE"]);
+    expect(row?.modules).toEqual(await modulesForTier("GROWTH"));
     expect(row?.limits).toMatchObject({ businesses: (await limitsForTier("GROWTH")).businesses });
     expect(row?.pricePaise).toBe(0);
     expect(row?.bonusDays).toBeGreaterThan(27);
     expect(row?.bonusDays).toBeLessThan(32);
     expect(row?.endsAt).toBeTruthy();
-    expect(await limit(user.id, "businesses")).toBe(5);
+    expect(await limit(user.id, "businesses")).toBe((await limitsForTier("GROWTH")).businesses);
     const saved = await prisma.user.findUnique({ where: { id: user.id } });
     expect(saved?.subscriptionTier).toBe("GROWTH");
   });
 
   it("switches a Starter buyer to Growth immediately", async () => {
     const user = await buyer("STARTER");
-    expect(await limit(user.id, "businesses")).toBe(1);
+    expect(await limit(user.id, "businesses")).toBe((await limitsForTier("STARTER")).businesses);
     const before = await prisma.subscription.findFirst({ where: { userId: user.id } });
     expect(before?.endsAt).toBeTruthy();
     await prisma.subscription.update({
@@ -151,7 +151,7 @@ describe("subscription snapshots from bundles, admin, and referrals", () => {
       data: { pricePaise: 49900, bonusDays: 12 }
     });
     await buyGrowth(user.id);
-    expect(await limit(user.id, "businesses")).toBe(5);
+    expect(await limit(user.id, "businesses")).toBe((await limitsForTier("GROWTH")).businesses);
     expect(await hasModule(user.id, "STORE")).toBe(true);
     const saved = await prisma.user.findUnique({ where: { id: user.id } });
     expect(saved?.subscriptionTier).toBe("GROWTH");
@@ -193,7 +193,7 @@ describe("subscription snapshots from bundles, admin, and referrals", () => {
       });
     });
     expect(await limit(user.id, "businesses")).toBe((await limitsForTier("AGENCY")).businesses);
-    expect(await hasModule(user.id, "MENU")).toBe(true);
+    expect(await hasModule(user.id, "MENU")).toBe((await modulesForTier("AGENCY")).includes("MENU"));
     const row = await prisma.subscription.findFirst({ where: { userId: user.id } });
     expect(row?.tier).toBe("AGENCY");
     expect(row?.planId).toBe("plan_legacy_agency");

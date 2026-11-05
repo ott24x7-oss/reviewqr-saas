@@ -7,7 +7,7 @@ import { differenceInCalendarDays } from "date-fns";
 import { logAudit } from "../admin";
 import { prisma } from "../db";
 import { extendSubscriptionEnd, nextInvoiceNumber } from "../subscription";
-import { legacyPlanId, limitsForTier, modulesForTier } from "../plans/legacy";
+import { legacyPlanId, planAccessForTier } from "../plans/legacy";
 import { grantPlanAccess } from "../plans/snapshot";
 import { bundleGrant } from "./bundle";
 import { holdUntil } from "../plans/commission-rules";
@@ -169,6 +169,7 @@ export async function fulfillPaidShopOrder(input: FulfillInput): Promise<Fulfill
       });
       const base = open?.endsAt && open.endsAt.getTime() > now.getTime() ? open.endsAt : now;
       const added = endsAt ? Math.max(0, differenceInCalendarDays(endsAt, base)) : 0;
+      const access = await planAccessForTier(tier);
       await grantPlanAccess(tx, {
         userId: user.id,
         tier,
@@ -177,8 +178,8 @@ export async function fulfillPaidShopOrder(input: FulfillInput): Promise<Fulfill
         startsAt: now,
         planId: legacyPlanId(tier),
         duration: tier === "FOUNDER" ? "LIFETIME" : null,
-        modules: modulesForTier(tier),
-        limits: await limitsForTier(tier),
+        modules: access.modules,
+        limits: access.limits,
         pricePaise: 0,
         bonusDays: (open?.bonusDays || 0) + added
       });
