@@ -8,7 +8,7 @@ import { AppText } from "@/components/app-ui/i18n";
 import { LockKeyhole } from "lucide-react";
 import { getBusinessLockedFeatureIds } from "@/lib/plans/dashboard-gate";
 import BusinessPrintPage from "@/app/(dashboard)/dashboard/businesses/[id]/print/page";
-import PrintPaperPage from "@/app/(dashboard)/dashboard/print/paper/page";
+import PrintPaperView from "@/app/(dashboard)/dashboard/print/paper/print-paper-view";
 import ShopPage from "@/app/(dashboard)/dashboard/shop/page";
 import ShopOrdersPage from "@/app/(dashboard)/dashboard/shop/orders/page";
 import ShopCartPage from "@/app/(dashboard)/dashboard/shop/cart/page";
@@ -31,7 +31,7 @@ export default async function PrintAndStandsPage({ searchParams }: { searchParam
     ["orders", "My orders", "मेरे ऑर्डर", false]
   ] as const;
   let content: React.ReactNode;
-  if (tab === "paper") content = <PrintPaperPage ownerId={business?.ownerId} />;
+  if (tab === "paper") content = <PrintPaperView ownerId={business?.ownerId} />;
   else if (tab === "shop") content = <ShopPage />;
   else if (tab === "orders") content = <ShopOrdersPage />;
   else if (tab === "cart") content = <ShopCartPage />;
